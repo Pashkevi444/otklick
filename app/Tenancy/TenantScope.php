@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tenancy;
 
+use App\Tenancy\Contracts\TenantOwned;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
@@ -14,11 +15,17 @@ use Illuminate\Database\Eloquent\Scope;
  * Это слой удобства. Когда тенант в контексте не задан (консоль, регистрация
  * тенанта, бутстрап аутентификации) — scope не применяется. Жёсткая гарантия
  * изоляции на уровне БД обеспечивается PostgreSQL Row-Level Security.
+ *
+ * @implements Scope<Model>
  */
 final class TenantScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
+        if (! $model instanceof TenantOwned) {
+            return;
+        }
+
         $context = app(TenantContext::class);
 
         if ($context->has()) {

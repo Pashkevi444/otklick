@@ -1,58 +1,109 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Отклик — AI-администратор для локального бизнеса
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Мультитенантный SaaS: перехватывает входящие обращения локального бизнеса
+(WhatsApp, Telegram, веб-виджет → далее Avito/VK/телефония), отвечает по базе
+знаний бизнеса (RAG + LLM) и записывает клиента в его CRM. Цель — не терять ни
+одного обращения, особенно вне рабочих часов и в пик.
 
-## About Laravel
+Бизнес- и тех-планы, материалы по продажам и инструкция по запуску — в `docs/`.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Статус
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+**Фаза 0 (Каркас) — готова.** Развёрнут мультитенантный скелет, изоляция
+тенантов (scope + RLS), Docker-окружение, CI-гейты, стартовая Inertia-страница.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Стек
 
-## Learning Laravel
+| Слой | Технология |
+|---|---|
+| Рантайм / фреймворк | PHP 8.3+ · Laravel 13 |
+| App-сервер | Laravel Octane + RoadRunner |
+| Очереди | Redis + Laravel Horizon |
+| БД | PostgreSQL 16 + pgvector (RAG) |
+| Кэш / сессии / очереди | Redis 7 |
+| Фронтенд | Inertia.js + Vue 3 + TypeScript + Tailwind (Vite) |
+| LLM (Фаза 3) | YandexGPT / GigaChat (данные в РФ, 152-ФЗ) |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Архитектура
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Поток зависимостей строго в одну сторону (подробнее — в `CLAUDE.md`):
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+HTTP / Console / Job  →  Service (бизнес-логика)  →  Repository (доступ к БД)  →  Model
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+- **Controller** (`app/Http/Controllers`) — тонкий: валидация, вызов сервиса, ответ.
+- **Service** (`app/Services`) — только бизнес-логика; БД трогает через репозитории.
+- **Repository** (`app/Repositories`) — единственный слой доступа к БД. Контракт
+  в `Contracts/`, реализация в `Eloquent/`. Биндинг — `RepositoryServiceProvider`.
+- **Model** (`app/Models`) — Eloquent (схема, связи, касты).
+- **DTO** (`app/DTO`) — `readonly` объекты переноса данных между слоями.
+- **Enum** (`app/Enums`) — backed string enum с `label()` для UI.
+- **Event** (`app/Events`) — побочные эффекты через домен-события.
 
-## Contributing
+### Мультитенантность
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Изоляция данных тенантов — критичный инвариант, многослойный:
 
-## Code of Conduct
+- `tenant_id` во всех тенант-таблицах;
+- трейт `App\Models\Concerns\BelongsToTenant` + глобальный `TenantScope`
+  (автофильтр по текущему тенанту из `App\Tenancy\TenantContext`);
+- `TenantContext` биндится как **scoped** — Octane сбрасывает его между
+  запросами (нет утечки тенанта в резидентном рантайме);
+- PostgreSQL **Row-Level Security** — жёсткий рубеж на уровне БД (миграция
+  применяется только на `pgsql`; на sqlite в тестах пропускается).
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Контракт тенант-моделей — `App\Tenancy\Contracts\TenantOwned`.
 
-## Security Vulnerabilities
+## Ключевые сущности (Фаза 0)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+| Сущность | Назначение |
+|---|---|
+| `App\Models\Tenant` | Клиент-бизнес (UUID PK). Реестр тенантов, сам не скоупится. |
+| `App\Enums\TenantPlan` | Тариф: `trial` / `starter` / `pro` (метод `label()`). |
+| `App\Services\TenantService` | Регистрация тенанта: уникальный slug, план, событие. |
+| `App\Repositories\Contracts\TenantRepositoryInterface` | Доступ к данным тенантов. |
+| `App\Events\TenantRegistered` | Домен-событие регистрации тенанта. |
 
-## License
+## Маршруты
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Метод | URL | Контроллер | Назначение |
+|---|---|---|---|
+| GET | `/` | `WelcomeController` | Стартовая Inertia-страница (`Welcome`). |
+| GET | `/up` | — | Health-check Laravel. |
+
+## Окружение (ключевые переменные)
+
+| Переменная | Назначение | В Docker |
+|---|---|---|
+| `DB_CONNECTION` | Драйвер БД | `pgsql` |
+| `DB_HOST` / `DB_PORT` | Хост/порт Postgres | `pgsql` / `5432` |
+| `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | Доступ к БД | `otklick` / `otklick` / `secret` |
+| `REDIS_HOST` / `REDIS_PORT` | Redis | `redis` / `6379` |
+| `CACHE_STORE` / `QUEUE_CONNECTION` / `SESSION_DRIVER` | Используют Redis | `redis` |
+| `OCTANE_SERVER` | App-сервер Octane | `roadrunner` |
+| `RUN_MIGRATIONS` | Гонять ли миграции при старте контейнера | `true` (app), `false` (horizon) |
+
+Тесты используют отдельный профиль из `phpunit.xml` (sqlite `:memory:`).
+
+## Запуск
+
+Полная пошаговая инструкция — **`docs/КАК_ЗАПУСТИТЬ_И_ТЕСТИРОВАТЬ.md`**. Кратко:
+
+```bash
+# Весь стек в Docker (приложение на http://localhost:8000)
+docker compose up -d --build
+
+# Локально (быстрые тесты на sqlite)
+composer test
+```
+
+## Гейты качества (CI)
+
+```bash
+./vendor/bin/pint --test                               # стиль кода
+php -d memory_limit=512M ./vendor/bin/phpstan analyse  # статанализ (level 6, Larastan)
+composer test                                          # Unit + Integration + Feature
+```
+
+Все три обязаны быть зелёными перед коммитом.

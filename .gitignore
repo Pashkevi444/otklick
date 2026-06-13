@@ -8,6 +8,7 @@
 /.codex
 /.cursor/
 /.idea
+/docs
 /.nova
 /.phpunit.cache
 /.vscode
@@ -25,3 +26,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+rr
+.rr.yaml
+
+/CLAUDE.md
