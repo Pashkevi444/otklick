@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
+import ThemeToggle from '@/Components/ThemeToggle.vue';
 
 interface Site {
     heroTitle: string;
@@ -35,7 +36,7 @@ const features = [
 ];
 
 const steps = [
-    { n: '01', title: 'Подключите канал', text: 'Telegram или WhatsApp за пару минут — по токену бота. Виджет на сайт — одной строкой.' },
+    { n: '01', title: 'Подключите канал', text: 'Telegram за пару минут — по токену бота. Виджет на сайт — одной строкой.' },
     { n: '02', title: 'Заполните базу знаний', text: 'Услуги, цены, частые вопросы, примеры работ — в удобном кабинете.' },
     { n: '03', title: 'Помощник работает за вас', text: 'Отвечает клиентам, записывает на услуги, а сложное передаёт администратору.' },
 ];
@@ -159,7 +160,7 @@ onBeforeUnmount(() => {
         />
     </Head>
 
-    <div class="page relative min-h-screen overflow-x-hidden text-slate-800">
+    <div class="page relative min-h-screen overflow-x-hidden text-slate-800 dark:text-slate-200">
         <!-- Анимированный фон + плавающие орбы -->
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
@@ -173,52 +174,55 @@ onBeforeUnmount(() => {
         <header class="sticky top-0 z-30">
             <div class="mx-auto mt-3 max-w-6xl px-4">
                 <div class="glass flex items-center justify-between rounded-2xl px-5 h-14">
-                    <span class="font-bold text-lg text-[#1F4E79]">Отклик</span>
-                    <nav class="hidden md:flex items-center gap-7 text-sm text-slate-600">
-                        <a href="#features" class="transition hover:text-[#1F4E79]">Возможности</a>
-                        <a href="#how" class="transition hover:text-[#1F4E79]">Как работает</a>
-                        <a href="#integrations" class="transition hover:text-[#1F4E79]">Интеграции</a>
-                        <a href="#pricing" class="transition hover:text-[#1F4E79]">Тарифы</a>
-                        <a href="#reliability" class="transition hover:text-[#1F4E79]">Надёжность</a>
-                        <a href="#contacts" class="transition hover:text-[#1F4E79]">Контакты</a>
+                    <span class="font-bold text-lg text-[#1F4E79] dark:text-white">Отклик</span>
+                    <nav class="hidden md:flex items-center gap-7 text-sm text-slate-600 dark:text-slate-300">
+                        <a href="#features" class="transition hover:text-[#1F4E79] dark:hover:text-white">Возможности</a>
+                        <a href="#how" class="transition hover:text-[#1F4E79] dark:hover:text-white">Как работает</a>
+                        <a href="#integrations" class="transition hover:text-[#1F4E79] dark:hover:text-white">Интеграции</a>
+                        <a href="#pricing" class="transition hover:text-[#1F4E79] dark:hover:text-white">Тарифы</a>
+                        <a href="#reliability" class="transition hover:text-[#1F4E79] dark:hover:text-white">Надёжность</a>
+                        <a href="#contacts" class="transition hover:text-[#1F4E79] dark:hover:text-white">Контакты</a>
                     </nav>
-                    <a :href="loginUrl" class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:bg-[#255f96] hover:-translate-y-0.5">
-                        Войти
-                    </a>
+                    <div class="flex items-center gap-2">
+                        <ThemeToggle />
+                        <a :href="loginUrl" class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:bg-[#255f96] hover:-translate-y-0.5">
+                            Войти
+                        </a>
+                    </div>
                 </div>
             </div>
         </header>
 
         <!-- Hero -->
         <section class="relative mx-auto max-w-6xl px-6 pt-16 pb-14 text-center sm:pt-24">
-            <div data-reveal class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-[#2E74B5]">
+            <div data-reveal class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-[#2E74B5] dark:text-sky-300">
                 <span class="relative flex h-2 w-2">
                     <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2E74B5] opacity-60"></span>
                     <span class="relative inline-flex h-2 w-2 rounded-full bg-[#2E74B5]"></span>
                 </span>
                 AI-администратор для локального бизнеса
             </div>
-            <h1 data-reveal style="transition-delay: 80ms" class="mx-auto mt-6 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1F4E79] sm:text-5xl lg:text-6xl">
+            <h1 data-reveal style="transition-delay: 80ms" class="mx-auto mt-6 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1F4E79] dark:text-sky-200 sm:text-5xl lg:text-6xl">
                 {{ site.heroTitle }}
             </h1>
-            <p data-reveal style="transition-delay: 160ms" class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">
+            <p data-reveal style="transition-delay: 160ms" class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">
                 {{ site.heroSubtitle }}
             </p>
             <div data-reveal style="transition-delay: 240ms" class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <a href="#contacts" class="btn-shine w-full rounded-2xl bg-[#2E74B5] px-8 py-3.5 font-semibold text-white shadow-xl shadow-[#2E74B5]/30 transition hover:-translate-y-0.5 hover:bg-[#255f96] sm:w-auto">
                     Получить доступ
                 </a>
-                <a href="#how" class="glass w-full rounded-2xl px-8 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 sm:w-auto">
+                <a href="#how" class="glass w-full rounded-2xl px-8 py-3.5 font-semibold text-[#1F4E79] dark:text-sky-200 transition hover:-translate-y-0.5 sm:w-auto">
                     Как это работает
                 </a>
             </div>
-            <p data-reveal style="transition-delay: 300ms" class="mt-4 text-sm text-slate-400">{{ site.accessNote }}</p>
+            <p data-reveal style="transition-delay: 300ms" class="mt-4 text-sm text-slate-400 dark:text-slate-500">{{ site.accessNote }}</p>
 
             <div data-reveal style="transition-delay: 360ms" class="mt-10 flex flex-wrap items-center justify-center gap-3">
-                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600">⚡ Ответ за секунды</span>
-                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600">🕐 Круглосуточно</span>
-                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600">🇷🇺 Серверы в РФ</span>
-                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600">🔒 152-ФЗ</span>
+                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-300">⚡ Ответ за секунды</span>
+                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-300">🕐 Круглосуточно</span>
+                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-300">🇷🇺 Серверы в РФ</span>
+                <span class="glass rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-300">🔒 152-ФЗ</span>
             </div>
         </section>
 
@@ -226,10 +230,10 @@ onBeforeUnmount(() => {
         <section class="mx-auto max-w-6xl px-6 py-8">
             <div ref="metricsEl" data-reveal class="glass grid grid-cols-2 gap-6 rounded-3xl px-6 py-10 lg:grid-cols-4">
                 <div v-for="m in metrics" :key="m.label" class="text-center">
-                    <div class="bg-gradient-to-r from-[#1F4E79] to-[#2E74B5] bg-clip-text text-4xl font-extrabold text-transparent sm:text-5xl">
+                    <div class="bg-gradient-to-r from-[#1F4E79] to-[#2E74B5] dark:from-sky-300 dark:to-blue-300 bg-clip-text text-4xl font-extrabold text-transparent sm:text-5xl">
                         {{ m.prefix }}{{ m.current }}{{ m.suffix }}
                     </div>
-                    <div class="mt-2 text-sm text-slate-500">{{ m.label }}</div>
+                    <div class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ m.label }}</div>
                 </div>
             </div>
         </section>
@@ -237,8 +241,8 @@ onBeforeUnmount(() => {
         <!-- Возможности -->
         <section id="features" class="mx-auto max-w-6xl px-6 py-16">
             <div data-reveal class="mb-12 text-center">
-                <h2 class="text-3xl font-bold text-[#1F4E79]">Что умеет «Отклик»</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-slate-500">Виртуальный администратор, который встречает каждого клиента и доводит его до записи.</p>
+                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Что умеет «Отклик»</h2>
+                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Виртуальный администратор, который встречает каждого клиента и доводит его до записи.</p>
             </div>
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <div
@@ -248,18 +252,18 @@ onBeforeUnmount(() => {
                     :style="{ transitionDelay: i * 70 + 'ms' }"
                     class="card-hover glass group rounded-3xl p-6"
                 >
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70 text-2xl shadow-sm transition group-hover:scale-110">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70 dark:bg-white/10 text-2xl shadow-sm transition group-hover:scale-110">
                         {{ f.icon }}
                     </div>
-                    <div class="mt-4 font-semibold text-[#1F4E79]">{{ f.title }}</div>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-600">{{ f.text }}</p>
+                    <div class="mt-4 font-semibold text-[#1F4E79] dark:text-sky-200">{{ f.title }}</div>
+                    <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ f.text }}</p>
                 </div>
             </div>
         </section>
 
         <!-- Как работает -->
         <section id="how" class="mx-auto max-w-6xl px-6 py-16">
-            <h2 data-reveal class="mb-12 text-center text-3xl font-bold text-[#1F4E79]">Запуск за один вечер</h2>
+            <h2 data-reveal class="mb-12 text-center text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Запуск за один вечер</h2>
             <div class="grid gap-6 sm:grid-cols-3">
                 <div
                     v-for="(s, i) in steps"
@@ -268,9 +272,9 @@ onBeforeUnmount(() => {
                     :style="{ transitionDelay: i * 90 + 'ms' }"
                     class="card-hover glass rounded-3xl p-7"
                 >
-                    <div class="text-4xl font-extrabold text-[#2E74B5]/30">{{ s.n }}</div>
-                    <div class="mt-3 font-semibold text-slate-800">{{ s.title }}</div>
-                    <p class="mt-1.5 text-sm leading-relaxed text-slate-600">{{ s.text }}</p>
+                    <div class="text-4xl font-extrabold text-[#2E74B5]/30 dark:text-sky-300/30">{{ s.n }}</div>
+                    <div class="mt-3 font-semibold text-slate-800 dark:text-slate-100">{{ s.title }}</div>
+                    <p class="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ s.text }}</p>
                 </div>
             </div>
         </section>
@@ -278,28 +282,28 @@ onBeforeUnmount(() => {
         <!-- Интеграции -->
         <section id="integrations" class="mx-auto max-w-6xl px-6 py-16">
             <div data-reveal class="mb-10 text-center">
-                <h2 class="text-3xl font-bold text-[#1F4E79]">Работает там, где ваши клиенты</h2>
-                <p class="mt-3 text-slate-500">Каналы общения и CRM подключаются в пару кликов.</p>
+                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Работает там, где ваши клиенты</h2>
+                <p class="mt-3 text-slate-500 dark:text-slate-400">Каналы общения и CRM подключаются в пару кликов.</p>
             </div>
             <div data-reveal class="flex flex-wrap justify-center gap-3">
-                <span v-for="i in integrationsNow" :key="i" class="glass rounded-full px-5 py-2.5 text-sm font-medium text-[#1F4E79]">
+                <span v-for="i in integrationsNow" :key="i" class="glass rounded-full px-5 py-2.5 text-sm font-medium text-[#1F4E79] dark:text-sky-200">
                     {{ i }}
                 </span>
             </div>
             <div data-reveal style="transition-delay: 120ms" class="mt-7 text-center">
-                <div class="mb-3 text-xs uppercase tracking-wide text-slate-400">Скоро</div>
+                <div class="mb-3 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Скоро</div>
                 <div class="flex flex-wrap justify-center gap-3">
-                    <span v-for="i in integrationsSoon" :key="i" class="rounded-full border border-white/60 bg-white/40 px-5 py-2.5 text-sm text-slate-400 backdrop-blur">
+                    <span v-for="i in integrationsSoon" :key="i" class="rounded-full border border-white/60 bg-white/40 px-5 py-2.5 text-sm text-slate-400 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-slate-500">
                         {{ i }}
                     </span>
                 </div>
             </div>
             <div data-reveal style="transition-delay: 200ms" class="mx-auto mt-8 max-w-2xl">
                 <div class="glass rounded-2xl p-6 text-center">
-                    <div class="font-semibold text-[#1F4E79]">Своя CRM? Подключим под вас</div>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-600">
+                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">Своя CRM? Подключим под вас</div>
+                    <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                         Интеграцию с вашей CRM настроим по договорённости. На данный момент поддерживается
-                        <span class="font-medium text-[#1F4E79]">YClients</span> — остальные подключаем индивидуально.
+                        <span class="font-medium text-[#1F4E79] dark:text-sky-200">YClients</span> — остальные подключаем индивидуально.
                     </p>
                 </div>
             </div>
@@ -308,8 +312,8 @@ onBeforeUnmount(() => {
         <!-- Надёжность -->
         <section id="reliability" class="mx-auto max-w-6xl px-6 py-16">
             <div data-reveal class="mb-12 text-center">
-                <h2 class="text-3xl font-bold text-[#1F4E79]">Спокойно за данные и клиентов</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-slate-500">Всё размещено в России и построено вокруг защиты вашего бизнеса.</p>
+                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Спокойно за данные и клиентов</h2>
+                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Всё размещено в России и построено вокруг защиты вашего бизнеса.</p>
             </div>
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <div
@@ -320,8 +324,8 @@ onBeforeUnmount(() => {
                     class="card-hover glass rounded-3xl p-6"
                 >
                     <div class="text-2xl">{{ r.icon }}</div>
-                    <div class="mt-3 font-semibold text-[#1F4E79]">{{ r.title }}</div>
-                    <p class="mt-1.5 text-sm leading-relaxed text-slate-600">{{ r.text }}</p>
+                    <div class="mt-3 font-semibold text-[#1F4E79] dark:text-sky-200">{{ r.title }}</div>
+                    <p class="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ r.text }}</p>
                 </div>
             </div>
         </section>
@@ -329,8 +333,8 @@ onBeforeUnmount(() => {
         <!-- Тарифы -->
         <section id="pricing" class="mx-auto max-w-6xl px-6 py-16">
             <div data-reveal class="mb-12 text-center">
-                <h2 class="text-3xl font-bold text-[#1F4E79]">Тарифы</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-slate-500">Пробный период включён в любой тариф — оцените результат до оплаты.</p>
+                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Тарифы</h2>
+                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Пробный период включён в любой тариф — оцените результат до оплаты.</p>
             </div>
             <div class="grid items-start gap-5 lg:grid-cols-3">
                 <div
@@ -344,25 +348,25 @@ onBeforeUnmount(() => {
                     <div v-if="p.highlight" class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2E74B5] px-3 py-1 text-xs font-medium text-white shadow">
                         Популярный
                     </div>
-                    <div class="text-lg font-bold text-[#1F4E79]">{{ p.name }}</div>
+                    <div class="text-lg font-bold text-[#1F4E79] dark:text-sky-200">{{ p.name }}</div>
                     <div class="mt-3 flex flex-wrap items-end gap-x-1.5">
                         <span
-                            class="font-extrabold leading-tight text-[#1F4E79]"
+                            class="font-extrabold leading-tight text-[#1F4E79] dark:text-sky-200"
                             :class="/[0-9]/.test(p.price) ? 'text-3xl' : 'text-xl'"
                         >{{ p.price }}</span>
-                        <span class="pb-1 text-sm text-slate-400">{{ p.period }}</span>
+                        <span class="pb-1 text-sm text-slate-400 dark:text-slate-500">{{ p.period }}</span>
                     </div>
-                    <p class="mt-2 text-sm text-slate-500">{{ p.note }}</p>
+                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ p.note }}</p>
                     <ul class="mt-5 space-y-2.5">
-                        <li v-for="feat in p.features" :key="feat" class="flex items-start gap-2 text-sm text-slate-600">
-                            <span class="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full bg-[#2E74B5]/10 text-[10px] text-[#2E74B5]">✓</span>
+                        <li v-for="feat in p.features" :key="feat" class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                            <span class="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full bg-[#2E74B5]/10 text-[10px] text-[#2E74B5] dark:text-sky-300">✓</span>
                             {{ feat }}
                         </li>
                     </ul>
                     <a
                         href="#contacts"
                         class="mt-7 block rounded-xl px-5 py-3 text-center font-semibold transition hover:-translate-y-0.5"
-                        :class="p.highlight ? 'bg-[#2E74B5] text-white shadow-lg shadow-[#2E74B5]/25 hover:bg-[#255f96]' : 'border border-[#2E74B5]/30 bg-white/60 text-[#1F4E79]'"
+                        :class="p.highlight ? 'bg-[#2E74B5] text-white shadow-lg shadow-[#2E74B5]/25 hover:bg-[#255f96]' : 'border border-[#2E74B5]/30 bg-white/60 text-[#1F4E79] dark:bg-white/10 dark:text-sky-200'"
                     >
                         {{ p.cta }}
                     </a>
@@ -397,15 +401,15 @@ onBeforeUnmount(() => {
             <div class="glass rounded-3xl px-6 py-8">
                 <div class="flex flex-col justify-between gap-4 sm:flex-row">
                     <div>
-                        <div class="font-bold text-[#1F4E79]">Отклик</div>
-                        <p class="mt-1 max-w-sm text-sm text-slate-400">AI-администратор для локального бизнеса: ответы клиентам и запись в CRM круглосуточно.</p>
+                        <div class="font-bold text-[#1F4E79] dark:text-white">Отклик</div>
+                        <p class="mt-1 max-w-sm text-sm text-slate-400 dark:text-slate-500">AI-администратор для локального бизнеса: ответы клиентам и запись в CRM круглосуточно.</p>
                     </div>
                     <div class="flex items-start gap-6 text-sm">
-                        <Link href="/contacts" class="text-slate-500 transition hover:text-[#1F4E79]">Контакты</Link>
-                        <a :href="loginUrl" class="text-slate-500 transition hover:text-[#1F4E79]">Вход</a>
+                        <Link href="/contacts" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Контакты</Link>
+                        <a :href="loginUrl" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Вход</a>
                     </div>
                 </div>
-                <div class="mt-8 border-t border-white/50 pt-6 text-xs leading-relaxed text-slate-400">
+                <div class="mt-8 border-t border-white/50 pt-6 text-xs leading-relaxed text-slate-400 dark:border-white/10 dark:text-slate-500">
                     <span v-if="site.legalName">{{ site.legalName }}</span>
                     <span v-if="site.inn"> · ИНН {{ site.inn }}</span>
                     <span v-if="site.ogrnip"> · ОГРНИП {{ site.ogrnip }}</span>
@@ -426,6 +430,13 @@ onBeforeUnmount(() => {
     box-shadow: 0 8px 32px rgba(31, 78, 121, 0.12);
 }
 
+/* Тёмная тема: стекло на тёмном */
+html.dark .glass {
+    background: rgba(20, 30, 48, 0.55);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
 /* Анимированный градиентный фон */
 .bg-base {
     position: fixed;
@@ -434,6 +445,10 @@ onBeforeUnmount(() => {
     background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
     background-size: 200% 200%;
     animation: bgpan 22s ease infinite;
+}
+html.dark .bg-base {
+    background: linear-gradient(125deg, #0b1220 0%, #0e1828 45%, #0a1a26 100%);
+    background-size: 200% 200%;
 }
 
 .orbs {
@@ -450,6 +465,9 @@ onBeforeUnmount(() => {
     filter: blur(70px);
     opacity: 0.5;
     will-change: transform;
+}
+html.dark .orb {
+    opacity: 0.28;
 }
 .orb-1 {
     width: 420px;
@@ -506,6 +524,9 @@ onBeforeUnmount(() => {
 .card-hover:hover {
     transform: translateY(-6px);
     box-shadow: 0 20px 48px rgba(31, 78, 121, 0.18);
+}
+html.dark .card-hover:hover {
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
 }
 
 /* Блик на главной кнопке */
