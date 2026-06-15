@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+import Logo from '@/Components/Logo.vue';
 
 interface Site {
     heroTitle: string;
@@ -186,7 +187,7 @@ onBeforeUnmount(() => {
             <div class="mx-auto mt-3 max-w-6xl px-4">
                 <div class="glass rounded-2xl px-4 sm:px-5">
                     <div class="flex h-14 items-center justify-between">
-                        <span class="font-bold text-lg text-[#1F4E79] dark:text-white">Отклик</span>
+                        <Logo class="text-lg text-[#1F4E79] dark:text-white" />
                         <nav class="hidden md:flex items-center gap-7 text-sm text-slate-600 dark:text-slate-300">
                             <a v-for="l in navLinks" :key="l.href" :href="l.href" class="transition hover:text-[#1F4E79] dark:hover:text-white">{{ l.label }}</a>
                         </nav>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import Logo from '@/Components/Logo.vue';
+
 defineProps<{ title: string; subtitle?: string }>();
 </script>
 
@@ -13,8 +15,8 @@ defineProps<{ title: string; subtitle?: string }>();
 
         <div class="auth-enter w-full max-w-md">
             <div class="mb-8 text-center">
-                <div class="text-sm font-medium uppercase tracking-wide text-[#2E74B5] dark:text-sky-300">Отклик</div>
-                <h1 class="mt-1 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">{{ title }}</h1>
+                <Logo :size="30" class="justify-center text-2xl text-[#1F4E79] dark:text-white" />
+                <h1 class="mt-3 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">{{ title }}</h1>
                 <p v-if="subtitle" class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
             </div>
             <div class="ui-scope glass rounded-3xl p-8">

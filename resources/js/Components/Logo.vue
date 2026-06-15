@@ -1,0 +1,22 @@
+<script setup lang="ts">
+withDefaults(defineProps<{ size?: number }>(), { size: 24 });
+</script>
+
+<template>
+    <span class="inline-flex items-center gap-2 font-bold leading-none tracking-tight">
+        <svg :width="size" :height="size" viewBox="0 0 24 24" class="flex-none" aria-hidden="true">
+            <defs>
+                <linearGradient id="otkLogoGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#5aa0e0" />
+                    <stop offset="1" stop-color="#2E74B5" />
+                </linearGradient>
+            </defs>
+            <path
+                fill="url(#otkLogoGrad)"
+                d="M4.8 21.64A6.7 6.7 0 0 0 6 21.75a6.72 6.72 0 0 0 3.58-1.03c.77.18 1.58.28 2.42.28 5.32 0 9.75-3.97 9.75-9s-4.43-9-9.75-9-9.75 3.97-9.75 9c0 2.41 1.03 4.59 2.67 6.19.23.23.28.43.25.54a3.73 3.73 0 0 1-.81 1.69.75.75 0 0 0 .44 1.22Z"
+            />
+            <path fill="#fff" d="M12 7l1.2 2.8L16 11l-2.8 1.2L12 15l-1.2-2.8L8 11l2.8-1.2z" />
+        </svg>
+        <span>Отклик</span>
+    </span>
+</template>

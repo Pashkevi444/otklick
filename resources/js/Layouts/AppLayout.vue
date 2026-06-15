@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+import Logo from '@/Components/Logo.vue';
 
 defineProps<{ title?: string }>();
 
@@ -64,7 +65,7 @@ const logout = (): void => {
                 <div class="glass rounded-2xl px-4">
                     <div class="flex h-14 items-center justify-between gap-4">
                         <div class="flex min-w-0 items-center gap-5">
-                            <span class="font-bold text-[#1F4E79] dark:text-white">Отклик</span>
+                            <Logo class="text-[#1F4E79] dark:text-white" />
                             <nav class="hidden items-center gap-1 md:flex">
                                 <Link
                                     v-for="item in navItems"

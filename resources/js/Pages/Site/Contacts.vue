@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+import Logo from '@/Components/Logo.vue';
 
 interface Site {
     phone: string | null;
@@ -35,7 +36,7 @@ const tgUrl = computed(() => (props.site.telegram ? `https://t.me/${props.site.t
         <header class="sticky top-0 z-30">
             <div class="mx-auto mt-3 max-w-6xl px-4">
                 <div class="glass flex h-14 items-center justify-between rounded-2xl px-5">
-                    <Link href="/" class="text-lg font-bold text-[#1F4E79] dark:text-white">Отклик</Link>
+                    <Link href="/"><Logo class="text-lg text-[#1F4E79] dark:text-white" /></Link>
                     <div class="flex items-center gap-2">
                         <ThemeToggle />
                         <a :href="loginUrl" class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:-translate-y-0.5 hover:bg-[#255f96]">Войти</a>

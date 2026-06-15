@@ -87,7 +87,7 @@ class AppServiceProvider extends ServiceProvider
                 '@context' => 'https://schema.org',
                 '@type' => 'Organization',
                 'name' => 'Отклик',
-                'description' => 'AI-администратор для локального бизнеса: автоответы в Telegram и WhatsApp и запись клиентов.',
+                'description' => 'AI-администратор для локального бизнеса: автоответы в Telegram и на сайте, запись клиентов.',
                 'url' => config('app.url'),
                 'telephone' => $site->phone,
                 'email' => $site->email,
