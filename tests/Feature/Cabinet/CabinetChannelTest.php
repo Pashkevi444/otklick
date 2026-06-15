@@ -8,6 +8,7 @@ use App\Models\Channel;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -65,6 +66,23 @@ final class CabinetChannelTest extends TestCase
 
         $this->assertDatabaseCount('channels', 0);
         Http::assertNothingSent();
+    }
+
+    public function test_telegram_timeout_shows_friendly_error_not_500(): void
+    {
+        // api.telegram.org недоступен (таймаут) — не должно быть 500.
+        Http::fake(fn () => throw new ConnectionException('cURL error 28: Connection timed out'));
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->from('/cabinet/channels')
+            ->post('/cabinet/channels', ['bot_token' => '123456:ABCdef_token'])
+            ->assertRedirect('/cabinet/channels')
+            ->assertSessionHasErrors('bot_token');
+
+        // Канал не должен остаться полу-подключённым (транзакция откатилась).
+        $this->assertDatabaseCount('channels', 0);
     }
 
     public function test_owner_disconnects_own_channel(): void

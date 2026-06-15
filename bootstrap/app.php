@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AddLogContext;
 use App\Http\Middleware\BindTenantToRequest;
 use App\Http\Middleware\EnsurePlanFeature;
 use App\Http\Middleware\EnsureSuperAdmin;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn (Request $request): string => HomeRedirect::for($request->user()));
 
         $middleware->web(append: [
+            AddLogContext::class,
             HandleInertiaRequests::class,
             BindTenantToRequest::class,
         ]);

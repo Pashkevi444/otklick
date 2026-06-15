@@ -9,10 +9,13 @@ use App\Http\Requests\Cabinet\StoreChannelRequest;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\ChannelService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 /**
  * Каналы тенанта в кабинете. Данные автоматически скоупятся текущим тенантом
@@ -40,10 +43,35 @@ final class ChannelController extends Controller
                 (string) $request->string('bot_token'),
                 (string) config('services.telegram.webhook_base_url'),
             );
-        } catch (RequestException) {
+        } catch (RequestException $e) {
+            Log::warning('Telegram: вебхук не зарегистрирован (ответ API с ошибкой)', [
+                'tenant_id' => $request->user()?->tenant_id,
+                'status' => $e->response->status(),
+                'body' => $e->response->body(),
+            ]);
+
             return back()->withErrors([
-                'bot_token' => 'Не удалось зарегистрировать вебхук в Telegram. Нужен публичный HTTPS-адрес '.
-                    '(localhost Telegram не принимает) — проверьте TELEGRAM_WEBHOOK_BASE_URL и токен.',
+                'bot_token' => 'Telegram отклонил запрос. Проверьте токен бота и публичный HTTPS-адрес '.
+                    '(TELEGRAM_WEBHOOK_BASE_URL); localhost Telegram не принимает.',
+            ]);
+        } catch (ConnectionException $e) {
+            Log::warning('Telegram: не удалось связаться с api.telegram.org', [
+                'tenant_id' => $request->user()?->tenant_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors([
+                'bot_token' => 'Не удалось связаться с Telegram (таймаут сети). Попробуйте ещё раз через минуту — '.
+                    'возможна временная недоступность api.telegram.org.',
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Telegram: непредвиденная ошибка подключения канала', [
+                'tenant_id' => $request->user()?->tenant_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors([
+                'bot_token' => 'Не удалось подключить канал из-за внутренней ошибки. Мы записали детали в лог — попробуйте позже.',
             ]);
         }
 

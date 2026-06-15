@@ -41,7 +41,12 @@ final readonly class TelegramGateway implements MessengerGateway
      */
     private function call(?string $botToken, string $method, array $params): void
     {
+        // Таймауты + ретраи: api.telegram.org бывает временно недоступен
+        // (особенно с РФ), не валим операцию из-за разовой сетевой флуктуации.
         Http::asJson()
+            ->connectTimeout(10)
+            ->timeout(15)
+            ->retry(3, 400, throw: false)
             ->post("{$this->apiUrl}/bot{$botToken}/{$method}", $params)
             ->throw();
     }
