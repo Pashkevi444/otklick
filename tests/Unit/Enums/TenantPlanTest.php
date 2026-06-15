@@ -19,7 +19,7 @@ final class TenantPlanTest extends TestCase
     public function test_label_returns_russian_text(): void
     {
         $this->assertSame('Пробный', TenantPlan::Trial->label());
-        $this->assertSame('Стартовый', TenantPlan::Starter->label());
+        $this->assertSame('Стандартный', TenantPlan::Starter->label());
         $this->assertSame('Профи', TenantPlan::Pro->label());
     }
 

@@ -19,7 +19,7 @@ enum TenantPlan: string implements HasLabel
     {
         return match ($this) {
             self::Trial => 'Пробный',
-            self::Starter => 'Стартовый',
+            self::Starter => 'Стандартный',
             self::Pro => 'Профи',
         };
     }

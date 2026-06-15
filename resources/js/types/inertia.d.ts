@@ -7,7 +7,13 @@ export interface AuthUser {
     role: UserRole;
     roleLabel: string;
     tenantId: string | null;
-    tenant: { id: string; name: string } | null;
+    tenant: {
+        id: string;
+        name: string;
+        plan: string;
+        accessExpiresAt: string | null;
+        hasActiveAccess: boolean;
+    } | null;
 }
 
 declare module '@inertiajs/core' {

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\TenantPlan;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreTenantRequest;
+use App\Http\Requests\Admin\UpdateTenantRequest;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Repositories\Contracts\TenantRepositoryInterface;
@@ -16,7 +18,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Управление тенантами супер-админом. Таблица tenants — реестр, не скоупится.
+ * Управление тенантами супер-админом: создание, тариф, срок доступа, блокировка.
+ * Таблица tenants — реестр, не скоупится.
  */
 final class TenantController extends Controller
 {
@@ -30,12 +33,17 @@ final class TenantController extends Controller
     {
         return Inertia::render('Admin/Tenants/Index', [
             'tenants' => $this->tenants->all()->map($this->present(...))->all(),
+            'plans' => $this->plans(),
         ]);
     }
 
     public function store(StoreTenantRequest $request): RedirectResponse
     {
-        $tenant = $this->tenantService->register((string) $request->string('name'));
+        $tenant = $this->tenantService->register(
+            (string) $request->string('name'),
+            TenantPlan::from((string) $request->string('plan')),
+            $request->input('access_expires_at'),
+        );
 
         $this->users->createOwner(
             $tenant,
@@ -51,12 +59,11 @@ final class TenantController extends Controller
 
     public function show(string $tenant): Response
     {
-        $model = $this->tenants->find($tenant);
-
-        abort_if($model === null, 404);
+        $model = $this->findOrFail($tenant);
 
         return Inertia::render('Admin/Tenants/Show', [
             'tenant' => $this->present($model),
+            'plans' => $this->plans(),
             'users' => $this->users->listForTenant($model)->map(fn (User $user): array => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -64,6 +71,51 @@ final class TenantController extends Controller
                 'role' => $user->role->label(),
             ])->all(),
         ]);
+    }
+
+    public function update(UpdateTenantRequest $request, string $tenant): RedirectResponse
+    {
+        $this->tenantService->updateSubscription(
+            $this->findOrFail($tenant),
+            TenantPlan::from((string) $request->string('plan')),
+            $request->input('access_expires_at'),
+        );
+
+        return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Подписка обновлена.');
+    }
+
+    public function block(string $tenant): RedirectResponse
+    {
+        $this->tenantService->block($this->findOrFail($tenant));
+
+        return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Бизнес заблокирован.');
+    }
+
+    public function unblock(string $tenant): RedirectResponse
+    {
+        $this->tenantService->unblock($this->findOrFail($tenant));
+
+        return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Бизнес разблокирован.');
+    }
+
+    private function findOrFail(string $id): Tenant
+    {
+        $tenant = $this->tenants->find($id);
+
+        abort_if($tenant === null, 404);
+
+        return $tenant;
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    private function plans(): array
+    {
+        return array_map(
+            fn (TenantPlan $p): array => ['value' => $p->value, 'label' => $p->label()],
+            TenantPlan::cases(),
+        );
     }
 
     /**
@@ -75,7 +127,11 @@ final class TenantController extends Controller
             'id' => $tenant->id,
             'name' => $tenant->name,
             'slug' => $tenant->slug,
-            'plan' => $tenant->plan->label(),
+            'plan' => $tenant->plan->value,
+            'plan_label' => $tenant->plan->label(),
+            'access_expires_at' => $tenant->access_expires_at?->toDateString(),
+            'is_blocked' => $tenant->is_blocked,
+            'has_active_access' => $tenant->hasActiveAccess(),
             'created_at' => $tenant->created_at?->toDateString(),
         ];
     }

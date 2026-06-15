@@ -50,6 +50,9 @@ class HandleInertiaRequests extends Middleware
                     'tenant' => $user->tenant_id === null ? null : [
                         'id' => $user->tenant->id,
                         'name' => $user->tenant->name,
+                        'plan' => $user->tenant->plan->label(),
+                        'accessExpiresAt' => $user->tenant->access_expires_at?->toDateString(),
+                        'hasActiveAccess' => $user->tenant->hasActiveAccess(),
                     ],
                 ],
             ],

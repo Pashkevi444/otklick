@@ -23,6 +23,8 @@ final class AdminTenantManagementTest extends TestCase
     {
         $response = $this->actingAs($this->superAdmin())->post('/admin/tenants', [
             'name' => 'Барбершоп Бруно',
+            'plan' => 'starter',
+            'access_expires_at' => '2030-01-01',
             'owner_name' => 'Иван',
             'owner_email' => 'ivan@biz.ru',
             'owner_password' => 'secret-pass',
@@ -31,11 +33,38 @@ final class AdminTenantManagementTest extends TestCase
         $tenant = Tenant::where('name', 'Барбершоп Бруно')->firstOrFail();
 
         $response->assertRedirect(route('admin.tenants.show', $tenant->id));
+        $this->assertSame('starter', $tenant->plan->value);
         $this->assertDatabaseHas('users', [
             'email' => 'ivan@biz.ru',
             'role' => 'owner',
             'tenant_id' => $tenant->id,
         ]);
+    }
+
+    public function test_super_admin_updates_subscription(): void
+    {
+        $tenant = Tenant::factory()->create(['plan' => 'trial']);
+
+        $this->actingAs($this->superAdmin())->put("/admin/tenants/{$tenant->id}", [
+            'plan' => 'pro',
+            'access_expires_at' => '2030-06-01',
+        ])->assertRedirect(route('admin.tenants.show', $tenant->id));
+
+        $tenant->refresh();
+        $this->assertSame('pro', $tenant->plan->value);
+        $this->assertSame('2030-06-01', $tenant->access_expires_at?->toDateString());
+    }
+
+    public function test_super_admin_blocks_and_unblocks_tenant(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $admin = $this->superAdmin();
+
+        $this->actingAs($admin)->post("/admin/tenants/{$tenant->id}/block");
+        $this->assertTrue($tenant->refresh()->is_blocked);
+
+        $this->actingAs($admin)->post("/admin/tenants/{$tenant->id}/unblock");
+        $this->assertFalse($tenant->refresh()->is_blocked);
     }
 
     public function test_validation_errors_on_empty_payload(): void

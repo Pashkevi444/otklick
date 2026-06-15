@@ -45,6 +45,11 @@ final class ProcessTelegramUpdate implements ShouldQueue
                 return;
             }
 
+            // Бизнес заблокирован или истёк оплаченный доступ — бот не отвечает.
+            if ($channel->tenant === null || ! $channel->tenant->hasActiveAccess()) {
+                return;
+            }
+
             $incoming = $this->parse();
 
             if ($incoming === null) {

@@ -62,7 +62,8 @@ const logout = (): void => {
                     <Link href="/account/password" class="text-right hover:opacity-80">
                         <div class="font-medium text-slate-700">{{ user?.name }}</div>
                         <div class="text-slate-400 text-xs">
-                            {{ user?.tenant?.name ?? user?.roleLabel }}
+                            <template v-if="user?.tenant">{{ user.tenant.name }} · {{ user.tenant.plan }}</template>
+                            <template v-else>{{ user?.roleLabel }}</template>
                         </div>
                     </Link>
                     <button

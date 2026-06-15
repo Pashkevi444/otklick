@@ -27,12 +27,13 @@ final readonly class TenantService
      *
      * @param  array<string, mixed>  $settings
      */
-    public function register(string $name, ?TenantPlan $plan = null, array $settings = []): Tenant
+    public function register(string $name, ?TenantPlan $plan = null, ?string $accessExpiresAt = null, array $settings = []): Tenant
     {
         $data = new NewTenantData(
             name: $name,
             slug: $this->uniqueSlug($name),
             plan: $plan ?? TenantPlan::default(),
+            accessExpiresAt: $accessExpiresAt,
             settings: $settings,
         );
 
@@ -41,6 +42,27 @@ final readonly class TenantService
         TenantRegistered::dispatch($tenant);
 
         return $tenant;
+    }
+
+    /**
+     * Тариф и срок оплаченного доступа (после даты кабинет блокируется).
+     */
+    public function updateSubscription(Tenant $tenant, TenantPlan $plan, ?string $accessExpiresAt): Tenant
+    {
+        return $this->tenants->update($tenant, [
+            'plan' => $plan,
+            'access_expires_at' => $accessExpiresAt,
+        ]);
+    }
+
+    public function block(Tenant $tenant): Tenant
+    {
+        return $this->tenants->update($tenant, ['is_blocked' => true]);
+    }
+
+    public function unblock(Tenant $tenant): Tenant
+    {
+        return $this->tenants->update($tenant, ['is_blocked' => false]);
     }
 
     /**

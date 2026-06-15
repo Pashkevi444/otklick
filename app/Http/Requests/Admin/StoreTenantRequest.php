@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\TenantPlan;
 use App\Http\Requests\AbstractFormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -19,6 +21,8 @@ final class StoreTenantRequest extends AbstractFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'plan' => ['required', Rule::enum(TenantPlan::class)],
+            'access_expires_at' => ['nullable', 'date'],
             'owner_name' => ['required', 'string', 'max:255'],
             'owner_email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'owner_password' => ['required', 'string', Password::min(8)],

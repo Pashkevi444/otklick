@@ -21,6 +21,11 @@ final class EnsureTenantUser
 
         abort_if($user === null || $user->tenant_id === null, Response::HTTP_FORBIDDEN);
 
+        // Доступ к кабинету приостановлен (блокировка или истёкший срок).
+        if ($user->tenant !== null && ! $user->tenant->hasActiveAccess()) {
+            return redirect()->route('suspended');
+        }
+
         return $next($request);
     }
 }

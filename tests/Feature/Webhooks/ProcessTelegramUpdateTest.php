@@ -94,6 +94,18 @@ final class ProcessTelegramUpdateTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_blocked_tenant_bot_does_not_respond(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create(['is_blocked' => true]);
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->process($tenant, $channel, $this->update());
+
+        $this->assertDatabaseCount('messages', 0);
+        Http::assertNothingSent();
+    }
+
     public function test_non_text_update_is_ignored(): void
     {
         Http::fake();

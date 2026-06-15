@@ -25,6 +25,7 @@ final class EloquentTenantRepository extends EloquentRepository implements Tenan
             'name' => $data->name,
             'slug' => $data->slug,
             'plan' => $data->plan,
+            'access_expires_at' => $data->accessExpiresAt,
             'settings' => $data->settings,
         ]);
     }

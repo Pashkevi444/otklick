@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * Клиент-бизнес (тенант). Корневая сущность изоляции данных.
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property string $slug
  * @property TenantPlan $plan
+ * @property Carbon|null $access_expires_at
+ * @property bool $is_blocked
  * @property array<string, mixed> $settings
  */
 class Tenant extends Model
@@ -31,6 +34,8 @@ class Tenant extends Model
         'name',
         'slug',
         'plan',
+        'access_expires_at',
+        'is_blocked',
         'settings',
     ];
 
@@ -38,8 +43,22 @@ class Tenant extends Model
     {
         return [
             'plan' => TenantPlan::class,
+            'access_expires_at' => 'datetime',
+            'is_blocked' => 'boolean',
             'settings' => 'array',
         ];
+    }
+
+    /**
+     * Кабинет доступен, пока бизнес не заблокирован и срок доступа не истёк.
+     */
+    public function hasActiveAccess(): bool
+    {
+        if ($this->is_blocked) {
+            return false;
+        }
+
+        return $this->access_expires_at === null || $this->access_expires_at->isFuture();
     }
 
     /**

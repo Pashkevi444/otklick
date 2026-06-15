@@ -11,6 +11,7 @@ use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\DashboardController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
+use App\Http\Controllers\Cabinet\SuspendedController;
 use App\Http\Controllers\Site\HomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,9 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
         Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
         Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
+        Route::put('/tenants/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
+        Route::post('/tenants/{tenant}/block', [TenantController::class, 'block'])->name('tenants.block');
+        Route::post('/tenants/{tenant}/unblock', [TenantController::class, 'unblock'])->name('tenants.unblock');
 
         Route::get('/site', [SiteController::class, 'edit'])->name('site.edit');
         Route::put('/site', [SiteController::class, 'update'])->name('site.update');
@@ -66,10 +70,12 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
     });
 
-    // Аккаунт (любой авторизованный пользователь)
+    // Аккаунт + сервисные страницы (любой авторизованный, без проверки тарифа)
     Route::middleware('auth')->group(function (): void {
         Route::get('/account/password', [PasswordController::class, 'edit'])->name('account.password.edit');
         Route::put('/account/password', [PasswordController::class, 'update'])->name('account.password.update');
+
+        Route::get('/suspended', SuspendedController::class)->name('suspended');
     });
 
     require __DIR__.'/auth.php';
