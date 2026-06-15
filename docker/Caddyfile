@@ -1,0 +1,11 @@
+# Публичный сайт (маркетинг)
+otcl1ck.ru, www.otcl1ck.ru {
+	encode zstd gzip
+	reverse_proxy app:8000
+}
+
+# Приложение: бизнес-кабинет, супер-админка, вход, вебхуки Telegram
+business.otcl1ck.ru {
+	encode zstd gzip
+	reverse_proxy app:8000
+}

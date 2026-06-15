@@ -1,0 +1,83 @@
+services:
+  app:
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "true"
+    volumes:
+      - storage_public:/var/www/html/storage/app/public
+    depends_on:
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  horizon:
+    build:
+      context: .
+      target: app
+    command: ["php", "artisan", "horizon"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - storage_public:/var/www/html/storage/app/public
+    depends_on:
+      app:
+        condition: service_started
+      pgsql:
+        condition: service_healthy
+
+  pgsql:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Обратный прокси с автоматическим Let's Encrypt для обоих доменов.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:
+  storage_public:
+  caddy_data:
+  caddy_config:
