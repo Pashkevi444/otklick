@@ -7,6 +7,10 @@
 
         <title inertia>{{ config('app.name', 'Отклик') }}</title>
 
+        @isset($siteJsonLd)
+            <script type="application/ld+json">{!! $siteJsonLd !!}</script>
+        @endisset
+
         @vite(['resources/css/app.css', 'resources/js/app.ts'])
         @inertiaHead
     </head>

@@ -15,7 +15,10 @@ interface NavItem {
 
 const navItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'super_admin') {
-        return [{ label: 'Тенанты', href: '/admin/tenants' }];
+        return [
+            { label: 'Бизнесы', href: '/admin/tenants' },
+            { label: 'Сайт', href: '/admin/site' },
+        ];
     }
 
     return [

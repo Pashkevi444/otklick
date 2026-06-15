@@ -9,6 +9,8 @@ use App\Crm\Yclients\YclientsGateway;
 use App\Llm\Contracts\LlmClient;
 use App\Llm\FakeLlmClient;
 use App\Llm\YandexGptClient;
+use App\Services\SiteSettingsService;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
 
@@ -77,6 +79,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // SEO: Organization JSON-LD в корневом шаблоне (только полные загрузки страниц).
+        View::composer('app', function ($view): void {
+            $site = $this->app->make(SiteSettingsService::class)->current();
+
+            $view->with('siteJsonLd', (string) json_encode([
+                '@context' => 'https://schema.org',
+                '@type' => 'Organization',
+                'name' => 'Отклик',
+                'description' => 'AI-администратор для локального бизнеса: автоответы в Telegram и WhatsApp и запись клиентов.',
+                'url' => config('app.url'),
+                'telephone' => $site->phone,
+                'email' => $site->email,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        });
     }
 }

@@ -4,53 +4,73 @@ declare(strict_types=1);
 
 use App\Enums\CrmProvider;
 use App\Http\Controllers\Account\PasswordController;
+use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\DashboardController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
-use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\Site\HomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', WelcomeController::class)->name('welcome');
+/*
+ * Разведение по доменам: публичный сайт — на маркетинговом домене, приложение
+ * (кабинет + супер-админка + вход) — на бизнес-поддомене. Если домены не заданы
+ * (локально) — всё регистрируется на одном хосте, пути не пересекаются.
+ */
+$onDomain = function (?string $domain, Closure $routes): void {
+    $domain ? Route::domain($domain)->group($routes) : $routes();
+};
 
-// Супер-админка
-Route::middleware(['auth', 'super-admin'])->prefix('admin')->name('admin.')->group(function (): void {
-    Route::get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
-    Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
-    Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
+// Публичный сайт (маркетинг).
+$onDomain(config('app.marketing_domain'), function (): void {
+    Route::get('/', [HomeController::class, 'home'])->name('home');
+    Route::get('/contacts', [HomeController::class, 'contacts'])->name('site.contacts');
 });
 
-// Кабинет тенанта
-Route::middleware(['auth', 'tenant'])->prefix('cabinet')->name('cabinet.')->group(function (): void {
-    Route::get('/', DashboardController::class)->name('dashboard');
+// Приложение: бизнес-поддомен (business.<домен>).
+$onDomain(config('app.business_domain'), function (): void {
+    // Супер-админка
+    Route::middleware(['auth', 'super-admin'])->prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
+        Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
+        Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
 
-    Route::get('/channels', [ChannelController::class, 'index'])->name('channels.index');
-    Route::post('/channels', [ChannelController::class, 'store'])->name('channels.store');
-    Route::delete('/channels/{channel}', [ChannelController::class, 'destroy'])->name('channels.destroy');
+        Route::get('/site', [SiteController::class, 'edit'])->name('site.edit');
+        Route::put('/site', [SiteController::class, 'update'])->name('site.update');
+    });
 
-    Route::get('/profile', [BusinessProfileController::class, 'edit'])->name('profile.edit');
-    Route::put('/profile', [BusinessProfileController::class, 'update'])->name('profile.update');
+    // Кабинет тенанта
+    Route::middleware(['auth', 'tenant'])->prefix('cabinet')->name('cabinet.')->group(function (): void {
+        Route::get('/', DashboardController::class)->name('dashboard');
 
-    Route::get('/knowledge', [KnowledgeEntryController::class, 'index'])->name('knowledge.index');
-    Route::post('/knowledge', [KnowledgeEntryController::class, 'store'])->name('knowledge.store');
-    Route::get('/knowledge/{entry}/edit', [KnowledgeEntryController::class, 'edit'])->name('knowledge.edit');
-    Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
-    Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
+        Route::get('/channels', [ChannelController::class, 'index'])->name('channels.index');
+        Route::post('/channels', [ChannelController::class, 'store'])->name('channels.store');
+        Route::delete('/channels/{channel}', [ChannelController::class, 'destroy'])->name('channels.destroy');
 
-    Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
-    Route::post('/integrations/connect/{provider}', [IntegrationController::class, 'store'])
-        ->whereIn('provider', array_map(fn (CrmProvider $p): string => $p->value, CrmProvider::cases()))
-        ->name('integrations.store');
-    Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
-    Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
+        Route::get('/profile', [BusinessProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [BusinessProfileController::class, 'update'])->name('profile.update');
+
+        Route::get('/knowledge', [KnowledgeEntryController::class, 'index'])->name('knowledge.index');
+        Route::post('/knowledge', [KnowledgeEntryController::class, 'store'])->name('knowledge.store');
+        Route::get('/knowledge/{entry}/edit', [KnowledgeEntryController::class, 'edit'])->name('knowledge.edit');
+        Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
+        Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
+
+        Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+        Route::post('/integrations/connect/{provider}', [IntegrationController::class, 'store'])
+            ->whereIn('provider', array_map(fn (CrmProvider $p): string => $p->value, CrmProvider::cases()))
+            ->name('integrations.store');
+        Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
+        Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
+    });
+
+    // Аккаунт (любой авторизованный пользователь)
+    Route::middleware('auth')->group(function (): void {
+        Route::get('/account/password', [PasswordController::class, 'edit'])->name('account.password.edit');
+        Route::put('/account/password', [PasswordController::class, 'update'])->name('account.password.update');
+    });
+
+    require __DIR__.'/auth.php';
 });
-
-// Аккаунт (любой авторизованный пользователь)
-Route::middleware('auth')->group(function (): void {
-    Route::get('/account/password', [PasswordController::class, 'edit'])->name('account.password.edit');
-    Route::put('/account/password', [PasswordController::class, 'update'])->name('account.password.update');
-});
-
-require __DIR__.'/auth.php';

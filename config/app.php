@@ -54,6 +54,11 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Домены: публичный сайт и бизнес-поддомен (кабинет + супер-админка).
+    // Пусто (локально) → всё на одном хосте; в проде задаются для разведения.
+    'marketing_domain' => env('MARKETING_DOMAIN'),
+    'business_domain' => env('BUSINESS_DOMAIN'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
