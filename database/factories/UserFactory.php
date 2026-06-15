@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -29,6 +31,7 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'role' => UserRole::Member,
             'remember_token' => Str::random(10),
         ];
     }
@@ -40,6 +43,28 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Супер-админ — кросс-тенантный пользователь (tenant_id = null).
+     */
+    public function superAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::SuperAdmin,
+            'tenant_id' => null,
+        ]);
+    }
+
+    /**
+     * Владелец конкретного тенанта.
+     */
+    public function owner(Tenant $tenant): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Owner,
+            'tenant_id' => $tenant->id,
         ]);
     }
 }

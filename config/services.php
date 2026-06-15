@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'telegram' => [
+        // Базовый URL Bot API (переопределяется для прокси/тестов).
+        'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
+        // Публичный базовый URL приложения для setWebhook (HTTPS, доступен Telegram).
+        'webhook_base_url' => env('TELEGRAM_WEBHOOK_BASE_URL', env('APP_URL')),
+    ],
+
 ];

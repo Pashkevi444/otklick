@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DTO\BusinessProfile;
 use App\DTO\NewTenantData;
 use App\Enums\TenantPlan;
 use App\Events\TenantRegistered;
@@ -40,6 +41,21 @@ final readonly class TenantService
         TenantRegistered::dispatch($tenant);
 
         return $tenant;
+    }
+
+    /**
+     * Обновляет название бизнеса и профиль («контекст работы»). Профиль
+     * хранится в settings под ключом profile.
+     */
+    public function updateProfile(Tenant $tenant, string $name, BusinessProfile $profile): Tenant
+    {
+        $settings = $tenant->settings;
+        $settings['profile'] = $profile->toArray();
+
+        return $this->tenants->update($tenant, [
+            'name' => $name,
+            'settings' => $settings,
+        ]);
     }
 
     private function uniqueSlug(string $name): string

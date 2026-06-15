@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Cabinet;
+
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
+
+final class BusinessProfileTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_edit_renders_current_profile(): void
+    {
+        $tenant = Tenant::factory()->create([
+            'name' => 'Кафе',
+            'settings' => ['profile' => ['phone' => '+700', 'working_hours' => '9–18']],
+        ]);
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->get('/cabinet/profile')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Cabinet/Profile')
+                ->where('profile.name', 'Кафе')
+                ->where('profile.phone', '+700'));
+    }
+
+    public function test_update_persists_profile(): void
+    {
+        $tenant = Tenant::factory()->create(['name' => 'Кафе']);
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)->put('/cabinet/profile', [
+            'name' => 'Кафе у дома',
+            'phone' => '+712',
+            'address' => 'ул. Ленина 1',
+            'working_hours' => '10–22',
+            'escalation_note' => 'Звонить администратору',
+        ])->assertRedirect(route('cabinet.profile.edit'))->assertSessionHas('success');
+
+        $tenant->refresh();
+        $this->assertSame('Кафе у дома', $tenant->name);
+        $this->assertSame('+712', $tenant->settings['profile']['phone']);
+        $this->assertSame('Звонить администратору', $tenant->settings['profile']['escalation_note']);
+    }
+
+    public function test_name_is_required(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->put('/cabinet/profile', ['name' => ''])
+            ->assertSessionHasErrors('name');
+    }
+}

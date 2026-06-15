@@ -4,8 +4,18 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\ChannelRepositoryInterface;
+use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\Eloquent\EloquentChannelRepository;
+use App\Repositories\Eloquent\EloquentConversationRepository;
+use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
+use App\Repositories\Eloquent\EloquentMessageRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
+use App\Repositories\Eloquent\EloquentUserRepository;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -17,5 +27,10 @@ final class RepositoryServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     public array $bindings = [
         TenantRepositoryInterface::class => EloquentTenantRepository::class,
+        ChannelRepositoryInterface::class => EloquentChannelRepository::class,
+        ConversationRepositoryInterface::class => EloquentConversationRepository::class,
+        MessageRepositoryInterface::class => EloquentMessageRepository::class,
+        UserRepositoryInterface::class => EloquentUserRepository::class,
+        KnowledgeEntryRepositoryInterface::class => EloquentKnowledgeEntryRepository::class,
     ];
 }

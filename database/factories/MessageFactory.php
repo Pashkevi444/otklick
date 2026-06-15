@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Factories;
+
+use App\Enums\MessageDirection;
+use App\Enums\MessageStatus;
+use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<Message>
+ */
+class MessageFactory extends Factory
+{
+    protected $model = Message::class;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'tenant_id' => Tenant::factory(),
+            // Диалог того же тенанта — когерентно для RLS.
+            'conversation_id' => fn (array $attributes): string => Conversation::factory()
+                ->create(['tenant_id' => $attributes['tenant_id']])->id,
+            'direction' => MessageDirection::Inbound,
+            'external_message_id' => (string) fake()->unique()->numberBetween(1, 999999999),
+            'text' => fake()->sentence(),
+            'payload' => null,
+            'status' => MessageStatus::Received,
+        ];
+    }
+}
