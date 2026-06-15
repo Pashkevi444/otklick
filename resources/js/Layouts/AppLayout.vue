@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
+import ThemeToggle from '@/Components/ThemeToggle.vue';
 
 defineProps<{ title?: string }>();
 
@@ -48,54 +49,159 @@ const logout = (): void => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 text-slate-800">
-        <header class="bg-white border-b border-slate-200">
-            <div class="max-w-6xl mx-auto px-6 flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
-                    <span class="font-bold text-[#1F4E79]">Отклик</span>
-                    <nav class="flex items-center gap-1">
-                        <Link
-                            v-for="item in navItems"
-                            :key="item.href"
-                            :href="item.href"
-                            class="px-3 py-2 rounded-lg text-sm font-medium transition"
-                            :class="isActive(item.href)
-                                ? 'bg-slate-100 text-[#1F4E79]'
-                                : 'text-slate-600 hover:bg-slate-50'"
-                        >
-                            {{ item.label }}
+    <div class="relative min-h-screen overflow-x-hidden text-slate-800 dark:text-slate-200">
+        <div class="bg-base"></div>
+        <div class="orbs" aria-hidden="true">
+            <span class="orb orb-1"></span>
+            <span class="orb orb-2"></span>
+            <span class="orb orb-3"></span>
+        </div>
+
+        <!-- Шапка -->
+        <header class="sticky top-0 z-30">
+            <div class="mx-auto mt-3 max-w-6xl px-4">
+                <div class="glass flex h-14 items-center justify-between gap-4 rounded-2xl px-4">
+                    <div class="flex min-w-0 items-center gap-5">
+                        <span class="font-bold text-[#1F4E79] dark:text-white">Отклик</span>
+                        <nav class="flex items-center gap-1 overflow-x-auto whitespace-nowrap">
+                            <Link
+                                v-for="item in navItems"
+                                :key="item.href"
+                                :href="item.href"
+                                class="rounded-xl px-3 py-1.5 text-sm font-medium transition"
+                                :class="isActive(item.href)
+                                    ? 'bg-white/70 text-[#1F4E79] shadow-sm dark:bg-white/15 dark:text-white'
+                                    : 'text-slate-600 hover:bg-white/50 dark:text-slate-300 dark:hover:bg-white/10'"
+                            >
+                                {{ item.label }}
+                            </Link>
+                        </nav>
+                    </div>
+                    <div class="flex flex-none items-center gap-3 text-sm">
+                        <ThemeToggle />
+                        <Link href="/account/password" class="hidden text-right transition hover:opacity-80 sm:block">
+                            <div class="font-medium text-slate-700 dark:text-slate-200">{{ user?.name }}</div>
+                            <div class="text-xs text-slate-400 dark:text-slate-500">
+                                <template v-if="user?.tenant">{{ user.tenant.name }} · {{ user.tenant.plan }}</template>
+                                <template v-else>{{ user?.roleLabel }}</template>
+                            </div>
                         </Link>
-                    </nav>
-                </div>
-                <div class="flex items-center gap-4 text-sm">
-                    <Link href="/account/password" class="text-right hover:opacity-80">
-                        <div class="font-medium text-slate-700">{{ user?.name }}</div>
-                        <div class="text-slate-400 text-xs">
-                            <template v-if="user?.tenant">{{ user.tenant.name }} · {{ user.tenant.plan }}</template>
-                            <template v-else>{{ user?.roleLabel }}</template>
-                        </div>
-                    </Link>
-                    <button
-                        type="button"
-                        class="text-slate-500 hover:text-slate-800 font-medium"
-                        @click="logout"
-                    >
-                        Выйти
-                    </button>
+                        <button
+                            type="button"
+                            class="rounded-xl border border-white/50 bg-white/40 px-3 py-1.5 font-medium text-slate-600 transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-slate-300"
+                            @click="logout"
+                        >
+                            Выйти
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <main class="max-w-6xl mx-auto px-6 py-8">
-            <div v-if="flash.success" class="mb-4 rounded-lg bg-green-50 border border-green-200 text-green-700 px-4 py-2 text-sm">
+        <main class="ui-scope ui-fade-in mx-auto max-w-6xl px-6 py-8">
+            <div v-if="flash.success" class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-300">
                 {{ flash.success }}
             </div>
-            <div v-if="flash.error" class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 px-4 py-2 text-sm">
+            <div v-if="flash.error" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
                 {{ flash.error }}
             </div>
 
-            <h1 v-if="title" class="text-2xl font-bold text-[#1F4E79] mb-6">{{ title }}</h1>
+            <h1 v-if="title" class="mb-6 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">{{ title }}</h1>
             <slot />
         </main>
     </div>
 </template>
+
+<style scoped>
+.glass {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px rgba(31, 78, 121, 0.12);
+}
+html.dark .glass {
+    background: rgba(20, 30, 48, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.bg-base {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
+    background-size: 200% 200%;
+    animation: bgpan 24s ease infinite;
+}
+html.dark .bg-base {
+    background: linear-gradient(125deg, #0b1220 0%, #0e1828 45%, #0a1a26 100%);
+    background-size: 200% 200%;
+}
+
+.orbs {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+.orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: 0.4;
+}
+html.dark .orb {
+    opacity: 0.25;
+}
+.orb-1 {
+    width: 420px;
+    height: 420px;
+    background: #7cc0ff;
+    top: -120px;
+    left: -80px;
+    animation: floaty 20s ease-in-out infinite;
+}
+.orb-2 {
+    width: 340px;
+    height: 340px;
+    background: #b9a8ff;
+    top: 20%;
+    right: -90px;
+    animation: floaty 26s ease-in-out infinite reverse;
+}
+.orb-3 {
+    width: 300px;
+    height: 300px;
+    background: #7df3e1;
+    bottom: 5%;
+    left: 10%;
+    animation: floaty 22s ease-in-out infinite;
+}
+
+@keyframes bgpan {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+@keyframes floaty {
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(24px, -30px) scale(1.06);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .bg-base,
+    .orb {
+        animation: none;
+    }
+}
+</style>

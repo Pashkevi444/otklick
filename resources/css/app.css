@@ -10,6 +10,90 @@ html.dark body {
     background-color: #0b1220;
 }
 
+/*
+ * Тёмная тема для админки/кабинета/форм входа. Страницы используют обычные
+ * Tailwind-утилиты (bg-white, text-slate-*, …); чтобы не править каждую,
+ * перекрашиваем их разом внутри обёртки .ui-scope. Несложный «слой темы».
+ */
+html.dark .ui-scope .bg-white {
+    background-color: #141d33;
+}
+html.dark .ui-scope .bg-slate-50 {
+    background-color: #0f1830;
+}
+html.dark .ui-scope .bg-slate-100 {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+html.dark .ui-scope .border-slate-200,
+html.dark .ui-scope .border-slate-300 {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+html.dark .ui-scope .border-slate-100 {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+html.dark .ui-scope .text-slate-800 {
+    color: #e6edf6;
+}
+html.dark .ui-scope .text-slate-700 {
+    color: #cbd5e1;
+}
+html.dark .ui-scope .text-slate-600 {
+    color: #b6c2d2;
+}
+html.dark .ui-scope .text-slate-500 {
+    color: #93a3b8;
+}
+html.dark .ui-scope .text-slate-400 {
+    color: #7c8aa0;
+}
+html.dark .ui-scope .text-\[\#1F4E79\] {
+    color: #9ec5ec;
+}
+html.dark .ui-scope .text-\[\#2E74B5\] {
+    color: #7db4e6;
+}
+html.dark .ui-scope .hover\:bg-slate-50:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+html.dark .ui-scope .divide-slate-100 > * + * {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+html.dark .ui-scope input,
+html.dark .ui-scope textarea,
+html.dark .ui-scope select {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #e6edf6;
+}
+html.dark .ui-scope input::placeholder,
+html.dark .ui-scope textarea::placeholder {
+    color: #6b7a90;
+}
+html.dark .ui-scope select option {
+    background-color: #141d33;
+    color: #e6edf6;
+}
+
+/* Плавное появление контента (страницы кабинета/входа) */
+@keyframes ui-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+.ui-fade-in {
+    animation: ui-fade-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .ui-fade-in {
+        animation: none;
+    }
+}
+
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';

@@ -3,7 +3,7 @@ defineProps<{ title: string; subtitle?: string }>();
 </script>
 
 <template>
-    <div class="relative flex min-h-screen items-center justify-center overflow-hidden p-6 text-slate-800">
+    <div class="relative flex min-h-screen items-center justify-center overflow-hidden p-6 text-slate-800 dark:text-slate-200">
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
             <span class="orb orb-1"></span>
@@ -13,11 +13,11 @@ defineProps<{ title: string; subtitle?: string }>();
 
         <div class="auth-enter w-full max-w-md">
             <div class="mb-8 text-center">
-                <div class="text-sm font-medium uppercase tracking-wide text-[#2E74B5]">Отклик</div>
-                <h1 class="mt-1 text-2xl font-bold text-[#1F4E79]">{{ title }}</h1>
-                <p v-if="subtitle" class="mt-1 text-sm text-slate-500">{{ subtitle }}</p>
+                <div class="text-sm font-medium uppercase tracking-wide text-[#2E74B5] dark:text-sky-300">Отклик</div>
+                <h1 class="mt-1 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">{{ title }}</h1>
+                <p v-if="subtitle" class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
             </div>
-            <div class="glass rounded-3xl p-8">
+            <div class="ui-scope glass rounded-3xl p-8">
                 <slot />
             </div>
         </div>
@@ -32,6 +32,11 @@ defineProps<{ title: string; subtitle?: string }>();
     border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: 0 8px 32px rgba(31, 78, 121, 0.14);
 }
+html.dark .glass {
+    background: rgba(20, 30, 48, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
 
 .bg-base {
     position: fixed;
@@ -40,6 +45,13 @@ defineProps<{ title: string; subtitle?: string }>();
     background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
     background-size: 200% 200%;
     animation: bgpan 22s ease infinite;
+}
+html.dark .bg-base {
+    background: linear-gradient(125deg, #0b1220 0%, #0e1828 45%, #0a1a26 100%);
+    background-size: 200% 200%;
+}
+html.dark .orb {
+    opacity: 0.25;
 }
 
 .orbs {
