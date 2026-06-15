@@ -23,7 +23,7 @@ final class AdminTenantManagementTest extends TestCase
     {
         $response = $this->actingAs($this->superAdmin())->post('/admin/tenants', [
             'name' => 'Барбершоп Бруно',
-            'plan' => 'starter',
+            'plan' => 'standard',
             'access_expires_at' => '2030-01-01',
             'owner_name' => 'Иван',
             'owner_email' => 'ivan@biz.ru',
@@ -33,7 +33,7 @@ final class AdminTenantManagementTest extends TestCase
         $tenant = Tenant::where('name', 'Барбершоп Бруно')->firstOrFail();
 
         $response->assertRedirect(route('admin.tenants.show', $tenant->id));
-        $this->assertSame('starter', $tenant->plan->value);
+        $this->assertSame('standard', $tenant->plan->value);
         $this->assertDatabaseHas('users', [
             'email' => 'ivan@biz.ru',
             'role' => 'owner',
@@ -46,12 +46,12 @@ final class AdminTenantManagementTest extends TestCase
         $tenant = Tenant::factory()->create(['plan' => 'trial']);
 
         $this->actingAs($this->superAdmin())->put("/admin/tenants/{$tenant->id}", [
-            'plan' => 'pro',
+            'plan' => 'max',
             'access_expires_at' => '2030-06-01',
         ])->assertRedirect(route('admin.tenants.show', $tenant->id));
 
         $tenant->refresh();
-        $this->assertSame('pro', $tenant->plan->value);
+        $this->assertSame('max', $tenant->plan->value);
         $this->assertSame('2030-06-01', $tenant->access_expires_at?->toDateString());
     }
 

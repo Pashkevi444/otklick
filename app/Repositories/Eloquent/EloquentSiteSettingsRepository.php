@@ -16,12 +16,15 @@ final class EloquentSiteSettingsRepository implements SiteSettingsRepositoryInte
      * @var array<string, string>
      */
     private const array DEFAULTS = [
-        'hero_title' => 'AI-администратор, который не теряет ни одного клиента',
-        'hero_subtitle' => 'Отвечает на сообщения в Telegram и WhatsApp за секунды, '.
-            'консультирует по вашим услугам и записывает клиентов — круглосуточно.',
+        'hero_title' => 'Цифровой администратор, который отвечает клиентам вместо вас',
+        'hero_subtitle' => 'Отклик мгновенно отвечает в Telegram и на сайте по базе знаний '.
+            'вашего бизнеса, записывает клиентов и передаёт горячих менеджеру — круглосуточно, без выходных.',
         'phone' => '89237032792',
         'email' => 'pasha.balaganskii@gmail.com',
         'telegram' => 'Pashkevi4',
+        'legal_name' => 'ИП Балаганский Павел Сергеевич',
+        'inn' => '543807917255',
+        'ogrnip' => '323547600043330',
         'access_note' => 'Оплаты пока нет. Чтобы получить доступ к админке — свяжитесь с нами.',
     ];
 

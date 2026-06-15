@@ -47,6 +47,9 @@ final class HomeController extends Controller
             'phone' => $site->phone,
             'email' => $site->email,
             'telegram' => $site->telegram,
+            'legalName' => $site->legal_name,
+            'inn' => $site->inn,
+            'ogrnip' => $site->ogrnip,
             'accessNote' => $site->access_note,
         ];
     }

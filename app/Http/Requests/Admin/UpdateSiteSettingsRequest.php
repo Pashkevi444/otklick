@@ -22,6 +22,9 @@ final class UpdateSiteSettingsRequest extends AbstractFormRequest
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'telegram' => ['nullable', 'string', 'max:100'],
+            'legal_name' => ['nullable', 'string', 'max:255'],
+            'inn' => ['nullable', 'string', 'max:20'],
+            'ogrnip' => ['nullable', 'string', 'max:20'],
             'access_note' => ['required', 'string', 'max:1000'],
         ];
     }

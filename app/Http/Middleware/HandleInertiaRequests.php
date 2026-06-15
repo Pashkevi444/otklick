@@ -51,6 +51,8 @@ class HandleInertiaRequests extends Middleware
                         'id' => $user->tenant->id,
                         'name' => $user->tenant->name,
                         'plan' => $user->tenant->plan->label(),
+                        'planKey' => $user->tenant->plan->value,
+                        'features' => $user->tenant->plan->features()->toArray(),
                         'accessExpiresAt' => $user->tenant->access_expires_at?->toDateString(),
                         'hasActiveAccess' => $user->tenant->hasActiveAccess(),
                     ],

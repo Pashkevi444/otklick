@@ -36,12 +36,17 @@ final class AdminSiteTest extends TestCase
             'phone' => '88005553535',
             'email' => 'new@otklick.io',
             'telegram' => 'newtg',
+            'legal_name' => 'ИП Тестовый Тест Тестович',
+            'inn' => '111111111111',
+            'ogrnip' => '999999999999999',
             'access_note' => 'Свяжитесь с нами.',
         ])->assertRedirect(route('admin.site.edit'))->assertSessionHas('success');
 
         $this->assertDatabaseHas('site_settings', [
             'hero_title' => 'Новый заголовок',
             'phone' => '88005553535',
+            'legal_name' => 'ИП Тестовый Тест Тестович',
+            'inn' => '111111111111',
         ]);
     }
 

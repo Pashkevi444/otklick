@@ -27,12 +27,12 @@ final class TenantRepositoryTest extends TestCase
         $tenant = $this->repository->create(new NewTenantData(
             name: 'Стоматология «Улыбка»',
             slug: 'ulybka',
-            plan: TenantPlan::Pro,
+            plan: TenantPlan::Max,
             settings: ['timezone' => 'Europe/Moscow'],
         ));
 
-        $this->assertDatabaseHas('tenants', ['slug' => 'ulybka', 'plan' => 'pro']);
-        $this->assertSame(TenantPlan::Pro, $tenant->fresh()->plan);
+        $this->assertDatabaseHas('tenants', ['slug' => 'ulybka', 'plan' => 'max']);
+        $this->assertSame(TenantPlan::Max, $tenant->fresh()->plan);
         $this->assertSame('Europe/Moscow', $tenant->fresh()->settings['timezone']);
     }
 

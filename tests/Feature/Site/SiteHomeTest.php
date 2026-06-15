@@ -21,6 +21,9 @@ final class SiteHomeTest extends TestCase
                 ->has('site.heroTitle')
                 ->where('site.phone', '89237032792')
                 ->where('site.telegram', 'Pashkevi4')
+                ->where('site.legalName', 'ИП Балаганский Павел Сергеевич')
+                ->where('site.inn', '543807917255')
+                ->where('site.ogrnip', '323547600043330')
                 ->has('loginUrl'));
     }
 

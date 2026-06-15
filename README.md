@@ -138,10 +138,18 @@ php artisan channel:connect-telegram <tenant-uuid> <bot-token>
 | `App\Enums\UserRole` | `super_admin` / `owner` / `member` (метод `label()`). |
 | `App\Models\KnowledgeEntry` | Запись базы знаний (title/content/is_published + `links`/`images` jsonb); строгий RLS. |
 | `App\Support\KnowledgeImageStorage` | Хранение картинок-«примеров работ» на public-диске под путём тенанта. |
+| `App\Models\SiteSetting` | Контент публичного лендинга, контакты и юр. реквизиты (`legal_name`/`inn`/`ogrnip`); редактируется супер-админом в `/admin/site`. |
+| `App\Enums\TenantPlan` | Тарифы `trial`/`standard`/`max` (Пробный/Стандарт/Макс). `tier()` (пробный = уровень «Стандарт») и `features()` → `App\DTO\PlanFeatures`. |
+| `App\DTO\PlanFeatures` | Возможности тарифа: `maxOperators`, `crm`, `analytics`, `broadcasts`, `clientBase`, `allChannels`, `webWidget`. Источник матрицы гейтинга. |
+| `App\Http\Middleware\EnsurePlanFeature` (alias `plan`) | Гейт маршрута по возможности тарифа: `->middleware('plan:crm')`. CRM-интеграции — только «Макс». |
+| `App\Http\Controllers\Cabinet\SubscriptionController` | Страница `/cabinet/subscription`: текущий тариф, срок доступа, доступные/закрытые возможности. |
 | `App\Http\Middleware\BindTenantToRequest` | Ставит тенант-контекст по `Auth::user()->tenant_id`, сбрасывает в `terminate()`. |
 | `App\Http\Middleware\EnsureSuperAdmin` (alias `super-admin`) | Доступ к `/admin/*` только супер-админу. |
 | `App\Http\Middleware\EnsureTenantUser` (alias `tenant`) | Доступ к `/cabinet/*` только пользователю тенанта. |
 | `App\Http\Controllers\Auth\AuthenticatedSessionController` | Вход/выход (session). |
+| `App\Http\Controllers\Auth\PasswordResetController` | Восстановление пароля по коду из письма. |
+| `App\Services\PasswordResetService` | Генерация/проверка одноразового кода (TTL 6 мин, в `password_reset_tokens` хранится только хеш; существование email не раскрывается). |
+| `App\Mail\PasswordResetCodeMail` | Письмо с 6-значным кодом восстановления (через очередь). |
 | `App\Support\HomeRedirect` | Домашний маршрут по роли: супер-админ → `admin.tenants.index`, тенант → `cabinet.dashboard`. Используется и после входа, и в guest-middleware (уже авторизованный на `/login` — напр. при активной remember-сессии — уходит в свою панель, а не на лендинг). |
 | `App\Http\Controllers\Admin\TenantController` | Супер-админ: список тенантов, создание бизнеса+владельца, детали. |
 | `App\Http\Controllers\Cabinet\{Channel,BusinessProfile,KnowledgeEntry}Controller` | Кабинет тенанта. |
@@ -170,8 +178,11 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | GET | `/` · `/contacts` | `Site\HomeController` | Публичный лендинг + контакты (маркетинг-домен). |
 | GET | `/up` | — | Health-check Laravel. |
 | GET/POST | `/login` · POST `/logout` | `Auth\AuthenticatedSessionController` | Вход/выход (session). |
+| GET/POST | `/forgot-password` · `/reset-password` | `Auth\PasswordResetController` | Восстановление пароля по коду из письма (код 6 мин, `throttle:6,1`). |
 | GET/POST/GET | `/admin/tenants[/{tenant}]` | `Admin\TenantController` | Реестр тенантов, создание, детали (auth + `super-admin`). |
-| — | `/cabinet`, `/cabinet/channels`, `/cabinet/profile`, `/cabinet/knowledge`, `/cabinet/integrations` | `Cabinet\*` | Кабинет тенанта (auth + `tenant`). |
+| PUT | `/admin/tenants/{tenant}/owner-password` | `Admin\TenantController` | Супер-админ задаёт пароль владельцу бизнеса (auth + `super-admin`). |
+| — | `/cabinet`, `/cabinet/channels`, `/cabinet/profile`, `/cabinet/knowledge`, `/cabinet/subscription` | `Cabinet\*` | Кабинет тенанта (auth + `tenant`). |
+| — | `/cabinet/integrations` | `Cabinet\IntegrationController` | CRM-интеграции (auth + `tenant` + `plan:crm` — тариф «Макс»). |
 | GET/PUT | `/account/password` | `Account\PasswordController` | Смена своего пароля (auth). |
 | POST | `/webhooks/telegram/{tenant}/{channel}` | `Webhooks\TelegramWebhookController` | Приём вебхука Telegram (stateless, без CSRF; верификация secret-токена; ack 200 → очередь). |
 

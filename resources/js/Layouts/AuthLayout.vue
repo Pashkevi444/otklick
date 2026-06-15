@@ -3,16 +3,123 @@ defineProps<{ title: string; subtitle?: string }>();
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center p-6">
-        <div class="max-w-md w-full">
-            <div class="text-center mb-8">
-                <div class="text-sm font-medium text-[#2E74B5] uppercase tracking-wide">Отклик</div>
+    <div class="relative flex min-h-screen items-center justify-center overflow-hidden p-6 text-slate-800">
+        <div class="bg-base"></div>
+        <div class="orbs" aria-hidden="true">
+            <span class="orb orb-1"></span>
+            <span class="orb orb-2"></span>
+            <span class="orb orb-3"></span>
+        </div>
+
+        <div class="auth-enter w-full max-w-md">
+            <div class="mb-8 text-center">
+                <div class="text-sm font-medium uppercase tracking-wide text-[#2E74B5]">Отклик</div>
                 <h1 class="mt-1 text-2xl font-bold text-[#1F4E79]">{{ title }}</h1>
                 <p v-if="subtitle" class="mt-1 text-sm text-slate-500">{{ subtitle }}</p>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <div class="glass rounded-3xl p-8">
                 <slot />
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.glass {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px rgba(31, 78, 121, 0.14);
+}
+
+.bg-base {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
+    background-size: 200% 200%;
+    animation: bgpan 22s ease infinite;
+}
+
+.orbs {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+.orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: 0.5;
+}
+.orb-1 {
+    width: 380px;
+    height: 380px;
+    background: #7cc0ff;
+    top: -80px;
+    left: -60px;
+    animation: floaty 18s ease-in-out infinite;
+}
+.orb-2 {
+    width: 320px;
+    height: 320px;
+    background: #b9a8ff;
+    bottom: -90px;
+    right: -70px;
+    animation: floaty 24s ease-in-out infinite reverse;
+}
+.orb-3 {
+    width: 260px;
+    height: 260px;
+    background: #7df3e1;
+    bottom: 20%;
+    left: 8%;
+    animation: floaty 20s ease-in-out infinite;
+}
+
+.auth-enter {
+    animation: enter 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes bgpan {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+@keyframes floaty {
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(24px, -30px) scale(1.06);
+    }
+}
+@keyframes enter {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bg-base,
+    .orb {
+        animation: none;
+    }
+    .auth-enter {
+        animation: none;
+    }
+}
+</style>

@@ -21,13 +21,21 @@ const navItems = computed<NavItem[]>(() => {
         ];
     }
 
-    return [
+    const items: NavItem[] = [
         { label: 'Дашборд', href: '/cabinet' },
         { label: 'Каналы', href: '/cabinet/channels' },
         { label: 'Профиль', href: '/cabinet/profile' },
         { label: 'База знаний', href: '/cabinet/knowledge' },
-        { label: 'Интеграции', href: '/cabinet/integrations' },
     ];
+
+    // Интеграции (CRM) — возможность тарифа «Макс».
+    if (user.value?.tenant?.features?.crm) {
+        items.push({ label: 'Интеграции', href: '/cabinet/integrations' });
+    }
+
+    items.push({ label: 'Подписка', href: '/cabinet/subscription' });
+
+    return items;
 });
 
 const isActive = (href: string): boolean =>

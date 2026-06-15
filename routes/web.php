@@ -11,6 +11,7 @@ use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\DashboardController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
+use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
 use App\Http\Controllers\Site\HomeController;
 use Illuminate\Support\Facades\Route;
@@ -63,12 +64,17 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
         Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
 
-        Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
-        Route::post('/integrations/connect/{provider}', [IntegrationController::class, 'store'])
-            ->whereIn('provider', array_map(fn (CrmProvider $p): string => $p->value, CrmProvider::cases()))
-            ->name('integrations.store');
-        Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
-        Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
+        Route::get('/subscription', SubscriptionController::class)->name('subscription');
+
+        // CRM-интеграции — возможность тарифа «Макс».
+        Route::middleware('plan:crm')->group(function (): void {
+            Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+            Route::post('/integrations/connect/{provider}', [IntegrationController::class, 'store'])
+                ->whereIn('provider', array_map(fn (CrmProvider $p): string => $p->value, CrmProvider::cases()))
+                ->name('integrations.store');
+            Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
+            Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
+        });
     });
 
     // Аккаунт + сервисные страницы (любой авторизованный, без проверки тарифа)

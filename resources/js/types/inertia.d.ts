@@ -11,6 +11,16 @@ export interface AuthUser {
         id: string;
         name: string;
         plan: string;
+        planKey: string;
+        features: {
+            maxOperators: number;
+            crm: boolean;
+            analytics: boolean;
+            broadcasts: boolean;
+            clientBase: boolean;
+            allChannels: boolean;
+            webWidget: boolean;
+        };
         accessExpiresAt: string | null;
         hasActiveAccess: boolean;
     } | null;

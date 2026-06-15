@@ -21,7 +21,8 @@ final class CabinetIntegrationTest extends TestCase
      */
     private function tenantWithOwner(): array
     {
-        $tenant = Tenant::factory()->create();
+        // CRM-интеграции доступны на тарифе «Макс».
+        $tenant = Tenant::factory()->max()->create();
 
         return [$tenant, User::factory()->owner($tenant)->create()];
     }

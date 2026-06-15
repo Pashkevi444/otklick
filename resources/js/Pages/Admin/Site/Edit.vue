@@ -8,6 +8,9 @@ interface Settings {
     phone: string | null;
     email: string | null;
     telegram: string | null;
+    legal_name: string | null;
+    inn: string | null;
+    ogrnip: string | null;
     access_note: string;
 }
 
@@ -19,6 +22,9 @@ const form = useForm({
     phone: props.settings.phone ?? '',
     email: props.settings.email ?? '',
     telegram: props.settings.telegram ?? '',
+    legal_name: props.settings.legal_name ?? '',
+    inn: props.settings.inn ?? '',
+    ogrnip: props.settings.ogrnip ?? '',
     access_note: props.settings.access_note,
 });
 
@@ -58,6 +64,26 @@ const submit = (): void => {
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Telegram (без @)</label>
                     <input v-model="form.telegram" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                </div>
+            </div>
+
+            <div class="border-t border-slate-100 pt-5">
+                <div class="text-sm font-semibold text-slate-700 mb-3">Юридические реквизиты (футер сайта)</div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Наименование (ИП / ООО)</label>
+                        <input v-model="form.legal_name" type="text" placeholder="ИП Иванов Иван Иванович" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">ИНН</label>
+                            <input v-model="form.inn" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">ОГРНИП / ОГРН</label>
+                            <input v-model="form.ogrnip" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                        </div>
+                    </div>
                 </div>
             </div>
 

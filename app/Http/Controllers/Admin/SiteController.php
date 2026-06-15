@@ -48,6 +48,9 @@ final class SiteController extends Controller
             'phone' => $site->phone,
             'email' => $site->email,
             'telegram' => $site->telegram,
+            'legal_name' => $site->legal_name,
+            'inn' => $site->inn,
+            'ogrnip' => $site->ogrnip,
             'access_note' => $site->access_note,
         ];
     }

@@ -15,6 +15,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $phone
  * @property string|null $email
  * @property string|null $telegram
+ * @property string|null $legal_name
+ * @property string|null $inn
+ * @property string|null $ogrnip
  * @property string $access_note
  */
 class SiteSetting extends Model
@@ -25,6 +28,9 @@ class SiteSetting extends Model
         'phone',
         'email',
         'telegram',
+        'legal_name',
+        'inn',
+        'ogrnip',
         'access_note',
     ];
 }

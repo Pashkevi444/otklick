@@ -30,4 +30,14 @@ class TenantFactory extends Factory
             'settings' => [],
         ];
     }
+
+    public function standard(): static
+    {
+        return $this->state(fn (): array => ['plan' => TenantPlan::Standard]);
+    }
+
+    public function max(): static
+    {
+        return $this->state(fn (): array => ['plan' => TenantPlan::Max]);
+    }
 }
