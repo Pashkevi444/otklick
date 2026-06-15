@@ -18,6 +18,11 @@ interface UserRepositoryInterface
     public function findByEmail(string $email): ?User;
 
     /**
+     * Владелец тенанта в текущем тенант-контексте (scoped/RLS).
+     */
+    public function ownerForCurrentTenant(): ?User;
+
+    /**
      * Пользователи текущего тенант-контекста (scoped/RLS).
      *
      * @return Collection<int, User>

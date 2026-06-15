@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthLayout from '@/Layouts/AuthLayout.vue';
 
 const form = useForm({
@@ -47,10 +47,13 @@ const submit = (): void => {
                 <p v-if="form.errors.password" class="mt-1 text-sm text-red-600">{{ form.errors.password }}</p>
             </div>
 
-            <label class="flex items-center gap-2 text-sm text-slate-600">
-                <input v-model="form.remember" type="checkbox" class="rounded border-slate-300" />
-                Запомнить меня
-            </label>
+            <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 text-sm text-slate-600">
+                    <input v-model="form.remember" type="checkbox" class="rounded border-slate-300" />
+                    Запомнить меня
+                </label>
+                <Link href="/forgot-password" class="text-sm text-[#2E74B5] hover:underline">Забыли пароль?</Link>
+            </div>
 
             <button
                 type="submit"

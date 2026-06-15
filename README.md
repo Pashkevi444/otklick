@@ -142,6 +142,7 @@ php artisan channel:connect-telegram <tenant-uuid> <bot-token>
 | `App\Http\Middleware\EnsureSuperAdmin` (alias `super-admin`) | Доступ к `/admin/*` только супер-админу. |
 | `App\Http\Middleware\EnsureTenantUser` (alias `tenant`) | Доступ к `/cabinet/*` только пользователю тенанта. |
 | `App\Http\Controllers\Auth\AuthenticatedSessionController` | Вход/выход (session). |
+| `App\Support\HomeRedirect` | Домашний маршрут по роли: супер-админ → `admin.tenants.index`, тенант → `cabinet.dashboard`. Используется и после входа, и в guest-middleware (уже авторизованный на `/login` — напр. при активной remember-сессии — уходит в свою панель, а не на лендинг). |
 | `App\Http\Controllers\Admin\TenantController` | Супер-админ: список тенантов, создание бизнеса+владельца, детали. |
 | `App\Http\Controllers\Cabinet\{Channel,BusinessProfile,KnowledgeEntry}Controller` | Кабинет тенанта. |
 | `App\Services\UserService` | Создание владельца в тенант-контексте; список пользователей тенанта. |
@@ -166,7 +167,7 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 
 | Метод | URL | Контроллер | Назначение |
 |---|---|---|---|
-| GET | `/` | `WelcomeController` | Лендинг (`Welcome`); авторизованного редиректит в его раздел. |
+| GET | `/` · `/contacts` | `Site\HomeController` | Публичный лендинг + контакты (маркетинг-домен). |
 | GET | `/up` | — | Health-check Laravel. |
 | GET/POST | `/login` · POST `/logout` | `Auth\AuthenticatedSessionController` | Вход/выход (session). |
 | GET/POST/GET | `/admin/tenants[/{tenant}]` | `Admin\TenantController` | Реестр тенантов, создание, детали (auth + `super-admin`). |
@@ -194,6 +195,11 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | `YCLIENTS_PARTNER_TOKEN` | Партнёрский токен приложения YClients | — |
 
 Тесты используют отдельный профиль из `phpunit.xml` (sqlite `:memory:`).
+
+На проде приложение работает за обратным прокси (Caddy терминирует TLS, проксирует
+по HTTP). В `bootstrap/app.php` включены доверенные прокси (`trustProxies(at: '*')`
+с `X-Forwarded-*`), иначе Laravel генерировал бы ссылки на ассеты по `http://`
+(mixed-content на HTTPS-странице).
 
 ## Запуск
 

@@ -38,6 +38,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
         Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
         Route::put('/tenants/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
+        Route::put('/tenants/{tenant}/owner-password', [TenantController::class, 'updateOwnerPassword'])->name('tenants.owner-password.update');
         Route::post('/tenants/{tenant}/block', [TenantController::class, 'block'])->name('tenants.block');
         Route::post('/tenants/{tenant}/unblock', [TenantController::class, 'unblock'])->name('tenants.unblock');
 

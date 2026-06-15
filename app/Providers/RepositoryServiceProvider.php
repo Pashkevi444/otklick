@@ -9,6 +9,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
 use App\Repositories\Contracts\SiteSettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
@@ -17,6 +18,7 @@ use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
+use App\Repositories\Eloquent\EloquentPasswordResetCodeRepository;
 use App\Repositories\Eloquent\EloquentSiteSettingsRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
 use App\Repositories\Eloquent\EloquentUserRepository;
@@ -38,5 +40,6 @@ final class RepositoryServiceProvider extends ServiceProvider
         KnowledgeEntryRepositoryInterface::class => EloquentKnowledgeEntryRepository::class,
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
         SiteSettingsRepositoryInterface::class => EloquentSiteSettingsRepository::class,
+        PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,
     ];
 }

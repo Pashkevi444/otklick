@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\TenantPlan;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreTenantRequest;
+use App\Http\Requests\Admin\UpdateTenantOwnerPasswordRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
 use App\Models\Tenant;
 use App\Models\User;
@@ -82,6 +83,18 @@ final class TenantController extends Controller
         );
 
         return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Подписка обновлена.');
+    }
+
+    public function updateOwnerPassword(UpdateTenantOwnerPasswordRequest $request, string $tenant): RedirectResponse
+    {
+        $ok = $this->users->setOwnerPassword(
+            $this->findOrFail($tenant),
+            (string) $request->string('password'),
+        );
+
+        abort_if(! $ok, 404, 'У бизнеса нет владельца.');
+
+        return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Пароль владельца обновлён.');
     }
 
     public function block(string $tenant): RedirectResponse

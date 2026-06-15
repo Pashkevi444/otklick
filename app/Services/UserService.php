@@ -35,6 +35,25 @@ final readonly class UserService
     }
 
     /**
+     * Установить пароль владельцу бизнеса (действие супер-админа).
+     * Возвращает false, если у тенанта нет владельца.
+     */
+    public function setOwnerPassword(Tenant $tenant, string $password): bool
+    {
+        return $this->tenancy->run($tenant->id, function () use ($password): bool {
+            $owner = $this->users->ownerForCurrentTenant();
+
+            if ($owner === null) {
+                return false;
+            }
+
+            $owner->update(['password' => $password]); // каст 'hashed' хеширует
+
+            return true;
+        });
+    }
+
+    /**
      * @return Collection<int, User>
      */
     public function listForTenant(Tenant $tenant): Collection

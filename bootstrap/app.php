@@ -4,6 +4,7 @@ use App\Http\Middleware\BindTenantToRequest;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureTenantUser;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Support\HomeRedirect;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -28,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
             | Request::HEADER_X_FORWARDED_HOST
             | Request::HEADER_X_FORWARDED_PORT
             | Request::HEADER_X_FORWARDED_PROTO);
+
+        // Уже авторизованный на guest-маршруте (напр. /login при активной
+        // remember-сессии) уходит в свою панель по роли, а не на лендинг.
+        $middleware->redirectUsersTo(fn (Request $request): string => HomeRedirect::for($request->user()));
 
         $middleware->web(append: [
             HandleInertiaRequests::class,

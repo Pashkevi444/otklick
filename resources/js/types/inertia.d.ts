@@ -19,6 +19,6 @@ export interface AuthUser {
 declare module '@inertiajs/core' {
     interface PageProps {
         auth: { user: AuthUser | null };
-        flash: { success: string | null; error: string | null };
+        flash: { success: string | null; error: string | null; status: string | null };
     }
 }

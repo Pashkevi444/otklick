@@ -37,6 +37,18 @@ const save = (): void => {
 
 const block = (): void => router.post(`/admin/tenants/${props.tenant.id}/block`);
 const unblock = (): void => router.post(`/admin/tenants/${props.tenant.id}/unblock`);
+
+const pwForm = useForm({
+    password: '',
+    password_confirmation: '',
+});
+
+const savePassword = (): void => {
+    pwForm.put(`/admin/tenants/${props.tenant.id}/owner-password`, {
+        preserveScroll: true,
+        onSuccess: () => pwForm.reset(),
+    });
+};
 </script>
 
 <template>
@@ -106,6 +118,29 @@ const unblock = (): void => router.post(`/admin/tenants/${props.tenant.id}/unblo
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Смена пароля владельцу -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 max-w-xl mt-6">
+            <div class="font-semibold text-[#1F4E79] mb-1">Пароль владельца</div>
+            <p class="text-sm text-slate-500 mb-4">Задайте новый пароль для входа владельца бизнеса.</p>
+            <form class="grid sm:grid-cols-2 gap-4" @submit.prevent="savePassword">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Новый пароль</label>
+                    <input v-model="pwForm.password" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                    <p v-if="pwForm.errors.password" class="mt-1 text-sm text-red-600">{{ pwForm.errors.password }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Повторите пароль</label>
+                    <input v-model="pwForm.password_confirmation" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                </div>
+                <div class="sm:col-span-2 flex items-center gap-3">
+                    <button type="submit" :disabled="pwForm.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">
+                        Сменить пароль
+                    </button>
+                    <span v-if="pwForm.recentlySuccessful" class="text-sm text-green-600">Пароль обновлён</span>
+                </div>
+            </form>
         </div>
     </AppLayout>
 </template>

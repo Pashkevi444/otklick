@@ -40,6 +40,21 @@ final class AuthenticationTest extends TestCase
             ->assertRedirect(route('admin.tenants.index'));
     }
 
+    public function test_authenticated_super_admin_visiting_login_is_redirected_to_admin(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+
+        $this->actingAs($admin)->get('/login')->assertRedirect(route('admin.tenants.index'));
+    }
+
+    public function test_authenticated_owner_visiting_login_is_redirected_to_cabinet(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($user)->get('/login')->assertRedirect(route('cabinet.dashboard'));
+    }
+
     public function test_login_fails_with_wrong_password(): void
     {
         $user = User::factory()->superAdmin()->create();

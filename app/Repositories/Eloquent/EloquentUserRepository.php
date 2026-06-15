@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Eloquent;
 
 use App\DTO\NewUserData;
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Collection;
@@ -33,6 +34,11 @@ final class EloquentUserRepository extends EloquentRepository implements UserRep
     public function findByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();
+    }
+
+    public function ownerForCurrentTenant(): ?User
+    {
+        return User::query()->where('role', UserRole::Owner)->first();
     }
 
     public function forCurrentTenant(): Collection
