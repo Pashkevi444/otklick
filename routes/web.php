@@ -13,6 +13,7 @@ use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
 use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
+use App\Http\Controllers\Cabinet\WidgetController;
 use App\Http\Controllers\Site\HomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -65,6 +66,12 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
 
         Route::get('/subscription', SubscriptionController::class)->name('subscription');
+
+        // Веб-виджет (чат на сайт) — доступен на всех тарифах.
+        Route::get('/widget', [WidgetController::class, 'index'])->name('widget.index');
+        Route::post('/widget', [WidgetController::class, 'store'])->name('widget.store');
+        Route::put('/widget/{channel}', [WidgetController::class, 'update'])->name('widget.update');
+        Route::delete('/widget/{channel}', [WidgetController::class, 'destroy'])->name('widget.destroy');
 
         // CRM-интеграции — возможность тарифа «Макс».
         Route::middleware('plan:crm')->group(function (): void {

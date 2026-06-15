@@ -143,6 +143,9 @@ php artisan channel:connect-telegram <tenant-uuid> <bot-token>
 | `App\DTO\PlanFeatures` | Возможности тарифа: `maxOperators`, `crm`, `analytics`, `broadcasts`, `clientBase`, `allChannels`, `webWidget`. Источник матрицы гейтинга. |
 | `App\Http\Middleware\EnsurePlanFeature` (alias `plan`) | Гейт маршрута по возможности тарифа: `->middleware('plan:crm')`. CRM-интеграции — только «Макс». |
 | `App\Http\Controllers\Cabinet\SubscriptionController` | Страница `/cabinet/subscription`: текущий тариф, срок доступа, доступные/закрытые возможности. |
+| `App\Services\WebWidgetService` | Диалог веб-виджета: сессия посетителя на подписанном токене (AES на `APP_KEY`, привязка к каналу+диалогу), ответ через `ReplyComposer`. |
+| `App\Http\Controllers\Widget\WidgetChatController` | Публичный API виджета (JS + session/message), CORS + origin allow-list + тенант-контекст из URL. |
+| `App\Http\Controllers\Cabinet\WidgetController` | Управление виджетом в кабинете: подключение `ChannelType::Web`, код для вставки, разрешённые домены. |
 | `App\Http\Middleware\BindTenantToRequest` | Ставит тенант-контекст по `Auth::user()->tenant_id`, сбрасывает в `terminate()`. |
 | `App\Http\Middleware\EnsureSuperAdmin` (alias `super-admin`) | Доступ к `/admin/*` только супер-админу. |
 | `App\Http\Middleware\EnsureTenantUser` (alias `tenant`) | Доступ к `/cabinet/*` только пользователю тенанта. |
@@ -181,6 +184,9 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | GET/POST | `/forgot-password` · `/reset-password` | `Auth\PasswordResetController` | Восстановление пароля по коду из письма (код 6 мин, `throttle:6,1`). |
 | GET/POST/GET | `/admin/tenants[/{tenant}]` | `Admin\TenantController` | Реестр тенантов, создание, детали (auth + `super-admin`). |
 | PUT | `/admin/tenants/{tenant}/owner-password` | `Admin\TenantController` | Супер-админ задаёт пароль владельцу бизнеса (auth + `super-admin`). |
+| — | `/cabinet/widget` | `Cabinet\WidgetController` | Веб-виджет: подключение, код для вставки, разрешённые домены (auth + `tenant`). |
+| GET | `/widget/v1/widget.js` | `Widget\WidgetChatController` | JS-рантайм виджета (публичный). |
+| POST | `/widget/v1/{tenant}/{channel}/{session\|message}` | `Widget\WidgetChatController` | Публичный API чата: stateless, CORS, origin allow-list, подписанный токен сессии, throttle. |
 | — | `/cabinet`, `/cabinet/channels`, `/cabinet/profile`, `/cabinet/knowledge`, `/cabinet/subscription` | `Cabinet\*` | Кабинет тенанта (auth + `tenant`). |
 | — | `/cabinet/integrations` | `Cabinet\IntegrationController` | CRM-интеграции (auth + `tenant` + `plan:crm` — тариф «Макс»). |
 | GET/PUT | `/account/password` | `Account\PasswordController` | Смена своего пароля (auth). |

@@ -19,6 +19,11 @@ interface ChannelRepositoryInterface
     public function find(string $id): ?Channel;
 
     /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function update(Channel $channel, array $attributes): void;
+
+    /**
      * Каналы текущего тенант-контекста (scoped/RLS), новые сверху.
      *
      * @return Collection<int, Channel>

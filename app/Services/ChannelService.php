@@ -48,6 +48,34 @@ final readonly class ChannelService
         });
     }
 
+    /**
+     * Подключает веб-виджет (чат на сайт) к тенанту. Создаёт канал типа web
+     * без внешних кред — доступ к чату изолируется подписанной сессией и
+     * списком разрешённых доменов (origin allow-list).
+     */
+    public function connectWeb(string $tenantId): Channel
+    {
+        return $this->channels->create(new NewChannelData(
+            tenantId: $tenantId,
+            type: ChannelType::Web,
+            externalId: null,
+            settings: ['allowed_origins' => []],
+        ));
+    }
+
+    /**
+     * Обновляет список разрешённых доменов виджета (с каких сайтов можно
+     * открывать чат). Пустой список = разрешено везде (не рекомендуется).
+     *
+     * @param  list<string>  $origins
+     */
+    public function setWidgetOrigins(Channel $channel, array $origins): void
+    {
+        $this->channels->update($channel, [
+            'settings' => ['allowed_origins' => array_values(array_filter($origins))],
+        ]);
+    }
+
     private function webhookUrl(string $baseUrl, Channel $channel): string
     {
         return rtrim($baseUrl, '/')."/webhooks/telegram/{$channel->tenant_id}/{$channel->id}";

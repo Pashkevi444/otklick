@@ -21,14 +21,16 @@ final class EloquentChannelRepository extends EloquentRepository implements Chan
 
     public function create(NewChannelData $data): Channel
     {
+        $credentials = array_filter([
+            'bot_token' => $data->botToken,
+            'secret_token' => $data->secretToken,
+        ], static fn (?string $v): bool => $v !== null);
+
         return Channel::create([
             'tenant_id' => $data->tenantId,
             'type' => $data->type,
             'external_id' => $data->externalId,
-            'credentials' => [
-                'bot_token' => $data->botToken,
-                'secret_token' => $data->secretToken,
-            ],
+            'credentials' => $credentials,
             'is_active' => true,
             'settings' => $data->settings,
         ]);
@@ -37,6 +39,14 @@ final class EloquentChannelRepository extends EloquentRepository implements Chan
     public function find(string $id): ?Channel
     {
         return $this->findById($id);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function update(Channel $channel, array $attributes): void
+    {
+        $channel->update($attributes);
     }
 
     public function forCurrentTenant(): Collection

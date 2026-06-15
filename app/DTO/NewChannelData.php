@@ -16,8 +16,8 @@ final readonly class NewChannelData
         public string $tenantId,
         public ChannelType $type,
         public ?string $externalId,
-        public string $botToken,
-        public string $secretToken,
+        public ?string $botToken = null,
+        public ?string $secretToken = null,
         /** @var array<string, mixed> */
         public array $settings = [],
     ) {}

@@ -1,0 +1,76 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Cabinet;
+
+use App\Enums\ChannelType;
+use App\Models\Channel;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
+
+final class WidgetCabinetTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * @return array{0: Tenant, 1: User}
+     */
+    private function tenantWithOwner(): array
+    {
+        $tenant = Tenant::factory()->create();
+
+        return [$tenant, User::factory()->owner($tenant)->create()];
+    }
+
+    public function test_index_shows_connect_prompt_when_no_widget(): void
+    {
+        [, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)
+            ->get('/cabinet/widget')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Cabinet/Widget/Index')
+                ->where('widget', null));
+    }
+
+    public function test_owner_connects_widget_and_sees_snippet(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)->post('/cabinet/widget')->assertRedirect(route('cabinet.widget.index'));
+
+        $this->assertDatabaseHas('channels', ['tenant_id' => $tenant->id, 'type' => ChannelType::Web->value]);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/widget')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Cabinet/Widget/Index')
+                ->has('widget.snippet')
+                ->has('widget.scriptUrl'));
+    }
+
+    public function test_owner_sets_allowed_origins(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)->post('/cabinet/widget');
+        $channel = Channel::where('tenant_id', $tenant->id)->firstOrFail();
+
+        $this->actingAs($owner)
+            ->put("/cabinet/widget/{$channel->id}", ['origins' => "https://shop.ru\nhttps://www.shop.ru"])
+            ->assertRedirect(route('cabinet.widget.index'));
+
+        $this->assertSame(['https://shop.ru', 'https://www.shop.ru'], $channel->fresh()->settings['allowed_origins']);
+    }
+
+    public function test_widget_tab_is_not_available_to_guests(): void
+    {
+        $this->get('/cabinet/widget')->assertRedirect('/login');
+    }
+}
