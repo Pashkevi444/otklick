@@ -35,7 +35,8 @@ services:
         condition: service_healthy
 
   pgsql:
-    image: pgvector/pgvector:pg16
+    build:
+      context: ./docker/postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE}
