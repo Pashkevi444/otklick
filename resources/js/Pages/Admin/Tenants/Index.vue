@@ -97,7 +97,30 @@ const statusClass = (t: TenantRow): string =>
             </div>
         </form>
 
-        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <!-- Мобильные карточки -->
+        <div class="space-y-3 md:hidden">
+            <Link
+                v-for="tenant in tenants"
+                :key="tenant.id"
+                :href="`/admin/tenants/${tenant.id}`"
+                class="block rounded-xl border border-slate-200 bg-white p-4"
+            >
+                <div class="flex items-center justify-between gap-2">
+                    <span class="font-medium text-[#2E74B5]">{{ tenant.name }}</span>
+                    <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="statusClass(tenant)">{{ statusLabel(tenant) }}</span>
+                </div>
+                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                    <span>Тариф: {{ tenant.plan_label }}</span>
+                    <span>Доступ до: {{ tenant.access_expires_at ?? '∞' }}</span>
+                </div>
+            </Link>
+            <div v-if="tenants.length === 0" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-400">
+                Бизнесов пока нет.
+            </div>
+        </div>
+
+        <!-- Таблица (десктоп) -->
+        <div class="hidden overflow-hidden rounded-xl border border-slate-200 bg-white md:block">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>

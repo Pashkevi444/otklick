@@ -19,6 +19,17 @@ const props = defineProps<{ site: Site; loginUrl: string }>();
 
 const tgUrl = computed(() => (props.site.telegram ? `https://t.me/${props.site.telegram}` : null));
 
+const mobileOpen = ref(false);
+
+const navLinks = [
+    { href: '#features', label: 'Возможности' },
+    { href: '#how', label: 'Как работает' },
+    { href: '#integrations', label: 'Интеграции' },
+    { href: '#pricing', label: 'Тарифы' },
+    { href: '#reliability', label: 'Надёжность' },
+    { href: '#contacts', label: 'Контакты' },
+];
+
 const metrics = ref([
     { target: 24, current: 0, prefix: '', suffix: '/7', label: 'на связи без выходных и перерывов' },
     { target: 2, current: 0, prefix: '<', suffix: ' сек', label: 'до первого ответа клиенту' },
@@ -173,22 +184,41 @@ onBeforeUnmount(() => {
         <!-- Шапка -->
         <header class="sticky top-0 z-30">
             <div class="mx-auto mt-3 max-w-6xl px-4">
-                <div class="glass flex items-center justify-between rounded-2xl px-5 h-14">
-                    <span class="font-bold text-lg text-[#1F4E79] dark:text-white">Отклик</span>
-                    <nav class="hidden md:flex items-center gap-7 text-sm text-slate-600 dark:text-slate-300">
-                        <a href="#features" class="transition hover:text-[#1F4E79] dark:hover:text-white">Возможности</a>
-                        <a href="#how" class="transition hover:text-[#1F4E79] dark:hover:text-white">Как работает</a>
-                        <a href="#integrations" class="transition hover:text-[#1F4E79] dark:hover:text-white">Интеграции</a>
-                        <a href="#pricing" class="transition hover:text-[#1F4E79] dark:hover:text-white">Тарифы</a>
-                        <a href="#reliability" class="transition hover:text-[#1F4E79] dark:hover:text-white">Надёжность</a>
-                        <a href="#contacts" class="transition hover:text-[#1F4E79] dark:hover:text-white">Контакты</a>
-                    </nav>
-                    <div class="flex items-center gap-2">
-                        <ThemeToggle />
-                        <a :href="loginUrl" class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:bg-[#255f96] hover:-translate-y-0.5">
-                            Войти
-                        </a>
+                <div class="glass rounded-2xl px-4 sm:px-5">
+                    <div class="flex h-14 items-center justify-between">
+                        <span class="font-bold text-lg text-[#1F4E79] dark:text-white">Отклик</span>
+                        <nav class="hidden md:flex items-center gap-7 text-sm text-slate-600 dark:text-slate-300">
+                            <a v-for="l in navLinks" :key="l.href" :href="l.href" class="transition hover:text-[#1F4E79] dark:hover:text-white">{{ l.label }}</a>
+                        </nav>
+                        <div class="flex items-center gap-2">
+                            <ThemeToggle />
+                            <a :href="loginUrl" class="hidden sm:inline-block rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:bg-[#255f96] hover:-translate-y-0.5">
+                                Войти
+                            </a>
+                            <button
+                                type="button"
+                                class="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-white/50 bg-white/40 text-lg text-[#1F4E79] dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                :aria-label="mobileOpen ? 'Закрыть меню' : 'Открыть меню'"
+                                @click="mobileOpen = !mobileOpen"
+                            >
+                                {{ mobileOpen ? '✕' : '☰' }}
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Мобильное меню -->
+                    <nav v-if="mobileOpen" class="md:hidden flex flex-col gap-1 border-t border-white/40 py-3 text-sm dark:border-white/10">
+                        <a
+                            v-for="l in navLinks"
+                            :key="l.href"
+                            :href="l.href"
+                            class="rounded-lg px-3 py-2 text-slate-700 transition hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10"
+                            @click="mobileOpen = false"
+                        >
+                            {{ l.label }}
+                        </a>
+                        <a :href="loginUrl" class="mt-1 rounded-lg bg-[#2E74B5] px-3 py-2 text-center font-medium text-white">Войти</a>
+                    </nav>
                 </div>
             </div>
         </header>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 
 defineProps<{ title?: string }>();
 
+const mobileOpen = ref(false);
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const flash = computed(() => page.props.flash);
@@ -60,40 +61,72 @@ const logout = (): void => {
         <!-- Шапка -->
         <header class="sticky top-0 z-30">
             <div class="mx-auto mt-3 max-w-6xl px-4">
-                <div class="glass flex h-14 items-center justify-between gap-4 rounded-2xl px-4">
-                    <div class="flex min-w-0 items-center gap-5">
-                        <span class="font-bold text-[#1F4E79] dark:text-white">Отклик</span>
-                        <nav class="flex items-center gap-1 overflow-x-auto whitespace-nowrap">
-                            <Link
-                                v-for="item in navItems"
-                                :key="item.href"
-                                :href="item.href"
-                                class="rounded-xl px-3 py-1.5 text-sm font-medium transition"
-                                :class="isActive(item.href)
-                                    ? 'bg-white/70 text-[#1F4E79] shadow-sm dark:bg-white/15 dark:text-white'
-                                    : 'text-slate-600 hover:bg-white/50 dark:text-slate-300 dark:hover:bg-white/10'"
-                            >
-                                {{ item.label }}
+                <div class="glass rounded-2xl px-4">
+                    <div class="flex h-14 items-center justify-between gap-4">
+                        <div class="flex min-w-0 items-center gap-5">
+                            <span class="font-bold text-[#1F4E79] dark:text-white">Отклик</span>
+                            <nav class="hidden items-center gap-1 md:flex">
+                                <Link
+                                    v-for="item in navItems"
+                                    :key="item.href"
+                                    :href="item.href"
+                                    class="rounded-xl px-3 py-1.5 text-sm font-medium transition"
+                                    :class="isActive(item.href)
+                                        ? 'bg-white/70 text-[#1F4E79] shadow-sm dark:bg-white/15 dark:text-white'
+                                        : 'text-slate-600 hover:bg-white/50 dark:text-slate-300 dark:hover:bg-white/10'"
+                                >
+                                    {{ item.label }}
+                                </Link>
+                            </nav>
+                        </div>
+                        <div class="flex flex-none items-center gap-2 text-sm sm:gap-3">
+                            <ThemeToggle />
+                            <Link href="/account/password" class="hidden text-right transition hover:opacity-80 lg:block">
+                                <div class="font-medium text-slate-700 dark:text-slate-200">{{ user?.name }}</div>
+                                <div class="text-xs text-slate-400 dark:text-slate-500">
+                                    <template v-if="user?.tenant">{{ user.tenant.name }} · {{ user.tenant.plan }}</template>
+                                    <template v-else>{{ user?.roleLabel }}</template>
+                                </div>
                             </Link>
-                        </nav>
+                            <button
+                                type="button"
+                                class="hidden rounded-xl border border-white/50 bg-white/40 px-3 py-1.5 font-medium text-slate-600 transition hover:-translate-y-0.5 sm:block dark:border-white/10 dark:bg-white/10 dark:text-slate-300"
+                                @click="logout"
+                            >
+                                Выйти
+                            </button>
+                            <button
+                                type="button"
+                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/50 bg-white/40 text-lg text-[#1F4E79] md:hidden dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                :aria-label="mobileOpen ? 'Закрыть меню' : 'Открыть меню'"
+                                @click="mobileOpen = !mobileOpen"
+                            >
+                                {{ mobileOpen ? '✕' : '☰' }}
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex flex-none items-center gap-3 text-sm">
-                        <ThemeToggle />
-                        <Link href="/account/password" class="hidden text-right transition hover:opacity-80 sm:block">
-                            <div class="font-medium text-slate-700 dark:text-slate-200">{{ user?.name }}</div>
-                            <div class="text-xs text-slate-400 dark:text-slate-500">
-                                <template v-if="user?.tenant">{{ user.tenant.name }} · {{ user.tenant.plan }}</template>
-                                <template v-else>{{ user?.roleLabel }}</template>
-                            </div>
-                        </Link>
-                        <button
-                            type="button"
-                            class="rounded-xl border border-white/50 bg-white/40 px-3 py-1.5 font-medium text-slate-600 transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-slate-300"
-                            @click="logout"
+
+                    <!-- Мобильное меню -->
+                    <nav v-if="mobileOpen" class="flex flex-col gap-1 border-t border-white/40 py-3 text-sm md:hidden dark:border-white/10">
+                        <Link
+                            v-for="item in navItems"
+                            :key="item.href"
+                            :href="item.href"
+                            class="rounded-lg px-3 py-2 font-medium transition"
+                            :class="isActive(item.href)
+                                ? 'bg-white/70 text-[#1F4E79] dark:bg-white/15 dark:text-white'
+                                : 'text-slate-700 hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10'"
+                            @click="mobileOpen = false"
                         >
+                            {{ item.label }}
+                        </Link>
+                        <Link href="/account/password" class="rounded-lg px-3 py-2 text-slate-700 hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10" @click="mobileOpen = false">
+                            Аккаунт ({{ user?.name }})
+                        </Link>
+                        <button type="button" class="mt-1 rounded-lg bg-white/40 px-3 py-2 text-left font-medium text-slate-700 dark:bg-white/10 dark:text-slate-200" @click="logout">
                             Выйти
                         </button>
-                    </div>
+                    </nav>
                 </div>
             </div>
         </header>

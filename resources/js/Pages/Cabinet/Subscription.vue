@@ -86,7 +86,7 @@ const rows = computed(() => [
             </div>
 
             <!-- Апгрейд на Макс -->
-            <div v-if="!plan.isMax" class="mt-8 rounded-xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-6">
+            <div v-if="!plan.isMax" class="mt-8 rounded-xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-6 dark:border-sky-400/20 dark:bg-none dark:bg-white/5">
                 <div class="font-semibold text-[#1F4E79]">Перейти на тариф «Макс»</div>
                 <p class="mt-2 text-sm text-slate-600">
                     Подключение всех каналов (ВКонтакте, MAX, Avito), интеграция с CRM и автозапись, рассылки,

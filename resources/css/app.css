@@ -73,6 +73,29 @@ html.dark .ui-scope select option {
     background-color: #141d33;
     color: #e6edf6;
 }
+/* Цветные статус-бейджи в тёмной теме */
+html.dark .ui-scope .bg-green-100 {
+    background-color: rgba(34, 197, 94, 0.16);
+}
+html.dark .ui-scope .bg-red-100 {
+    background-color: rgba(239, 68, 68, 0.16);
+}
+html.dark .ui-scope .bg-amber-100 {
+    background-color: rgba(245, 158, 11, 0.16);
+}
+html.dark .ui-scope .text-green-700,
+html.dark .ui-scope .text-green-600 {
+    color: #86efac;
+}
+html.dark .ui-scope .text-red-700 {
+    color: #fca5a5;
+}
+html.dark .ui-scope .text-amber-700 {
+    color: #fcd34d;
+}
+html.dark .ui-scope .text-slate-300 {
+    color: #5b6677;
+}
 
 /* Плавное появление контента (страницы кабинета/входа) */
 @keyframes ui-fade-in {

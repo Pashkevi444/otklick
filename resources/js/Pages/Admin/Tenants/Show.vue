@@ -101,20 +101,20 @@ const savePassword = (): void => {
         </div>
 
         <h2 class="font-semibold text-slate-700 mb-2">Пользователи</h2>
-        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <table class="w-full text-sm">
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table class="w-full min-w-[420px] text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>
-                        <th class="px-5 py-3 font-medium">Имя</th>
-                        <th class="px-5 py-3 font-medium">Email</th>
-                        <th class="px-5 py-3 font-medium">Роль</th>
+                        <th class="px-5 py-3 font-medium whitespace-nowrap">Имя</th>
+                        <th class="px-5 py-3 font-medium whitespace-nowrap">Email</th>
+                        <th class="px-5 py-3 font-medium whitespace-nowrap">Роль</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <tr v-for="user in users" :key="user.id">
-                        <td class="px-5 py-3 font-medium text-slate-700">{{ user.name }}</td>
-                        <td class="px-5 py-3 text-slate-500">{{ user.email }}</td>
-                        <td class="px-5 py-3 text-slate-500">{{ user.role }}</td>
+                        <td class="px-5 py-3 font-medium text-slate-700 whitespace-nowrap">{{ user.name }}</td>
+                        <td class="px-5 py-3 text-slate-500 whitespace-nowrap">{{ user.email }}</td>
+                        <td class="px-5 py-3 text-slate-500 whitespace-nowrap">{{ user.role }}</td>
                     </tr>
                 </tbody>
             </table>
