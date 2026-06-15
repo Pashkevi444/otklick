@@ -33,7 +33,12 @@ const disconnect = (id: string): void => {
 
     <AppLayout title="Каналы">
         <form class="bg-white rounded-xl border border-slate-200 p-6 mb-6" @submit.prevent="connect">
-            <div class="font-semibold text-[#1F4E79] mb-3">Подключить Telegram-бота</div>
+            <div class="font-semibold text-[#1F4E79] mb-1">Подключить Telegram-бота</div>
+            <ol class="text-sm text-slate-500 mb-3 list-decimal list-inside space-y-0.5">
+                <li>Откройте <a href="https://t.me/BotFather" target="_blank" class="text-[#2E74B5] hover:underline">@BotFather</a> в Telegram, команда <code>/newbot</code>.</li>
+                <li>Скопируйте выданный токен вида <code>123456789:ABCdef...</code> и вставьте ниже.</li>
+                <li>После подключения бот начнёт принимать сообщения клиентов.</li>
+            </ol>
             <div class="flex gap-3 items-start">
                 <div class="flex-1">
                     <input

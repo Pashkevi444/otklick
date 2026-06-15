@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Requests\AbstractFormRequest;
 use Illuminate\Auth\Events\Lockout;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -14,13 +14,8 @@ use Illuminate\Validation\ValidationException;
 /**
  * Вход в систему. Логика аутентификации и троттлинга — по паттерну Breeze.
  */
-final class LoginRequest extends FormRequest
+final class LoginRequest extends AbstractFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * @return array<string, mixed>
      */

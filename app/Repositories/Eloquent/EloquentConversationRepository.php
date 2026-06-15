@@ -10,6 +10,11 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 
 final class EloquentConversationRepository implements ConversationRepositoryInterface
 {
+    public function updateStatus(Conversation $conversation, ConversationStatus $status): void
+    {
+        $conversation->forceFill(['status' => $status])->save();
+    }
+
     public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName): Conversation
     {
         return Conversation::firstOrCreate(

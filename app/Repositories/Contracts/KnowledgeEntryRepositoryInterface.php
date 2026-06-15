@@ -18,6 +18,13 @@ interface KnowledgeEntryRepositoryInterface
      */
     public function forCurrentTenant(): Collection;
 
+    /**
+     * Только опубликованные записи текущего тенанта (для ответов бота).
+     *
+     * @return Collection<int, KnowledgeEntry>
+     */
+    public function publishedForCurrentTenant(): Collection;
+
     public function find(string $id): ?KnowledgeEntry;
 
     public function create(KnowledgeEntryData $data): KnowledgeEntry;

@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
-use App\Tenancy\Contracts\TenantOwned;
 use Database\Factories\KnowledgeEntryFactory;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
 /**
  * Запись базы знаний тенанта.
@@ -19,23 +15,29 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $title
  * @property string $content
  * @property bool $is_published
+ * @property list<array{label: string, url: string}> $links
+ * @property list<array{path: string, url: string}> $images
  */
-class KnowledgeEntry extends Model implements TenantOwned
+class KnowledgeEntry extends TenantOwnedModel
 {
     /** @use HasFactory<KnowledgeEntryFactory> */
-    use BelongsToTenant, HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'tenant_id',
         'title',
         'content',
         'is_published',
+        'links',
+        'images',
     ];
 
     protected function casts(): array
     {
         return [
             'is_published' => 'boolean',
+            'links' => 'array',
+            'images' => 'array',
         ];
     }
 }

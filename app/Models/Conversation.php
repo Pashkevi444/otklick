@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ConversationStatus;
-use App\Models\Concerns\BelongsToTenant;
-use App\Tenancy\Contracts\TenantOwned;
 use Database\Factories\ConversationFactory;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
@@ -26,10 +22,10 @@ use Illuminate\Support\Carbon;
  * @property ConversationStatus $status
  * @property Carbon|null $last_message_at
  */
-class Conversation extends Model implements TenantOwned
+class Conversation extends TenantOwnedModel
 {
     /** @use HasFactory<ConversationFactory> */
-    use BelongsToTenant, HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'tenant_id',

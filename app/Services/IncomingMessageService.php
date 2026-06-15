@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Channels\Contracts\MessengerGateway;
 use App\DTO\IncomingMessage;
+use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Models\Channel;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
@@ -13,10 +14,11 @@ use App\Repositories\Contracts\MessageRepositoryInterface;
 use Throwable;
 
 /**
- * Обработка входящего сообщения: фиксация диалога и сообщения, формирование
- * ответа и отправка обратно в канал.
+ * Обработка входящего сообщения: фиксация диалога и сообщения, генерация ответа
+ * по базе знаний (ReplyComposer) и отправка обратно в канал.
  *
- * Фаза 1 — эхо-шаблон. Дальше здесь подключатся RAG и LLM (Фазы 2–3).
+ * Если бот не знает ответа — отправляется вежливый фолбек, а диалог помечается
+ * статусом «нужен человек».
  */
 final readonly class IncomingMessageService
 {
@@ -24,6 +26,7 @@ final readonly class IncomingMessageService
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
         private MessengerGateway $gateway,
+        private ReplyComposer $composer,
     ) {}
 
     public function handle(Channel $channel, IncomingMessage $incoming): void
@@ -41,26 +44,22 @@ final readonly class IncomingMessageService
             return;
         }
 
-        $reply = $this->reply($incoming);
+        $reply = $this->composer->compose($channel->tenant, $conversation);
 
         $status = MessageStatus::Sent;
 
         try {
-            $this->gateway->send($channel, $incoming->externalChatId, $reply);
+            $this->gateway->send($channel, $incoming->externalChatId, $reply->text);
         } catch (Throwable $e) {
             $status = MessageStatus::Failed;
             report($e);
         }
 
-        $this->messages->recordOutbound($conversation, $reply, $status);
+        $this->messages->recordOutbound($conversation, $reply->text, $status);
         $this->conversations->touchLastMessage($conversation);
-    }
 
-    /**
-     * Шаблон ответа Фазы 1: эхо. Заменится конвейером RAG + LLM.
-     */
-    private function reply(IncomingMessage $incoming): string
-    {
-        return "Вы написали: {$incoming->text}";
+        if ($reply->escalate) {
+            $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+        }
     }
 }

@@ -9,8 +9,16 @@ use App\Models\Tenant;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use Illuminate\Support\Collection;
 
-final class EloquentTenantRepository implements TenantRepositoryInterface
+/**
+ * @extends EloquentRepository<Tenant>
+ */
+final class EloquentTenantRepository extends EloquentRepository implements TenantRepositoryInterface
 {
+    protected function model(): string
+    {
+        return Tenant::class;
+    }
+
     public function create(NewTenantData $data): Tenant
     {
         return Tenant::create([
@@ -30,7 +38,7 @@ final class EloquentTenantRepository implements TenantRepositoryInterface
 
     public function find(string $id): ?Tenant
     {
-        return Tenant::find($id);
+        return $this->findById($id);
     }
 
     public function findBySlug(string $slug): ?Tenant

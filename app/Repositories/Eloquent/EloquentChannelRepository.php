@@ -9,8 +9,16 @@ use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use Illuminate\Support\Collection;
 
-final class EloquentChannelRepository implements ChannelRepositoryInterface
+/**
+ * @extends EloquentRepository<Channel>
+ */
+final class EloquentChannelRepository extends EloquentRepository implements ChannelRepositoryInterface
 {
+    protected function model(): string
+    {
+        return Channel::class;
+    }
+
     public function create(NewChannelData $data): Channel
     {
         return Channel::create([
@@ -28,7 +36,7 @@ final class EloquentChannelRepository implements ChannelRepositoryInterface
 
     public function find(string $id): ?Channel
     {
-        return Channel::find($id);
+        return $this->findById($id);
     }
 
     public function forCurrentTenant(): Collection
@@ -38,6 +46,6 @@ final class EloquentChannelRepository implements ChannelRepositoryInterface
 
     public function delete(Channel $channel): void
     {
-        $channel->delete();
+        $this->remove($channel);
     }
 }

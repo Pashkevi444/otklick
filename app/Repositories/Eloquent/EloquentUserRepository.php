@@ -9,8 +9,16 @@ use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Collection;
 
-final class EloquentUserRepository implements UserRepositoryInterface
+/**
+ * @extends EloquentRepository<User>
+ */
+final class EloquentUserRepository extends EloquentRepository implements UserRepositoryInterface
 {
+    protected function model(): string
+    {
+        return User::class;
+    }
+
     public function create(NewUserData $data): User
     {
         return User::create([

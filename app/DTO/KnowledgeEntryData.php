@@ -9,9 +9,15 @@ namespace App\DTO;
  */
 final readonly class KnowledgeEntryData
 {
+    /**
+     * @param  list<array{label: string, url: string}>  $links
+     * @param  list<array{path: string, url: string}>  $images
+     */
     public function __construct(
         public string $title,
         public string $content,
         public bool $isPublished,
+        public array $links = [],
+        public array $images = [],
     ) {}
 }

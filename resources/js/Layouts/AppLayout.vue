@@ -23,6 +23,7 @@ const navItems = computed<NavItem[]>(() => {
         { label: 'Каналы', href: '/cabinet/channels' },
         { label: 'Профиль', href: '/cabinet/profile' },
         { label: 'База знаний', href: '/cabinet/knowledge' },
+        { label: 'Интеграции', href: '/cabinet/integrations' },
     ];
 });
 

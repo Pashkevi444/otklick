@@ -9,16 +9,29 @@ use App\Models\KnowledgeEntry;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use Illuminate\Support\Collection;
 
-final class EloquentKnowledgeEntryRepository implements KnowledgeEntryRepositoryInterface
+/**
+ * @extends EloquentRepository<KnowledgeEntry>
+ */
+final class EloquentKnowledgeEntryRepository extends EloquentRepository implements KnowledgeEntryRepositoryInterface
 {
+    protected function model(): string
+    {
+        return KnowledgeEntry::class;
+    }
+
     public function forCurrentTenant(): Collection
     {
         return KnowledgeEntry::query()->latest()->get();
     }
 
+    public function publishedForCurrentTenant(): Collection
+    {
+        return KnowledgeEntry::query()->where('is_published', true)->latest()->get();
+    }
+
     public function find(string $id): ?KnowledgeEntry
     {
-        return KnowledgeEntry::find($id);
+        return $this->findById($id);
     }
 
     public function create(KnowledgeEntryData $data): KnowledgeEntry
@@ -27,6 +40,8 @@ final class EloquentKnowledgeEntryRepository implements KnowledgeEntryRepository
             'title' => $data->title,
             'content' => $data->content,
             'is_published' => $data->isPublished,
+            'links' => $data->links,
+            'images' => $data->images,
         ]);
     }
 
@@ -36,6 +51,8 @@ final class EloquentKnowledgeEntryRepository implements KnowledgeEntryRepository
             'title' => $data->title,
             'content' => $data->content,
             'is_published' => $data->isPublished,
+            'links' => $data->links,
+            'images' => $data->images,
         ]);
 
         return $entry->refresh();
@@ -43,6 +60,6 @@ final class EloquentKnowledgeEntryRepository implements KnowledgeEntryRepository
 
     public function delete(KnowledgeEntry $entry): void
     {
-        $entry->delete();
+        $this->remove($entry);
     }
 }

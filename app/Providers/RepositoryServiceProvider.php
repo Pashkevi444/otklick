@@ -6,12 +6,14 @@ namespace App\Providers;
 
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentChannelRepository;
 use App\Repositories\Eloquent\EloquentConversationRepository;
+use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
@@ -32,5 +34,6 @@ final class RepositoryServiceProvider extends ServiceProvider
         MessageRepositoryInterface::class => EloquentMessageRepository::class,
         UserRepositoryInterface::class => EloquentUserRepository::class,
         KnowledgeEntryRepositoryInterface::class => EloquentKnowledgeEntryRepository::class,
+        CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
     ];
 }

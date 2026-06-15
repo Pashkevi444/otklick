@@ -6,6 +6,8 @@ namespace Tests\Feature\Webhooks;
 
 use App\Jobs\ProcessTelegramUpdate;
 use App\Models\Channel;
+use App\Models\KnowledgeEntry;
+use App\Models\Message;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -26,41 +28,56 @@ final class ProcessTelegramUpdateTest extends TestCase
             'message' => array_merge([
                 'message_id' => 10,
                 'chat' => ['id' => 555],
-                'text' => 'привет',
+                'text' => 'есть ли доставка?',
                 'from' => ['first_name' => 'Иван'],
             ], $overrides),
         ];
     }
 
-    public function test_processing_records_messages_and_sends_echo(): void
+    private function process(Tenant $tenant, Channel $channel, array $update): void
+    {
+        $this->app->call([new ProcessTelegramUpdate($tenant->id, $channel->id, $update), 'handle']);
+    }
+
+    public function test_bot_answers_from_published_knowledge(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        KnowledgeEntry::factory()->create([
+            'tenant_id' => $tenant->id,
+            'is_published' => true,
+            'title' => 'Доставка',
+            'content' => 'Доставка бесплатно от 1000 рублей',
+        ]);
+
+        $this->process($tenant, $channel, $this->update());
+
+        $this->assertDatabaseHas('messages', [
+            'tenant_id' => $tenant->id,
+            'direction' => 'inbound',
+            'text' => 'есть ли доставка?',
+        ]);
+
+        $outbound = Message::query()->where('direction', 'outbound')->firstOrFail();
+        $this->assertStringContainsString('бесплатно', (string) $outbound->text);
+        $this->assertDatabaseHas('conversations', ['tenant_id' => $tenant->id, 'status' => 'open']);
+
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/sendMessage')
+            && str_contains((string) $request['text'], 'бесплатно'));
+    }
+
+    public function test_unknown_question_falls_back_and_flags_needs_human(): void
     {
         Http::fake();
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        $this->app->call([new ProcessTelegramUpdate($tenant->id, $channel->id, $this->update()), 'handle']);
+        $this->process($tenant, $channel, $this->update(['text' => 'расскажи про квантовую физику']));
 
-        $this->assertDatabaseHas('messages', [
-            'tenant_id' => $tenant->id,
-            'direction' => 'inbound',
-            'external_message_id' => '10',
-            'text' => 'привет',
-        ]);
-        $this->assertDatabaseHas('messages', [
-            'tenant_id' => $tenant->id,
-            'direction' => 'outbound',
-            'text' => 'Вы написали: привет',
-            'status' => 'sent',
-        ]);
-        $this->assertDatabaseHas('conversations', [
-            'tenant_id' => $tenant->id,
-            'external_chat_id' => '555',
-            'contact_name' => 'Иван',
-        ]);
-
-        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/sendMessage')
-            && $request['chat_id'] === '555'
-            && $request['text'] === 'Вы написали: привет');
+        $outbound = Message::query()->where('direction', 'outbound')->firstOrFail();
+        $this->assertStringContainsString('администратору', (string) $outbound->text);
+        $this->assertDatabaseHas('conversations', ['tenant_id' => $tenant->id, 'status' => 'needs_human']);
     }
 
     public function test_duplicate_update_is_idempotent(): void
@@ -69,8 +86,8 @@ final class ProcessTelegramUpdateTest extends TestCase
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        $this->app->call([new ProcessTelegramUpdate($tenant->id, $channel->id, $this->update()), 'handle']);
-        $this->app->call([new ProcessTelegramUpdate($tenant->id, $channel->id, $this->update()), 'handle']);
+        $this->process($tenant, $channel, $this->update());
+        $this->process($tenant, $channel, $this->update());
 
         // 1 входящее + 1 исходящее, без дублей.
         $this->assertDatabaseCount('messages', 2);
@@ -83,8 +100,7 @@ final class ProcessTelegramUpdateTest extends TestCase
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        $update = ['update_id' => 101, 'message' => ['message_id' => 11, 'chat' => ['id' => 555], 'photo' => []]];
-        $this->app->call([new ProcessTelegramUpdate($tenant->id, $channel->id, $update), 'handle']);
+        $this->process($tenant, $channel, ['update_id' => 101, 'message' => ['message_id' => 11, 'chat' => ['id' => 555], 'photo' => []]]);
 
         $this->assertDatabaseCount('messages', 0);
         Http::assertNothingSent();

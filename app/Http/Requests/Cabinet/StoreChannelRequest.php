@@ -4,18 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Cabinet;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\AbstractFormRequest;
 
 /**
  * Подключение Telegram-бота к каналу тенанта. Токен формата <bot_id>:<secret>.
  */
-final class StoreChannelRequest extends FormRequest
+final class StoreChannelRequest extends AbstractFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * @return array<string, mixed>
      */

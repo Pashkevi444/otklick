@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Enums\Contracts\HasLabel;
+
 /**
  * Статус доставки сообщения. Входящее фиксируется как received; исходящее
  * переходит sent при успешной отправке в канал или failed при ошибке.
  */
-enum MessageStatus: string
+enum MessageStatus: string implements HasLabel
 {
     case Received = 'received';
     case Sent = 'sent';

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Enums\Contracts\HasLabel;
+
 /**
  * Тарифный план тенанта (клиента-бизнеса).
  */
-enum TenantPlan: string
+enum TenantPlan: string implements HasLabel
 {
     case Trial = 'trial';
     case Starter = 'starter';

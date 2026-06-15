@@ -31,6 +31,9 @@ services:
       target: app
     ports:
       - "8000:8000"
+    volumes:
+      # Загруженные файлы (картинки базы знаний) переживают пересборку образа.
+      - storage_public:/var/www/html/storage/app/public
     environment:
       APP_NAME: "Отклик"
       APP_ENV: local
@@ -47,6 +50,11 @@ services:
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: redis
+      LLM_DRIVER: ${LLM_DRIVER:-fake}
+      YANDEX_API_KEY: ${YANDEX_API_KEY:-}
+      YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}
+      YANDEX_GPT_MODEL: ${YANDEX_GPT_MODEL:-yandexgpt-lite}
+      TELEGRAM_WEBHOOK_BASE_URL: ${TELEGRAM_WEBHOOK_BASE_URL:-http://localhost:8000}
       RUN_MIGRATIONS: "true"
     depends_on:
       pgsql:
@@ -74,6 +82,11 @@ services:
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: redis
+      LLM_DRIVER: ${LLM_DRIVER:-fake}
+      YANDEX_API_KEY: ${YANDEX_API_KEY:-}
+      YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}
+      YANDEX_GPT_MODEL: ${YANDEX_GPT_MODEL:-yandexgpt-lite}
+      TELEGRAM_WEBHOOK_BASE_URL: ${TELEGRAM_WEBHOOK_BASE_URL:-http://localhost:8000}
       RUN_MIGRATIONS: "false"
     depends_on:
       app:
@@ -85,3 +98,4 @@ services:
 
 volumes:
   pgdata:
+  storage_public:

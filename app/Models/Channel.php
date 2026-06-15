@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ChannelType;
-use App\Models\Concerns\BelongsToTenant;
-use App\Tenancy\Contracts\TenantOwned;
 use Database\Factories\ChannelFactory;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -24,10 +20,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_active
  * @property array<string, mixed> $settings
  */
-class Channel extends Model implements TenantOwned
+class Channel extends TenantOwnedModel
 {
     /** @use HasFactory<ChannelFactory> */
-    use BelongsToTenant, HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'tenant_id',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Contracts;
 
+use App\Enums\ConversationStatus;
 use App\Models\Conversation;
 
 /**
@@ -11,6 +12,8 @@ use App\Models\Conversation;
  */
 interface ConversationRepositoryInterface
 {
+    public function updateStatus(Conversation $conversation, ConversationStatus $status): void;
+
     /**
      * Находит диалог по чату канала или создаёт новый. tenant_id проставляется
      * автоматически из текущего тенант-контекста.

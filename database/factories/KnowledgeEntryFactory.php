@@ -25,6 +25,8 @@ class KnowledgeEntryFactory extends Factory
             'title' => fake()->sentence(3),
             'content' => fake()->paragraph(),
             'is_published' => true,
+            'links' => [],
+            'images' => [],
         ];
     }
 }

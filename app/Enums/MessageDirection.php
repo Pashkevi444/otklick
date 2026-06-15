@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Enums\Contracts\HasLabel;
+
 /**
  * Направление сообщения относительно бизнеса: входящее от клиента или
  * исходящее (ответ бота / оператора).
  */
-enum MessageDirection: string
+enum MessageDirection: string implements HasLabel
 {
     case Inbound = 'inbound';
     case Outbound = 'outbound';

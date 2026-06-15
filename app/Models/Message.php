@@ -6,12 +6,8 @@ namespace App\Models;
 
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
-use App\Models\Concerns\BelongsToTenant;
-use App\Tenancy\Contracts\TenantOwned;
 use Database\Factories\MessageFactory;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -26,10 +22,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, mixed>|null $payload
  * @property MessageStatus $status
  */
-class Message extends Model implements TenantOwned
+class Message extends TenantOwnedModel
 {
     /** @use HasFactory<MessageFactory> */
-    use BelongsToTenant, HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'tenant_id',

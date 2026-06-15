@@ -42,4 +42,31 @@ return [
         'webhook_base_url' => env('TELEGRAM_WEBHOOK_BASE_URL', env('APP_URL')),
     ],
 
+    'yclients' => [
+        'api_url' => env('YCLIENTS_API_URL', 'https://api.yclients.com/api/v1'),
+        // Партнёрский токен приложения (общий для платформы); пользовательский
+        // токен и company_id задаёт бизнес при подключении.
+        'partner_token' => env('YCLIENTS_PARTNER_TOKEN'),
+    ],
+
+    'llm' => [
+        // fake — локальная детерминированная модель (по умолчанию, без ключей).
+        // gigachat / yandexgpt — реальные провайдеры (адаптеры добавляются при наличии ключей).
+        'driver' => env('LLM_DRIVER', 'fake'),
+
+        'gigachat' => [
+            'client_id' => env('GIGACHAT_CLIENT_ID'),
+            'client_secret' => env('GIGACHAT_CLIENT_SECRET'),
+            'scope' => env('GIGACHAT_SCOPE', 'GIGACHAT_API_PERS'),
+        ],
+
+        'yandexgpt' => [
+            // OpenAI-совместимый эндпоинт Yandex Cloud AI.
+            'api_url' => env('YANDEX_API_URL', 'https://ai.api.cloud.yandex.net/v1/chat/completions'),
+            'api_key' => env('YANDEX_API_KEY'),
+            'folder_id' => env('YANDEX_FOLDER_ID'),
+            'model' => env('YANDEX_GPT_MODEL', 'yandexgpt-lite'),
+        ],
+    ],
+
 ];

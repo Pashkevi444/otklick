@@ -10,9 +10,21 @@ use App\Enums\MessageStatus;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use Illuminate\Support\Collection;
 
 final class EloquentMessageRepository implements MessageRepositoryInterface
 {
+    public function recentForConversation(Conversation $conversation, int $limit): Collection
+    {
+        return Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->latest()
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+    }
+
     public function recordInbound(Conversation $conversation, IncomingMessage $incoming): ?Message
     {
         $alreadyRecorded = Message::query()

@@ -42,7 +42,8 @@ final class ChannelController extends Controller
             );
         } catch (RequestException) {
             return back()->withErrors([
-                'bot_token' => 'Не удалось зарегистрировать вебхук в Telegram. Проверьте токен.',
+                'bot_token' => 'Не удалось зарегистрировать вебхук в Telegram. Нужен публичный HTTPS-адрес '.
+                    '(localhost Telegram не принимает) — проверьте TELEGRAM_WEBHOOK_BASE_URL и токен.',
             ]);
         }
 

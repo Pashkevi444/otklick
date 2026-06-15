@@ -30,4 +30,8 @@ fi
 
 php artisan config:clear
 
+# Симлинк public/storage → storage/app/public, чтобы отдавались загруженные
+# файлы (картинки базы знаний). Пересоздаём при каждом старте контейнера.
+php artisan storage:link --force
+
 exec "$@"

@@ -4,19 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\AbstractFormRequest;
 use Illuminate\Validation\Rules\Password;
 
 /**
  * Создание тенанта-бизнеса вместе с владельцем (только супер-админ).
  */
-final class StoreTenantRequest extends FormRequest
+final class StoreTenantRequest extends AbstractFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * @return array<string, mixed>
      */

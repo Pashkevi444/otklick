@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Enums\CrmProvider;
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\DashboardController;
+use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
 use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +38,13 @@ Route::middleware(['auth', 'tenant'])->prefix('cabinet')->name('cabinet.')->grou
     Route::get('/knowledge/{entry}/edit', [KnowledgeEntryController::class, 'edit'])->name('knowledge.edit');
     Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
     Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
+
+    Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+    Route::post('/integrations/connect/{provider}', [IntegrationController::class, 'store'])
+        ->whereIn('provider', array_map(fn (CrmProvider $p): string => $p->value, CrmProvider::cases()))
+        ->name('integrations.store');
+    Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
+    Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
 });
 
 // Аккаунт (любой авторизованный пользователь)

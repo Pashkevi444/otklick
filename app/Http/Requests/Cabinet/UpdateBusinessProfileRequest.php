@@ -4,18 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Cabinet;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\AbstractFormRequest;
 
 /**
  * Обновление профиля бизнеса в кабинете тенанта.
  */
-final class UpdateBusinessProfileRequest extends FormRequest
+final class UpdateBusinessProfileRequest extends AbstractFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * @return array<string, mixed>
      */

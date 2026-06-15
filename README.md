@@ -22,6 +22,13 @@
 подключение Telegram формой, профиль бизнеса, база знаний. Тенант-контекст в
 вебе ставит `BindTenantToRequest` по залогиненному пользователю.
 
+**Фаза 3 (диалоговый слой, MVP) — готова.** Бот отвечает по опубликованной базе
+знаний бизнеса (профиль + записи в промпт), а при отсутствии ответа — вежливый
+фолбек и пометка диалога `needs_human`. Провайдер LLM — за интерфейсом `LlmClient`;
+по умолчанию локальный `FakeLlmClient` (без ключей, всё тестируется). Реальные
+GigaChat/YandexGPT подключаются за конфигом `LLM_DRIVER`. Векторный RAG (pgvector) —
+следующий шаг при росте базы знаний.
+
 ## Стек
 
 | Слой | Технология |
@@ -100,7 +107,14 @@ HTTP / Console / Job  →  Service (бизнес-логика)  →  Repository 
 | `App\Enums\MessageStatus` | `received` / `sent` / `failed`. |
 | `App\Enums\ConversationStatus` | `open` / `closed`. |
 | `App\Services\ChannelService` | Подключение Telegram-бота к тенанту: создание канала + `setWebhook`. |
-| `App\Services\IncomingMessageService` | Обработка входящего: фиксация диалога/сообщения, эхо-ответ, отправка (RAG+LLM — далее). |
+| `App\Services\IncomingMessageService` | Обработка входящего: фиксация диалога/сообщения, ответ через `ReplyComposer`, отправка; при эскалации — статус `needs_human`. |
+| `App\Llm\Contracts\LlmClient` | Порт LLM (реализации: `FakeLlmClient`, `YandexGptClient` — OpenAI-совместимый эндпоинт Yandex Cloud AI; выбор по `LLM_DRIVER`). |
+| `App\Services\PromptBuilder` | Системный промпт из профиля бизнеса + опубликованной базы знаний (сентинел `[[ESCALATE]]`). |
+| `App\Services\ReplyComposer` | Сборка ответа: промпт + история диалога → LLM; распознавание эскалации, фолбек. |
+| `App\Models\CrmConnection` | Подключение тенанта к CRM (провайдер + зашифрованные креды); строгий RLS. |
+| `App\Enums\CrmProvider` | CRM-провайдер (`yclients`; расширяется). |
+| `App\Crm\Contracts\CrmGateway` | Стратегия CRM (verify + услуги/мастера/слоты/создание записи; DTO в `App\Crm\Data`). Реестр стратегий `CrmGatewayResolver` по тегу `crm.gateways` — новый CRM = новый адаптер. Реализация: `App\Crm\Yclients\YclientsGateway`. |
+| `App\Services\CrmConnectionService` | Подключение/проверка/отключение CRM + делегирование booking-операций (таб «Интеграции»). |
 | `App\Channels\Contracts\MessengerGateway` | Порт отправки в мессенджер (реализация `App\Channels\Telegram\TelegramGateway`). |
 | `App\Jobs\ProcessTelegramUpdate` | Асинхронный разбор апдейта в тенант-контексте (Horizon). |
 | `App\Tenancy\TenantInitializer` | Единая точка входа в тенант-контекст (in-memory + `app.current_tenant` для RLS). |
@@ -122,7 +136,8 @@ php artisan channel:connect-telegram <tenant-uuid> <bot-token>
 | Сущность | Назначение |
 |---|---|
 | `App\Enums\UserRole` | `super_admin` / `owner` / `member` (метод `label()`). |
-| `App\Models\KnowledgeEntry` | Запись базы знаний тенанта (title/content/is_published); строгий RLS. |
+| `App\Models\KnowledgeEntry` | Запись базы знаний (title/content/is_published + `links`/`images` jsonb); строгий RLS. |
+| `App\Support\KnowledgeImageStorage` | Хранение картинок-«примеров работ» на public-диске под путём тенанта. |
 | `App\Http\Middleware\BindTenantToRequest` | Ставит тенант-контекст по `Auth::user()->tenant_id`, сбрасывает в `terminate()`. |
 | `App\Http\Middleware\EnsureSuperAdmin` (alias `super-admin`) | Доступ к `/admin/*` только супер-админу. |
 | `App\Http\Middleware\EnsureTenantUser` (alias `tenant`) | Доступ к `/cabinet/*` только пользователю тенанта. |
@@ -142,6 +157,11 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 Публичной регистрации нет — тенантов заводит супер-админ. Подключение Telegram в
 кабинете заменяет консольную команду `channel:connect-telegram`.
 
+База знаний поддерживает структурированный контент: текст, ссылки (`label`+`url`)
+и картинки-«примеры работ» (загрузка на disk `public`). Для отдачи картинок нужен
+символьный линк: `php artisan storage:link` (на проде хранилище — RU object storage,
+152-ФЗ).
+
 ## Маршруты
 
 | Метод | URL | Контроллер | Назначение |
@@ -150,7 +170,7 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | GET | `/up` | — | Health-check Laravel. |
 | GET/POST | `/login` · POST `/logout` | `Auth\AuthenticatedSessionController` | Вход/выход (session). |
 | GET/POST/GET | `/admin/tenants[/{tenant}]` | `Admin\TenantController` | Реестр тенантов, создание, детали (auth + `super-admin`). |
-| — | `/cabinet`, `/cabinet/channels`, `/cabinet/profile`, `/cabinet/knowledge` | `Cabinet\*` | Кабинет тенанта (auth + `tenant`). |
+| — | `/cabinet`, `/cabinet/channels`, `/cabinet/profile`, `/cabinet/knowledge`, `/cabinet/integrations` | `Cabinet\*` | Кабинет тенанта (auth + `tenant`). |
 | GET/PUT | `/account/password` | `Account\PasswordController` | Смена своего пароля (auth). |
 | POST | `/webhooks/telegram/{tenant}/{channel}` | `Webhooks\TelegramWebhookController` | Приём вебхука Telegram (stateless, без CSRF; верификация secret-токена; ack 200 → очередь). |
 
@@ -167,6 +187,11 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | `RUN_MIGRATIONS` | Гонять ли миграции при старте контейнера | `true` (app), `false` (horizon) |
 | `TELEGRAM_API_URL` | Базовый URL Telegram Bot API | `https://api.telegram.org` |
 | `TELEGRAM_WEBHOOK_BASE_URL` | Публичный HTTPS-адрес для `setWebhook` | `${APP_URL}` |
+| `LLM_DRIVER` | Провайдер LLM: `fake` / `yandexgpt` (gigachat — TODO) | `fake` |
+| `YANDEX_API_KEY` / `YANDEX_FOLDER_ID` | Ключ и folder каталога Yandex Cloud (для `yandexgpt`) | — |
+| `YANDEX_GPT_MODEL` | Модель YandexGPT | `yandexgpt-lite` |
+| `YCLIENTS_API_URL` | Базовый URL YClients API | `https://api.yclients.com/api/v1` |
+| `YCLIENTS_PARTNER_TOKEN` | Партнёрский токен приложения YClients | — |
 
 Тесты используют отдельный профиль из `phpunit.xml` (sqlite `:memory:`).
 
