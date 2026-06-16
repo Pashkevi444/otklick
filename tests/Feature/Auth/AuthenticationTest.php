@@ -74,6 +74,21 @@ final class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_inertia_logout_returns_external_location_not_followable_redirect(): void
+    {
+        $user = User::factory()->superAdmin()->create();
+
+        // Inertia-запрос (как из кабинета/админки): на кросс-доменный лендинг
+        // нужен 409 + X-Inertia-Location, иначе клиент follow'ит 302 через fetch
+        // и упирается в CORS («Не удалось выполнить запрос»).
+        $this->actingAs($user)
+            ->post('/logout', [], ['X-Inertia' => 'true'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('home'));
+
+        $this->assertGuest();
+    }
+
     public function test_guest_is_redirected_to_login_from_protected_routes(): void
     {
         $this->get('/cabinet')->assertRedirect('/login');
