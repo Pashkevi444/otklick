@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DTO\Analytics\AnalyticsRange;
 use App\DTO\Analytics\Gap;
 use App\DTO\Analytics\LeadAnalytics;
 use App\DTO\Analytics\MetricCard;
-use App\Enums\LeadAnalyticsPeriod;
 use App\Llm\Contracts\LlmClient;
 use App\Tenancy\TenantContext;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
@@ -44,11 +44,11 @@ final readonly class LeadInsightsService
     /**
      * @return array<string, mixed>|null
      */
-    public function cached(LeadAnalyticsPeriod $period): ?array
+    public function cached(AnalyticsRange $range): ?array
     {
         $tid = $this->tenant->id();
 
-        return $tid !== null ? $this->cache->get($this->key($tid, $period)) : null;
+        return $tid !== null ? $this->cache->get($this->key($tid, $range)) : null;
     }
 
     /**
@@ -64,7 +64,7 @@ final readonly class LeadInsightsService
      *
      * @return array<string, mixed>|null
      */
-    public function refresh(LeadAnalyticsPeriod $period): ?array
+    public function refresh(AnalyticsRange $range): ?array
     {
         $tid = $this->tenant->id();
 
@@ -72,17 +72,17 @@ final readonly class LeadInsightsService
             return null;
         }
 
-        $generated = $this->generate($this->analytics->forPeriod($period));
+        $generated = $this->generate($this->analytics->forPeriod($range));
 
         $payload = [
             'items' => $generated['items'],
             'source' => $generated['source'],
             'ts' => now()->timestamp,
             'generatedAt' => now()->format('d.m.Y H:i'),
-            'period' => $period->value,
+            'period' => $range->key,
         ];
 
-        $this->cache->put($this->key($tid, $period), $payload, self::TTL);
+        $this->cache->put($this->key($tid, $range), $payload, self::TTL);
 
         return $payload;
     }
@@ -171,8 +171,8 @@ final readonly class LeadInsightsService
         return in_array($value, [Gap::HIGH, Gap::MEDIUM, Gap::LOW, Gap::OK], true) ? $value : Gap::MEDIUM;
     }
 
-    private function key(string $tenantId, LeadAnalyticsPeriod $period): string
+    private function key(string $tenantId, AnalyticsRange $range): string
     {
-        return "lead-insights:{$tenantId}:{$period->value}";
+        return "lead-insights:{$tenantId}:{$range->cacheKey()}";
     }
 }

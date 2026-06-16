@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\DTO\Analytics\AnalyticsRange;
 use App\Enums\LeadAnalyticsPeriod;
 use App\Llm\Contracts\LlmClient;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
@@ -45,7 +46,7 @@ final class LeadInsightsServiceTest extends TestCase
             '[{"severity":"high","title":"Мало записей","detail":"конверсия низкая","action":"включите автозапись"}]',
         );
 
-        $result = $this->service($llm)->refresh(LeadAnalyticsPeriod::Month);
+        $result = $this->service($llm)->refresh(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
 
         $this->assertSame('ai', $result['source']);
         $this->assertSame('Мало записей', $result['items'][0]['title']);
@@ -56,7 +57,7 @@ final class LeadInsightsServiceTest extends TestCase
         $llm = Mockery::mock(LlmClient::class);
         $llm->shouldReceive('generate')->once()->andReturn('Извините, не понял запрос.');
 
-        $result = $this->service($llm)->refresh(LeadAnalyticsPeriod::Month);
+        $result = $this->service($llm)->refresh(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
 
         $this->assertSame('rules', $result['source']);
         $this->assertNotEmpty($result['items']);
@@ -68,10 +69,10 @@ final class LeadInsightsServiceTest extends TestCase
         $llm->shouldReceive('generate')->once()->andReturn('[{"title":"X","detail":"d","action":"a"}]');
 
         $service = $this->service($llm);
-        $this->assertNull($service->cached(LeadAnalyticsPeriod::Month));
+        $this->assertNull($service->cached(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month)));
 
-        $service->refresh(LeadAnalyticsPeriod::Month);
+        $service->refresh(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
 
-        $this->assertNotNull($service->cached(LeadAnalyticsPeriod::Month));
+        $this->assertNotNull($service->cached(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month)));
     }
 }

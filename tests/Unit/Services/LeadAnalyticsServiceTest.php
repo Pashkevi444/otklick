@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\DTO\Analytics\AnalyticsRange;
 use App\DTO\Analytics\BreakdownSlice;
 use App\DTO\Analytics\FunnelStage;
 use App\DTO\Analytics\Gap;
@@ -79,7 +80,7 @@ final class LeadAnalyticsServiceTest extends TestCase
             $this->lead(ChannelType::Web, null, null, 1, ConversationStatus::Closed, false, 0),
         ];
 
-        $analytics = $this->service($leads)->forPeriod(LeadAnalyticsPeriod::Month);
+        $analytics = $this->service($leads)->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
 
         $this->assertSame(4, $this->kpi($analytics->kpis, 'leads')->value);
         $this->assertSame(25.0, $this->kpi($analytics->kpis, 'conversion')->value); // 1/4
@@ -106,7 +107,7 @@ final class LeadAnalyticsServiceTest extends TestCase
             $this->lead(ChannelType::Telegram, null, null, 1, ConversationStatus::Open, false),
         ];
 
-        $analytics = $this->service($leads)->forPeriod(LeadAnalyticsPeriod::Month);
+        $analytics = $this->service($leads)->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
 
         $titles = array_map(fn (Gap $g): string => $g->title, $analytics->gaps);
         $this->assertContains('Мало контактов', $titles);
@@ -119,7 +120,7 @@ final class LeadAnalyticsServiceTest extends TestCase
         ];
 
         // Подключён только telegram — web должен попасть в пробелы.
-        $analytics = $this->service($leads, ['telegram'])->forPeriod(LeadAnalyticsPeriod::Month);
+        $analytics = $this->service($leads, ['telegram'])->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
 
         $titles = array_map(fn (Gap $g): string => $g->title, $analytics->gaps);
         $this->assertContains('Канал не подключён: Веб-виджет', $titles);
@@ -127,7 +128,7 @@ final class LeadAnalyticsServiceTest extends TestCase
 
     public function test_empty_period_reports_no_leads_gap(): void
     {
-        $analytics = $this->service([])->forPeriod(LeadAnalyticsPeriod::Month);
+        $analytics = $this->service([])->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
 
         $this->assertSame(0, $this->kpi($analytics->kpis, 'leads')->value);
         $this->assertSame('Пока нет лидов', $analytics->gaps[0]->title);

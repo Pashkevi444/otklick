@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import CountUp from '@/Components/Charts/CountUp.vue';
@@ -71,23 +71,46 @@ const props = defineProps<{ analytics: Analytics; insights: Insights | null }>()
 
 const refreshing = ref(false);
 
+const isCustom = computed<boolean>(() => props.analytics.period.key === 'custom');
+const customFrom = ref(props.analytics.period.from);
+const customTo = ref(props.analytics.period.to);
+
+// Поля дат следуют за активным окном (в т.ч. после смены пресета).
+watch(
+    () => props.analytics.period,
+    (p) => {
+        customFrom.value = p.from;
+        customTo.value = p.to;
+    },
+);
+
+// Параметры текущего окна для экспорта/обновления: пресет или произвольные даты.
+const rangeParams = (): Record<string, string> =>
+    isCustom.value ? { from: props.analytics.period.from, to: props.analytics.period.to } : { period: props.analytics.period.key };
+
 const setPeriod = (key: string): void => {
     router.get('/cabinet/analytics', { period: key }, { preserveScroll: true, preserveState: true, only: ['analytics', 'insights'] });
 };
 
-const refreshInsights = (): void => {
-    router.post(
-        '/cabinet/analytics/insights/refresh',
-        { period: props.analytics.period.key },
-        {
-            preserveScroll: true,
-            onStart: () => (refreshing.value = true),
-            onFinish: () => (refreshing.value = false),
-        },
+const applyCustom = (): void => {
+    if (!customFrom.value || !customTo.value) return;
+    router.get(
+        '/cabinet/analytics',
+        { from: customFrom.value, to: customTo.value },
+        { preserveScroll: true, preserveState: true, only: ['analytics', 'insights'] },
     );
 };
 
-const exportUrl = (type: string): string => `/cabinet/analytics/export/${type}?period=${props.analytics.period.key}`;
+const refreshInsights = (): void => {
+    router.post('/cabinet/analytics/insights/refresh', rangeParams(), {
+        preserveScroll: true,
+        onStart: () => (refreshing.value = true),
+        onFinish: () => (refreshing.value = false),
+    });
+};
+
+const exportUrl = (type: string): string =>
+    `/cabinet/analytics/export/${type}?${new URLSearchParams(rangeParams()).toString()}`;
 
 const hourBars = computed(() => props.analytics.hourly.map((h) => ({ label: String(h.hour), value: h.value })));
 const weekBars = computed(() => props.analytics.weekday.map((w) => ({ label: w.label, value: w.value })));
@@ -142,6 +165,32 @@ const statusClass = (s: string): string =>
                         @click="setPeriod(p.key)"
                     >
                         {{ p.label }}
+                    </button>
+                </div>
+                <div
+                    class="flex items-center gap-1.5 rounded-xl border bg-white/60 px-2 py-1 dark:bg-white/5"
+                    :class="isCustom ? 'border-[#2E74B5] dark:border-sky-400' : 'border-slate-200 dark:border-white/10'"
+                >
+                    <input
+                        v-model="customFrom"
+                        type="date"
+                        class="bg-transparent text-sm text-slate-600 outline-none dark:text-slate-200 dark:[color-scheme:dark]"
+                        aria-label="Дата начала"
+                    />
+                    <span class="text-slate-400">—</span>
+                    <input
+                        v-model="customTo"
+                        type="date"
+                        class="bg-transparent text-sm text-slate-600 outline-none dark:text-slate-200 dark:[color-scheme:dark]"
+                        aria-label="Дата конца"
+                    />
+                    <button
+                        type="button"
+                        class="rounded-lg bg-[#2E74B5] px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-0.5 disabled:opacity-50"
+                        :disabled="!customFrom || !customTo"
+                        @click="applyCustom"
+                    >
+                        Применить
                     </button>
                 </div>
                 <a :href="exportUrl('leads')" class="rounded-xl border border-slate-200 bg-white/60 px-3 py-1.5 text-sm font-medium text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-sky-300">⬇ Лиды CSV</a>

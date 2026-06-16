@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DTO\Analytics\AnalyticsRange;
 use App\DTO\Analytics\BreakdownSlice;
 use App\DTO\Analytics\FunnelStage;
 use App\DTO\Analytics\Gap;
@@ -14,7 +15,6 @@ use App\Enums\ConversationStatus;
 use App\Enums\LeadAnalyticsPeriod;
 use App\Models\Conversation;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -47,31 +47,29 @@ final readonly class LeadAnalyticsService
         private LeadAnalyticsRepositoryInterface $repository,
     ) {}
 
-    public function forPeriod(LeadAnalyticsPeriod $period): LeadAnalytics
+    public function forPeriod(AnalyticsRange $range): LeadAnalytics
     {
-        [$from, $to] = $period->range();
-        $leads = $this->repository->leadsForAnalytics($from, $to);
+        $leads = $this->repository->leadsForAnalytics($range->from, $range->to);
 
-        $prevRange = $period->previousRange();
-        $prev = $prevRange !== null
-            ? $this->metrics($this->repository->leadsForAnalytics($prevRange[0], $prevRange[1]))
+        $prev = $range->hasPrevious()
+            ? $this->metrics($this->repository->leadsForAnalytics($range->previousFrom, $range->previousTo))
             : null;
 
         $now = $this->metrics($leads);
 
         return new LeadAnalytics(
             period: [
-                'key' => $period->value,
-                'label' => $period->label(),
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
+                'key' => $range->key,
+                'label' => $range->label,
+                'from' => $range->from->toDateString(),
+                'to' => $range->to->toDateString(),
             ],
             periods: array_map(
                 fn (LeadAnalyticsPeriod $p): array => ['key' => $p->value, 'label' => $p->label()],
                 LeadAnalyticsPeriod::cases(),
             ),
             kpis: $this->kpis($now, $prev),
-            daily: $this->daily($leads, $period, $to),
+            daily: $this->daily($leads, $range),
             byChannel: $this->byChannel($leads),
             byStatus: $this->byStatus($leads),
             funnel: $this->funnel($now),
@@ -148,15 +146,24 @@ final readonly class LeadAnalyticsService
     }
 
     /**
-     * Ряд по дням (зона графика). Для «всё время» показываем последние 90 дней.
+     * Ряд по дням (зона графика). Для «всё время» показываем последние 90 дней;
+     * для произвольного окна — выбранный диапазон (с защитой от слишком длинного).
      *
      * @param  Collection<int, Conversation>  $leads
      * @return list<array{date: string, label: string, value: int}>
      */
-    private function daily(Collection $leads, LeadAnalyticsPeriod $period, Carbon $to): array
+    private function daily(Collection $leads, AnalyticsRange $range): array
     {
-        $days = $period->days() ?? 90;
-        $start = $to->copy()->subDays($days)->startOfDay();
+        $to = $range->to;
+        $start = $range->key === LeadAnalyticsPeriod::All->value
+            ? $to->copy()->subDays(90)->startOfDay()
+            : $range->from->copy()->startOfDay();
+
+        // Не строим больше ~366 точек, даже если выбран очень широкий диапазон.
+        $cap = $to->copy()->subDays(366)->startOfDay();
+        if ($start->lt($cap)) {
+            $start = $cap;
+        }
 
         $counts = $leads
             ->filter(fn (Conversation $c): bool => $c->created_at !== null && $c->created_at->gte($start))

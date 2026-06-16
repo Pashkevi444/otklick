@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
-use App\Enums\LeadAnalyticsPeriod;
+use App\DTO\Analytics\AnalyticsRange;
 use App\Http\Controllers\Controller;
 use App\Jobs\RefreshLeadInsights;
 use App\Models\Conversation;
@@ -32,19 +32,19 @@ final class AnalyticsController extends Controller
 
     public function index(Request $request): Response
     {
-        $period = LeadAnalyticsPeriod::fromValue($request->query('period'));
-        $insights = $this->insights->cached($period);
+        $range = AnalyticsRange::resolve($request->query('period'), $request->query('from'), $request->query('to'));
+        $insights = $this->insights->cached($range);
 
         // ИИ-разбор устарел/не считался — обновим в фоне (Horizon), без задержки
         // ответа. Лок на 5 минут, чтобы не плодить задачи при перезагрузках.
         $tenantId = $request->user()?->tenant_id;
         if ($tenantId !== null && ($insights === null || $this->insights->isStale($insights))
-            && Cache::add("lead-insights-refreshing:{$tenantId}:{$period->value}", true, 300)) {
-            RefreshLeadInsights::dispatch($tenantId, $period->value);
+            && Cache::add("lead-insights-refreshing:{$tenantId}:{$range->cacheKey()}", true, 300)) {
+            RefreshLeadInsights::dispatch($tenantId, $range->key, $range->from->toDateString(), $range->to->toDateString());
         }
 
         return Inertia::render('Cabinet/Analytics', [
-            'analytics' => $this->analytics->forPeriod($period)->toArray(),
+            'analytics' => $this->analytics->forPeriod($range)->toArray(),
             'insights' => $insights,
         ]);
     }
@@ -54,8 +54,8 @@ final class AnalyticsController extends Controller
      */
     public function refreshInsights(Request $request): RedirectResponse
     {
-        $period = LeadAnalyticsPeriod::fromValue($request->input('period'));
-        $this->insights->refresh($period);
+        $range = AnalyticsRange::resolve($request->input('period'), $request->input('from'), $request->input('to'));
+        $this->insights->refresh($range);
 
         return back();
     }
@@ -64,19 +64,18 @@ final class AnalyticsController extends Controller
     {
         abort_unless(in_array($type, ['leads', 'daily'], true), 404);
 
-        $period = LeadAnalyticsPeriod::fromValue($request->query('period'));
+        $range = AnalyticsRange::resolve($request->query('period'), $request->query('from'), $request->query('to'));
 
         return $type === 'leads'
-            ? $this->exportLeads($period)
-            : $this->exportDaily($period);
+            ? $this->exportLeads($range)
+            : $this->exportDaily($range);
     }
 
-    private function exportLeads(LeadAnalyticsPeriod $period): StreamedResponse
+    private function exportLeads(AnalyticsRange $range): StreamedResponse
     {
-        [$from, $to] = $period->range();
-        $leads = $this->repository->leadsForAnalytics($from, $to);
+        $leads = $this->repository->leadsForAnalytics($range->from, $range->to);
 
-        return $this->stream("leads-{$period->value}", [
+        return $this->stream("leads-{$range->key}", [
             'Дата', 'Канал', 'Имя', 'Телефон', 'Аккаунт/IP', 'Статус', 'Запись', 'Сообщений (вход.)', 'Уточнений',
         ], $leads->map(fn (Conversation $c): array => [
             $c->created_at?->format('Y-m-d H:i') ?? '',
@@ -91,11 +90,11 @@ final class AnalyticsController extends Controller
         ])->all());
     }
 
-    private function exportDaily(LeadAnalyticsPeriod $period): StreamedResponse
+    private function exportDaily(AnalyticsRange $range): StreamedResponse
     {
-        $daily = $this->analytics->forPeriod($period)->daily;
+        $daily = $this->analytics->forPeriod($range)->daily;
 
-        return $this->stream("leads-by-day-{$period->value}", ['Дата', 'Лидов'],
+        return $this->stream("leads-by-day-{$range->key}", ['Дата', 'Лидов'],
             array_map(fn (array $row): array => [$row['date'], (string) $row['value']], $daily));
     }
 

@@ -64,6 +64,23 @@ final class AnalyticsPageTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('analytics.totals.leads', 2));
     }
 
+    public function test_custom_date_range_window(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'created_at' => '2026-05-10 12:00:00']);
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'created_at' => '2026-01-01 12:00:00']);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/analytics?from=2026-05-01&to=2026-05-31')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('analytics.period.key', 'custom')
+                ->where('analytics.period.from', '2026-05-01')
+                ->where('analytics.period.to', '2026-05-31')
+                ->where('analytics.totals.leads', 1));
+    }
+
     public function test_refresh_insights_button_populates_ai_block(): void
     {
         $tenant = Tenant::factory()->create();
