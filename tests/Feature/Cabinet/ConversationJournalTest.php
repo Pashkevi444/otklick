@@ -91,25 +91,6 @@ final class ConversationJournalTest extends TestCase
                 ->where('conversations.0.contact', 'Ivan Petrov'));
     }
 
-    public function test_grid_shows_lead_outcome(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $owner = User::factory()->owner($tenant)->create();
-
-        Conversation::factory()->create([
-            'tenant_id' => $tenant->id,
-            'status' => ConversationStatus::Closed,
-            'booked_at' => now(),
-            'last_message_at' => now(),
-        ]);
-
-        $this->actingAs($owner)
-            ->get('/cabinet/conversations')
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('conversations.0.outcome', 'booked')
-                ->where('conversations.0.outcomeLabel', 'Успешный лид'));
-    }
-
     public function test_search_finds_by_message_text(): void
     {
         $tenant = Tenant::factory()->create();

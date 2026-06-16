@@ -310,7 +310,6 @@ const statusClass = (s: string): string =>
                                 <th class="py-2 pr-3 font-medium">Источник</th>
                                 <th class="py-2 pr-3 font-medium">Статус</th>
                                 <th class="py-2 pr-3 text-center font-medium">Сообщений</th>
-                                <th class="py-2 pr-3 text-center font-medium">Запись</th>
                                 <th class="py-2 font-medium">Когда</th>
                             </tr>
                         </thead>
@@ -328,7 +327,6 @@ const statusClass = (s: string): string =>
                                 <td class="py-2.5 pr-3 text-slate-500">{{ r.channel }}</td>
                                 <td class="py-2.5 pr-3"><span class="rounded-full px-2 py-0.5 text-xs" :class="statusClass(r.status)">{{ r.statusLabel }}</span></td>
                                 <td class="py-2.5 pr-3 text-center text-slate-500">{{ r.messages }}</td>
-                                <td class="py-2.5 pr-3 text-center">{{ r.booked ? '✅' : '—' }}</td>
                                 <td class="py-2.5 text-slate-400">{{ r.createdAt }}</td>
                             </tr>
                             <tr v-if="analytics.recent.length === 0">

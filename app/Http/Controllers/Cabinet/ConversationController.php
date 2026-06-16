@@ -128,8 +128,6 @@ final class ConversationController extends Controller
             'source' => $this->source($c->channel),
             'status' => $c->status->value,
             'statusLabel' => $c->status->label(),
-            'outcome' => $c->outcome()->value,
-            'outcomeLabel' => $c->outcome()->label(),
             'messagesCount' => (int) $c->getAttribute('messages_count'),
             'lastMessage' => $c->latestMessage?->text,
             'lastMessageAt' => $c->last_message_at?->format('d.m.Y H:i'),
