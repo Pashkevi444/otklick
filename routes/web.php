@@ -6,6 +6,7 @@ use App\Enums\CrmProvider;
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
+use App\Http\Controllers\Cabinet\BillingController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\ConversationController;
@@ -70,6 +71,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
 
         Route::get('/subscription', SubscriptionController::class)->name('subscription');
+        Route::get('/billing', BillingController::class)->name('billing');
 
         // Веб-виджет (чат на сайт) — доступен на всех тарифах.
         Route::get('/widget', [WidgetController::class, 'index'])->name('widget.index');

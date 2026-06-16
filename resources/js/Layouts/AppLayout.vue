@@ -23,23 +23,12 @@ const navItems = computed<NavItem[]>(() => {
         ];
     }
 
-    const items: NavItem[] = [
+    // Меню короткое: всё по разделам — на дашборде. Здесь только ключевое.
+    return [
         { label: 'Дашборд', href: '/cabinet' },
-        { label: 'Диалоги', href: '/cabinet/conversations' },
-        { label: 'Каналы', href: '/cabinet/channels' },
-        { label: 'Виджет на сайт', href: '/cabinet/widget' },
-        { label: 'Профиль', href: '/cabinet/profile' },
-        { label: 'База знаний', href: '/cabinet/knowledge' },
+        { label: 'Подписка', href: '/cabinet/subscription' },
+        { label: 'Оплата', href: '/cabinet/billing' },
     ];
-
-    // Интеграции (CRM) — возможность тарифа «Макс».
-    if (user.value?.tenant?.features?.crm) {
-        items.push({ label: 'Интеграции', href: '/cabinet/integrations' });
-    }
-
-    items.push({ label: 'Подписка', href: '/cabinet/subscription' });
-
-    return items;
 });
 
 const isActive = (href: string): boolean =>

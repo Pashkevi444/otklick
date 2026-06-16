@@ -7,6 +7,7 @@ namespace Tests\Feature\Cabinet;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 final class CabinetAccessTest extends TestCase
@@ -55,5 +56,25 @@ final class CabinetAccessTest extends TestCase
         $this->actingAs($this->owner($tenant))
             ->get('/suspended')
             ->assertRedirect(route('cabinet.dashboard'));
+    }
+
+    public function test_dashboard_renders_as_hub(): void
+    {
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($this->owner($tenant))
+            ->get('/cabinet')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('Cabinet/Dashboard'));
+    }
+
+    public function test_billing_page_renders(): void
+    {
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($this->owner($tenant))
+            ->get('/cabinet/billing')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('Cabinet/Billing'));
     }
 }
