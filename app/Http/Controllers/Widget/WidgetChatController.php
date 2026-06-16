@@ -118,8 +118,16 @@ final class WidgetChatController extends Controller
 
         $allowed = $channel->settings['allowed_origins'] ?? [];
 
-        if (is_array($allowed) && $allowed !== [] && $origin !== '' && ! in_array($origin, $allowed, true)) {
-            abort(Response::HTTP_FORBIDDEN, 'Домен не разрешён для виджета.');
+        // Сравниваем без хвостового слэша и регистра: пользователь мог ввести
+        // «https://site.ru/», а браузер шлёт «https://site.ru».
+        $normalize = static fn (string $o): string => rtrim(mb_strtolower(trim($o)), '/');
+
+        if (is_array($allowed) && $allowed !== [] && $origin !== '') {
+            $allowedNormalized = array_map($normalize, array_map('strval', $allowed));
+
+            if (! in_array($normalize($origin), $allowedNormalized, true)) {
+                abort(Response::HTTP_FORBIDDEN, 'Домен не разрешён для виджета.');
+            }
         }
 
         return $origin !== '' ? $origin : '*';

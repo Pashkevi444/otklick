@@ -14,12 +14,14 @@ const toast = useToast();
 router.on('httpException', (event) => {
     event.preventDefault();
     toast.error('Произошла ошибка на сервере. Мы записали детали — попробуйте ещё раз.');
+    return false;
 });
 
 // Сетевой сбой запроса.
 router.on('networkError', (event) => {
     event.preventDefault();
     toast.error('Не удалось выполнить запрос. Проверьте соединение и попробуйте ещё раз.');
+    return false;
 });
 
 // Flash-сообщения после действий показываем тостом.

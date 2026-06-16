@@ -1,6 +1,6 @@
 /* Отклик — встраиваемый чат-виджет. Подключается одним <script> на сайт бизнеса.
  * Читает data-otklik-tenant / data-otklik-channel со своего тега, общается с
- * публичным API по токену сессии (без cookie, cross-origin). */
+ * публичным API по токену сессии (без cookie, cross-origin). Без зависимостей. */
 (function () {
     'use strict';
 
@@ -27,49 +27,83 @@
     var starting = false;
     var sending = false;
 
-    var css =
-        '.otk-btn{position:fixed;right:20px;bottom:20px;width:60px;height:60px;border-radius:50%;border:0;' +
-        'background:#2E74B5;color:#fff;font-size:26px;cursor:pointer;box-shadow:0 8px 24px rgba(31,78,121,.35);z-index:2147483000}' +
-        '.otk-btn:hover{background:#255f96}' +
-        '.otk-panel{position:fixed;right:20px;bottom:90px;width:360px;max-width:calc(100vw - 40px);height:520px;max-height:calc(100vh - 120px);' +
-        'background:#fff;border-radius:16px;box-shadow:0 18px 60px rgba(31,78,121,.28);display:none;flex-direction:column;overflow:hidden;z-index:2147483000;' +
-        'font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif}' +
-        '.otk-panel.open{display:flex}' +
-        '.otk-head{background:#1F4E79;color:#fff;padding:14px 16px;font-weight:600}' +
-        '.otk-body{flex:1;overflow-y:auto;padding:14px;background:#f6f8fb}' +
-        '.otk-msg{max-width:80%;padding:9px 12px;border-radius:14px;margin-bottom:8px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word}' +
-        '.otk-bot{background:#fff;border:1px solid #e6ebf2;color:#222;border-bottom-left-radius:4px}' +
-        '.otk-me{background:#2E74B5;color:#fff;margin-left:auto;border-bottom-right-radius:4px}' +
-        '.otk-foot{display:flex;gap:8px;padding:10px;border-top:1px solid #eef1f5;background:#fff}' +
-        '.otk-input{flex:1;border:1px solid #d7dee8;border-radius:10px;padding:9px 11px;font-size:14px;outline:none}' +
-        '.otk-input:focus{border-color:#2E74B5}' +
-        '.otk-send{border:0;background:#2E74B5;color:#fff;border-radius:10px;padding:0 14px;cursor:pointer;font-size:14px}' +
-        '.otk-send:disabled{opacity:.5;cursor:default}';
+    var css = [
+        '.otk-launcher{position:fixed;right:22px;bottom:22px;width:60px;height:60px;border:0;border-radius:50%;cursor:pointer;z-index:2147483000;',
+        'background:linear-gradient(135deg,#2E74B5,#1F4E79);box-shadow:0 10px 28px rgba(31,78,121,.4);display:flex;align-items:center;justify-content:center;',
+        'transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease}',
+        '.otk-launcher:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 14px 34px rgba(31,78,121,.5)}',
+        '.otk-launcher svg{width:28px;height:28px;fill:#fff;transition:transform .3s ease}',
+        '.otk-launcher.otk-on svg{transform:rotate(90deg) scale(.9)}',
+        '.otk-panel{position:fixed;right:22px;bottom:94px;width:374px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 130px);z-index:2147483000;',
+        'background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(16,42,73,.34);display:flex;flex-direction:column;overflow:hidden;',
+        'font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:0;transform:translateY(22px) scale(.96);pointer-events:none;',
+        'transition:opacity .3s ease,transform .32s cubic-bezier(.2,.85,.25,1)}',
+        '.otk-panel.otk-open{opacity:1;transform:none;pointer-events:auto}',
+        '.otk-head{background:linear-gradient(135deg,#2E74B5,#1F4E79);color:#fff;padding:15px 16px;display:flex;align-items:center;gap:11px}',
+        '.otk-ava{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:0 0 auto}',
+        '.otk-ava svg{width:21px;height:21px;fill:#fff}',
+        '.otk-ttl{font-weight:700;font-size:15px;line-height:1.1}',
+        '.otk-sub{font-size:12px;opacity:.85;display:flex;align-items:center;gap:5px;margin-top:2px}',
+        '.otk-dot{width:7px;height:7px;border-radius:50%;background:#7CF6C3;box-shadow:0 0 0 0 rgba(124,246,195,.7);animation:otk-pulse 2s infinite}',
+        '.otk-x{margin-left:auto;background:rgba(255,255,255,.15);border:0;color:#fff;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:15px;transition:background .2s}',
+        '.otk-x:hover{background:rgba(255,255,255,.28)}',
+        '.otk-body{flex:1;overflow-y:auto;padding:16px 14px;background:#f3f6fb;display:flex;flex-direction:column;gap:9px}',
+        '.otk-body::-webkit-scrollbar{width:7px}.otk-body::-webkit-scrollbar-thumb{background:#cdd8e6;border-radius:9px}',
+        '.otk-msg{max-width:82%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.42;white-space:pre-wrap;word-wrap:break-word;animation:otk-in .32s cubic-bezier(.2,.85,.25,1) both}',
+        '.otk-bot{align-self:flex-start;background:#fff;color:#1f2a3a;border-bottom-left-radius:5px;box-shadow:0 2px 8px rgba(16,42,73,.07)}',
+        '.otk-me{align-self:flex-end;background:linear-gradient(135deg,#2E74B5,#255f96);color:#fff;border-bottom-right-radius:5px}',
+        '.otk-typing{align-self:flex-start;background:#fff;border-radius:16px;border-bottom-left-radius:5px;padding:13px 15px;display:flex;gap:5px;box-shadow:0 2px 8px rgba(16,42,73,.07)}',
+        '.otk-typing span{width:7px;height:7px;border-radius:50%;background:#9fb2c9;animation:otk-bounce 1.2s infinite}',
+        '.otk-typing span:nth-child(2){animation-delay:.2s}.otk-typing span:nth-child(3){animation-delay:.4s}',
+        '.otk-foot{display:flex;gap:9px;padding:11px;border-top:1px solid #eef2f7;background:#fff;align-items:flex-end}',
+        '.otk-in{flex:1;border:1.5px solid #dde5ef;border-radius:13px;padding:10px 13px;font-size:14px;outline:none;resize:none;max-height:96px;font-family:inherit;transition:border-color .2s}',
+        '.otk-in:focus{border-color:#2E74B5}',
+        '.otk-send{flex:0 0 auto;width:42px;height:42px;border:0;border-radius:13px;background:linear-gradient(135deg,#2E74B5,#1F4E79);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,opacity .2s}',
+        '.otk-send:hover{transform:translateY(-1px)}.otk-send:disabled{opacity:.45;cursor:default;transform:none}',
+        '.otk-send svg{width:19px;height:19px;fill:#fff}',
+        '.otk-pow{text-align:center;font-size:11px;color:#9aa7b8;padding:6px 0 9px;background:#fff}',
+        '@keyframes otk-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}',
+        '@keyframes otk-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}',
+        '@keyframes otk-pulse{0%{box-shadow:0 0 0 0 rgba(124,246,195,.6)}70%{box-shadow:0 0 0 7px rgba(124,246,195,0)}100%{box-shadow:0 0 0 0 rgba(124,246,195,0)}}',
+        '@media (prefers-reduced-motion:reduce){.otk-launcher,.otk-panel,.otk-msg,.otk-dot,.otk-typing span{transition:none;animation:none}}',
+    ].join('');
     var style = document.createElement('style');
     style.textContent = css;
     document.head.appendChild(style);
 
-    var btn = document.createElement('button');
-    btn.className = 'otk-btn';
-    btn.setAttribute('aria-label', 'Открыть чат');
-    btn.textContent = '💬';
+    var chatIcon =
+        '<svg viewBox="0 0 24 24"><path d="M12 3C6.9 3 2.8 6.3 2.8 10.5c0 2 .95 3.8 2.5 5.2-.1.95-.5 2-.95 2.7-.2.3 0 .7.4.65 1.4-.2 2.6-.7 3.5-1.3.85.2 1.75.3 2.7.3 5.1 0 9.2-3.3 9.2-7.5S17.1 3 12 3z"/></svg>';
+    var closeMark = '✕';
+    var sendIcon = '<svg viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.4.92V9.5c0 .5.37.92.87.98l9.13 1.52-9.13 1.52a1 1 0 0 0-.87.98v4.98a1 1 0 0 0 1.4.92z"/></svg>';
+
+    var launcher = document.createElement('button');
+    launcher.className = 'otk-launcher';
+    launcher.setAttribute('aria-label', 'Открыть чат');
+    launcher.innerHTML = chatIcon;
 
     var panel = document.createElement('div');
     panel.className = 'otk-panel';
     panel.innerHTML =
-        '<div class="otk-head">Чат с администратором</div>' +
+        '<div class="otk-head">' +
+        '<div class="otk-ava">' + chatIcon + '</div>' +
+        '<div><div class="otk-ttl">Отклик</div><div class="otk-sub"><span class="otk-dot"></span>Обычно отвечает сразу</div></div>' +
+        '<button class="otk-x" aria-label="Закрыть">' + closeMark + '</button>' +
+        '</div>' +
         '<div class="otk-body"></div>' +
         '<div class="otk-foot">' +
-        '<input class="otk-input" type="text" placeholder="Напишите сообщение…" />' +
-        '<button class="otk-send">→</button>' +
-        '</div>';
+        '<textarea class="otk-in" rows="1" placeholder="Напишите сообщение…"></textarea>' +
+        '<button class="otk-send" aria-label="Отправить">' + sendIcon + '</button>' +
+        '</div>' +
+        '<div class="otk-pow">Работает на Отклик</div>';
 
-    document.body.appendChild(btn);
+    document.body.appendChild(launcher);
     document.body.appendChild(panel);
 
     var body = panel.querySelector('.otk-body');
-    var input = panel.querySelector('.otk-input');
+    var input = panel.querySelector('.otk-in');
     var sendBtn = panel.querySelector('.otk-send');
+    var closeBtn = panel.querySelector('.otk-x');
+    var typingEl = null;
 
     function addMsg(text, who) {
         var el = document.createElement('div');
@@ -77,6 +111,26 @@
         el.textContent = text;
         body.appendChild(el);
         body.scrollTop = body.scrollHeight;
+        return el;
+    }
+
+    // Не спамим одинаковыми сообщениями бота (защита от «бесконечного цикла»).
+    function addBotOnce(text) {
+        var last = body.querySelector('.otk-bot:last-of-type');
+        if (last && last.textContent === text) return;
+        addMsg(text, 'bot');
+    }
+
+    function showTyping() {
+        if (typingEl) return;
+        typingEl = document.createElement('div');
+        typingEl.className = 'otk-typing';
+        typingEl.innerHTML = '<span></span><span></span><span></span>';
+        body.appendChild(typingEl);
+        body.scrollTop = body.scrollHeight;
+    }
+    function hideTyping() {
+        if (typingEl) { typingEl.remove(); typingEl = null; }
     }
 
     function post(path, payload) {
@@ -92,36 +146,47 @@
     function startSession() {
         if (token || starting) return Promise.resolve();
         starting = true;
+        showTyping();
         return post('/session', {})
             .then(function (data) {
                 token = data.token;
+                hideTyping();
                 if (data.greeting) addMsg(data.greeting, 'bot');
             })
             .catch(function () {
-                addMsg('Не удалось подключиться к чату. Попробуйте позже.', 'bot');
+                hideTyping();
+                addBotOnce('Чат сейчас недоступен. Попробуйте чуть позже или свяжитесь с нами другим способом.');
             })
-            .finally(function () {
-                starting = false;
-            });
+            .finally(function () { starting = false; });
     }
 
     function send() {
         var text = (input.value || '').trim();
         if (!text || sending) return;
         if (!token) {
-            startSession().then(send);
+            // Одна попытка подключиться, потом отправка. Без рекурсивного спама.
+            if (starting) return;
+            startSession().then(function () { if (token) reallySend(text); });
             return;
         }
+        reallySend(text);
+    }
+
+    function reallySend(text) {
         addMsg(text, 'me');
         input.value = '';
+        input.style.height = 'auto';
         sending = true;
         sendBtn.disabled = true;
+        showTyping();
         post('/message', { token: token, text: text })
             .then(function (data) {
+                hideTyping();
                 addMsg(data.reply, 'bot');
             })
             .catch(function () {
-                addMsg('Сообщение не доставлено. Попробуйте ещё раз.', 'bot');
+                hideTyping();
+                addBotOnce('Сообщение не доставлено. Попробуйте ещё раз чуть позже.');
             })
             .finally(function () {
                 sending = false;
@@ -130,15 +195,25 @@
             });
     }
 
-    btn.addEventListener('click', function () {
-        panel.classList.toggle('open');
-        if (panel.classList.contains('open')) {
+    function toggle(open) {
+        var willOpen = open === undefined ? !panel.classList.contains('otk-open') : open;
+        panel.classList.toggle('otk-open', willOpen);
+        launcher.classList.toggle('otk-on', willOpen);
+        launcher.setAttribute('aria-label', willOpen ? 'Свернуть чат' : 'Открыть чат');
+        if (willOpen) {
             startSession();
-            input.focus();
+            setTimeout(function () { input.focus(); }, 300);
         }
-    });
+    }
+
+    launcher.addEventListener('click', function () { toggle(); });
+    closeBtn.addEventListener('click', function () { toggle(false); });
     sendBtn.addEventListener('click', send);
     input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') send();
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    input.addEventListener('input', function () {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 96) + 'px';
     });
 })();

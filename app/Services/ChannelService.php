@@ -71,8 +71,15 @@ final readonly class ChannelService
      */
     public function setWidgetOrigins(Channel $channel, array $origins): void
     {
+        // Нормализуем: убираем хвостовой слэш и пробелы, приводим к нижнему
+        // регистру — чтобы origin из браузера совпадал со списком.
+        $normalized = array_values(array_unique(array_filter(array_map(
+            static fn (string $o): string => rtrim(mb_strtolower(trim($o)), '/'),
+            $origins,
+        ))));
+
         $this->channels->update($channel, [
-            'settings' => ['allowed_origins' => array_values(array_filter($origins))],
+            'settings' => ['allowed_origins' => $normalized],
         ]);
     }
 

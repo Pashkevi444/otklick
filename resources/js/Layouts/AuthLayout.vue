@@ -44,6 +44,7 @@ html.dark .glass {
     position: fixed;
     inset: 0;
     z-index: -2;
+    pointer-events: none;
     background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
     background-size: 200% 200%;
     animation: bgpan 22s ease infinite;
