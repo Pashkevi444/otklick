@@ -39,6 +39,8 @@ final class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // На лендинг (маркетинг-домен). Кабинет/выход живут на бизнес-поддомене,
+        // где роута «/» нет — поэтому ведём именно на home, а не на «/».
+        return redirect()->route('home');
     }
 }

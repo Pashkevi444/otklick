@@ -69,7 +69,7 @@ final class AuthenticationTest extends TestCase
     {
         $user = User::factory()->superAdmin()->create();
 
-        $this->actingAs($user)->post('/logout')->assertRedirect('/');
+        $this->actingAs($user)->post('/logout')->assertRedirect(route('home'));
 
         $this->assertGuest();
     }
