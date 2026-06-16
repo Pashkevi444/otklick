@@ -94,6 +94,21 @@ final class WidgetChatTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_session_does_not_create_conversation_until_first_message(): void
+    {
+        $channel = $this->webChannel();
+
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        // Открыли виджет, но ничего не написали — диалога в БД быть не должно.
+        $this->assertSame(0, Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->count());
+
+        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'привет'])->assertOk();
+
+        // Первое сообщение — диалог создаётся.
+        $this->assertSame(1, Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->count());
+    }
+
     public function test_widget_captures_client_phone(): void
     {
         $channel = $this->webChannel();

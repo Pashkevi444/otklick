@@ -33,13 +33,13 @@ final readonly class WebWidgetService
     ) {}
 
     /**
-     * Начинает сессию: создаёт диалог и возвращает подписанный токен.
+     * Начинает сессию: выдаёт подписанный токен с новым id сессии. Сам диалог в
+     * БД НЕ создаётся — он появится лениво при первом реальном сообщении
+     * (`reply`), чтобы открытие виджета без переписки не засоряло базу.
      */
     public function startSession(Channel $channel): string
     {
         $sessionId = (string) Str::uuid();
-
-        $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null);
 
         return Crypt::encryptString($channel->id.'|'.$sessionId);
     }

@@ -36,9 +36,13 @@ final class WidgetChatController extends Controller
     {
         $js = (string) file_get_contents(resource_path('widget/widget.js'));
 
+        // Короткий кэш + обязательная ревалидация по ETag: при обновлении логики
+        // виджета браузеры быстро подхватывают новую версию, а не держат
+        // устаревший скрипт час.
         return response($js, Response::HTTP_OK, [
             'Content-Type' => 'application/javascript; charset=utf-8',
-            'Cache-Control' => 'public, max-age=3600',
+            'Cache-Control' => 'public, max-age=300, must-revalidate',
+            'ETag' => '"'.md5($js).'"',
         ]);
     }
 
