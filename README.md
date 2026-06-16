@@ -209,7 +209,9 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | POST | `/widget/v1/{tenant}/{channel}/{session\|message}` | `Widget\WidgetChatController` | Публичный API чата: stateless, CORS, origin allow-list, подписанный токен сессии, throttle. |
 | — | `/cabinet`, `/cabinet/overview`, `/cabinet/channels`, `/cabinet/profile`, `/cabinet/knowledge`, `/cabinet/subscription` | `Cabinet\*` | Кабинет тенанта (auth + `tenant`). `/cabinet/overview` — карточка бизнеса (`BusinessOverviewController`): аватар, описание, контакты, тариф; это «домашняя» по клику на логотип, на проде же — корень бизнес-домена `/`. Профиль (`BusinessProfileController`) поддерживает аватар (public-диск), описание и сайт. |
 | — | `/cabinet/integrations` | `Cabinet\IntegrationController` | CRM-интеграции (auth + `tenant` + `plan:crm` — тариф «Макс»). |
+| GET | `/account` | `Account\AccountController` | Настройки аккаунта (хаб: пароль / почта). В шапке — иконка-шестерёнка. 2FA — позже. |
 | GET/PUT | `/account/password` | `Account\PasswordController` | Смена своего пароля (auth). |
+| GET/POST | `/account/email`, `/account/email/confirm` | `Account\EmailController` | Смена e-mail с подтверждением: код (6 цифр, 15 мин, хеш в `email_change_codes`) уходит на НОВЫЙ адрес через `EmailChangeService`; почта меняется только после ввода кода. Запрос требует текущий пароль и свободный адрес. |
 | POST | `/webhooks/telegram/{tenant}/{channel}` | `Webhooks\TelegramWebhookController` | Приём вебхука Telegram (stateless, без CSRF; верификация secret-токена; ack 200 → очередь). |
 
 ## Окружение (ключевые переменные)

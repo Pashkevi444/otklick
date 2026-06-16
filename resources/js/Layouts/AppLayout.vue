@@ -80,12 +80,13 @@ const logout = (): void => {
                         </div>
                         <div class="flex flex-none items-center gap-2 text-sm sm:gap-3">
                             <ThemeToggle />
-                            <Link href="/account/password" class="hidden text-right transition hover:opacity-80 lg:block">
-                                <div class="font-medium text-slate-700 dark:text-slate-200">{{ user?.name }}</div>
-                                <div class="text-xs text-slate-400 dark:text-slate-500">
-                                    <template v-if="user?.tenant">{{ user.tenant.name }} · {{ user.tenant.plan }}</template>
-                                    <template v-else>{{ user?.roleLabel }}</template>
-                                </div>
+                            <Link
+                                href="/account"
+                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/50 bg-white/40 text-lg text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                aria-label="Настройки аккаунта"
+                                title="Настройки аккаунта"
+                            >
+                                ⚙️
                             </Link>
                             <button
                                 type="button"
@@ -119,8 +120,8 @@ const logout = (): void => {
                         >
                             {{ item.label }}
                         </Link>
-                        <Link href="/account/password" class="rounded-lg px-3 py-2 text-slate-700 hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10" @click="mobileOpen = false">
-                            Аккаунт ({{ user?.name }})
+                        <Link href="/account" class="rounded-lg px-3 py-2 text-slate-700 hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10" @click="mobileOpen = false">
+                            ⚙️ Настройки аккаунта
                         </Link>
                         <button type="button" class="mt-1 rounded-lg bg-white/40 px-3 py-2 text-left font-medium text-slate-700 dark:bg-white/10 dark:text-slate-200" @click="logout">
                             Выйти

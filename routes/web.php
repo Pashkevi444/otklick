@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Enums\CrmProvider;
+use App\Http\Controllers\Account\AccountController;
+use App\Http\Controllers\Account\EmailController;
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
@@ -117,8 +119,14 @@ $onDomain(config('app.business_domain'), function (): void {
 
     // Аккаунт + сервисные страницы (любой авторизованный, без проверки тарифа)
     Route::middleware('auth')->group(function (): void {
+        Route::get('/account', [AccountController::class, 'index'])->name('account.settings');
+
         Route::get('/account/password', [PasswordController::class, 'edit'])->name('account.password.edit');
         Route::put('/account/password', [PasswordController::class, 'update'])->name('account.password.update');
+
+        Route::get('/account/email', [EmailController::class, 'edit'])->name('account.email.edit');
+        Route::post('/account/email', [EmailController::class, 'requestChange'])->name('account.email.request');
+        Route::post('/account/email/confirm', [EmailController::class, 'confirm'])->name('account.email.confirm');
 
         Route::get('/suspended', SuspendedController::class)->name('suspended');
     });
