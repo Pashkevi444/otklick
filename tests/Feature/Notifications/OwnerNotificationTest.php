@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\DTO\OwnerNotification;
 use App\Enums\NotificationChannelType;
 use App\Enums\OwnerEvent;
 use App\Jobs\ProcessTelegramUpdate;
@@ -53,6 +54,16 @@ final class OwnerNotificationTest extends TestCase
         $this->app->make(NotificationService::class)->send($tenant, OwnerEvent::NewLead, ['contact' => 'Иван']);
 
         Mail::assertQueued(OwnerEventMail::class);
+    }
+
+    public function test_owner_event_mail_renders(): void
+    {
+        // Рендер markdown-шаблона не должен падать («No hint path for [mail]»).
+        $mail = new OwnerEventMail(new OwnerNotification('Тема', "Строка 1\nСтрока 2"));
+
+        $html = $mail->render();
+
+        $this->assertStringContainsString('Строка 1', $html);
     }
 
     public function test_telegram_start_links_pending_recipient(): void

@@ -29,7 +29,7 @@ final class OwnerEventMail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            view: 'emails.owner-event',
+            markdown: 'emails.owner-event',
             with: ['body' => $this->notification->body],
         );
     }
