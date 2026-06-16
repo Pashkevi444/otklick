@@ -85,3 +85,15 @@ volumes:
   storage_logs:
   caddy_data:
   caddy_config:
+
+# IPv6 в сети контейнеров: api.telegram.org заблокирован Роскомнадзором по IPv4,
+# но доступен по IPv6 (у хоста IPv6 есть). Docker 29 поднимает NAT66 (ip6tables)
+# через IPv6 хоста. ВАЖНО: указываем ОБЕ подсети явно — если задать только IPv6,
+# Docker перестаёт управлять IPv4 и ломает внутренний DNS (redis/pgsql).
+networks:
+  default:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+        - subnet: fd00:dead:beef:1::/64
