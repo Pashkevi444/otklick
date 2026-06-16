@@ -55,7 +55,13 @@ html.dark .ui-scope .text-\[\#2E74B5\] {
 html.dark .ui-scope .hover\:bg-slate-50:hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
-html.dark .ui-scope .divide-slate-100 > * + * {
+/*
+ * Tailwind v4 рисует divide-y как border-bottom у всех, КРОМЕ последнего
+ * (:not(:last-child)) — включая первый элемент. Поэтому перекрашиваем тем же
+ * селектором, иначе нижняя граница первой строки осталась бы светлой (slate-100)
+ * и выглядела яркой полоской в тёмной теме.
+ */
+html.dark .ui-scope .divide-slate-100 > :not(:last-child) {
     border-color: rgba(255, 255, 255, 0.08);
 }
 html.dark .ui-scope input,
