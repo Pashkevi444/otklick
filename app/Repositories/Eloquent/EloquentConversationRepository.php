@@ -76,17 +76,25 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
 
     public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName, ?string $contactRef = null): Conversation
     {
-        return Conversation::firstOrCreate(
-            [
-                'channel_id' => $channelId,
-                'external_chat_id' => $externalChatId,
-            ],
-            [
-                'contact_name' => $contactName,
-                'contact_ref' => $contactRef,
-                'status' => ConversationStatus::Open,
-            ],
-        );
+        // Переиспользуем только незакрытый диалог: закрытый остаётся в истории,
+        // а новое обращение начинает свежий разговор.
+        $active = Conversation::query()
+            ->where('channel_id', $channelId)
+            ->where('external_chat_id', $externalChatId)
+            ->where('status', '!=', ConversationStatus::Closed)
+            ->first();
+
+        if ($active !== null) {
+            return $active;
+        }
+
+        return Conversation::create([
+            'channel_id' => $channelId,
+            'external_chat_id' => $externalChatId,
+            'contact_name' => $contactName,
+            'contact_ref' => $contactRef,
+            'status' => ConversationStatus::Open,
+        ]);
     }
 
     public function touchLastMessage(Conversation $conversation): void

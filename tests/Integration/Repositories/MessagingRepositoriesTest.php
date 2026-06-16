@@ -7,6 +7,7 @@ namespace Tests\Integration\Repositories;
 use App\DTO\IncomingMessage;
 use App\DTO\NewChannelData;
 use App\Enums\ChannelType;
+use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Models\Tenant;
@@ -72,6 +73,23 @@ final class MessagingRepositoriesTest extends TestCase
         $this->assertTrue($first->is($second));
         $this->assertSame(1, $channel->conversations()->count());
         $this->assertSame($this->tenant->id, $first->tenant_id);
+    }
+
+    public function test_creates_new_conversation_after_close(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+
+        $first = $this->conversations->firstOrCreateForChat($channel->id, '555', null);
+        $this->conversations->updateStatus($first, ConversationStatus::Closed);
+
+        // Закрытый диалог не переиспользуется — новое обращение начинает свежий.
+        $second = $this->conversations->firstOrCreateForChat($channel->id, '555', null);
+
+        $this->assertFalse($first->is($second));
+        $this->assertSame(ConversationStatus::Open, $second->status);
+        $this->assertSame(2, $channel->conversations()->count());
     }
 
     public function test_record_inbound_dedupes_by_external_message_id(): void

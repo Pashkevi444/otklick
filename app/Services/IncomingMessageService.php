@@ -65,6 +65,9 @@ final readonly class IncomingMessageService
 
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+        } elseif ($reply->booked) {
+            // Запись оформлена — закрываем диалог. Следующее обращение начнёт новый.
+            $this->conversations->updateStatus($conversation, ConversationStatus::Closed);
         }
     }
 }

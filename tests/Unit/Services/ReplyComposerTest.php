@@ -107,6 +107,19 @@ final class ReplyComposerTest extends TestCase
         $this->assertStringContainsString('администратору', $reply->text);
     }
 
+    public function test_booked_sentinel_closes_dialog(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()
+            ->andReturn(PromptBuilder::BOOKED.' Записал вас на завтра в 15:00, ждём!');
+
+        $reply = $this->composer($llm)->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertTrue($reply->booked);
+        $this->assertFalse($reply->escalate);
+        $this->assertSame('Записал вас на завтра в 15:00, ждём!', $reply->text);
+    }
+
     public function test_resets_streak_when_model_answers(): void
     {
         $llm = Mockery::mock(LlmClient::class);

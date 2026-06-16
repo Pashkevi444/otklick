@@ -19,10 +19,11 @@ use App\Repositories\Contracts\MessageRepositoryInterface;
  * Формирует ответ бота: системный промпт (профиль + опубликованная БЗ) + история
  * диалога → LLM.
  *
- * Различает два сигнала модели: настоящую эскалацию ([[ESCALATE]] — клиент зовёт
- * человека, жалоба) и непонятку ([[CLARIFY]] — вопрос неясен / нет ответа в базе).
- * На непонятку бот несколько раз переспрашивает (счётчик в диалоге), и только
- * после лимита подряд идущих уточнений диалог уходит на администратора.
+ * Различает сигналы модели: эскалацию ([[ESCALATE]] — клиент зовёт человека,
+ * жалоба), непонятку ([[CLARIFY]] — вопрос неясен / нет ответа в базе) и
+ * состоявшуюся запись ([[BOOKED]] — диалог закрывается). На непонятку бот
+ * несколько раз переспрашивает (счётчик в диалоге), и только после лимита подряд
+ * идущих уточнений диалог уходит на администратора.
  */
 class ReplyComposer
 {
@@ -58,6 +59,19 @@ class ReplyComposer
             return new BotReply($this->fallback($profile), escalate: true);
         }
 
+        // Запись оформлена — подтверждаем клиенту и закрываем диалог.
+        if (str_starts_with($answer, PromptBuilder::BOOKED)) {
+            $this->resetStreak($conversation);
+
+            $confirmation = trim(substr($answer, strlen(PromptBuilder::BOOKED)));
+
+            return new BotReply(
+                $confirmation !== '' ? $confirmation : $this->defaultBookingConfirmation(),
+                escalate: false,
+                booked: true,
+            );
+        }
+
         // Бот не понял / не нашёл ответ — переспрашиваем, пока не упрёмся в лимит.
         if (str_starts_with($answer, PromptBuilder::CLARIFY)) {
             $attempts = $this->conversations->bumpClarificationAttempts($conversation);
@@ -89,6 +103,11 @@ class ReplyComposer
     private function defaultClarification(): string
     {
         return 'Подскажите, пожалуйста, чуть подробнее, что именно вас интересует?';
+    }
+
+    private function defaultBookingConfirmation(): string
+    {
+        return 'Готово, записал вас! Будем рады видеть. Если что-то изменится — напишите нам.';
     }
 
     /**
