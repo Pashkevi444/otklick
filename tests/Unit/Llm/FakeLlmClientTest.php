@@ -21,13 +21,14 @@ final class FakeLlmClientTest extends TestCase
         $this->assertSame('Доставка: Бесплатно от 1000 рублей', $answer);
     }
 
-    public function test_escalates_when_no_match(): void
+    public function test_clarifies_when_no_match(): void
     {
         $answer = (new FakeLlmClient)->generate(self::SYSTEM, [
             ['role' => 'user', 'content' => 'расскажи про вселенную'],
         ]);
 
-        $this->assertSame(PromptBuilder::ESCALATE, $answer);
+        // Нет ответа в базе → не эскалация, а уточняющий вопрос.
+        $this->assertStringStartsWith(PromptBuilder::CLARIFY, $answer);
     }
 
     public function test_escalates_without_user_message(): void

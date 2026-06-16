@@ -7,6 +7,7 @@ namespace Tests\Unit\Services;
 use App\Llm\Contracts\LlmClient;
 use App\Models\Conversation;
 use App\Models\Tenant;
+use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\PromptBuilder;
@@ -14,13 +15,14 @@ use App\Services\ReplyComposer;
 use Illuminate\Support\Collection;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 final class ReplyComposerTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
 
-    private function composer(LlmClient $llm): ReplyComposer
+    private function composer(LlmClient $llm, ?ConversationRepositoryInterface $conversations = null): ReplyComposer
     {
         $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection);
@@ -28,7 +30,19 @@ final class ReplyComposerTest extends TestCase
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('recentForConversation')->andReturn(new Collection);
 
-        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages);
+        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations());
+    }
+
+    /**
+     * Репозиторий диалогов по умолчанию терпит любые вызовы счётчика уточнений.
+     */
+    private function conversations(): ConversationRepositoryInterface&MockInterface
+    {
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('bumpClarificationAttempts')->andReturn(1)->byDefault();
+        $conversations->shouldReceive('resetClarificationAttempts')->byDefault();
+
+        return $conversations;
     }
 
     public function test_returns_model_answer_when_available(): void
@@ -54,5 +68,59 @@ final class ReplyComposerTest extends TestCase
         $this->assertTrue($reply->escalate);
         $this->assertStringContainsString('администратору', $reply->text);
         $this->assertStringContainsString('+7 900', $reply->text);
+    }
+
+    public function test_clarifies_instead_of_escalating_below_limit(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()
+            ->andReturn(PromptBuilder::CLARIFY.' Подскажите, какая услуга вас интересует?');
+
+        $conversation = new Conversation;
+
+        $conversations = $this->conversations();
+        $conversations->shouldReceive('bumpClarificationAttempts')->once()->with($conversation)->andReturn(1);
+        $conversations->shouldNotReceive('resetClarificationAttempts');
+
+        $reply = $this->composer($llm, $conversations)->compose(new Tenant(['name' => 'Бизнес']), $conversation);
+
+        $this->assertFalse($reply->escalate);
+        $this->assertSame('Подскажите, какая услуга вас интересует?', $reply->text);
+    }
+
+    public function test_escalates_after_third_clarification(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()
+            ->andReturn(PromptBuilder::CLARIFY.' Не совсем понял вопрос.');
+
+        $conversation = new Conversation(['clarification_attempts' => 2]);
+
+        $conversations = $this->conversations();
+        // Третья подряд непонятка → счётчик доходит до лимита.
+        $conversations->shouldReceive('bumpClarificationAttempts')->once()->with($conversation)->andReturn(3);
+        $conversations->shouldReceive('resetClarificationAttempts')->once()->with($conversation);
+
+        $reply = $this->composer($llm, $conversations)->compose(new Tenant(['name' => 'Бизнес']), $conversation);
+
+        $this->assertTrue($reply->escalate);
+        $this->assertStringContainsString('администратору', $reply->text);
+    }
+
+    public function test_resets_streak_when_model_answers(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Да, конечно, записать вас?');
+
+        $conversation = new Conversation(['clarification_attempts' => 2]);
+
+        $conversations = $this->conversations();
+        $conversations->shouldReceive('resetClarificationAttempts')->once()->with($conversation);
+        $conversations->shouldNotReceive('bumpClarificationAttempts');
+
+        $reply = $this->composer($llm, $conversations)->compose(new Tenant(['name' => 'Бизнес']), $conversation);
+
+        $this->assertFalse($reply->escalate);
+        $this->assertSame('Да, конечно, записать вас?', $reply->text);
     }
 }

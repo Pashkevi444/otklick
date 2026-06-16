@@ -25,6 +25,18 @@ interface ConversationRepositoryInterface
     public function touchLastMessage(Conversation $conversation): void;
 
     /**
+     * Увеличивает счётчик подряд идущих уточняющих вопросов бота и возвращает
+     * новое значение.
+     */
+    public function bumpClarificationAttempts(Conversation $conversation): int;
+
+    /**
+     * Обнуляет счётчик уточняющих вопросов (бот ответил по делу или диалог ушёл
+     * на человека).
+     */
+    public function resetClarificationAttempts(Conversation $conversation): void;
+
+    /**
      * Сохраняет телефон клиента (для обратной связи), если он ещё не задан.
      */
     public function setContactPhone(Conversation $conversation, string $phone): void;

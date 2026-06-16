@@ -93,6 +93,19 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill(['last_message_at' => now()])->save();
     }
 
+    public function bumpClarificationAttempts(Conversation $conversation): int
+    {
+        $next = ($conversation->clarification_attempts ?? 0) + 1;
+        $conversation->forceFill(['clarification_attempts' => $next])->save();
+
+        return $next;
+    }
+
+    public function resetClarificationAttempts(Conversation $conversation): void
+    {
+        $conversation->forceFill(['clarification_attempts' => 0])->save();
+    }
+
     public function setContactPhone(Conversation $conversation, string $phone): void
     {
         $conversation->forceFill(['contact_phone' => $phone])->save();

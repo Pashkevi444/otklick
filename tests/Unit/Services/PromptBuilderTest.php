@@ -30,6 +30,16 @@ final class PromptBuilderTest extends TestCase
         $this->assertStringContainsString('жалобы', $prompt);
         $this->assertStringContainsString('• Доставка: Бесплатно от 1000₽', $prompt);
         $this->assertStringContainsString(PromptBuilder::ESCALATE, $prompt);
+        $this->assertStringContainsString(PromptBuilder::CLARIFY, $prompt);
+    }
+
+    public function test_prompt_instructs_to_clarify_before_escalating(): void
+    {
+        $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection);
+
+        // Непонятный вопрос → сначала уточняем (CLARIFY), а не сразу на человека (ESCALATE).
+        $this->assertStringContainsString(PromptBuilder::CLARIFY, $prompt);
+        $this->assertStringContainsString('уточняющий вопрос', $prompt);
     }
 
     public function test_links_are_appended_to_entry(): void

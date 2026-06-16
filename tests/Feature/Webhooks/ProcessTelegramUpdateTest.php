@@ -67,17 +67,38 @@ final class ProcessTelegramUpdateTest extends TestCase
             && str_contains((string) $request['text'], 'бесплатно'));
     }
 
-    public function test_unknown_question_falls_back_and_flags_needs_human(): void
+    public function test_unknown_question_clarifies_and_keeps_conversation_open(): void
     {
         Http::fake();
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        $this->process($tenant, $channel, $this->update(['text' => 'расскажи про квантовую физику']));
+        $this->process($tenant, $channel, $this->update(['text' => 'шо ты голова']));
 
         $outbound = Message::query()->where('direction', 'outbound')->firstOrFail();
-        $this->assertStringContainsString('администратору', (string) $outbound->text);
+        // Бот не зовёт сразу человека — переспрашивает и остаётся в диалоге.
+        $this->assertStringNotContainsString('администратору', (string) $outbound->text);
+        $this->assertDatabaseHas('conversations', ['tenant_id' => $tenant->id, 'status' => 'open']);
+        $this->assertDatabaseHas('conversations', ['tenant_id' => $tenant->id, 'clarification_attempts' => 1]);
+    }
+
+    public function test_escalates_after_three_unanswerable_questions(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        // Три подряд непонятных сообщения в одном чате → третье эскалирует на человека.
+        $this->process($tenant, $channel, $this->update(['message_id' => 10, 'text' => 'шо ты голова']));
+        $this->process($tenant, $channel, $this->update(['message_id' => 11, 'text' => 'а ты кто такой']));
+        $this->process($tenant, $channel, $this->update(['message_id' => 12, 'text' => 'бла бла бла']));
+
         $this->assertDatabaseHas('conversations', ['tenant_id' => $tenant->id, 'status' => 'needs_human']);
+
+        // Среди ответов есть фолбэк с передачей администратору.
+        $escalated = Message::query()->where('direction', 'outbound')
+            ->get()->contains(fn (Message $m): bool => str_contains((string) $m->text, 'администратору'));
+        $this->assertTrue($escalated, 'Ожидали фолбэк-сообщение про администратора после третьей непонятки.');
     }
 
     public function test_duplicate_update_is_idempotent(): void

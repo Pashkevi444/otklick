@@ -12,8 +12,8 @@ use App\Services\PromptBuilder;
  *
  * Ищет среди строк базы знаний в системном промпте (строки, начинающиеся с «• »)
  * самую релевантную последнему сообщению пользователя по пересечению слов и
- * возвращает её. Если совпадений нет — возвращает сентинел эскалации, как это
- * сделал бы реальный провайдер по инструкции в промпте.
+ * возвращает её. Если совпадений нет — возвращает уточняющий вопрос (сентинел
+ * CLARIFY), как это сделал бы реальный провайдер по инструкции в промпте.
  */
 final class FakeLlmClient implements LlmClient
 {
@@ -47,7 +47,11 @@ final class FakeLlmClient implements LlmClient
             }
         }
 
-        return $bestScore > 0 && $best !== null ? $best : PromptBuilder::ESCALATE;
+        if ($bestScore > 0 && $best !== null) {
+            return $best;
+        }
+
+        return PromptBuilder::CLARIFY.' Подскажите, пожалуйста, что именно вас интересует?';
     }
 
     /**
