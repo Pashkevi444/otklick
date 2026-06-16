@@ -7,6 +7,7 @@ use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\BillingController;
+use App\Http\Controllers\Cabinet\BusinessOverviewController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\ConversationController;
@@ -50,9 +51,17 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::put('/site', [SiteController::class, 'update'])->name('site.update');
     });
 
+    // Корень бизнес-домена (business.<домен>/) — карточка бизнеса. На маркетинг-
+    // домене «/» занят лендингом, поэтому регистрируем эту «/» только когда домены
+    // реально разведены (на проде), чтобы локально не перекрыть лендинг.
+    if (config('app.business_domain')) {
+        Route::middleware('auth')->get('/', BusinessOverviewController::class)->name('business.home');
+    }
+
     // Кабинет тенанта
     Route::middleware(['auth', 'tenant'])->prefix('cabinet')->name('cabinet.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('/overview', BusinessOverviewController::class)->name('overview');
 
         Route::get('/channels', [ChannelController::class, 'index'])->name('channels.index');
         Route::post('/channels', [ChannelController::class, 'store'])->name('channels.store');

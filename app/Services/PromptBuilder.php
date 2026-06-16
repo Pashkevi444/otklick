@@ -66,9 +66,11 @@ final class PromptBuilder
     private function about(BusinessProfile $profile): array
     {
         return array_values(array_filter([
+            $profile->description !== null && $profile->description !== '' ? "Описание: {$profile->description}" : null,
             $profile->phone !== null && $profile->phone !== '' ? "Телефон: {$profile->phone}" : null,
             $profile->address !== null && $profile->address !== '' ? "Адрес: {$profile->address}" : null,
             $profile->workingHours !== null && $profile->workingHours !== '' ? "Часы работы: {$profile->workingHours}" : null,
+            $profile->website !== null && $profile->website !== '' ? "Сайт: {$profile->website}" : null,
         ], fn (?string $l): bool => $l !== null));
     }
 

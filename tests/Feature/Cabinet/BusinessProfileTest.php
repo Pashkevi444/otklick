@@ -7,6 +7,8 @@ namespace Tests\Feature\Cabinet;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -58,5 +60,45 @@ final class BusinessProfileTest extends TestCase
         $this->actingAs($owner)
             ->put('/cabinet/profile', ['name' => ''])
             ->assertSessionHasErrors('name');
+    }
+
+    public function test_update_persists_description_website_and_avatar(): void
+    {
+        Storage::fake('public');
+        $tenant = Tenant::factory()->create(['name' => 'Кафе']);
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)->post('/cabinet/profile', [
+            '_method' => 'put',
+            'name' => 'Кафе у дома',
+            'description' => 'Уютное семейное кафе с завтраками',
+            'website' => 'cafe.example.ru',
+            'avatar' => UploadedFile::fake()->image('logo.jpg', 200, 200),
+        ])->assertRedirect(route('cabinet.profile.edit'));
+
+        $tenant->refresh();
+        $profile = $tenant->settings['profile'];
+        $this->assertSame('Уютное семейное кафе с завтраками', $profile['description']);
+        $this->assertSame('cafe.example.ru', $profile['website']);
+        $this->assertNotNull($profile['avatar_path']);
+        Storage::disk('public')->assertExists($profile['avatar_path']);
+    }
+
+    public function test_overview_page_renders_business_card(): void
+    {
+        $tenant = Tenant::factory()->create([
+            'name' => 'Барбершоп Бруно',
+            'settings' => ['profile' => ['description' => 'Мужские стрижки', 'phone' => '+7900']],
+        ]);
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->get('/cabinet/overview')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Cabinet/Overview')
+                ->where('business.name', 'Барбершоп Бруно')
+                ->where('business.description', 'Мужские стрижки')
+                ->where('business.phone', '+7900'));
     }
 }

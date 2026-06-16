@@ -22,6 +22,10 @@ final class UpdateBusinessProfileRequest extends AbstractFormRequest
             'address' => ['nullable', 'string', 'max:255'],
             'working_hours' => ['nullable', 'string', 'max:255'],
             'escalation_note' => ['nullable', 'string', 'max:2000'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'avatar' => ['nullable', 'image', 'max:2048'],
+            'remove_avatar' => ['nullable', 'boolean'],
         ];
     }
 }

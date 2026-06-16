@@ -31,6 +31,12 @@ const navItems = computed<NavItem[]>(() => {
     ];
 });
 
+// Куда ведёт логотип «Отклик»: супер-админа — в список бизнесов, владельца — на
+// карточку бизнеса (домашняя страница кабинета).
+const homeHref = computed<string>(() =>
+    user.value?.role === 'super_admin' ? '/admin/tenants' : '/cabinet/overview',
+);
+
 const isActive = (href: string): boolean =>
     page.url === href || (href !== '/cabinet' && page.url.startsWith(href));
 
@@ -54,7 +60,9 @@ const logout = (): void => {
                 <div class="glass rounded-2xl px-4">
                     <div class="flex h-14 items-center justify-between gap-4">
                         <div class="flex min-w-0 items-center gap-5">
-                            <Logo class="text-[#1F4E79] dark:text-white" />
+                            <Link :href="homeHref" class="transition hover:opacity-80">
+                                <Logo class="text-[#1F4E79] dark:text-white" />
+                            </Link>
                             <nav class="hidden items-center gap-1 md:flex">
                                 <Link
                                     v-for="item in navItems"

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\DTO;
 
 /**
- * Профиль бизнеса — «контекст работы», который видит/использует бот.
+ * Профиль бизнеса — «контекст работы», который видит/использует бот, и заодно
+ * витрина бизнеса (карточка): описание, сайт, аватар.
  * Хранится в tenants.settings под ключом profile.
  */
 final readonly class BusinessProfile
@@ -15,6 +16,10 @@ final readonly class BusinessProfile
         public ?string $address = null,
         public ?string $workingHours = null,
         public ?string $escalationNote = null,
+        public ?string $description = null,
+        public ?string $website = null,
+        public ?string $avatarPath = null,
+        public ?string $avatarUrl = null,
     ) {}
 
     /**
@@ -27,6 +32,10 @@ final readonly class BusinessProfile
             address: $data['address'] ?? null,
             workingHours: $data['working_hours'] ?? null,
             escalationNote: $data['escalation_note'] ?? null,
+            description: $data['description'] ?? null,
+            website: $data['website'] ?? null,
+            avatarPath: $data['avatar_path'] ?? null,
+            avatarUrl: $data['avatar_url'] ?? null,
         );
     }
 
@@ -40,6 +49,10 @@ final readonly class BusinessProfile
             'address' => $this->address,
             'working_hours' => $this->workingHours,
             'escalation_note' => $this->escalationNote,
+            'description' => $this->description,
+            'website' => $this->website,
+            'avatar_path' => $this->avatarPath,
+            'avatar_url' => $this->avatarUrl,
         ];
     }
 }
