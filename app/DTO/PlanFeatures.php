@@ -18,7 +18,30 @@ final readonly class PlanFeatures
         public bool $clientBase,
         public bool $allChannels,
         public bool $webWidget,
+        public int $maxNotifyEmail = 1,
+        public int $maxNotifyTelegram = 4,
     ) {}
+
+    /**
+     * Накладывает индивидуальные оверрайды бизнеса (из settings['overrides'])
+     * поверх базовых возможностей тарифа. Присутствующие ключи переопределяют.
+     *
+     * @param  array<string, mixed>  $o
+     */
+    public function merge(array $o): self
+    {
+        return new self(
+            maxOperators: (int) ($o['maxOperators'] ?? $this->maxOperators),
+            crm: (bool) ($o['crm'] ?? $this->crm),
+            analytics: (bool) ($o['analytics'] ?? $this->analytics),
+            broadcasts: (bool) ($o['broadcasts'] ?? $this->broadcasts),
+            clientBase: (bool) ($o['clientBase'] ?? $this->clientBase),
+            allChannels: (bool) ($o['allChannels'] ?? $this->allChannels),
+            webWidget: (bool) ($o['webWidget'] ?? $this->webWidget),
+            maxNotifyEmail: (int) ($o['maxNotifyEmail'] ?? $this->maxNotifyEmail),
+            maxNotifyTelegram: (int) ($o['maxNotifyTelegram'] ?? $this->maxNotifyTelegram),
+        );
+    }
 
     /**
      * Доступна ли булева возможность по её ключу (для middleware/гейтов).
@@ -49,6 +72,8 @@ final readonly class PlanFeatures
             'clientBase' => $this->clientBase,
             'allChannels' => $this->allChannels,
             'webWidget' => $this->webWidget,
+            'maxNotifyEmail' => $this->maxNotifyEmail,
+            'maxNotifyTelegram' => $this->maxNotifyTelegram,
         ];
     }
 }

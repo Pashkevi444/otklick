@@ -6,6 +6,17 @@ interface Plan {
     value: string;
     label: string;
 }
+interface Features {
+    maxOperators: number;
+    crm: boolean;
+    analytics: boolean;
+    broadcasts: boolean;
+    clientBase: boolean;
+    allChannels: boolean;
+    webWidget: boolean;
+    maxNotifyEmail: number;
+    maxNotifyTelegram: number;
+}
 interface TenantInfo {
     id: string;
     name: string;
@@ -16,6 +27,9 @@ interface TenantInfo {
     is_blocked: boolean;
     has_active_access: boolean;
     created_at: string | null;
+    features: Features;
+    planDefaults: Features;
+    hasOverrides: boolean;
 }
 interface UserRow {
     id: string;
@@ -25,6 +39,28 @@ interface UserRow {
 }
 
 const props = defineProps<{ tenant: TenantInfo; plans: Plan[]; users: UserRow[] }>();
+
+const toggles: { key: keyof Features; label: string }[] = [
+    { key: 'crm', label: 'CRM-интеграции' },
+    { key: 'analytics', label: 'Аналитика' },
+    { key: 'broadcasts', label: 'Рассылки' },
+    { key: 'clientBase', label: 'База клиентов' },
+    { key: 'allChannels', label: 'Все каналы' },
+    { key: 'webWidget', label: 'Веб-виджет' },
+];
+const numbers: { key: keyof Features; label: string }[] = [
+    { key: 'maxOperators', label: 'Операторов' },
+    { key: 'maxNotifyEmail', label: 'Email-получателей' },
+    { key: 'maxNotifyTelegram', label: 'Telegram-получателей' },
+];
+
+const ovForm = useForm<Features>({ ...props.tenant.features });
+const saveOverrides = (): void => {
+    ovForm.put(`/admin/tenants/${props.tenant.id}/overrides`, { preserveScroll: true });
+};
+const resetOverrides = (): void => {
+    router.delete(`/admin/tenants/${props.tenant.id}/overrides`, { preserveScroll: true });
+};
 
 const form = useForm({
     plan: props.tenant.plan,
@@ -98,6 +134,41 @@ const savePassword = (): void => {
                     Заблокировать бизнес
                 </button>
             </div>
+        </div>
+
+        <!-- Права и лимиты (по договорённости) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 max-w-xl mb-6">
+            <div class="mb-1 flex items-center gap-2">
+                <span class="font-semibold text-[#1F4E79]">Права и лимиты</span>
+                <span v-if="tenant.hasOverrides" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">индивидуальные</span>
+                <span v-else class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">по тарифу</span>
+            </div>
+            <p class="mb-4 text-sm text-slate-500">Переопределяет возможности тарифа для этого бизнеса (для сделок по договорённости).</p>
+
+            <form class="space-y-4" @submit.prevent="saveOverrides">
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <label v-for="t in toggles" :key="t.key" class="flex items-center gap-2 text-sm text-slate-700">
+                        <input v-model="ovForm[t.key] as boolean" type="checkbox" class="rounded border-slate-300" />
+                        {{ t.label }}
+                    </label>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div v-for="n in numbers" :key="n.key">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">{{ n.label }}</label>
+                        <input v-model.number="ovForm[n.key] as number" type="number" min="0" max="999" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <p class="mt-0.5 text-xs text-slate-400">тариф: {{ tenant.planDefaults[n.key] }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="submit" :disabled="ovForm.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">
+                        Сохранить права
+                    </button>
+                    <button v-if="tenant.hasOverrides" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50" @click="resetOverrides">
+                        Сбросить к тарифу
+                    </button>
+                    <span v-if="ovForm.recentlySuccessful" class="text-sm text-green-600">Сохранено</span>
+                </div>
+            </form>
         </div>
 
         <h2 class="font-semibold text-slate-700 mb-2">Пользователи</h2>

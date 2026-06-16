@@ -8,7 +8,10 @@ use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
+use App\Enums\OwnerEvent;
+use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
+use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -78,7 +81,40 @@ final readonly class WebWidgetService
             $this->conversations->markCancelled($conversation);
         }
 
+        $this->notifyOwner($channel, $conversation, $text, $reply);
+
         return $reply;
+    }
+
+    /**
+     * Уведомляет владельца о событии в веб-виджете (в фоне).
+     */
+    private function notifyOwner(Channel $channel, Conversation $conversation, string $snippet, BotReply $reply): void
+    {
+        $tenantId = $channel->getAttribute('tenant_id');
+        if (! is_string($tenantId) || $tenantId === '') {
+            return;
+        }
+
+        $event = match (true) {
+            $reply->escalate => OwnerEvent::NeedsHuman,
+            $reply->booked => OwnerEvent::Booked,
+            $reply->cancelled => OwnerEvent::Cancelled,
+            $conversation->wasRecentlyCreated => OwnerEvent::NewLead,
+            default => null,
+        };
+
+        if ($event === null) {
+            return;
+        }
+
+        SendOwnerNotification::dispatch($tenantId, $event->value, [
+            'contact' => $conversation->contact_name ?? 'Гость сайта',
+            'phone' => (string) $conversation->contact_phone,
+            'channel' => $channel->type->label(),
+            'snippet' => $snippet,
+            'conversationId' => $conversation->id,
+        ]);
     }
 
     /**

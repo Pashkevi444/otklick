@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
                         'name' => $user->tenant->name,
                         'plan' => $user->tenant->plan->label(),
                         'planKey' => $user->tenant->plan->value,
-                        'features' => $user->tenant->plan->features()->toArray(),
+                        'features' => $user->tenant->features()->toArray(),
                         'accessExpiresAt' => $user->tenant->access_expires_at?->toDateString(),
                         'hasActiveAccess' => $user->tenant->hasActiveAccess(),
                     ],
@@ -62,6 +62,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'status' => fn () => $request->session()->get('status'),
+                'telegramLink' => fn () => $request->session()->get('telegram_link'),
             ],
         ];
     }

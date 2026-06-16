@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Channels\Contracts\MessengerGateway;
+use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
+use App\Enums\OwnerEvent;
+use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
+use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use Throwable;
@@ -72,5 +76,39 @@ final readonly class IncomingMessageService
             // Клиент отменил запись — закрываем диалог как отменённый.
             $this->conversations->markCancelled($conversation);
         }
+
+        $this->notifyOwner($channel, $conversation, $incoming->text, $reply);
+    }
+
+    /**
+     * Уведомляет владельца о событии (в фоне). Событие выбирается по исходу
+     * ответа; для нового диалога — «новый лид».
+     */
+    private function notifyOwner(Channel $channel, Conversation $conversation, string $snippet, BotReply $reply): void
+    {
+        $tenantId = $channel->getAttribute('tenant_id');
+        if (! is_string($tenantId) || $tenantId === '') {
+            return;
+        }
+
+        $event = match (true) {
+            $reply->escalate => OwnerEvent::NeedsHuman,
+            $reply->booked => OwnerEvent::Booked,
+            $reply->cancelled => OwnerEvent::Cancelled,
+            $conversation->wasRecentlyCreated => OwnerEvent::NewLead,
+            default => null,
+        };
+
+        if ($event === null) {
+            return;
+        }
+
+        SendOwnerNotification::dispatch($tenantId, $event->value, [
+            'contact' => $conversation->contact_name ?? 'Гость',
+            'phone' => (string) $conversation->contact_phone,
+            'channel' => $channel->type->label(),
+            'snippet' => $snippet,
+            'conversationId' => $conversation->id,
+        ]);
     }
 }

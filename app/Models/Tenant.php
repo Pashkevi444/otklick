@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\DTO\PlanFeatures;
 use App\Enums\TenantPlan;
 use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -47,6 +48,18 @@ class Tenant extends Model
             'is_blocked' => 'boolean',
             'settings' => 'array',
         ];
+    }
+
+    /**
+     * Эффективные возможности бизнеса: базовые из тарифа + индивидуальные
+     * оверрайды супер-админа (settings['overrides']). Источник истины для
+     * гейтинга и лимитов на уровне конкретного бизнеса.
+     */
+    public function features(): PlanFeatures
+    {
+        $overrides = $this->settings['overrides'] ?? [];
+
+        return $this->plan->features()->merge(is_array($overrides) ? $overrides : []);
     }
 
     /**

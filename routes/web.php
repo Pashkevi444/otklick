@@ -15,6 +15,7 @@ use App\Http\Controllers\Cabinet\ConversationController;
 use App\Http\Controllers\Cabinet\DashboardController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
+use App\Http\Controllers\Cabinet\NotificationController;
 use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
 use App\Http\Controllers\Cabinet\WidgetController;
@@ -45,6 +46,8 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
         Route::put('/tenants/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
         Route::put('/tenants/{tenant}/owner-password', [TenantController::class, 'updateOwnerPassword'])->name('tenants.owner-password.update');
+        Route::put('/tenants/{tenant}/overrides', [TenantController::class, 'updateOverrides'])->name('tenants.overrides.update');
+        Route::delete('/tenants/{tenant}/overrides', [TenantController::class, 'resetOverrides'])->name('tenants.overrides.reset');
         Route::post('/tenants/{tenant}/block', [TenantController::class, 'block'])->name('tenants.block');
         Route::post('/tenants/{tenant}/unblock', [TenantController::class, 'unblock'])->name('tenants.unblock');
 
@@ -84,6 +87,13 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/knowledge/{entry}/edit', [KnowledgeEntryController::class, 'edit'])->name('knowledge.edit');
         Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
         Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
+
+        // Уведомления владельцу о событиях (email/Telegram).
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/email', [NotificationController::class, 'storeEmail'])->name('notifications.email');
+        Route::post('/notifications/telegram', [NotificationController::class, 'connectTelegram'])->name('notifications.telegram');
+        Route::put('/notifications/{recipient}/toggle', [NotificationController::class, 'toggle'])->name('notifications.toggle');
+        Route::delete('/notifications/{recipient}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 
         Route::get('/subscription', SubscriptionController::class)->name('subscription');
         Route::get('/billing', BillingController::class)->name('billing');

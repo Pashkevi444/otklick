@@ -19,7 +19,7 @@ final class EnsurePlanFeature
         $tenant = $request->user()?->tenant;
 
         abort_if($tenant === null, Response::HTTP_FORBIDDEN);
-        abort_unless($tenant->plan->features()->has($feature), Response::HTTP_FORBIDDEN);
+        abort_unless($tenant->features()->has($feature), Response::HTTP_FORBIDDEN);
 
         return $next($request);
     }

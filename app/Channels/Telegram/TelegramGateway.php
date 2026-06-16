@@ -80,6 +80,25 @@ final readonly class TelegramGateway implements MessengerGateway
     }
 
     /**
+     * Данные о боте (getMe) — нужен username для диплинка подключения уведомлений.
+     *
+     * @return array<string, mixed>
+     */
+    public function getMe(Channel $channel): array
+    {
+        $response = $this->request()
+            ->connectTimeout(5)
+            ->timeout(8)
+            ->get("{$this->apiUrl}/bot{$channel->botToken()}/getMe")
+            ->throw();
+
+        /** @var array<string, mixed> $result */
+        $result = $response->json('result', []);
+
+        return $result;
+    }
+
+    /**
      * @param  array<string, mixed>  $params
      */
     private function call(?string $botToken, string $method, array $params): void

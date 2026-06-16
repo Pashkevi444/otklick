@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\DTO\IncomingMessage;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\IncomingMessageService;
+use App\Services\TelegramLinkService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -37,8 +38,9 @@ final class ProcessTelegramUpdate implements ShouldQueue
         TenantInitializer $tenancy,
         ChannelRepositoryInterface $channels,
         IncomingMessageService $messages,
+        TelegramLinkService $linker,
     ): void {
-        $tenancy->run($this->tenantId, function () use ($channels, $messages): void {
+        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker): void {
             $channel = $channels->find($this->channelId);
 
             if ($channel === null || ! $channel->is_active) {
@@ -47,6 +49,12 @@ final class ProcessTelegramUpdate implements ShouldQueue
 
             // Бизнес заблокирован или истёк оплаченный доступ — бот не отвечает.
             if ($channel->tenant === null || ! $channel->tenant->hasActiveAccess()) {
+                return;
+            }
+
+            // Подключение уведомлений по диплинку «/start notify_<token>».
+            $message = $this->update['message'] ?? null;
+            if (is_array($message) && $linker->tryLink($channel, $message)) {
                 return;
             }
 

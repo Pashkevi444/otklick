@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\TenantPlan;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreTenantRequest;
+use App\Http\Requests\Admin\UpdateTenantOverridesRequest;
 use App\Http\Requests\Admin\UpdateTenantOwnerPasswordRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
 use App\Models\Tenant;
@@ -97,6 +98,26 @@ final class TenantController extends Controller
         return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Пароль владельца обновлён.');
     }
 
+    /**
+     * Индивидуальные права/лимиты бизнеса (по договорённости) — поверх тарифа.
+     */
+    public function updateOverrides(UpdateTenantOverridesRequest $request, string $tenant): RedirectResponse
+    {
+        $this->tenantService->setOverrides($this->findOrFail($tenant), $request->overrides());
+
+        return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Права и лимиты обновлены.');
+    }
+
+    /**
+     * Сброс индивидуальных оверрайдов — бизнес возвращается к возможностям тарифа.
+     */
+    public function resetOverrides(string $tenant): RedirectResponse
+    {
+        $this->tenantService->setOverrides($this->findOrFail($tenant), []);
+
+        return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Права сброшены к тарифу.');
+    }
+
     public function block(string $tenant): RedirectResponse
     {
         $this->tenantService->block($this->findOrFail($tenant));
@@ -146,6 +167,10 @@ final class TenantController extends Controller
             'is_blocked' => $tenant->is_blocked,
             'has_active_access' => $tenant->hasActiveAccess(),
             'created_at' => $tenant->created_at?->toDateString(),
+            // Права/лимиты: эффективные (тариф + оверрайды), дефолты тарифа и факт оверрайда.
+            'features' => $tenant->features()->toArray(),
+            'planDefaults' => $tenant->plan->features()->toArray(),
+            'hasOverrides' => isset($tenant->settings['overrides']) && $tenant->settings['overrides'] !== [],
         ];
     }
 }

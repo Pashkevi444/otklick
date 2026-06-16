@@ -9,6 +9,9 @@ use App\Crm\Yclients\YclientsGateway;
 use App\Llm\Contracts\LlmClient;
 use App\Llm\FakeLlmClient;
 use App\Llm\YandexGptClient;
+use App\Notifications\EmailNotifier;
+use App\Notifications\NotifierResolver;
+use App\Notifications\TelegramNotifier;
 use App\Services\SiteSettingsService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -41,6 +44,13 @@ class AppServiceProvider extends ServiceProvider
         // Единственный канал на данный момент — Telegram. Резолвер по ChannelType
         // появится со вторым каналом (WhatsApp).
         $this->app->bind(MessengerGateway::class, TelegramGateway::class);
+
+        // Реестр нотификаторов: новый канал уведомлений добавляется в этот тег.
+        $this->app->tag([EmailNotifier::class, TelegramNotifier::class], 'notifiers');
+        $this->app->singleton(
+            NotifierResolver::class,
+            fn ($app): NotifierResolver => new NotifierResolver($app->tagged('notifiers')),
+        );
 
         $this->app->singleton(LlmClient::class, function (): LlmClient {
             $driver = (string) config('services.llm.driver');

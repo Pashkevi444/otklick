@@ -80,6 +80,25 @@ final readonly class TenantService
         ]);
     }
 
+    /**
+     * Индивидуальные оверрайды прав/лимитов бизнеса (поверх тарифа). Пустой
+     * массив очищает оверрайды — бизнес возвращается к возможностям тарифа.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    public function setOverrides(Tenant $tenant, array $overrides): Tenant
+    {
+        $settings = $tenant->settings;
+
+        if ($overrides === []) {
+            unset($settings['overrides']);
+        } else {
+            $settings['overrides'] = $overrides;
+        }
+
+        return $this->tenants->update($tenant, ['settings' => $settings]);
+    }
+
     private function uniqueSlug(string $name): string
     {
         $base = Str::slug($name);

@@ -51,6 +51,8 @@ enum TenantPlan: string implements HasLabel
                 clientBase: true,
                 allChannels: true,
                 webWidget: true,
+                maxNotifyEmail: 5,
+                maxNotifyTelegram: 20,
             ),
             default => new PlanFeatures(
                 maxOperators: 2,
@@ -60,6 +62,8 @@ enum TenantPlan: string implements HasLabel
                 clientBase: false,
                 allChannels: false,
                 webWidget: true,
+                maxNotifyEmail: 1,
+                maxNotifyTelegram: 4,
             ),
         };
     }
