@@ -13,6 +13,7 @@ interface Msg {
 interface Conv {
     id: string;
     contact: string;
+    phone: string | null;
     channel: string;
     status: string;
     statusLabel: string;
@@ -81,6 +82,7 @@ const statusClass = (s: string): string =>
             <div class="min-w-0">
                 <div class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ conversation.contact }}</div>
                 <div class="text-xs text-slate-400">{{ conversation.channel }} · диалог от {{ conversation.createdAt }}</div>
+                <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-medium text-[#2E74B5] dark:text-sky-300">📞 {{ conversation.phone }}</a>
             </div>
             <span class="ml-auto rounded-full px-2.5 py-1 text-xs" :class="statusClass(conversation.status)">{{ conversation.statusLabel }}</span>
         </div>

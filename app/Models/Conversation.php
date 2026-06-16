@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $channel_id
  * @property string $external_chat_id
  * @property string|null $contact_name
+ * @property string|null $contact_phone
  * @property ConversationStatus $status
  * @property Carbon|null $last_message_at
  */
@@ -33,6 +34,7 @@ class Conversation extends TenantOwnedModel
         'channel_id',
         'external_chat_id',
         'contact_name',
+        'contact_phone',
         'status',
         'last_message_at',
     ];

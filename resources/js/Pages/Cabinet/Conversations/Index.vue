@@ -6,6 +6,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 interface Row {
     id: string;
     contact: string;
+    phone: string | null;
     channel: string;
     status: string;
     statusLabel: string;
@@ -117,7 +118,7 @@ const open = (id: string): void => {
                 <input
                     v-model="state.search"
                     type="text"
-                    placeholder="Поиск по имени клиента или тексту сообщений…"
+                    placeholder="Поиск по имени, телефону или тексту сообщений…"
                     class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[#2E74B5]"
                 />
             </div>
@@ -160,6 +161,7 @@ const open = (id: string): void => {
                         <span class="font-medium text-slate-800">{{ c.contact }}</span>
                         <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="statusClass(c.status)">{{ c.statusLabel }}</span>
                     </div>
+                    <p v-if="c.phone" class="mt-1 text-sm font-medium text-[#2E74B5]">📞 {{ c.phone }}</p>
                     <p class="mt-1 truncate text-sm text-slate-500">{{ c.lastMessage ?? '—' }}</p>
                     <div class="mt-1 flex justify-between text-xs text-slate-400">
                         <span>{{ c.channel }} · {{ c.messagesCount }} сообщ.</span>
@@ -174,6 +176,7 @@ const open = (id: string): void => {
                     <thead class="bg-slate-50 text-left text-slate-500">
                         <tr>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('contact')">Клиент{{ arrow('contact') }}</th>
+                            <th class="px-5 py-3 font-medium">Телефон</th>
                             <th class="px-5 py-3 font-medium">Канал</th>
                             <th class="px-5 py-3 font-medium">Последнее сообщение</th>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('messages')">Сообщений{{ arrow('messages') }}</th>
@@ -189,6 +192,7 @@ const open = (id: string): void => {
                                     <span class="font-medium text-slate-800">{{ c.contact }}</span>
                                 </div>
                             </td>
+                            <td class="whitespace-nowrap px-5 py-3 font-medium" :class="c.phone ? 'text-[#2E74B5]' : 'text-slate-300'">{{ c.phone ?? '—' }}</td>
                             <td class="px-5 py-3 text-slate-500">{{ c.channel }}</td>
                             <td class="max-w-xs truncate px-5 py-3 text-slate-500">{{ c.lastMessage ?? '—' }}</td>
                             <td class="px-5 py-3 text-slate-500">{{ c.messagesCount }}</td>

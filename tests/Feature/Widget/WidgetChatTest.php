@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Widget;
 
 use App\Models\Channel;
+use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Services\ChannelService;
 use App\Tenancy\TenantInitializer;
@@ -91,6 +92,20 @@ final class WidgetChatTest extends TestCase
         // Несуществующий/чужой канал.
         $this->postJson("/widget/v1/{$tenant->id}/00000000-0000-0000-0000-000000000000/session")
             ->assertNotFound();
+    }
+
+    public function test_widget_captures_client_phone(): void
+    {
+        $channel = $this->webChannel();
+
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+        $this->postJson($this->url($channel, 'message'), [
+            'token' => $token,
+            'text' => 'Запишите меня, мой телефон +7 999 123-45-67',
+        ])->assertOk();
+
+        $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
+        $this->assertSame('+79991234567', $conv->contact_phone);
     }
 
     public function test_widget_script_is_served_as_javascript(): void

@@ -48,6 +48,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             $needle = '%'.mb_strtolower($search).'%';
             $query->where(function (Builder $w) use ($needle): void {
                 $w->whereRaw('lower(contact_name) like ?', [$needle])
+                    ->orWhereRaw('lower(contact_phone) like ?', [$needle])
                     ->orWhereRaw('lower(external_chat_id) like ?', [$needle])
                     ->orWhereHas('messages', fn (Builder $m) => $m->whereRaw('lower(text) like ?', [$needle]));
             });
@@ -90,5 +91,10 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function touchLastMessage(Conversation $conversation): void
     {
         $conversation->forceFill(['last_message_at' => now()])->save();
+    }
+
+    public function setContactPhone(Conversation $conversation, string $phone): void
+    {
+        $conversation->forceFill(['contact_phone' => $phone])->save();
     }
 }

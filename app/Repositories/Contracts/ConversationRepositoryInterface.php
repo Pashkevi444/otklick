@@ -25,6 +25,11 @@ interface ConversationRepositoryInterface
     public function touchLastMessage(Conversation $conversation): void;
 
     /**
+     * Сохраняет телефон клиента (для обратной связи), если он ещё не задан.
+     */
+    public function setContactPhone(Conversation $conversation, string $phone): void;
+
+    /**
      * Диалоги текущего тенанта (scoped/RLS) для журнала: с каналом, последним
      * сообщением и числом сообщений, новые сверху.
      *

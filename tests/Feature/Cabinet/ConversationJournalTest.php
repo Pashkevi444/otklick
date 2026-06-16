@@ -114,6 +114,22 @@ final class ConversationJournalTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.status', 'needs_human'));
     }
 
+    public function test_grid_shows_and_searches_by_phone(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Без телефона', 'contact_phone' => null, 'last_message_at' => now()->subHour()]);
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Сергей', 'contact_phone' => '+79991234567', 'last_message_at' => now()]);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('conversations.0.phone', '+79991234567'));
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations?search=9991234567')
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.contact', 'Сергей'));
+    }
+
     public function test_pagination_limits_to_15_per_page(): void
     {
         $tenant = Tenant::factory()->create();

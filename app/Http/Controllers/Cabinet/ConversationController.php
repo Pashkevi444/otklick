@@ -66,6 +66,7 @@ final class ConversationController extends Controller
             'conversation' => [
                 'id' => $model->id,
                 'contact' => $this->contact($model),
+                'phone' => $model->contact_phone,
                 'channel' => $model->channel?->type->label() ?? '—',
                 'status' => $model->status->value,
                 'statusLabel' => $model->status->label(),
@@ -89,6 +90,7 @@ final class ConversationController extends Controller
         return [
             'id' => $c->id,
             'contact' => $this->contact($c),
+            'phone' => $c->contact_phone,
             'channel' => $c->channel?->type->label() ?? '—',
             'status' => $c->status->value,
             'statusLabel' => $c->status->label(),

@@ -11,6 +11,7 @@ use App\Enums\MessageStatus;
 use App\Models\Channel;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Support\PhoneExtractor;
 use Throwable;
 
 /**
@@ -42,6 +43,14 @@ final readonly class IncomingMessageService
         // Дубликат вебхука: сообщение уже обработано — выходим (идемпотентность).
         if ($inbound === null) {
             return;
+        }
+
+        // Телефон для обратной связи — сохраняем по клиенту, если ещё не задан.
+        if ($conversation->contact_phone === null) {
+            $phone = PhoneExtractor::fromText($incoming->text);
+            if ($phone !== null) {
+                $this->conversations->setContactPhone($conversation, $phone);
+            }
         }
 
         $reply = $this->composer->compose($channel->tenant, $conversation);
