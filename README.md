@@ -106,7 +106,8 @@ HTTP / Console / Job  →  Service (бизнес-логика)  →  Repository 
 | `App\Enums\MessageDirection` | `inbound` / `outbound`. |
 | `App\Enums\MessageStatus` | `received` / `sent` / `failed`. |
 | `App\Enums\ConversationStatus` | `open` / `needs_human` / `closed`. Закрыть/вернуть диалог можно вручную из кабинета (`PUT /cabinet/conversations/{id}/status`). |
-| `App\Services\ChannelService` | Подключение Telegram-бота к тенанту: создание канала + `setWebhook`. |
+| `App\Services\ChannelService` | Подключение Telegram-бота к тенанту: создание канала + `deleteWebhook` (бот работает через long polling — вебхуки в РФ не доставляются). |
+| `App\Console\Commands\PollTelegramUpdates` (`telegram:poll`) | Long polling Telegram: сервер сам тянет апдейты (getUpdates по IPv6) и кладёт их в ту же очередь, что и вебхук. Отдельный контейнер `telegram` в проде. Нужно в РФ, где входящий путь Telegram→IPv4 заблокирован. |
 | `App\Services\IncomingMessageService` | Обработка входящего: фиксация диалога/сообщения, захват контактов (`ContactCapture`), ответ через `ReplyComposer`, отправка; при эскалации — статус `needs_human`. |
 | `App\Services\ContactCapture` | Достаёт из входящего телефон (`PhoneExtractor`, регулярка) и имя (`NameDetector`, нейросеть — только если бот спрашивал имя) и сохраняет их по диалогу. |
 | `App\Services\NameDetector` | Определяет имя клиента LLM-классификацией ответа на вопрос «Как вас зовут?» (люди пишут просто «Павел», без «меня зовут»). |
