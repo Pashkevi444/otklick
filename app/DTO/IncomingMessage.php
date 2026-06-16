@@ -16,6 +16,8 @@ final readonly class IncomingMessage
         public string $externalMessageId,
         public string $text,
         public ?string $contactName = null,
+        /** Ссылка на аккаунт клиента в мессенджере (для деталей диалога). */
+        public ?string $contactRef = null,
         /** @var array<string, mixed> */
         public array $raw = [],
     ) {}

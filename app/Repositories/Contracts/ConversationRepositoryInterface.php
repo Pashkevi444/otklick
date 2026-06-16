@@ -18,9 +18,10 @@ interface ConversationRepositoryInterface
 
     /**
      * Находит диалог по чату канала или создаёт новый. tenant_id проставляется
-     * автоматически из текущего тенант-контекста.
+     * автоматически из текущего тенант-контекста. $contactRef — ссылка на аккаунт
+     * клиента (мессенджеры) или IP посетителя (веб-виджет).
      */
-    public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName): Conversation;
+    public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName, ?string $contactRef = null): Conversation;
 
     public function touchLastMessage(Conversation $conversation): void;
 

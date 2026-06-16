@@ -81,7 +81,7 @@ final class MessagingRepositoriesTest extends TestCase
         ));
         $conversation = $this->conversations->firstOrCreateForChat($channel->id, '999', null);
 
-        $incoming = new IncomingMessage('999', '42', 'привет', 'Иван', ['message_id' => 42]);
+        $incoming = new IncomingMessage('999', '42', 'привет', 'Иван', raw: ['message_id' => 42]);
 
         $first = $this->messages->recordInbound($conversation, $incoming);
         $duplicate = $this->messages->recordInbound($conversation, $incoming);

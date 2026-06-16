@@ -36,6 +36,7 @@ final readonly class IncomingMessageService
             $channel->id,
             $incoming->externalChatId,
             $incoming->contactName,
+            $incoming->contactRef,
         );
 
         $inbound = $this->messages->recordInbound($conversation, $incoming);

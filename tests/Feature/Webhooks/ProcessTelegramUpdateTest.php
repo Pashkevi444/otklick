@@ -6,6 +6,7 @@ namespace Tests\Feature\Webhooks;
 
 use App\Jobs\ProcessTelegramUpdate;
 use App\Models\Channel;
+use App\Models\Conversation;
 use App\Models\KnowledgeEntry;
 use App\Models\Message;
 use App\Models\Tenant;
@@ -99,6 +100,38 @@ final class ProcessTelegramUpdateTest extends TestCase
         $escalated = Message::query()->where('direction', 'outbound')
             ->get()->contains(fn (Message $m): bool => str_contains((string) $m->text, 'администратору'));
         $this->assertTrue($escalated, 'Ожидали фолбэк-сообщение про администратора после третьей непонятки.');
+    }
+
+    public function test_stores_account_link_and_does_not_seed_name_from_account(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->process($tenant, $channel, $this->update([
+            'text' => 'есть ли доставка?',
+            'from' => ['first_name' => 'Иван', 'username' => 'ivan_tg'],
+        ]));
+
+        $conv = Conversation::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        // Имя из аккаунта НЕ подставляем; ссылку на аккаунт — сохраняем.
+        $this->assertNull($conv->contact_name);
+        $this->assertSame('https://t.me/ivan_tg', $conv->contact_ref);
+    }
+
+    public function test_account_link_is_null_without_username(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->process($tenant, $channel, $this->update([
+            'text' => 'привет',
+            'from' => ['first_name' => 'Иван'],
+        ]));
+
+        $conv = Conversation::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        $this->assertNull($conv->contact_ref);
     }
 
     public function test_duplicate_update_is_idempotent(): void

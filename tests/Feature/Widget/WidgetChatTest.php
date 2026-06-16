@@ -123,6 +123,19 @@ final class WidgetChatTest extends TestCase
         $this->assertSame('+79991234567', $conv->contact_phone);
     }
 
+    public function test_widget_stores_visitor_ip_as_contact_ref(): void
+    {
+        $channel = $this->webChannel();
+
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])
+            ->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'привет'])
+            ->assertOk();
+
+        $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
+        $this->assertSame('203.0.113.7', $conv->contact_ref);
+    }
+
     public function test_widget_script_is_served_as_javascript(): void
     {
         $this->get('/widget/v1/widget.js')

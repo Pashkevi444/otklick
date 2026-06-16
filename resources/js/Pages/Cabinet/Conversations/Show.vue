@@ -16,6 +16,7 @@ interface Conv {
     phone: string | null;
     channel: string;
     source: string;
+    contactRef: string | null;
     status: string;
     statusLabel: string;
     createdAt: string | null;
@@ -87,6 +88,17 @@ const setStatus = (status: string): void => {
             <div class="min-w-0">
                 <div class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ conversation.contact }}</div>
                 <div class="text-xs text-slate-400">{{ conversation.source }} · диалог от {{ conversation.createdAt }}</div>
+                <div v-if="conversation.contactRef" class="mt-0.5 text-xs text-slate-400">
+                    <a
+                        v-if="conversation.contactRef.startsWith('http')"
+                        :href="conversation.contactRef"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="font-medium text-[#2E74B5] hover:underline dark:text-sky-300"
+                        >👤 {{ conversation.contactRef.replace(/^https?:\/\//, '') }}</a
+                    >
+                    <span v-else>IP: {{ conversation.contactRef }}</span>
+                </div>
                 <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-medium text-[#2E74B5] dark:text-sky-300">📞 {{ conversation.phone }}</a>
             </div>
             <div class="ml-auto flex items-center gap-2">

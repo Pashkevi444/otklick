@@ -70,7 +70,7 @@ final class WidgetChatController extends Controller
             $model = $this->resolve($channel);
             $origin = $this->guardOrigin($request, $model);
 
-            $reply = $this->widget->reply($model, (string) $validated['token'], (string) $validated['text']);
+            $reply = $this->widget->reply($model, (string) $validated['token'], (string) $validated['text'], $request->ip());
 
             return $this->cors(response()->json([
                 'reply' => $reply->text,

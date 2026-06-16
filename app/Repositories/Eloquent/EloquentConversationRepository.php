@@ -74,7 +74,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
     }
 
-    public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName): Conversation
+    public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName, ?string $contactRef = null): Conversation
     {
         return Conversation::firstOrCreate(
             [
@@ -83,6 +83,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ],
             [
                 'contact_name' => $contactName,
+                'contact_ref' => $contactRef,
                 'status' => ConversationStatus::Open,
             ],
         );

@@ -84,24 +84,24 @@ final class ProcessTelegramUpdate implements ShouldQueue
             externalChatId: (string) $chatId,
             externalMessageId: (string) $messageId,
             text: $text,
-            contactName: $this->contactName($message['from'] ?? []),
+            // Имя НЕ берём из аккаунта Telegram — его подставит ContactCapture из
+            // того, как клиент представится сам. В contactRef — ссылка на аккаунт.
+            contactName: null,
+            contactRef: $this->accountLink($message['from'] ?? []),
             raw: $this->update,
         );
     }
 
     /**
+     * Ссылка на аккаунт клиента для деталей диалога. Публичная ссылка возможна
+     * только при заданном username (t.me/<username>); по числовому id ссылки нет.
+     *
      * @param  array<string, mixed>  $from
      */
-    private function contactName(array $from): ?string
+    private function accountLink(array $from): ?string
     {
-        $name = trim(($from['first_name'] ?? '').' '.($from['last_name'] ?? ''));
-
-        if ($name !== '') {
-            return $name;
-        }
-
         $username = $from['username'] ?? null;
 
-        return is_string($username) && $username !== '' ? $username : null;
+        return is_string($username) && $username !== '' ? 'https://t.me/'.$username : null;
     }
 }

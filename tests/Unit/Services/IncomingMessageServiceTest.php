@@ -32,10 +32,10 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
-        $incoming = new IncomingMessage('555', '42', 'есть ли доставка?', 'Иван');
+        $incoming = new IncomingMessage('555', '42', 'есть ли доставка?', 'Иван', 'https://t.me/ivan');
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
-        $conversations->shouldReceive('firstOrCreateForChat')->once()->with('ch-1', '555', 'Иван')->andReturn($conversation);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->with('ch-1', '555', 'Иван', 'https://t.me/ivan')->andReturn($conversation);
         $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
         $conversations->shouldNotReceive('updateStatus');
 

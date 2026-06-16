@@ -73,6 +73,7 @@ final class ConversationController extends Controller
                 'phone' => $model->contact_phone,
                 'channel' => $model->channel?->type->label() ?? '—',
                 'source' => $this->source($model->channel),
+                'contactRef' => $model->contact_ref,
                 'status' => $model->status->value,
                 'statusLabel' => $model->status->label(),
                 'createdAt' => $model->created_at?->format('d.m.Y'),

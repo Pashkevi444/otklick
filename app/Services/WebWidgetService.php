@@ -46,12 +46,13 @@ final readonly class WebWidgetService
 
     /**
      * Принимает сообщение посетителя и возвращает ответ бота по базе знаний.
+     * $clientIp сохраняется в деталях диалога (аналог ссылки на аккаунт в мессенджерах).
      */
-    public function reply(Channel $channel, string $token, string $text): BotReply
+    public function reply(Channel $channel, string $token, string $text, ?string $clientIp = null): BotReply
     {
         $sessionId = $this->sessionFromToken($channel, $token);
 
-        $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, 'Гость сайта');
+        $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, 'Гость сайта', $clientIp);
 
         $this->messages->recordInbound($conversation, new IncomingMessage(
             externalChatId: $sessionId,
