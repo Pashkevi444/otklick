@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
+use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -71,5 +72,59 @@ final class ConversationJournalTest extends TestCase
     public function test_journal_requires_auth(): void
     {
         $this->get('/cabinet/conversations')->assertRedirect('/login');
+    }
+
+    public function test_search_filters_by_contact_name(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Ivan Petrov']);
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Maria Sidorova']);
+
+        // Поиск регистронезависимый (на проде Postgres lower() работает и с кириллицей).
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations?search=ivan')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('conversations', 1)
+                ->where('conversations.0.contact', 'Ivan Petrov'));
+    }
+
+    public function test_search_finds_by_message_text(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $conv = Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Guest One']);
+        Message::factory()->create(['tenant_id' => $tenant->id, 'conversation_id' => $conv->id, 'text' => 'How much is the fade haircut?']);
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Guest Two']);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations?search=fade')
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.contact', 'Guest One'));
+    }
+
+    public function test_status_filter(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'status' => ConversationStatus::NeedsHuman]);
+        Conversation::factory()->create(['tenant_id' => $tenant->id, 'status' => ConversationStatus::Open]);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations?status=needs_human')
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.status', 'needs_human'));
+    }
+
+    public function test_pagination_limits_to_15_per_page(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        Conversation::factory()->count(20)->create(['tenant_id' => $tenant->id]);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('conversations', 15)
+                ->where('pagination.total', 20)
+                ->where('pagination.last', 2));
     }
 }

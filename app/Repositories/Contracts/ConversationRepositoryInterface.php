@@ -6,6 +6,7 @@ namespace App\Repositories\Contracts;
 
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 /**
@@ -32,4 +33,20 @@ interface ConversationRepositoryInterface
     public function forCurrentTenant(): Collection;
 
     public function findForCurrentTenant(string $id): ?Conversation;
+
+    /**
+     * Диалоги текущего тенанта с поиском, фильтром по статусу, сортировкой и
+     * пагинацией (для грид-журнала).
+     *
+     * @param  'last'|'contact'|'messages'  $sort
+     * @param  'asc'|'desc'  $direction
+     * @return LengthAwarePaginator<int, Conversation>
+     */
+    public function paginateForCurrentTenant(
+        ?string $search,
+        ?ConversationStatus $status,
+        string $sort,
+        string $direction,
+        int $perPage,
+    ): LengthAwarePaginator;
 }

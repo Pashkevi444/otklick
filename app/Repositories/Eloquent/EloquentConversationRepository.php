@@ -7,6 +7,8 @@ namespace App\Repositories\Eloquent;
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 final class EloquentConversationRepository implements ConversationRepositoryInterface
@@ -29,6 +31,46 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function findForCurrentTenant(string $id): ?Conversation
     {
         return Conversation::query()->with('channel')->find($id);
+    }
+
+    public function paginateForCurrentTenant(
+        ?string $search,
+        ?ConversationStatus $status,
+        string $sort,
+        string $direction,
+        int $perPage,
+    ): LengthAwarePaginator {
+        $query = Conversation::query()
+            ->with(['channel', 'latestMessage'])
+            ->withCount('messages');
+
+        if ($search !== null && $search !== '') {
+            $needle = '%'.mb_strtolower($search).'%';
+            $query->where(function (Builder $w) use ($needle): void {
+                $w->whereRaw('lower(contact_name) like ?', [$needle])
+                    ->orWhereRaw('lower(external_chat_id) like ?', [$needle])
+                    ->orWhereHas('messages', fn (Builder $m) => $m->whereRaw('lower(text) like ?', [$needle]));
+            });
+        }
+
+        if ($status instanceof ConversationStatus) {
+            $query->where('status', $status);
+        }
+
+        $column = match ($sort) {
+            'contact' => 'contact_name',
+            'messages' => 'messages_count',
+            default => 'last_message_at',
+        };
+        $dir = $direction === 'asc' ? 'asc' : 'desc';
+
+        if ($column === 'messages_count') {
+            $query->orderBy('messages_count', $dir);
+        } else {
+            $query->orderBy($column, $dir);
+        }
+
+        return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
     }
 
     public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName): Conversation

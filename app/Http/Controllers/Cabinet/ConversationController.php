@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
+use App\Enums\ConversationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,10 +25,34 @@ final class ConversationController extends Controller
         private readonly MessageRepositoryInterface $messages,
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = trim((string) $request->query('search', '')) ?: null;
+        $status = ConversationStatus::tryFrom((string) $request->query('status', ''));
+        $sort = in_array($request->query('sort'), ['last', 'contact', 'messages'], true) ? (string) $request->query('sort') : 'last';
+        $dir = $request->query('dir') === 'asc' ? 'asc' : 'desc';
+
+        $page = $this->conversations->paginateForCurrentTenant($search, $status, $sort, $dir, 15);
+
         return Inertia::render('Cabinet/Conversations/Index', [
-            'conversations' => $this->conversations->forCurrentTenant()->map($this->present(...))->all(),
+            'conversations' => array_map($this->present(...), $page->items()),
+            'pagination' => [
+                'current' => $page->currentPage(),
+                'last' => $page->lastPage(),
+                'total' => $page->total(),
+                'from' => $page->firstItem(),
+                'to' => $page->lastItem(),
+            ],
+            'filters' => [
+                'search' => $search ?? '',
+                'status' => $status instanceof ConversationStatus ? $status->value : '',
+                'sort' => $sort,
+                'dir' => $dir,
+            ],
+            'statuses' => array_map(
+                fn (ConversationStatus $s): array => ['value' => $s->value, 'label' => $s->label()],
+                ConversationStatus::cases(),
+            ),
         ]);
     }
 
