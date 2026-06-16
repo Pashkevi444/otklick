@@ -64,6 +64,8 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('/overview', BusinessOverviewController::class)->name('overview');
 
+        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+        Route::post('/analytics/insights/refresh', [AnalyticsController::class, 'refreshInsights'])->name('analytics.insights.refresh');
         Route::get('/analytics/export/{type}', [AnalyticsController::class, 'export'])->name('analytics.export');
 
         Route::get('/channels', [ChannelController::class, 'index'])->name('channels.index');

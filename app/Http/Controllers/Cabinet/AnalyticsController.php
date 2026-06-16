@@ -6,22 +6,59 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\Enums\LeadAnalyticsPeriod;
 use App\Http\Controllers\Controller;
+use App\Jobs\RefreshLeadInsights;
 use App\Models\Conversation;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Services\LeadAnalyticsService;
+use App\Services\LeadInsightsService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
+use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Выгрузки аналитики по лидам в CSV (UTF-8 с BOM — корректно открывается в Excel).
- * Данные скоупятся текущим тенантом (RLS + scope).
+ * Аналитика по лидам: отдельная страница кабинета + выгрузки в CSV (UTF-8 с BOM —
+ * корректно открывается в Excel). Данные скоупятся текущим тенантом (RLS + scope).
  */
 final class AnalyticsController extends Controller
 {
     public function __construct(
         private readonly LeadAnalyticsRepositoryInterface $repository,
         private readonly LeadAnalyticsService $analytics,
+        private readonly LeadInsightsService $insights,
     ) {}
+
+    public function index(Request $request): Response
+    {
+        $period = LeadAnalyticsPeriod::fromValue($request->query('period'));
+        $insights = $this->insights->cached($period);
+
+        // ИИ-разбор устарел/не считался — обновим в фоне (Horizon), без задержки
+        // ответа. Лок на 5 минут, чтобы не плодить задачи при перезагрузках.
+        $tenantId = $request->user()?->tenant_id;
+        if ($tenantId !== null && ($insights === null || $this->insights->isStale($insights))
+            && Cache::add("lead-insights-refreshing:{$tenantId}:{$period->value}", true, 300)) {
+            RefreshLeadInsights::dispatch($tenantId, $period->value);
+        }
+
+        return Inertia::render('Cabinet/Analytics', [
+            'analytics' => $this->analytics->forPeriod($period)->toArray(),
+            'insights' => $insights,
+        ]);
+    }
+
+    /**
+     * Ручное обновление ИИ-разбора по кнопке (синхронно — пользователь ждёт ответ).
+     */
+    public function refreshInsights(Request $request): RedirectResponse
+    {
+        $period = LeadAnalyticsPeriod::fromValue($request->input('period'));
+        $this->insights->refresh($period);
+
+        return back();
+    }
 
     public function export(Request $request, string $type): StreamedResponse
     {

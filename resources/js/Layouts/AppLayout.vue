@@ -26,6 +26,7 @@ const navItems = computed<NavItem[]>(() => {
     // Меню короткое: всё по разделам — на дашборде. Здесь только ключевое.
     return [
         { label: 'Дашборд', href: '/cabinet' },
+        { label: 'Аналитика', href: '/cabinet/analytics' },
         { label: 'Подписка', href: '/cabinet/subscription' },
         { label: 'Оплата', href: '/cabinet/billing' },
     ];

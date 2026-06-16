@@ -40,8 +40,11 @@ final readonly class TenantInitializer
     }
 
     /**
-     * Выполняет колбэк в контексте тенанта, гарантированно сбрасывая контекст
-     * после завершения (в т.ч. при исключении).
+     * Выполняет колбэк в контексте тенанта, восстанавливая ПРЕДЫДУЩИЙ контекст
+     * после завершения (в т.ч. при исключении). Если внешнего контекста не было
+     * — сбрасывает. Так вложенный/синхронный вызов (например, job, запущенный
+     * внутри HTTP-запроса) не затирает контекст внешнего запроса — иначе
+     * последующие запросы шли бы без скоупа и нарушали изоляцию тенантов.
      *
      * @template TReturn
      *
@@ -50,12 +53,13 @@ final readonly class TenantInitializer
      */
     public function run(string $tenantId, Closure $callback): mixed
     {
+        $previous = $this->context->id();
         $this->initialize($tenantId);
 
         try {
             return $callback();
         } finally {
-            $this->flush();
+            $previous !== null ? $this->initialize($previous) : $this->flush();
         }
     }
 
