@@ -3,6 +3,14 @@ import { computed } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
+interface Support {
+    email: string | null;
+    phone: string | null;
+    telegram: string | null;
+}
+
+defineProps<{ support: Support }>();
+
 const page = usePage();
 const tenant = computed(() => page.props.auth.user?.tenant ?? null);
 </script>
@@ -33,11 +41,18 @@ const tenant = computed(() => page.props.auth.user?.tenant ?? null);
                         Что входит в тариф
                     </Link>
                     <a
-                        href="mailto:support@otcl1ck.ru"
+                        v-if="support.email"
+                        :href="`mailto:${support.email}`"
                         class="rounded-xl bg-[#2E74B5] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:-translate-y-0.5 hover:bg-[#255f96]"
                     >
                         Связаться для оплаты
                     </a>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-slate-500">
+                    <a v-if="support.email" :href="`mailto:${support.email}`" class="hover:text-[#2E74B5]">✉️ {{ support.email }}</a>
+                    <a v-if="support.phone" :href="`tel:${support.phone}`" class="hover:text-[#2E74B5]">📞 {{ support.phone }}</a>
+                    <a v-if="support.telegram" :href="`https://t.me/${support.telegram}`" target="_blank" rel="noopener" class="hover:text-[#2E74B5]">✈️ Telegram</a>
                 </div>
             </div>
         </div>
