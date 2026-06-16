@@ -31,3 +31,4 @@ rr
 
 /CLAUDE.md
 /storage/framework/phpstan
+/scripts/deploy.env
