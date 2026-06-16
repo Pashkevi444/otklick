@@ -135,6 +135,21 @@ final class ReplyComposerTest extends TestCase
         $this->assertStringContainsString('Хорошо, Паша', $reply->text);
     }
 
+    public function test_cancellation_sentinel_marks_cancelled(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()
+            ->andReturn('Отменил вашу запись на завтра. '.PromptBuilder::CANCELLED.' Ждём вас снова!');
+
+        $reply = $this->composer($llm)->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertTrue($reply->cancelled);
+        $this->assertFalse($reply->booked);
+        $this->assertFalse($reply->escalate);
+        $this->assertStringNotContainsString('[[CANCELLED]]', $reply->text);
+        $this->assertStringContainsString('Отменил вашу запись', $reply->text);
+    }
+
     public function test_resets_streak_when_model_answers(): void
     {
         $llm = Mockery::mock(LlmClient::class);

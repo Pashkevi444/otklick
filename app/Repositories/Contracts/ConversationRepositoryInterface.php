@@ -7,6 +7,7 @@ namespace App\Repositories\Contracts;
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -23,6 +24,12 @@ interface ConversationRepositoryInterface
     public function markBooked(Conversation $conversation): void;
 
     /**
+     * Фиксирует отмену записи клиентом: закрывает диалог и проставляет cancelled_at
+     * (итог «Отменён клиентом»).
+     */
+    public function markCancelled(Conversation $conversation): void;
+
+    /**
      * Находит диалог по чату канала или создаёт новый. tenant_id проставляется
      * автоматически из текущего тенант-контекста. $contactRef — ссылка на аккаунт
      * клиента (мессенджеры) или IP посетителя (веб-виджет).
@@ -30,6 +37,12 @@ interface ConversationRepositoryInterface
     public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName, ?string $contactRef = null): Conversation;
 
     public function touchLastMessage(Conversation $conversation): void;
+
+    /**
+     * Закрывает открытые диалоги текущего тенанта без активности с момента
+     * $before и без записи (потерянные лиды). Возвращает число закрытых.
+     */
+    public function closeStaleOpen(Carbon $before): int;
 
     /**
      * Увеличивает счётчик подряд идущих уточняющих вопросов бота и возвращает

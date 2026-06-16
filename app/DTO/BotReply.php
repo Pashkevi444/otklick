@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\DTO;
 
 /**
- * Ответ бота: текст для отправки, нужно ли эскалировать диалог на администратора
- * и состоялась ли запись (тогда диалог закрывается).
+ * Ответ бота: текст для отправки, нужно ли эскалировать на администратора,
+ * оформлена ли запись и отменил ли клиент запись (запись/отмена закрывают диалог).
  */
 final readonly class BotReply
 {
@@ -14,5 +14,6 @@ final readonly class BotReply
         public string $text,
         public bool $escalate,
         public bool $booked = false,
+        public bool $cancelled = false,
     ) {}
 }

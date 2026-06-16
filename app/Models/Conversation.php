@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use Database\Factories\ConversationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property ConversationStatus $status
  * @property int $clarification_attempts
  * @property Carbon|null $booked_at
+ * @property Carbon|null $cancelled_at
  * @property Carbon|null $last_message_at
  */
 class Conversation extends TenantOwnedModel
@@ -42,6 +44,7 @@ class Conversation extends TenantOwnedModel
         'status',
         'clarification_attempts',
         'booked_at',
+        'cancelled_at',
         'last_message_at',
     ];
 
@@ -51,8 +54,30 @@ class Conversation extends TenantOwnedModel
             'status' => ConversationStatus::class,
             'clarification_attempts' => 'integer',
             'booked_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'last_message_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Итог по лиду: запись (есть booked_at), иначе по статусу — потерян (закрыт),
+     * нужен человек или в работе.
+     */
+    public function outcome(): ConversationOutcome
+    {
+        if ($this->cancelled_at !== null) {
+            return ConversationOutcome::Cancelled;
+        }
+
+        if ($this->booked_at !== null) {
+            return ConversationOutcome::Booked;
+        }
+
+        return match ($this->status) {
+            ConversationStatus::Closed => ConversationOutcome::Lost,
+            ConversationStatus::NeedsHuman => ConversationOutcome::NeedsHuman,
+            ConversationStatus::Open => ConversationOutcome::Open,
+        };
     }
 
     /**

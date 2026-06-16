@@ -92,6 +92,33 @@ final class MessagingRepositoriesTest extends TestCase
         $this->assertSame(2, $channel->conversations()->count());
     }
 
+    public function test_close_stale_open_closes_only_inactive_unbooked(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+
+        // Протух (открыт, давно без активности, без записи) — закроется.
+        $stale = $this->conversations->firstOrCreateForChat($channel->id, 'stale', null);
+        $stale->forceFill(['last_message_at' => now()->subHour()])->save();
+
+        // Свежий — не трогаем.
+        $fresh = $this->conversations->firstOrCreateForChat($channel->id, 'fresh', null);
+        $fresh->forceFill(['last_message_at' => now()->subMinutes(5)])->save();
+
+        // С записью — не трогаем (хотя и старый).
+        $booked = $this->conversations->firstOrCreateForChat($channel->id, 'booked', null);
+        $booked->forceFill(['last_message_at' => now()->subHour()])->save();
+        $this->conversations->markBooked($booked);
+
+        $closed = $this->conversations->closeStaleOpen(now()->subMinutes(30));
+
+        $this->assertSame(1, $closed);
+        $this->assertSame(ConversationStatus::Closed, $stale->fresh()->status);
+        $this->assertSame(ConversationStatus::Open, $fresh->fresh()->status);
+        $this->assertNull($stale->fresh()->booked_at); // потерян, не запись
+    }
+
     public function test_record_inbound_dedupes_by_external_message_id(): void
     {
         $channel = $this->channels->create(new NewChannelData(

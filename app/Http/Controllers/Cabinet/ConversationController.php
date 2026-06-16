@@ -76,6 +76,8 @@ final class ConversationController extends Controller
                 'contactRef' => $model->contact_ref,
                 'status' => $model->status->value,
                 'statusLabel' => $model->status->label(),
+                'outcome' => $model->outcome()->value,
+                'outcomeLabel' => $model->outcome()->label(),
                 'createdAt' => $model->created_at?->format('d.m.Y'),
             ],
             'messages' => $this->messages->allForConversation($model)->map(fn (Message $m): array => [
@@ -120,6 +122,8 @@ final class ConversationController extends Controller
             'source' => $this->source($c->channel),
             'status' => $c->status->value,
             'statusLabel' => $c->status->label(),
+            'outcome' => $c->outcome()->value,
+            'outcomeLabel' => $c->outcome()->label(),
             'messagesCount' => (int) $c->getAttribute('messages_count'),
             'lastMessage' => $c->latestMessage?->text,
             'lastMessageAt' => $c->last_message_at?->format('d.m.Y H:i'),

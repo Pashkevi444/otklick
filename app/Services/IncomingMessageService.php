@@ -68,6 +68,9 @@ final readonly class IncomingMessageService
         } elseif ($reply->booked) {
             // Запись оформлена — закрываем диалог и фиксируем конверсию.
             $this->conversations->markBooked($conversation);
+        } elseif ($reply->cancelled) {
+            // Клиент отменил запись — закрываем диалог как отменённый.
+            $this->conversations->markCancelled($conversation);
         }
     }
 }

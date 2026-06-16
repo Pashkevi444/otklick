@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 final class EloquentConversationRepository implements ConversationRepositoryInterface
@@ -23,6 +24,14 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill([
             'status' => ConversationStatus::Closed,
             'booked_at' => now(),
+        ])->save();
+    }
+
+    public function markCancelled(Conversation $conversation): void
+    {
+        $conversation->forceFill([
+            'status' => ConversationStatus::Closed,
+            'cancelled_at' => now(),
         ])->save();
     }
 
@@ -108,6 +117,16 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function touchLastMessage(Conversation $conversation): void
     {
         $conversation->forceFill(['last_message_at' => now()])->save();
+    }
+
+    public function closeStaleOpen(Carbon $before): int
+    {
+        return Conversation::query()
+            ->where('status', ConversationStatus::Open)
+            ->whereNull('booked_at')
+            ->whereNotNull('last_message_at')
+            ->where('last_message_at', '<', $before)
+            ->update(['status' => ConversationStatus::Closed]);
     }
 
     public function bumpClarificationAttempts(Conversation $conversation): int

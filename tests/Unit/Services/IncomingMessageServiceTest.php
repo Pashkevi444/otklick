@@ -112,6 +112,33 @@ final class IncomingMessageServiceTest extends TestCase
         (new IncomingMessageService($conversations, $messages, $gateway, $composer, $contacts))->handle($channel, $incoming);
     }
 
+    public function test_cancellation_marks_conversation_cancelled(): void
+    {
+        $channel = $this->channel();
+        $conversation = new Conversation;
+        $incoming = new IncomingMessage('555', '42', 'отмените мою запись', null);
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once();
+        $conversations->shouldReceive('markCancelled')->once()->with($conversation);
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $messages->shouldReceive('recordOutbound')->once()->andReturn(new Message);
+
+        $composer = Mockery::mock(ReplyComposer::class);
+        $composer->shouldReceive('compose')->once()->andReturn(new BotReply('Отменил запись.', escalate: false, cancelled: true));
+
+        $gateway = Mockery::mock(MessengerGateway::class);
+        $gateway->shouldReceive('send')->once();
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        (new IncomingMessageService($conversations, $messages, $gateway, $composer, $contacts))->handle($channel, $incoming);
+    }
+
     public function test_duplicate_inbound_does_nothing(): void
     {
         $channel = $this->channel();

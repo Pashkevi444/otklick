@@ -36,6 +36,28 @@ services:
       pgsql:
         condition: service_healthy
 
+  # Планировщик Laravel: крутит schedule:work (раз в минуту проверяет расписание).
+  # Нужен для авто-закрытия протухших диалогов (conversations:close-stale).
+  scheduler:
+    build:
+      context: .
+      target: app
+    command: ["php", "artisan", "schedule:work"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - storage_public:/var/www/html/storage/app/public
+      - storage_logs:/var/www/html/storage/logs
+    depends_on:
+      app:
+        condition: service_started
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   # Long polling Telegram: сервер сам забирает апдейты (вебхуки в РФ недоступны).
   telegram:
     build:

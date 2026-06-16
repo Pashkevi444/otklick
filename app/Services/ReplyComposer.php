@@ -62,6 +62,19 @@ class ReplyComposer
             return new BotReply($this->fallback($profile), escalate: true);
         }
 
+        // Клиент отменил запись — подтверждаем отмену и закрываем диалог.
+        if (str_contains($answer, PromptBuilder::CANCELLED)) {
+            $this->resetStreak($conversation);
+
+            $text = $this->stripSentinels($answer);
+
+            return new BotReply(
+                $text !== '' ? $text : 'Готово, отменил вашу запись. Если захотите записаться снова — напишите нам.',
+                escalate: false,
+                cancelled: true,
+            );
+        }
+
         // Запись оформлена — подтверждаем клиенту и закрываем диалог.
         if (str_contains($answer, PromptBuilder::BOOKED)) {
             $this->resetStreak($conversation);
@@ -102,7 +115,7 @@ class ReplyComposer
     private function stripSentinels(string $text): string
     {
         $text = str_replace(
-            [PromptBuilder::ESCALATE, PromptBuilder::BOOKED, PromptBuilder::CLARIFY],
+            [PromptBuilder::ESCALATE, PromptBuilder::BOOKED, PromptBuilder::CANCELLED, PromptBuilder::CLARIFY],
             '',
             $text,
         );
