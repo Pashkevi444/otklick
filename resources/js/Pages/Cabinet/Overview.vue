@@ -62,24 +62,24 @@ const shortcuts = [
     <AppLayout>
         <!-- Карточка бизнеса -->
         <div class="ui-scope overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/10">
-            <div class="h-28 bg-gradient-to-r from-[#2E74B5] to-[#1F4E79] sm:h-32"></div>
+            <div class="h-24 bg-gradient-to-r from-[#2E74B5] to-[#1F4E79] sm:h-28"></div>
             <div class="px-5 pb-6 sm:px-8">
-                <div class="-mt-12 flex flex-wrap items-end gap-4 sm:-mt-14">
-                    <div class="flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-[#EAF2FB] text-2xl font-bold text-[#1F4E79] shadow-md sm:h-28 sm:w-28 dark:border-slate-800 dark:bg-white/10 dark:text-sky-200">
+                <div class="flex flex-col gap-x-5 gap-y-3 sm:flex-row sm:items-start">
+                    <div class="-mt-12 flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-[#EAF2FB] text-2xl font-bold text-[#1F4E79] shadow-md sm:h-28 sm:w-28 dark:border-slate-800 dark:bg-white/10 dark:text-sky-200">
                         <img v-if="business.avatar_url" :src="business.avatar_url" alt="Аватар бизнеса" class="h-full w-full object-cover" />
                         <span v-else>{{ initials }}</span>
                     </div>
-                    <div class="min-w-0 flex-1 pb-1">
+                    <div class="min-w-0 flex-1 pt-1 sm:pt-5">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h2 class="text-xl font-bold text-[#1F4E79] sm:text-2xl dark:text-sky-200">{{ business.name }}</h2>
-                            <span class="rounded-full bg-[#EAF2FB] px-2.5 py-0.5 text-xs font-medium text-[#2E74B5] dark:bg-white/10 dark:text-sky-200">Тариф «{{ business.planLabel }}»</span>
+                            <h2 class="min-w-0 max-w-full break-words text-xl font-bold text-[#1F4E79] sm:text-2xl dark:text-sky-200">{{ business.name }}</h2>
+                            <span class="flex-none rounded-full bg-[#EAF2FB] px-2.5 py-0.5 text-xs font-medium text-[#2E74B5] dark:bg-white/10 dark:text-sky-200">Тариф «{{ business.planLabel }}»</span>
                         </div>
-                        <p v-if="business.description" class="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ business.description }}</p>
+                        <p v-if="business.description" class="mt-1.5 max-w-2xl break-words text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ business.description }}</p>
                         <p v-else class="mt-1.5 text-sm text-slate-400">Добавьте описание бизнеса — клиенты увидят, чем вы занимаетесь.</p>
                     </div>
                     <Link
                         href="/cabinet/profile"
-                        class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#255f96]"
+                        class="flex-none self-start rounded-xl bg-[#2E74B5] px-4 py-2 text-center text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#255f96] sm:mt-5"
                     >
                         Редактировать профиль
                     </Link>
