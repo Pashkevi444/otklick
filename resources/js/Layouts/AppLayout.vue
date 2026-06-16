@@ -46,7 +46,7 @@ const logout = (): void => {
 </script>
 
 <template>
-    <div class="relative min-h-screen overflow-x-hidden text-slate-800 dark:text-slate-200">
+    <div class="relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200">
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
             <span class="orb orb-1"></span>

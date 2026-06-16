@@ -25,7 +25,7 @@ const tgUrl = computed(() => (props.site.telegram ? `https://t.me/${props.site.t
         <meta name="description" content="Свяжитесь с командой «Отклик», чтобы получить доступ к AI-администратору для вашего бизнеса." />
     </Head>
 
-    <div class="relative min-h-screen overflow-x-hidden text-slate-800 dark:text-slate-200">
+    <div class="relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200">
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
             <span class="orb orb-1"></span>

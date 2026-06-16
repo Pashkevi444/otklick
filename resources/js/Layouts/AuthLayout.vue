@@ -5,7 +5,7 @@ defineProps<{ title: string; subtitle?: string }>();
 </script>
 
 <template>
-    <div class="relative flex min-h-screen items-center justify-center overflow-hidden p-6 text-slate-800 dark:text-slate-200">
+    <div class="relative flex min-h-screen items-center justify-center overflow-x-clip p-6 text-slate-800 dark:text-slate-200">
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
             <span class="orb orb-1"></span>

@@ -172,7 +172,7 @@ const open = (id: string): void => {
             </div>
 
             <!-- Таблица (десктоп) -->
-            <div class="hidden overflow-hidden rounded-xl border border-slate-200 bg-white md:block">
+            <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50 text-left text-slate-500">
                         <tr>

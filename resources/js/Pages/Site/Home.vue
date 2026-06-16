@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
         />
     </Head>
 
-    <div class="page relative min-h-screen overflow-x-hidden text-slate-800 dark:text-slate-200">
+    <div class="page relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200">
         <!-- Анимированный фон + плавающие орбы -->
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
