@@ -16,27 +16,20 @@ final class ConnectTelegramChannel extends Command
 {
     protected $signature = 'channel:connect-telegram {tenant : UUID тенанта} {token : Токен Telegram-бота}';
 
-    protected $description = 'Подключает Telegram-бота к тенанту и регистрирует вебхук';
+    protected $description = 'Подключает Telegram-бота к тенанту (работает через long polling, см. telegram:poll)';
 
     public function handle(ChannelService $channels, TenantInitializer $tenancy): int
     {
         $tenantId = (string) $this->argument('tenant');
         $token = (string) $this->argument('token');
-        $baseUrl = (string) config('services.telegram.webhook_base_url');
-
-        if ($baseUrl === '') {
-            $this->error('Не задан TELEGRAM_WEBHOOK_BASE_URL (или APP_URL) — нужен публичный HTTPS-адрес для setWebhook.');
-
-            return self::FAILURE;
-        }
 
         $channel = $tenancy->run(
             $tenantId,
-            fn () => $channels->connectTelegram($tenantId, $token, $baseUrl),
+            fn () => $channels->connectTelegram($tenantId, $token),
         );
 
         $this->info("Канал подключён: {$channel->id}");
-        $this->line("Вебхук: {$baseUrl}/webhooks/telegram/{$tenantId}/{$channel->id}");
+        $this->line('Апдейты забирает telegram:poll (вебхук снят).');
 
         return self::SUCCESS;
     }

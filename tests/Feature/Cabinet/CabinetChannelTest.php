@@ -51,7 +51,7 @@ final class CabinetChannelTest extends TestCase
             'external_id' => '123456',
         ]);
 
-        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/setWebhook'));
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/deleteWebhook'));
     }
 
     public function test_invalid_token_is_rejected(): void

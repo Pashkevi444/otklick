@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
+use App\Enums\ChannelType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\StoreChannelRequest;
 use App\Models\Channel;

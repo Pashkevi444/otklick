@@ -24,16 +24,20 @@ final readonly class ChannelService
     ) {}
 
     /**
-     * Подключает Telegram-бота к тенанту: создаёт канал с зашифрованными кредами
-     * и регистрирует вебхук с уникальным secret_token.
+     * Подключает Telegram-бота к тенанту: создаёт канал с зашифрованными кредами.
+     * Бот работает через long polling (`telegram:poll`), поэтому вебхук не
+     * ставится, а снимается (иначе getUpdates вернёт 409). deleteWebhook заодно
+     * валидирует токен — битый отклонится с 401.
+     *
+     * $webhookBaseUrl сохранён в сигнатуре для совместимости (не-РФ окружения).
      */
-    public function connectTelegram(string $tenantId, string $botToken, string $webhookBaseUrl): Channel
+    public function connectTelegram(string $tenantId, string $botToken, string $webhookBaseUrl = ''): Channel
     {
         $secretToken = Str::random(40);
 
-        // Транзакция: если setWebhook у Telegram упадёт, канал не останется
-        // полу-подключённым.
-        return DB::transaction(function () use ($tenantId, $botToken, $webhookBaseUrl, $secretToken): Channel {
+        // Транзакция: если запрос к Telegram упадёт (битый токен/сеть), канал не
+        // останется полу-подключённым.
+        return DB::transaction(function () use ($tenantId, $botToken, $secretToken): Channel {
             $channel = $this->channels->create(new NewChannelData(
                 tenantId: $tenantId,
                 type: ChannelType::Telegram,
@@ -42,7 +46,7 @@ final readonly class ChannelService
                 secretToken: $secretToken,
             ));
 
-            $this->telegram->setWebhook($channel, $this->webhookUrl($webhookBaseUrl, $channel), $secretToken);
+            $this->telegram->deleteWebhook($channel);
 
             return $channel;
         });
@@ -81,11 +85,6 @@ final readonly class ChannelService
         $this->channels->update($channel, [
             'settings' => ['allowed_origins' => $normalized],
         ]);
-    }
-
-    private function webhookUrl(string $baseUrl, Channel $channel): string
-    {
-        return rtrim($baseUrl, '/')."/webhooks/telegram/{$channel->tenant_id}/{$channel->id}";
     }
 
     /**
