@@ -25,6 +25,7 @@ const navItems = computed<NavItem[]>(() => {
 
     const items: NavItem[] = [
         { label: 'Дашборд', href: '/cabinet' },
+        { label: 'Диалоги', href: '/cabinet/conversations' },
         { label: 'Каналы', href: '/cabinet/channels' },
         { label: 'Виджет на сайт', href: '/cabinet/widget' },
         { label: 'Профиль', href: '/cabinet/profile' },

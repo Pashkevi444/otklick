@@ -25,6 +25,15 @@ final class EloquentMessageRepository implements MessageRepositoryInterface
             ->values();
     }
 
+    public function allForConversation(Conversation $conversation): Collection
+    {
+        return Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+    }
+
     public function recordInbound(Conversation $conversation, IncomingMessage $incoming): ?Message
     {
         $alreadyRecorded = Message::query()

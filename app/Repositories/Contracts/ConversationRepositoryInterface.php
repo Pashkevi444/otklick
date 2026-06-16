@@ -6,6 +6,7 @@ namespace App\Repositories\Contracts;
 
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
+use Illuminate\Support\Collection;
 
 /**
  * Контракт доступа к данным диалогов.
@@ -21,4 +22,14 @@ interface ConversationRepositoryInterface
     public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName): Conversation;
 
     public function touchLastMessage(Conversation $conversation): void;
+
+    /**
+     * Диалоги текущего тенанта (scoped/RLS) для журнала: с каналом, последним
+     * сообщением и числом сообщений, новые сверху.
+     *
+     * @return Collection<int, Conversation>
+     */
+    public function forCurrentTenant(): Collection;
+
+    public function findForCurrentTenant(string $id): ?Conversation;
 }

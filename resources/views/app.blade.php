@@ -36,7 +36,7 @@
 
         {{-- TODO(временно): тестовый виджет «Отклик» на нашем публичном сайте. УДАЛИТЬ после теста. --}}
         @if (request()->getHost() === config('app.marketing_domain'))
-            <script src="https://business.otcl1ck.ru/widget/v1/widget.js" data-otklik-tenant="019ecbf6-1101-7114-98ba-16c5fbbbc189" data-otklik-channel="019ecd47-02fd-7256-9196-e6785918a4f0" defer></script>
+            <script src="https://business.otcl1ck.ru/widget/v1/widget.js" data-otklik-tenant="019ecbf6-1101-7114-98ba-16c5fbbbc189" data-otklik-channel="019ecf67-f894-72b4-b9ff-72c270d41a0e" defer></script>
         @endif
     </body>
 </html>

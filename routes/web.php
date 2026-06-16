@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
+use App\Http\Controllers\Cabinet\ConversationController;
 use App\Http\Controllers\Cabinet\DashboardController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
@@ -58,6 +59,9 @@ $onDomain(config('app.business_domain'), function (): void {
 
         Route::get('/profile', [BusinessProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [BusinessProfileController::class, 'update'])->name('profile.update');
+
+        Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
+        Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
 
         Route::get('/knowledge', [KnowledgeEntryController::class, 'index'])->name('knowledge.index');
         Route::post('/knowledge', [KnowledgeEntryController::class, 'store'])->name('knowledge.store');

@@ -23,6 +23,13 @@ interface MessageRepositoryInterface
     public function recentForConversation(Conversation $conversation, int $limit): Collection;
 
     /**
+     * Все сообщения диалога в хронологическом порядке (для журнала переписок).
+     *
+     * @return Collection<int, Message>
+     */
+    public function allForConversation(Conversation $conversation): Collection;
+
+    /**
      * Сохраняет входящее сообщение. Возвращает null, если сообщение с таким
      * external_message_id уже записано в этом диалоге (идемпотентность ретраев).
      */

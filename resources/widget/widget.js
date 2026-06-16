@@ -62,6 +62,13 @@
         '.otk-send:hover{transform:translateY(-1px)}.otk-send:disabled{opacity:.45;cursor:default;transform:none}',
         '.otk-send svg{width:19px;height:19px;fill:#fff}',
         '.otk-pow{text-align:center;font-size:11px;color:#9aa7b8;padding:6px 0 9px;background:#fff}',
+        '.otk-img{margin-top:8px;max-width:220px;max-height:220px;width:auto;border-radius:13px;cursor:zoom-in;display:block;object-fit:cover;box-shadow:0 2px 10px rgba(16,42,73,.14);transition:transform .2s ease}',
+        '.otk-img:hover{transform:scale(1.03)}',
+        '.otk-lightbox{position:fixed;inset:0;z-index:2147483600;background:rgba(8,15,30,0);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;transition:background .28s ease}',
+        '.otk-lightbox.otk-lb-on{background:rgba(8,15,30,.88)}',
+        '.otk-lightbox img{max-width:92vw;max-height:88vh;border-radius:14px;box-shadow:0 28px 80px rgba(0,0,0,.6);transform:scale(.9);opacity:0;transition:transform .32s cubic-bezier(.2,.85,.25,1),opacity .25s ease}',
+        '.otk-lightbox.otk-lb-on img{transform:none;opacity:1}',
+        '.otk-lightbox .otk-lb-x{position:absolute;top:18px;right:20px;width:40px;height:40px;border:0;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:18px;cursor:pointer}',
         '@keyframes otk-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}',
         '@keyframes otk-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}',
         '@keyframes otk-pulse{0%{box-shadow:0 0 0 0 rgba(124,246,195,.6)}70%{box-shadow:0 0 0 7px rgba(124,246,195,0)}100%{box-shadow:0 0 0 0 rgba(124,246,195,0)}}',
@@ -105,10 +112,53 @@
     var closeBtn = panel.querySelector('.otk-x');
     var typingEl = null;
 
+    var IMG_RE = /(https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp)(?:\?[^\s<>"']*)?)/gi;
+
+    function openLightbox(url) {
+        var ov = document.createElement('div');
+        ov.className = 'otk-lightbox';
+        var img = document.createElement('img');
+        img.src = url;
+        var x = document.createElement('button');
+        x.className = 'otk-lb-x';
+        x.setAttribute('aria-label', 'Закрыть');
+        x.textContent = '✕';
+        ov.appendChild(img);
+        ov.appendChild(x);
+        var close = function () {
+            ov.classList.remove('otk-lb-on');
+            setTimeout(function () { ov.remove(); }, 300);
+        };
+        ov.addEventListener('click', close);
+        document.body.appendChild(ov);
+        requestAnimationFrame(function () { ov.classList.add('otk-lb-on'); });
+    }
+
     function addMsg(text, who) {
         var el = document.createElement('div');
         el.className = 'otk-msg ' + (who === 'me' ? 'otk-me' : 'otk-bot');
-        el.textContent = text;
+
+        // Вытащим ссылки на картинки и покажем их как фото (клик — увеличить).
+        var images = [];
+        var clean = String(text).replace(IMG_RE, function (u) { images.push(u); return ''; });
+        clean = clean.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
+
+        if (clean) {
+            var t = document.createElement('div');
+            t.textContent = clean;
+            el.appendChild(t);
+        }
+        images.forEach(function (url) {
+            var img = document.createElement('img');
+            img.className = 'otk-img';
+            img.src = url;
+            img.alt = 'Фото';
+            img.loading = 'lazy';
+            img.addEventListener('click', function () { openLightbox(url); });
+            img.addEventListener('load', function () { body.scrollTop = body.scrollHeight; });
+            el.appendChild(img);
+        });
+
         body.appendChild(el);
         body.scrollTop = body.scrollHeight;
         return el;
