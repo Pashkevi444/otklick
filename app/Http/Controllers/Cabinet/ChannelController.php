@@ -30,8 +30,14 @@ final class ChannelController extends Controller
 
     public function index(): Response
     {
+        // Только Telegram: веб-виджетом управляют на вкладке «Виджет», ему
+        // telegram-вебхук не нужен (иначе показывался бы бессмысленный URL).
         return Inertia::render('Cabinet/Channels/Index', [
-            'channels' => $this->channels->forCurrentTenant()->map($this->present(...))->all(),
+            'channels' => $this->channels->forCurrentTenant()
+                ->filter(fn (Channel $c): bool => $c->type === ChannelType::Telegram)
+                ->map($this->present(...))
+                ->values()
+                ->all(),
         ]);
     }
 
