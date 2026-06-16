@@ -9,7 +9,6 @@ defineProps<{ title?: string }>();
 const mobileOpen = ref(false);
 const page = usePage();
 const user = computed(() => page.props.auth.user);
-const flash = computed(() => page.props.flash);
 
 interface NavItem {
     label: string;
@@ -133,13 +132,6 @@ const logout = (): void => {
         </header>
 
         <main class="ui-scope ui-fade-in mx-auto max-w-6xl px-6 py-8">
-            <div v-if="flash.success" class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-300">
-                {{ flash.success }}
-            </div>
-            <div v-if="flash.error" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-                {{ flash.error }}
-            </div>
-
             <h1 v-if="title" class="mb-6 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">{{ title }}</h1>
             <slot />
         </main>
