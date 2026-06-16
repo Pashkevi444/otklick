@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property int $clarification_attempts
  * @property Carbon|null $booked_at
  * @property Carbon|null $cancelled_at
+ * @property ConversationOutcome|null $outcome_override
  * @property Carbon|null $last_message_at
  */
 class Conversation extends TenantOwnedModel
@@ -45,6 +46,7 @@ class Conversation extends TenantOwnedModel
         'clarification_attempts',
         'booked_at',
         'cancelled_at',
+        'outcome_override',
         'last_message_at',
     ];
 
@@ -55,16 +57,22 @@ class Conversation extends TenantOwnedModel
             'clarification_attempts' => 'integer',
             'booked_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'outcome_override' => ConversationOutcome::class,
             'last_message_at' => 'datetime',
         ];
     }
 
     /**
-     * Итог по лиду: запись (есть booked_at), иначе по статусу — потерян (закрыт),
-     * нужен человек или в работе.
+     * Итог по лиду. Ручной итог админа (outcome_override) — в приоритете; иначе
+     * выводим автоматически: отмена → успешный (есть booked_at) → по статусу
+     * (закрыт = потерянный лид, иначе в работе / нужен человек).
      */
     public function outcome(): ConversationOutcome
     {
+        if ($this->outcome_override !== null) {
+            return $this->outcome_override;
+        }
+
         if ($this->cancelled_at !== null) {
             return ConversationOutcome::Cancelled;
         }

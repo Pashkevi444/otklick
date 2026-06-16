@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Contracts;
 
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -28,6 +29,13 @@ interface ConversationRepositoryInterface
      * (итог «Отменён клиентом»).
      */
     public function markCancelled(Conversation $conversation): void;
+
+    /**
+     * Вручную (админом) выставляет итог лида и синхронизирует статус диалога
+     * (закрытые итоги → closed, «нужен человек»/«в работе» → соответствующий
+     * статус). Для успеха/отмены проставляет недостающую отметку времени.
+     */
+    public function setOutcome(Conversation $conversation, ConversationOutcome $outcome): void;
 
     /**
      * Находит диалог по чату канала или создаёт новый. tenant_id проставляется

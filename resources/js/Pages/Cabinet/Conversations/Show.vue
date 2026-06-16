@@ -19,10 +19,16 @@ interface Conv {
     contactRef: string | null;
     status: string;
     statusLabel: string;
+    outcome: string;
+    outcomeLabel: string;
     createdAt: string | null;
 }
+interface Outcome {
+    value: string;
+    label: string;
+}
 
-const props = defineProps<{ conversation: Conv; messages: Msg[] }>();
+const props = defineProps<{ conversation: Conv; messages: Msg[]; outcomes: Outcome[] }>();
 
 const lightbox = ref<string | null>(null);
 
@@ -62,15 +68,18 @@ const groups = computed(() => {
     return out;
 });
 
-const statusClass = (s: string): string =>
-    s === 'needs_human'
-        ? 'bg-amber-100 text-amber-700'
-        : s === 'closed'
-          ? 'bg-slate-100 text-slate-500'
-          : 'bg-green-100 text-green-700';
+const outcomeClass = (o: string): string =>
+    ({
+        booked: 'bg-green-100 text-green-700',
+        lost: 'bg-red-100 text-red-700',
+        cancelled: 'bg-amber-100 text-amber-700',
+        spam: 'bg-slate-100 text-slate-500',
+        needs_human: 'bg-amber-100 text-amber-700',
+        open: 'bg-green-100 text-green-700',
+    })[o] ?? 'bg-slate-100 text-slate-500';
 
-const setStatus = (status: string): void => {
-    router.put(`/cabinet/conversations/${props.conversation.id}/status`, { status }, { preserveScroll: true });
+const setOutcome = (outcome: string): void => {
+    router.put(`/cabinet/conversations/${props.conversation.id}/status`, { outcome }, { preserveScroll: true });
 };
 </script>
 
@@ -102,23 +111,15 @@ const setStatus = (status: string): void => {
                 <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-medium text-[#2E74B5] dark:text-sky-300">📞 {{ conversation.phone }}</a>
             </div>
             <div class="ml-auto flex items-center gap-2">
-                <span class="rounded-full px-2.5 py-1 text-xs" :class="statusClass(conversation.status)">{{ conversation.statusLabel }}</span>
-                <button
-                    v-if="conversation.status !== 'closed'"
-                    type="button"
-                    class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 hover:text-[#1F4E79] dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
-                    @click="setStatus('closed')"
+                <span class="rounded-full px-2.5 py-1 text-xs" :class="outcomeClass(conversation.outcome)">{{ conversation.outcomeLabel }}</span>
+                <select
+                    :value="conversation.outcome"
+                    class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 outline-none transition hover:text-[#1F4E79] focus:border-[#2E74B5] dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                    title="Статус лида"
+                    @change="setOutcome(($event.target as HTMLSelectElement).value)"
                 >
-                    Закрыть диалог
-                </button>
-                <button
-                    v-else
-                    type="button"
-                    class="rounded-xl border border-[#2E74B5]/30 bg-white px-3 py-1.5 text-xs font-medium text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-sky-400/30 dark:bg-white/5 dark:text-sky-300"
-                    @click="setStatus('open')"
-                >
-                    Вернуть в работу
-                </button>
+                    <option v-for="o in outcomes" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </select>
             </div>
         </div>
 

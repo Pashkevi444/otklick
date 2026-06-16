@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cabinet;
 
 use App\Enums\ChannelType;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
@@ -80,6 +81,10 @@ final class ConversationController extends Controller
                 'outcomeLabel' => $model->outcome()->label(),
                 'createdAt' => $model->created_at?->format('d.m.Y'),
             ],
+            'outcomes' => array_map(
+                fn (ConversationOutcome $o): array => ['value' => $o->value, 'label' => $o->label()],
+                ConversationOutcome::cases(),
+            ),
             'messages' => $this->messages->allForConversation($model)->map(fn (Message $m): array => [
                 'id' => $m->id,
                 'direction' => $m->direction->value,
@@ -91,7 +96,8 @@ final class ConversationController extends Controller
     }
 
     /**
-     * Меняет статус диалога вручную из кабинета (закрыть / вернуть в работу).
+     * Админ вручную выставляет итог лида (любой из ConversationOutcome) — статус
+     * диалога синхронизируется автоматически.
      */
     public function setStatus(Request $request, string $conversation): RedirectResponse
     {
@@ -100,13 +106,13 @@ final class ConversationController extends Controller
         abort_if($model === null, 404);
 
         $validated = $request->validate([
-            'status' => ['required', Rule::enum(ConversationStatus::class)],
+            'outcome' => ['required', Rule::enum(ConversationOutcome::class)],
         ]);
 
-        $status = ConversationStatus::from((string) $validated['status']);
-        $this->conversations->updateStatus($model, $status);
+        $outcome = ConversationOutcome::from((string) $validated['outcome']);
+        $this->conversations->setOutcome($model, $outcome);
 
-        return back()->with('success', "Диалог: статус «{$status->label()}».");
+        return back()->with('success', "Лид: статус «{$outcome->label()}».");
     }
 
     /**

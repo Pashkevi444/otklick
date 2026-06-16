@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
@@ -33,6 +34,26 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             'status' => ConversationStatus::Closed,
             'cancelled_at' => now(),
         ])->save();
+    }
+
+    public function setOutcome(Conversation $conversation, ConversationOutcome $outcome): void
+    {
+        $status = match ($outcome) {
+            ConversationOutcome::Open => ConversationStatus::Open,
+            ConversationOutcome::NeedsHuman => ConversationStatus::NeedsHuman,
+            default => ConversationStatus::Closed,
+        };
+
+        $fields = ['outcome_override' => $outcome, 'status' => $status];
+
+        if ($outcome === ConversationOutcome::Booked && $conversation->booked_at === null) {
+            $fields['booked_at'] = now();
+        }
+        if ($outcome === ConversationOutcome::Cancelled && $conversation->cancelled_at === null) {
+            $fields['cancelled_at'] = now();
+        }
+
+        $conversation->forceFill($fields)->save();
     }
 
     public function forCurrentTenant(): Collection
