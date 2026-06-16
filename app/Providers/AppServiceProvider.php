@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(TelegramGateway::class, fn (): TelegramGateway => new TelegramGateway(
             (string) config('services.telegram.api_url'),
+            (bool) config('services.telegram.force_ipv6'),
         ));
 
         $this->app->singleton(YclientsGateway::class, fn (): YclientsGateway => new YclientsGateway(

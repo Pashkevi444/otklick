@@ -40,6 +40,10 @@ return [
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
         // Публичный базовый URL приложения для setWebhook (HTTPS, доступен Telegram).
         'webhook_base_url' => env('TELEGRAM_WEBHOOK_BASE_URL', env('APP_URL')),
+        // Форсировать IPv6 для запросов к Telegram: в РФ api.telegram.org
+        // заблокирован по IPv4, и без этого Guzzle сначала висит на IPv4-таймауте
+        // (~5 с на каждый вызов, включая ответы бота), потом уходит в IPv6.
+        'force_ipv6' => (bool) env('TELEGRAM_FORCE_IPV6', false),
     ],
 
     'yclients' => [
