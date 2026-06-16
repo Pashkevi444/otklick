@@ -20,7 +20,7 @@ final class EloquentSiteSettingsRepository implements SiteSettingsRepositoryInte
         'hero_subtitle' => 'Отклик мгновенно отвечает в Telegram и на сайте по базе знаний '.
             'вашего бизнеса, записывает клиентов и передаёт горячих менеджеру — круглосуточно, без выходных.',
         'phone' => '89237032792',
-        'email' => 'pasha.balaganskii@gmail.com',
+        'email' => 'support@otcl1ck.ru',
         'telegram' => 'Pashkevi4',
         'legal_name' => 'ИП Балаганский Павел Сергеевич',
         'inn' => '543807917255',

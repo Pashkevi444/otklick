@@ -33,7 +33,7 @@ const tenant = computed(() => page.props.auth.user?.tenant ?? null);
                         Что входит в тариф
                     </Link>
                     <a
-                        href="mailto:pasha.balaganskii@gmail.com"
+                        href="mailto:support@otcl1ck.ru"
                         class="rounded-xl bg-[#2E74B5] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:-translate-y-0.5 hover:bg-[#255f96]"
                     >
                         Связаться для оплаты

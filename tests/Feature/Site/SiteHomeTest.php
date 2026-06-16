@@ -33,6 +33,6 @@ final class SiteHomeTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Site/Contacts')
-                ->where('site.email', 'pasha.balaganskii@gmail.com'));
+                ->where('site.email', 'support@otcl1ck.ru'));
     }
 }
