@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\DTO\BotReply;
-use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -38,7 +37,7 @@ final class WebWidgetServiceTest extends TestCase
         $conversations->shouldReceive('firstOrCreateForChat')
             ->once()->with('web-1', 'sess-1', 'Гость сайта', null)->andReturn($conversation);
         $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
-        $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::Closed);
+        $conversations->shouldReceive('markBooked')->once()->with($conversation);
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);

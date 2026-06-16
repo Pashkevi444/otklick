@@ -17,6 +17,12 @@ interface ConversationRepositoryInterface
     public function updateStatus(Conversation $conversation, ConversationStatus $status): void;
 
     /**
+     * Фиксирует оформленную запись: закрывает диалог и проставляет booked_at
+     * (для аналитики конверсии).
+     */
+    public function markBooked(Conversation $conversation): void;
+
+    /**
      * Находит диалог по чату канала или создаёт новый. tenant_id проставляется
      * автоматически из текущего тенант-контекста. $contactRef — ссылка на аккаунт
      * клиента (мессенджеры) или IP посетителя (веб-виджет).

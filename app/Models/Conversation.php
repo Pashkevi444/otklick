@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $contact_ref
  * @property ConversationStatus $status
  * @property int $clarification_attempts
+ * @property Carbon|null $booked_at
  * @property Carbon|null $last_message_at
  */
 class Conversation extends TenantOwnedModel
@@ -40,6 +41,7 @@ class Conversation extends TenantOwnedModel
         'contact_ref',
         'status',
         'clarification_attempts',
+        'booked_at',
         'last_message_at',
     ];
 
@@ -48,6 +50,7 @@ class Conversation extends TenantOwnedModel
         return [
             'status' => ConversationStatus::class,
             'clarification_attempts' => 'integer',
+            'booked_at' => 'datetime',
             'last_message_at' => 'datetime',
         ];
     }

@@ -8,6 +8,7 @@ use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
 use App\Repositories\Contracts\SiteSettingsRepositoryInterface;
@@ -17,6 +18,7 @@ use App\Repositories\Eloquent\EloquentChannelRepository;
 use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
+use App\Repositories\Eloquent\EloquentLeadAnalyticsRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
 use App\Repositories\Eloquent\EloquentPasswordResetCodeRepository;
 use App\Repositories\Eloquent\EloquentSiteSettingsRepository;
@@ -38,6 +40,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         MessageRepositoryInterface::class => EloquentMessageRepository::class,
         UserRepositoryInterface::class => EloquentUserRepository::class,
         KnowledgeEntryRepositoryInterface::class => EloquentKnowledgeEntryRepository::class,
+        LeadAnalyticsRepositoryInterface::class => EloquentLeadAnalyticsRepository::class,
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
         SiteSettingsRepositoryInterface::class => EloquentSiteSettingsRepository::class,
         PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,

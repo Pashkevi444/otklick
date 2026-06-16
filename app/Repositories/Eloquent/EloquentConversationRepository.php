@@ -18,6 +18,14 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill(['status' => $status])->save();
     }
 
+    public function markBooked(Conversation $conversation): void
+    {
+        $conversation->forceFill([
+            'status' => ConversationStatus::Closed,
+            'booked_at' => now(),
+        ])->save();
+    }
+
     public function forCurrentTenant(): Collection
     {
         return Conversation::query()

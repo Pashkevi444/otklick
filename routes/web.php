@@ -6,6 +6,7 @@ use App\Enums\CrmProvider;
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
+use App\Http\Controllers\Cabinet\AnalyticsController;
 use App\Http\Controllers\Cabinet\BillingController;
 use App\Http\Controllers\Cabinet\BusinessOverviewController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
@@ -62,6 +63,8 @@ $onDomain(config('app.business_domain'), function (): void {
     Route::middleware(['auth', 'tenant'])->prefix('cabinet')->name('cabinet.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('/overview', BusinessOverviewController::class)->name('overview');
+
+        Route::get('/analytics/export/{type}', [AnalyticsController::class, 'export'])->name('analytics.export');
 
         Route::get('/channels', [ChannelController::class, 'index'])->name('channels.index');
         Route::post('/channels', [ChannelController::class, 'store'])->name('channels.store');

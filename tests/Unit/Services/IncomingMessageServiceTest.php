@@ -94,7 +94,7 @@ final class IncomingMessageServiceTest extends TestCase
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
         $conversations->shouldReceive('touchLastMessage')->once();
-        $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::Closed);
+        $conversations->shouldReceive('markBooked')->once()->with($conversation);
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
