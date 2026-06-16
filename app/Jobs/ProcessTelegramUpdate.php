@@ -8,6 +8,7 @@ use App\DTO\IncomingMessage;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\IncomingMessageService;
 use App\Services\TelegramLinkService;
+use App\Services\TelegramRelayService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -39,8 +40,9 @@ final class ProcessTelegramUpdate implements ShouldQueue
         ChannelRepositoryInterface $channels,
         IncomingMessageService $messages,
         TelegramLinkService $linker,
+        TelegramRelayService $relay,
     ): void {
-        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker): void {
+        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker, $relay): void {
             $channel = $channels->find($this->channelId);
 
             if ($channel === null || ! $channel->is_active) {
@@ -52,9 +54,19 @@ final class ProcessTelegramUpdate implements ShouldQueue
                 return;
             }
 
-            // Подключение уведомлений по диплинку «/start notify_<token>».
             $message = $this->update['message'] ?? null;
+
+            // Подключение уведомлений по диплинку «/start notify_<token>».
             if (is_array($message) && $linker->tryLink($channel, $message)) {
+                return;
+            }
+
+            // Сообщение от оператора (его chat_id — среди telegram-получателей):
+            // команда или ответ клиенту через мост.
+            $chatId = is_array($message) ? ($message['chat']['id'] ?? null) : null;
+            if ($chatId !== null && $relay->isOperator((string) $chatId)) {
+                $relay->handleOperatorMessage($channel, $message);
+
                 return;
             }
 
@@ -64,7 +76,15 @@ final class ProcessTelegramUpdate implements ShouldQueue
                 return;
             }
 
+            // Диалог в режиме «нужен человек» — мост к оператору, ИИ молчит.
+            if ($relay->relayClientIfNeedsHuman($channel, $incoming)) {
+                return;
+            }
+
             $messages->handle($channel, $incoming);
+
+            // Если этим сообщением диалог эскалировался — перешлём его операторам.
+            $relay->forwardEscalation($channel, $incoming);
         });
     }
 

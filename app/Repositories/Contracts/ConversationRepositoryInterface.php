@@ -44,6 +44,11 @@ interface ConversationRepositoryInterface
      */
     public function firstOrCreateForChat(string $channelId, string $externalChatId, ?string $contactName, ?string $contactRef = null): Conversation;
 
+    /**
+     * Активный (незакрытый) диалог чата канала или null — без создания.
+     */
+    public function findActiveForChat(string $channelId, string $externalChatId): ?Conversation;
+
     public function touchLastMessage(Conversation $conversation): void;
 
     /**

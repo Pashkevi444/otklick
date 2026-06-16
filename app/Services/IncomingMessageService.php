@@ -91,8 +91,13 @@ final readonly class IncomingMessageService
             return;
         }
 
+        // Эскалацию операторам в Telegram выполняет живой мост (TelegramRelayService),
+        // поэтому общий «нужен оператор» здесь не дублируем.
+        if ($reply->escalate) {
+            return;
+        }
+
         $event = match (true) {
-            $reply->escalate => OwnerEvent::NeedsHuman,
             $reply->booked => OwnerEvent::Booked,
             $reply->cancelled => OwnerEvent::Cancelled,
             $conversation->wasRecentlyCreated => OwnerEvent::NewLead,

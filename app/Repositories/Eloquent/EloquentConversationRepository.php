@@ -135,6 +135,15 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         ]);
     }
 
+    public function findActiveForChat(string $channelId, string $externalChatId): ?Conversation
+    {
+        return Conversation::query()
+            ->where('channel_id', $channelId)
+            ->where('external_chat_id', $externalChatId)
+            ->where('status', '!=', ConversationStatus::Closed)
+            ->first();
+    }
+
     public function touchLastMessage(Conversation $conversation): void
     {
         $conversation->forceFill(['last_message_at' => now()])->save();

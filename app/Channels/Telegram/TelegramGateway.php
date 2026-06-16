@@ -80,6 +80,23 @@ final readonly class TelegramGateway implements MessengerGateway
     }
 
     /**
+     * Отправляет сообщение и возвращает его telegram message_id (нужен для
+     * reply-маппинга в операторском мосте). null — если id не пришёл.
+     */
+    public function sendReturningId(Channel $channel, string $chatId, string $text): ?int
+    {
+        $id = $this->request()
+            ->connectTimeout(5)
+            ->timeout(8)
+            ->retry(2, 300, throw: false)
+            ->post("{$this->apiUrl}/bot{$channel->botToken()}/sendMessage", ['chat_id' => $chatId, 'text' => $text])
+            ->throw()
+            ->json('result.message_id');
+
+        return is_numeric($id) ? (int) $id : null;
+    }
+
+    /**
      * Данные о боте (getMe) — нужен username для диплинка подключения уведомлений.
      *
      * @return array<string, mixed>
