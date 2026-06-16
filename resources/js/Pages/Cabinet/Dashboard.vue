@@ -22,7 +22,7 @@ const cards = computed<Card[]>(() => {
         { icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget' },
         { icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile' },
         { icon: '📚', label: 'База знаний', text: 'Тексты, по которым отвечает бот', href: '/cabinet/knowledge' },
-        { icon: '🔔', label: 'Уведомления', text: 'Лиды и записи на почту и в Telegram', href: '/cabinet/notifications' },
+        { icon: '🔔', label: 'Уведомления и эскалация', text: 'Лиды и записи на почту/в Telegram + ответ клиенту через бота', href: '/cabinet/notifications' },
     ];
 
     if (hasCrm.value) {

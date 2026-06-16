@@ -49,12 +49,18 @@ const icon = (type: string): string => (type === 'telegram' ? '✈️' : '📧')
 </script>
 
 <template>
-    <Head title="Уведомления" />
+    <Head title="Уведомления и эскалация" />
 
-    <AppLayout title="Уведомления">
-        <p class="mb-5 max-w-2xl text-sm text-slate-500">
+    <AppLayout title="Уведомления и эскалация">
+        <p class="mb-3 max-w-2xl text-sm text-slate-500">
             Получайте уведомления о событиях (новый лид, нужен оператор, запись) на почту и в Telegram.
         </p>
+        <div class="mb-5 max-w-2xl rounded-xl border border-amber-300/50 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-200/90">
+            <div class="mb-1 font-medium">🔔 Эскалация на человека</div>
+            Когда клиент просит оператора, бот замолкает, а получатели в Telegram получают его сообщение и
+            могут отвечать клиенту <b>прямо через бота бизнеса</b> — ответом («Ответить») на пересланное сообщение.
+            Команды в чате: <b>/close</b> — закрыть диалог (дальше отвечает бот), <b>/bot</b> — вернуть диалог боту.
+        </div>
 
         <!-- Диплинк после «Подключить Telegram» -->
         <div
