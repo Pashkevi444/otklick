@@ -7,12 +7,14 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "bacon/bacon-qr-code": "^3.1",
         "inertiajs/inertia-laravel": "^3.1",
         "laravel/framework": "^13.8",
         "laravel/horizon": "^5.47",
         "laravel/octane": "^2.17",
         "laravel/tinker": "^3.0",
         "pgvector/pgvector": "^0.2.2",
+        "pragmarx/google2fa-qrcode": "^4.0",
         "spiral/roadrunner-cli": "^2.6.0",
         "spiral/roadrunner-http": "^3.3.0"
     },

@@ -6,6 +6,7 @@ use App\Enums\CrmProvider;
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Account\EmailController;
 use App\Http\Controllers\Account\PasswordController;
+use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\AnalyticsController;
@@ -127,6 +128,11 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/account/email', [EmailController::class, 'edit'])->name('account.email.edit');
         Route::post('/account/email', [EmailController::class, 'requestChange'])->name('account.email.request');
         Route::post('/account/email/confirm', [EmailController::class, 'confirm'])->name('account.email.confirm');
+
+        Route::get('/account/two-factor', [TwoFactorController::class, 'show'])->name('account.2fa.show');
+        Route::post('/account/two-factor', [TwoFactorController::class, 'enable'])->name('account.2fa.enable');
+        Route::post('/account/two-factor/confirm', [TwoFactorController::class, 'confirm'])->name('account.2fa.confirm');
+        Route::delete('/account/two-factor', [TwoFactorController::class, 'disable'])->name('account.2fa.disable');
 
         Route::get('/suspended', SuspendedController::class)->name('suspended');
     });

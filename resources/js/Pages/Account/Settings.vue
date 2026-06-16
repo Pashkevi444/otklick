@@ -12,6 +12,7 @@ defineProps<{ account: Account }>();
 const items = [
     { icon: '🔑', label: 'Сменить пароль', text: 'Обновите пароль для входа', href: '/account/password' },
     { icon: '✉️', label: 'Сменить почту', text: 'С подтверждением на новый адрес', href: '/account/email' },
+    { icon: '🛡️', label: 'Двухфакторная аутентификация', text: 'Google Authenticator и любые TOTP-приложения', href: '/account/two-factor' },
 ];
 </script>
 
@@ -35,7 +36,5 @@ const items = [
                 <div class="mt-1 text-sm text-slate-500">{{ item.text }}</div>
             </Link>
         </div>
-
-        <p class="mt-6 max-w-2xl text-xs text-slate-400">Двухфакторная аутентификация появится здесь позже.</p>
     </AppLayout>
 </template>

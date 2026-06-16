@@ -28,9 +28,21 @@ final class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+        $user = $request->user();
+
+        // Включена 2FA — не завершаем вход, отправляем на второй фактор.
+        if ($user->hasTwoFactorEnabled()) {
+            $remember = $request->boolean('remember');
+            Auth::guard('web')->logout();
+            $request->session()->put('login.2fa.id', $user->id);
+            $request->session()->put('login.2fa.remember', $remember);
+
+            return redirect()->route('two-factor.login');
+        }
+
         $request->session()->regenerate();
 
-        return redirect()->intended(HomeRedirect::for($request->user()));
+        return redirect()->intended(HomeRedirect::for($user));
     }
 
     public function destroy(Request $request): HttpResponse

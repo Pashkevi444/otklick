@@ -212,6 +212,7 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | GET | `/account` | `Account\AccountController` | Настройки аккаунта (хаб: пароль / почта). В шапке — иконка-шестерёнка. 2FA — позже. |
 | GET/PUT | `/account/password` | `Account\PasswordController` | Смена своего пароля (auth). |
 | GET/POST | `/account/email`, `/account/email/confirm` | `Account\EmailController` | Смена e-mail с подтверждением: код (6 цифр, 15 мин, хеш в `email_change_codes`) уходит на НОВЫЙ адрес через `EmailChangeService`; почта меняется только после ввода кода. Запрос требует текущий пароль и свободный адрес. |
+| GET/POST/DELETE | `/account/two-factor`, `…/confirm` | `Account\TwoFactorController` | Двухфакторка (TOTP, `TwoFactorService` на `pragmarx/google2fa`): включение требует пароль → QR + резервные коды → подтверждение кодом; секрет/коды хранятся зашифрованными в `users`. При входе (`AuthenticatedSessionController` + `Auth\TwoFactorChallengeController`, GET/POST `/two-factor-challenge`) после пароля запрашивается код приложения или резервный код. Доступно всем (вкл. супер-админа). |
 | POST | `/webhooks/telegram/{tenant}/{channel}` | `Webhooks\TelegramWebhookController` | Приём вебхука Telegram (stateless, без CSRF; верификация secret-токена; ack 200 → очередь). |
 
 ## Окружение (ключевые переменные)
