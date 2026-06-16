@@ -52,7 +52,7 @@ interface Analytics {
     kpis: Kpi[];
     daily: { date: string; label: string; value: number }[];
     byChannel: Slice[];
-    byStatus: Slice[];
+    byOutcome: Slice[];
     funnel: Stage[];
     hourly: { hour: number; value: number }[];
     weekday: { key: string; label: string; value: number }[];
@@ -230,8 +230,8 @@ const statusClass = (s: string): string =>
                     <DonutChart :slices="analytics.byChannel" center-label="лидов" :center-value="analytics.totals.leads" />
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">Статусы</div>
-                    <DonutChart :slices="analytics.byStatus" center-label="диалогов" :center-value="analytics.totals.leads" />
+                    <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">Результаты лидов</div>
+                    <DonutChart :slices="analytics.byOutcome" center-label="лидов" :center-value="analytics.totals.leads" />
                 </div>
             </div>
 

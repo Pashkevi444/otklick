@@ -55,7 +55,7 @@ final class ConversationController extends Controller
                 'dir' => $dir,
             ],
             'statuses' => array_map(
-                fn (ConversationStatus $s): array => ['value' => $s->value, 'label' => $s->label()],
+                fn (ConversationStatus $s): array => ['value' => $s->value, 'label' => $s->stageLabel()],
                 ConversationStatus::cases(),
             ),
         ]);
@@ -126,8 +126,8 @@ final class ConversationController extends Controller
             'phone' => $c->contact_phone,
             'channel' => $c->channel?->type->label() ?? '—',
             'source' => $this->source($c->channel),
-            'status' => $c->status->value,
-            'statusLabel' => $c->status->label(),
+            'outcome' => $c->outcome()->value,
+            'outcomeLabel' => $c->outcome()->label(),
             'messagesCount' => (int) $c->getAttribute('messages_count'),
             'lastMessage' => $c->latestMessage?->text,
             'lastMessageAt' => $c->last_message_at?->format('d.m.Y H:i'),

@@ -25,6 +25,19 @@ enum ConversationStatus: string implements HasLabel
     }
 
     /**
+     * Грубая стадия для фильтра в журнале: активная / завершённая / нужен человек.
+     * Бизнес-результат показываем отдельно (ConversationOutcome).
+     */
+    public function stageLabel(): string
+    {
+        return match ($this) {
+            self::Open => 'Активные',
+            self::NeedsHuman => 'Нужен человек',
+            self::Closed => 'Завершённые',
+        };
+    }
+
+    /**
      * Статус нового диалога.
      */
     public static function default(): self

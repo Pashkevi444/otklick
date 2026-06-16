@@ -113,7 +113,7 @@ final class ConversationJournalTest extends TestCase
 
         $this->actingAs($owner)
             ->get('/cabinet/conversations?status=needs_human')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.status', 'needs_human'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.outcome', 'needs_human'));
     }
 
     public function test_grid_shows_and_searches_by_phone(): void

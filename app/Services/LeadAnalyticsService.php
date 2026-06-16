@@ -11,6 +11,7 @@ use App\DTO\Analytics\Gap;
 use App\DTO\Analytics\LeadAnalytics;
 use App\DTO\Analytics\MetricCard;
 use App\Enums\ChannelType;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\LeadAnalyticsPeriod;
 use App\Models\Conversation;
@@ -37,10 +38,13 @@ final readonly class LeadAnalyticsService
     ];
 
     /** @var array<string, string> */
-    private const array STATUS_COLORS = [
+    private const array OUTCOME_COLORS = [
+        'booked' => '#22c55e',
         'open' => '#2E74B5',
         'needs_human' => '#f59e0b',
-        'closed' => '#94a3b8',
+        'cancelled' => '#a855f7',
+        'lost' => '#ef4444',
+        'spam' => '#94a3b8',
     ];
 
     public function __construct(
@@ -71,7 +75,7 @@ final readonly class LeadAnalyticsService
             kpis: $this->kpis($now, $prev),
             daily: $this->daily($leads, $range),
             byChannel: $this->byChannel($leads),
-            byStatus: $this->byStatus($leads),
+            byOutcome: $this->byOutcome($leads),
             funnel: $this->funnel($now),
             hourly: $this->hourly($leads),
             weekday: $this->weekday($leads),
@@ -216,25 +220,25 @@ final readonly class LeadAnalyticsService
      * @param  Collection<int, Conversation>  $leads
      * @return list<BreakdownSlice>
      */
-    private function byStatus(Collection $leads): array
+    private function byOutcome(Collection $leads): array
     {
         $total = $leads->count();
         $grouped = $leads
-            ->groupBy(fn (Conversation $c): string => $c->status->value)
+            ->groupBy(fn (Conversation $c): string => $c->outcome()->value)
             ->map(fn (Collection $g): int => $g->count());
 
         $slices = [];
-        foreach (ConversationStatus::cases() as $status) {
-            $value = (int) ($grouped[$status->value] ?? 0);
+        foreach (ConversationOutcome::cases() as $outcome) {
+            $value = (int) ($grouped[$outcome->value] ?? 0);
             if ($value === 0) {
                 continue;
             }
             $slices[] = new BreakdownSlice(
-                $status->value,
-                $status->label(),
+                $outcome->value,
+                $outcome->label(),
                 $value,
                 $this->rate($value, $total),
-                self::STATUS_COLORS[$status->value],
+                self::OUTCOME_COLORS[$outcome->value],
             );
         }
 

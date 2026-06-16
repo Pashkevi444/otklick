@@ -9,8 +9,8 @@ interface Row {
     phone: string | null;
     channel: string;
     source: string;
-    status: string;
-    statusLabel: string;
+    outcome: string;
+    outcomeLabel: string;
     messagesCount: number;
     lastMessage: string | null;
     lastMessageAt: string | null;
@@ -84,12 +84,18 @@ const pages = computed<number[]>(() => {
     return out;
 });
 
-const statusClass = (s: string): string =>
-    s === 'needs_human'
-        ? 'bg-amber-100 text-amber-700'
-        : s === 'closed'
-          ? 'bg-slate-100 text-slate-500'
-          : 'bg-green-100 text-green-700';
+const outcomeClass = (o: string): string =>
+    ({
+        booked: 'bg-green-100 text-green-700',
+        lost: 'bg-red-100 text-red-700',
+        cancelled: 'bg-amber-100 text-amber-700',
+        spam: 'bg-slate-100 text-slate-500',
+        needs_human: 'bg-amber-100 text-amber-700',
+        open: 'bg-green-100 text-green-700',
+    })[o] ?? 'bg-slate-100 text-slate-500';
+
+const outcomeIcon = (o: string): string =>
+    ({ booked: '✅', lost: '✖', cancelled: '🚫', spam: '🗑', needs_human: '🙋', open: '⏳' })[o] ?? '';
 
 const initials = (name: string): string =>
     name
@@ -160,7 +166,7 @@ const open = (id: string): void => {
                 >
                     <div class="flex items-center justify-between gap-2">
                         <span class="font-medium text-slate-800">{{ c.contact }}</span>
-                        <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="statusClass(c.status)">{{ c.statusLabel }}</span>
+                        <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                     </div>
                     <p v-if="c.phone" class="mt-1 text-sm font-medium text-[#2E74B5]">📞 {{ c.phone }}</p>
                     <p class="mt-1 truncate text-sm text-slate-500">{{ c.lastMessage ?? '—' }}</p>
@@ -198,7 +204,7 @@ const open = (id: string): void => {
                             <td class="max-w-xs truncate px-5 py-3 text-slate-500">{{ c.lastMessage ?? '—' }}</td>
                             <td class="px-5 py-3 text-slate-500">{{ c.messagesCount }}</td>
                             <td class="px-5 py-3">
-                                <span class="rounded-full px-2 py-0.5 text-xs" :class="statusClass(c.status)">{{ c.statusLabel }}</span>
+                                <span class="rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                             </td>
                             <td class="whitespace-nowrap px-5 py-3 text-slate-400">{{ c.lastMessageAt }}</td>
                         </tr>
