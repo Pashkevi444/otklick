@@ -29,7 +29,32 @@ final readonly class NameDetector
         'представьтесь',
     ];
 
+    /** Слова, которые попадают после «зовут/имя», но именем не являются. */
+    private const array NON_NAMES = ['как', 'меня', 'вас', 'тебя', 'нас', 'его', 'её', 'имя', 'зовут', 'никак', 'так'];
+
     public function __construct(private LlmClient $llm) {}
+
+    /**
+     * Извлекает имя из явного представления в ЛЮБОМ сообщении («меня зовут X»,
+     * «моё имя X») — детерминированно, без LLM. Возвращает имя или null.
+     */
+    public function fromText(string $userMessage): ?string
+    {
+        $patterns = [
+            '/(?:меня\s+)?зовут\s+([A-Za-zА-Яа-яЁё]{2,30})/ui',
+            '/(?:мо[ёе])\s+имя\s+(?:[—:\-]\s*)?([A-Za-zА-Яа-яЁё]{2,30})/ui',
+            '/\bимя\s*[—:\-]\s*([A-Za-zА-Яа-яЁё]{2,30})/ui',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $userMessage, $m) === 1
+                && ! in_array(mb_strtolower($m[1]), self::NON_NAMES, true)) {
+                return $this->normalize($m[1]);
+            }
+        }
+
+        return null;
+    }
 
     /**
      * Если предыдущая реплика бота просила имя — пытается извлечь имя из ответа

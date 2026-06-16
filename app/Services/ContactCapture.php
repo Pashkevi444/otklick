@@ -38,10 +38,11 @@ class ContactCapture
         }
 
         if (in_array($conversation->contact_name, self::PLACEHOLDER_NAMES, true)) {
-            $name = $this->names->fromReply(
-                $this->messages->latestOutboundText($conversation),
-                $text,
-            );
+            // Сначала явное представление в самом сообщении («меня зовут …»),
+            // затем — короткий ответ на вопрос бота «Как вас зовут?» (через LLM).
+            $name = $this->names->fromText($text)
+                ?? $this->names->fromReply($this->messages->latestOutboundText($conversation), $text);
+
             if ($name !== null) {
                 $this->conversations->setContactName($conversation, $name);
             }

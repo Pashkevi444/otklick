@@ -50,6 +50,26 @@ final class ContactCaptureTest extends TestCase
         $this->capture($conversations, $messages, $llm)->fromInbound($conversation, 'Павел');
     }
 
+    public function test_captures_name_and_phone_from_one_message_without_bot_asking(): void
+    {
+        // Клиент сам представился в первом же сообщении — без предыдущего вопроса бота.
+        $conversation = new Conversation(['contact_name' => null, 'contact_phone' => null]);
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('setContactPhone')->once()->with($conversation, '+79991234567');
+        $conversations->shouldReceive('setContactName')->once()->with($conversation, 'Паша');
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        // Явное представление ловится без обращения к истории/модели.
+        $messages->shouldNotReceive('latestOutboundText');
+
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldNotReceive('generate');
+
+        $this->capture($conversations, $messages, $llm)
+            ->fromInbound($conversation, 'запиши меня к Савелию, меня зовут Паша, телефон 8 999 123-45-67');
+    }
+
     public function test_does_not_touch_name_when_already_known(): void
     {
         $conversation = new Conversation(['contact_name' => 'Анна', 'contact_phone' => '+70000000000']);

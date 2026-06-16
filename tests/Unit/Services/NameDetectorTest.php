@@ -54,6 +54,26 @@ final class NameDetectorTest extends TestCase
         $this->assertNull($name);
     }
 
+    public function test_extracts_name_from_explicit_introduction_without_llm(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldNotReceive('generate');
+
+        $detector = new NameDetector($llm);
+
+        $this->assertSame('Паша', $detector->fromText('привет запиши меня на завтра, меня зовут Паша и телефон 89990000000'));
+        $this->assertSame('Павел', $detector->fromText('Моё имя Павел'));
+    }
+
+    public function test_from_text_returns_null_without_introduction(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldNotReceive('generate');
+
+        $this->assertNull((new NameDetector($llm))->fromText('хочу записаться на завтра в 15:00'));
+        $this->assertNull((new NameDetector($llm))->fromText('зовут как у вас барбера?'));
+    }
+
     public function test_rejects_non_name_answer_from_model(): void
     {
         $llm = Mockery::mock(LlmClient::class);

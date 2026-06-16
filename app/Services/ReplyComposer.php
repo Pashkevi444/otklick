@@ -52,18 +52,21 @@ class ReplyComposer
 
         $answer = trim($this->llm->generate($systemPrompt, $this->history($conversation)));
 
+        // Сентинелы ищем в ЛЮБОМ месте ответа (модель не всегда ставит их строго
+        // в начало) и вырезаем из видимого текста.
+
         // Настоящая эскалация (или сбой модели = пустой ответ) — сразу на человека.
-        if ($answer === '' || $answer === PromptBuilder::ESCALATE) {
+        if ($answer === '' || str_contains($answer, PromptBuilder::ESCALATE)) {
             $this->resetStreak($conversation);
 
             return new BotReply($this->fallback($profile), escalate: true);
         }
 
         // Запись оформлена — подтверждаем клиенту и закрываем диалог.
-        if (str_starts_with($answer, PromptBuilder::BOOKED)) {
+        if (str_contains($answer, PromptBuilder::BOOKED)) {
             $this->resetStreak($conversation);
 
-            $confirmation = trim(substr($answer, strlen(PromptBuilder::BOOKED)));
+            $confirmation = $this->stripSentinels($answer);
 
             return new BotReply(
                 $confirmation !== '' ? $confirmation : $this->defaultBookingConfirmation(),
@@ -73,7 +76,7 @@ class ReplyComposer
         }
 
         // Бот не понял / не нашёл ответ — переспрашиваем, пока не упрёмся в лимит.
-        if (str_starts_with($answer, PromptBuilder::CLARIFY)) {
+        if (str_contains($answer, PromptBuilder::CLARIFY)) {
             $attempts = $this->conversations->bumpClarificationAttempts($conversation);
 
             if ($attempts >= self::MAX_CLARIFICATIONS) {
@@ -82,7 +85,7 @@ class ReplyComposer
                 return new BotReply($this->fallback($profile), escalate: true);
             }
 
-            $question = trim(substr($answer, strlen(PromptBuilder::CLARIFY)));
+            $question = $this->stripSentinels($answer);
 
             return new BotReply($question !== '' ? $question : $this->defaultClarification(), escalate: false);
         }
@@ -91,6 +94,20 @@ class ReplyComposer
         $this->resetStreak($conversation);
 
         return new BotReply($answer, escalate: false);
+    }
+
+    /**
+     * Убирает служебные сентинелы из видимого клиенту текста и подчищает пробелы.
+     */
+    private function stripSentinels(string $text): string
+    {
+        $text = str_replace(
+            [PromptBuilder::ESCALATE, PromptBuilder::BOOKED, PromptBuilder::CLARIFY],
+            '',
+            $text,
+        );
+
+        return trim((string) preg_replace('/ {2,}/', ' ', $text));
     }
 
     private function resetStreak(Conversation $conversation): void
