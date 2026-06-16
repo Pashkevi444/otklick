@@ -30,6 +30,11 @@ interface ConversationRepositoryInterface
     public function setContactPhone(Conversation $conversation, string $phone): void;
 
     /**
+     * Сохраняет имя клиента (как он представился боту).
+     */
+    public function setContactName(Conversation $conversation, string $name): void;
+
+    /**
      * Диалоги текущего тенанта (scoped/RLS) для журнала: с каналом, последним
      * сообщением и числом сообщений, новые сверху.
      *

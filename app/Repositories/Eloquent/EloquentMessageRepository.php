@@ -66,4 +66,16 @@ final class EloquentMessageRepository implements MessageRepositoryInterface
             'status' => $status,
         ]);
     }
+
+    public function latestOutboundText(Conversation $conversation): ?string
+    {
+        $text = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('direction', MessageDirection::Outbound)
+            ->latest('created_at')
+            ->latest('id')
+            ->value('text');
+
+        return $text !== null ? (string) $text : null;
+    }
 }

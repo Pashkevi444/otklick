@@ -11,7 +11,6 @@ use App\Enums\MessageStatus;
 use App\Models\Channel;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
-use App\Support\PhoneExtractor;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
@@ -30,6 +29,7 @@ final readonly class WebWidgetService
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
         private ReplyComposer $composer,
+        private ContactCapture $contacts,
     ) {}
 
     /**
@@ -39,7 +39,7 @@ final readonly class WebWidgetService
     {
         $sessionId = (string) Str::uuid();
 
-        $this->conversations->firstOrCreateForChat($channel->id, $sessionId, 'Гость сайта');
+        $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null);
 
         return Crypt::encryptString($channel->id.'|'.$sessionId);
     }
@@ -59,13 +59,8 @@ final readonly class WebWidgetService
             text: $text,
         ));
 
-        // Телефон для обратной связи — сохраняем по клиенту, если ещё не задан.
-        if ($conversation->contact_phone === null) {
-            $phone = PhoneExtractor::fromText($text);
-            if ($phone !== null) {
-                $this->conversations->setContactPhone($conversation, $phone);
-            }
-        }
+        // Контакты клиента (телефон, имя) — до генерации ответа.
+        $this->contacts->fromInbound($conversation, $text);
 
         $reply = $this->composer->compose($channel->tenant, $conversation);
 

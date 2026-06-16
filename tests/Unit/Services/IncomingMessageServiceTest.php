@@ -16,6 +16,7 @@ use App\Models\Message;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Services\ContactCapture;
 use App\Services\IncomingMessageService;
 use App\Services\ReplyComposer;
 use Mockery;
@@ -51,7 +52,10 @@ final class IncomingMessageServiceTest extends TestCase
         $gateway = Mockery::mock(MessengerGateway::class);
         $gateway->shouldReceive('send')->once()->with($channel, '555', 'Доставка бесплатно от 1000₽');
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $composer))->handle($channel, $incoming);
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'есть ли доставка?');
+
+        (new IncomingMessageService($conversations, $messages, $gateway, $composer, $contacts))->handle($channel, $incoming);
     }
 
     public function test_escalation_marks_conversation_needs_human(): void
@@ -75,7 +79,10 @@ final class IncomingMessageServiceTest extends TestCase
         $gateway = Mockery::mock(MessengerGateway::class);
         $gateway->shouldReceive('send')->once();
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $composer))->handle($channel, $incoming);
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        (new IncomingMessageService($conversations, $messages, $gateway, $composer, $contacts))->handle($channel, $incoming);
     }
 
     public function test_duplicate_inbound_does_nothing(): void
@@ -99,7 +106,10 @@ final class IncomingMessageServiceTest extends TestCase
         $gateway = Mockery::mock(MessengerGateway::class);
         $gateway->shouldNotReceive('send');
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $composer))->handle($channel, $incoming);
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldNotReceive('fromInbound');
+
+        (new IncomingMessageService($conversations, $messages, $gateway, $composer, $contacts))->handle($channel, $incoming);
     }
 
     public function test_failed_send_is_recorded_as_failed(): void
@@ -124,7 +134,10 @@ final class IncomingMessageServiceTest extends TestCase
         $gateway = Mockery::mock(MessengerGateway::class);
         $gateway->shouldReceive('send')->once()->andThrow(new RuntimeException('down'));
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $composer))->handle($channel, $incoming);
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        (new IncomingMessageService($conversations, $messages, $gateway, $composer, $contacts))->handle($channel, $incoming);
     }
 
     private function channel(): Channel

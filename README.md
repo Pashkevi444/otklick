@@ -105,9 +105,11 @@ HTTP / Console / Job  →  Service (бизнес-логика)  →  Repository 
 | `App\Enums\ChannelType` | `telegram` / `whatsapp` / `web`. |
 | `App\Enums\MessageDirection` | `inbound` / `outbound`. |
 | `App\Enums\MessageStatus` | `received` / `sent` / `failed`. |
-| `App\Enums\ConversationStatus` | `open` / `closed`. |
+| `App\Enums\ConversationStatus` | `open` / `needs_human` / `closed`. Закрыть/вернуть диалог можно вручную из кабинета (`PUT /cabinet/conversations/{id}/status`). |
 | `App\Services\ChannelService` | Подключение Telegram-бота к тенанту: создание канала + `setWebhook`. |
-| `App\Services\IncomingMessageService` | Обработка входящего: фиксация диалога/сообщения, ответ через `ReplyComposer`, отправка; при эскалации — статус `needs_human`. |
+| `App\Services\IncomingMessageService` | Обработка входящего: фиксация диалога/сообщения, захват контактов (`ContactCapture`), ответ через `ReplyComposer`, отправка; при эскалации — статус `needs_human`. |
+| `App\Services\ContactCapture` | Достаёт из входящего телефон (`PhoneExtractor`, регулярка) и имя (`NameDetector`, нейросеть — только если бот спрашивал имя) и сохраняет их по диалогу. |
+| `App\Services\NameDetector` | Определяет имя клиента LLM-классификацией ответа на вопрос «Как вас зовут?» (люди пишут просто «Павел», без «меня зовут»). |
 | `App\Llm\Contracts\LlmClient` | Порт LLM (реализации: `FakeLlmClient`, `YandexGptClient` — OpenAI-совместимый эндпоинт Yandex Cloud AI; выбор по `LLM_DRIVER`). |
 | `App\Services\PromptBuilder` | Системный промпт из профиля бизнеса + опубликованной базы знаний (сентинел `[[ESCALATE]]`). |
 | `App\Services\ReplyComposer` | Сборка ответа: промпт + история диалога → LLM; распознавание эскалации, фолбек. |

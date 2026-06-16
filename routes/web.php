@@ -63,6 +63,7 @@ $onDomain(config('app.business_domain'), function (): void {
 
         Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
+        Route::put('/conversations/{conversation}/status', [ConversationController::class, 'setStatus'])->name('conversations.status');
 
         Route::get('/knowledge', [KnowledgeEntryController::class, 'index'])->name('knowledge.index');
         Route::post('/knowledge', [KnowledgeEntryController::class, 'store'])->name('knowledge.store');

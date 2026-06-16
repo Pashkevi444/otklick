@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 interface Msg {
@@ -15,6 +15,7 @@ interface Conv {
     contact: string;
     phone: string | null;
     channel: string;
+    source: string;
     status: string;
     statusLabel: string;
     createdAt: string | null;
@@ -66,6 +67,10 @@ const statusClass = (s: string): string =>
         : s === 'closed'
           ? 'bg-slate-100 text-slate-500'
           : 'bg-green-100 text-green-700';
+
+const setStatus = (status: string): void => {
+    router.put(`/cabinet/conversations/${props.conversation.id}/status`, { status }, { preserveScroll: true });
+};
 </script>
 
 <template>
@@ -81,10 +86,28 @@ const statusClass = (s: string): string =>
             </span>
             <div class="min-w-0">
                 <div class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ conversation.contact }}</div>
-                <div class="text-xs text-slate-400">{{ conversation.channel }} · диалог от {{ conversation.createdAt }}</div>
+                <div class="text-xs text-slate-400">{{ conversation.source }} · диалог от {{ conversation.createdAt }}</div>
                 <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-medium text-[#2E74B5] dark:text-sky-300">📞 {{ conversation.phone }}</a>
             </div>
-            <span class="ml-auto rounded-full px-2.5 py-1 text-xs" :class="statusClass(conversation.status)">{{ conversation.statusLabel }}</span>
+            <div class="ml-auto flex items-center gap-2">
+                <span class="rounded-full px-2.5 py-1 text-xs" :class="statusClass(conversation.status)">{{ conversation.statusLabel }}</span>
+                <button
+                    v-if="conversation.status !== 'closed'"
+                    type="button"
+                    class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 hover:text-[#1F4E79] dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                    @click="setStatus('closed')"
+                >
+                    Закрыть диалог
+                </button>
+                <button
+                    v-else
+                    type="button"
+                    class="rounded-xl border border-[#2E74B5]/30 bg-white px-3 py-1.5 text-xs font-medium text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-sky-400/30 dark:bg-white/5 dark:text-sky-300"
+                    @click="setStatus('open')"
+                >
+                    Вернуть в работу
+                </button>
+            </div>
         </div>
 
         <!-- Переписка -->

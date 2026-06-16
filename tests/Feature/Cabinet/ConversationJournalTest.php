@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
+use App\Enums\ChannelType;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
+use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
@@ -142,5 +144,59 @@ final class ConversationJournalTest extends TestCase
                 ->has('conversations', 15)
                 ->where('pagination.total', 20)
                 ->where('pagination.last', 2));
+    }
+
+    public function test_owner_closes_and_reopens_conversation(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $conv = Conversation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'status' => ConversationStatus::Open,
+        ]);
+
+        $this->actingAs($owner)
+            ->put("/cabinet/conversations/{$conv->id}/status", ['status' => 'closed'])
+            ->assertRedirect();
+        $this->assertSame(ConversationStatus::Closed, $conv->fresh()->status);
+
+        $this->actingAs($owner)
+            ->put("/cabinet/conversations/{$conv->id}/status", ['status' => 'open'])
+            ->assertRedirect();
+        $this->assertSame(ConversationStatus::Open, $conv->fresh()->status);
+    }
+
+    public function test_owner_cannot_change_status_of_other_tenant_conversation(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $otherConv = Conversation::factory()->create(['tenant_id' => Tenant::factory()->create()->id]);
+
+        $this->actingAs($owner)
+            ->put("/cabinet/conversations/{$otherConv->id}/status", ['status' => 'closed'])
+            ->assertNotFound();
+    }
+
+    public function test_web_conversation_shows_site_as_source_and_guest_name(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $channel = Channel::factory()->create([
+            'tenant_id' => $tenant->id,
+            'type' => ChannelType::Web,
+            'settings' => ['allowed_origins' => ['https://shop.example.com']],
+        ]);
+        Conversation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channel_id' => $channel->id,
+            'contact_name' => null,
+            'last_message_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('conversations.0.contact', 'Гость')
+                ->where('conversations.0.source', 'Веб-виджет · shop.example.com'));
     }
 }

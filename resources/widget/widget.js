@@ -27,6 +27,36 @@
     var starting = false;
     var sending = false;
 
+    // Память диалога: токен сессии + история сообщений переживают перезагрузку
+    // страницы (ключ привязан к конкретному виджету tenant/channel).
+    var SKEY = 'otklik:' + tenant + ':' + channel;
+    var history = [];
+    (function () {
+        try {
+            var saved = JSON.parse(localStorage.getItem(SKEY) || '{}');
+            if (saved && typeof saved.token === 'string') token = saved.token;
+            if (saved && Array.isArray(saved.msgs)) history = saved.msgs;
+        } catch (e) {
+            /* приватный режим / переполнение — работаем без памяти */
+        }
+    })();
+    function persist() {
+        try {
+            localStorage.setItem(SKEY, JSON.stringify({ token: token, msgs: history.slice(-60) }));
+        } catch (e) {
+            /* запись недоступна — не падаем */
+        }
+    }
+    function resetSession() {
+        token = null;
+        history = [];
+        try {
+            localStorage.removeItem(SKEY);
+        } catch (e) {
+            /* игнор */
+        }
+    }
+
     var css = [
         '.otk-launcher{position:fixed;right:22px;bottom:22px;width:60px;height:60px;border:0;border-radius:50%;cursor:pointer;z-index:2147483000;',
         'background:linear-gradient(135deg,#2E74B5,#1F4E79);box-shadow:0 10px 28px rgba(31,78,121,.4);display:flex;align-items:center;justify-content:center;',
@@ -134,7 +164,12 @@
         requestAnimationFrame(function () { ov.classList.add('otk-lb-on'); });
     }
 
-    function addMsg(text, who) {
+    function addMsg(text, who, noSave) {
+        if (!noSave) {
+            history.push({ t: String(text), w: who });
+            persist();
+        }
+
         var el = document.createElement('div');
         el.className = 'otk-msg ' + (who === 'me' ? 'otk-me' : 'otk-bot');
 
@@ -165,10 +200,11 @@
     }
 
     // Не спамим одинаковыми сообщениями бота (защита от «бесконечного цикла»).
+    // Это техническое уведомление — в историю диалога не сохраняем.
     function addBotOnce(text) {
         var last = body.querySelector('.otk-bot:last-of-type');
         if (last && last.textContent === text) return;
-        addMsg(text, 'bot');
+        addMsg(text, 'bot', true);
     }
 
     function showTyping() {
@@ -200,6 +236,7 @@
         return post('/session', {})
             .then(function (data) {
                 token = data.token;
+                persist();
                 hideTyping();
                 if (data.greeting) addMsg(data.greeting, 'bot');
             })
@@ -234,8 +271,11 @@
                 hideTyping();
                 addMsg(data.reply, 'bot');
             })
-            .catch(function () {
+            .catch(function (err) {
                 hideTyping();
+                // Сессия устарела (например, виджет переподключали) — сбросим
+                // токен, при следующей отправке начнётся новая.
+                if (err && err.status === 403) resetSession();
                 addBotOnce('Сообщение не доставлено. Попробуйте ещё раз чуть позже.');
             })
             .finally(function () {
@@ -254,6 +294,11 @@
             startSession();
             setTimeout(function () { input.focus(); }, 300);
         }
+    }
+
+    // Восстанавливаем прошлую переписку (если страницу перезагрузили).
+    if (history.length) {
+        history.forEach(function (m) { addMsg(m.t, m.w, true); });
     }
 
     launcher.addEventListener('click', function () { toggle(); });

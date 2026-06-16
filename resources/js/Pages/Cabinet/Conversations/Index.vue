@@ -8,6 +8,7 @@ interface Row {
     contact: string;
     phone: string | null;
     channel: string;
+    source: string;
     status: string;
     statusLabel: string;
     messagesCount: number;
@@ -164,7 +165,7 @@ const open = (id: string): void => {
                     <p v-if="c.phone" class="mt-1 text-sm font-medium text-[#2E74B5]">📞 {{ c.phone }}</p>
                     <p class="mt-1 truncate text-sm text-slate-500">{{ c.lastMessage ?? '—' }}</p>
                     <div class="mt-1 flex justify-between text-xs text-slate-400">
-                        <span>{{ c.channel }} · {{ c.messagesCount }} сообщ.</span>
+                        <span>{{ c.source }} · {{ c.messagesCount }} сообщ.</span>
                         <span>{{ c.lastMessageAt }}</span>
                     </div>
                 </Link>
@@ -177,7 +178,7 @@ const open = (id: string): void => {
                         <tr>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('contact')">Клиент{{ arrow('contact') }}</th>
                             <th class="px-5 py-3 font-medium">Телефон</th>
-                            <th class="px-5 py-3 font-medium">Канал</th>
+                            <th class="px-5 py-3 font-medium">Источник</th>
                             <th class="px-5 py-3 font-medium">Последнее сообщение</th>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('messages')">Сообщений{{ arrow('messages') }}</th>
                             <th class="px-5 py-3 font-medium">Статус</th>
@@ -193,7 +194,7 @@ const open = (id: string): void => {
                                 </div>
                             </td>
                             <td class="whitespace-nowrap px-5 py-3 font-medium" :class="c.phone ? 'text-[#2E74B5]' : 'text-slate-300'">{{ c.phone ?? '—' }}</td>
-                            <td class="px-5 py-3 text-slate-500">{{ c.channel }}</td>
+                            <td class="px-5 py-3 text-slate-500">{{ c.source }}</td>
                             <td class="max-w-xs truncate px-5 py-3 text-slate-500">{{ c.lastMessage ?? '—' }}</td>
                             <td class="px-5 py-3 text-slate-500">{{ c.messagesCount }}</td>
                             <td class="px-5 py-3">

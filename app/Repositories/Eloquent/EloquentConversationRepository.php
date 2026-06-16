@@ -97,4 +97,9 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     {
         $conversation->forceFill(['contact_phone' => $phone])->save();
     }
+
+    public function setContactName(Conversation $conversation, string $name): void
+    {
+        $conversation->forceFill(['contact_name' => $name])->save();
+    }
 }

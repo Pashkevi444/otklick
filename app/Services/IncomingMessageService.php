@@ -11,7 +11,6 @@ use App\Enums\MessageStatus;
 use App\Models\Channel;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
-use App\Support\PhoneExtractor;
 use Throwable;
 
 /**
@@ -28,6 +27,7 @@ final readonly class IncomingMessageService
         private MessageRepositoryInterface $messages,
         private MessengerGateway $gateway,
         private ReplyComposer $composer,
+        private ContactCapture $contacts,
     ) {}
 
     public function handle(Channel $channel, IncomingMessage $incoming): void
@@ -45,13 +45,8 @@ final readonly class IncomingMessageService
             return;
         }
 
-        // Телефон для обратной связи — сохраняем по клиенту, если ещё не задан.
-        if ($conversation->contact_phone === null) {
-            $phone = PhoneExtractor::fromText($incoming->text);
-            if ($phone !== null) {
-                $this->conversations->setContactPhone($conversation, $phone);
-            }
-        }
+        // Контакты клиента (телефон, имя) — до генерации ответа.
+        $this->contacts->fromInbound($conversation, $incoming->text);
 
         $reply = $this->composer->compose($channel->tenant, $conversation);
 

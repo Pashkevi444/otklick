@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
+use App\Enums\ChannelType;
 use App\Enums\ConversationStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -68,6 +72,7 @@ final class ConversationController extends Controller
                 'contact' => $this->contact($model),
                 'phone' => $model->contact_phone,
                 'channel' => $model->channel?->type->label() ?? '—',
+                'source' => $this->source($model->channel),
                 'status' => $model->status->value,
                 'statusLabel' => $model->status->label(),
                 'createdAt' => $model->created_at?->format('d.m.Y'),
@@ -83,6 +88,25 @@ final class ConversationController extends Controller
     }
 
     /**
+     * Меняет статус диалога вручную из кабинета (закрыть / вернуть в работу).
+     */
+    public function setStatus(Request $request, string $conversation): RedirectResponse
+    {
+        $model = $this->conversations->findForCurrentTenant($conversation);
+
+        abort_if($model === null, 404);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::enum(ConversationStatus::class)],
+        ]);
+
+        $status = ConversationStatus::from((string) $validated['status']);
+        $this->conversations->updateStatus($model, $status);
+
+        return back()->with('success', "Диалог: статус «{$status->label()}».");
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function present(Conversation $c): array
@@ -92,6 +116,7 @@ final class ConversationController extends Controller
             'contact' => $this->contact($c),
             'phone' => $c->contact_phone,
             'channel' => $c->channel?->type->label() ?? '—',
+            'source' => $this->source($c->channel),
             'status' => $c->status->value,
             'statusLabel' => $c->status->label(),
             'messagesCount' => (int) $c->getAttribute('messages_count'),
@@ -100,10 +125,46 @@ final class ConversationController extends Controller
         ];
     }
 
+    /**
+     * Имя клиента, если он представился; иначе нейтральное «Гость» (без
+     * технического id чата — имя и источник теперь разведены).
+     */
     private function contact(Conversation $c): string
     {
         return $c->contact_name !== null && $c->contact_name !== ''
             ? $c->contact_name
-            : 'Гость '.mb_substr($c->external_chat_id, 0, 6);
+            : 'Гость';
+    }
+
+    /**
+     * Откуда пришёл клиент: тип канала + конкретный источник (домен сайта для
+     * веб-виджета, id бота для Telegram) — чтобы различать несколько сайтов/ботов.
+     */
+    private function source(?Channel $channel): string
+    {
+        if ($channel === null) {
+            return '—';
+        }
+
+        $detail = match ($channel->type) {
+            ChannelType::Web => $this->siteHost($channel),
+            ChannelType::Telegram => $channel->external_id !== null ? 'бот '.$channel->external_id : null,
+            default => null,
+        };
+
+        return $detail !== null ? $channel->type->label().' · '.$detail : $channel->type->label();
+    }
+
+    private function siteHost(Channel $channel): ?string
+    {
+        $origins = $channel->settings['allowed_origins'] ?? [];
+
+        if (! is_array($origins) || $origins === []) {
+            return null;
+        }
+
+        $host = parse_url((string) $origins[0], PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? $host : null;
     }
 }

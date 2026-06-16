@@ -36,4 +36,10 @@ interface MessageRepositoryInterface
     public function recordInbound(Conversation $conversation, IncomingMessage $incoming): ?Message;
 
     public function recordOutbound(Conversation $conversation, string $text, MessageStatus $status): Message;
+
+    /**
+     * Текст последней реплики бота в диалоге (для контекста — например, чтобы
+     * понять, спрашивал ли бот имя). null, если бот ещё ничего не отправлял.
+     */
+    public function latestOutboundText(Conversation $conversation): ?string;
 }
