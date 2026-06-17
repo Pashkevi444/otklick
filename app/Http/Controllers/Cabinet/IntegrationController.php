@@ -95,6 +95,9 @@ final class IntegrationController extends Controller
      */
     public function reminders(Request $request, string $connection): RedirectResponse
     {
+        // Напоминания — отдельная возможность тарифа (поверх CRM-интеграции).
+        abort_unless($request->user()->tenant->features()->reminders, 403, 'Напоминания недоступны на вашем тарифе.');
+
         $conn = $this->findOrFail($connection);
 
         $validated = $request->validate([

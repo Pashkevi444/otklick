@@ -7,6 +7,7 @@ use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Account\EmailController;
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Account\TwoFactorController;
+use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\AnalyticsController;
@@ -22,8 +23,10 @@ use App\Http\Controllers\Cabinet\KnowledgeEntryController;
 use App\Http\Controllers\Cabinet\NotificationController;
 use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
+use App\Http\Controllers\Cabinet\TeamController;
 use App\Http\Controllers\Cabinet\WidgetController;
 use App\Http\Controllers\Site\HomeController;
+use App\Http\Middleware\EnsureSectionAllowed;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -57,7 +60,13 @@ $onDomain(config('app.business_domain'), function (): void {
 
         Route::get('/site', [SiteController::class, 'edit'])->name('site.edit');
         Route::put('/site', [SiteController::class, 'update'])->name('site.update');
+
+        // Войти в кабинет бизнеса (impersonation).
+        Route::post('/tenants/{tenant}/impersonate', [ImpersonationController::class, 'start'])->name('tenants.impersonate');
     });
+
+    // Выход из режима «вошёл как бизнес» — уже под владельцем, поэтому только auth.
+    Route::middleware('auth')->post('/impersonate/leave', [ImpersonationController::class, 'stop'])->name('impersonate.leave');
 
     // Корень бизнес-домена (business.<домен>/) — карточка бизнеса. На маркетинг-
     // домене «/» занят лендингом, поэтому регистрируем эту «/» только когда домены
@@ -67,13 +76,16 @@ $onDomain(config('app.business_domain'), function (): void {
     }
 
     // Кабинет тенанта
-    Route::middleware(['auth', 'tenant'])->prefix('cabinet')->name('cabinet.')->group(function (): void {
+    Route::middleware(['auth', 'tenant', EnsureSectionAllowed::class])->prefix('cabinet')->name('cabinet.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('/overview', BusinessOverviewController::class)->name('overview');
 
-        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
-        Route::post('/analytics/insights/refresh', [AnalyticsController::class, 'refreshInsights'])->name('analytics.insights.refresh');
-        Route::get('/analytics/export/{type}', [AnalyticsController::class, 'export'])->name('analytics.export');
+        // Аналитика — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
+        Route::middleware('plan:analytics')->group(function (): void {
+            Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+            Route::post('/analytics/insights/refresh', [AnalyticsController::class, 'refreshInsights'])->name('analytics.insights.refresh');
+            Route::get('/analytics/export/{type}', [AnalyticsController::class, 'export'])->name('analytics.export');
+        });
 
         Route::get('/channels', [ChannelController::class, 'index'])->name('channels.index');
         Route::post('/channels', [ChannelController::class, 'store'])->name('channels.store');
@@ -98,6 +110,12 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::post('/notifications/telegram', [NotificationController::class, 'connectTelegram'])->name('notifications.telegram');
         Route::put('/notifications/{recipient}/toggle', [NotificationController::class, 'toggle'])->name('notifications.toggle');
         Route::delete('/notifications/{recipient}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+        // Команда: владелец добавляет операторов и ограничивает им разделы.
+        Route::get('/team', [TeamController::class, 'index'])->name('team.index');
+        Route::post('/team', [TeamController::class, 'store'])->name('team.store');
+        Route::put('/team/{member}', [TeamController::class, 'update'])->name('team.update');
+        Route::delete('/team/{member}', [TeamController::class, 'destroy'])->name('team.destroy');
 
         Route::get('/subscription', SubscriptionController::class)->name('subscription');
         Route::get('/billing', BillingController::class)->name('billing');

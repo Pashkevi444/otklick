@@ -12,6 +12,7 @@ interface PlanFeatures {
     allChannels: boolean;
     webWidget: boolean;
     reminders: boolean;
+    rag: boolean;
 }
 
 interface Plan {
@@ -34,9 +35,10 @@ const rows = computed(() => [
     { label: 'AI-ответы 24/7 в Telegram', on: true },
     { label: 'Виджет на сайт', on: f.value.webWidget },
     { label: 'База знаний (тексты, ссылки, фото)', on: true },
-    { label: `Операторы (пользователи кабинета): ${f.value.maxOperators}`, on: true },
+    { label: `Пользователи кабинета (сотрудники): до ${f.value.maxOperators}`, on: true },
     { label: 'Интеграция с любой CRM (например, YClients) и автозапись', on: f.value.crm },
     { label: 'Напоминания клиентам о записи', on: f.value.reminders },
+    { label: 'Умный поиск по базе знаний (RAG)', on: f.value.rag },
     { label: 'Все каналы (ВКонтакте, MAX, Avito)', on: f.value.allChannels },
     { label: 'Рассылки и уведомления', on: f.value.broadcasts },
     { label: 'Расширенная аналитика и статистика', on: f.value.analytics },

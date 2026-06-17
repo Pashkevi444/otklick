@@ -21,6 +21,7 @@ final readonly class PlanFeatures
         public int $maxNotifyEmail = 1,
         public int $maxNotifyTelegram = 4,
         public bool $reminders = false,
+        public bool $rag = false,
     ) {}
 
     /**
@@ -42,6 +43,7 @@ final readonly class PlanFeatures
             maxNotifyEmail: (int) ($o['maxNotifyEmail'] ?? $this->maxNotifyEmail),
             maxNotifyTelegram: (int) ($o['maxNotifyTelegram'] ?? $this->maxNotifyTelegram),
             reminders: (bool) ($o['reminders'] ?? $this->reminders),
+            rag: (bool) ($o['rag'] ?? $this->rag),
         );
     }
 
@@ -58,6 +60,7 @@ final readonly class PlanFeatures
             'allChannels' => $this->allChannels,
             'webWidget' => $this->webWidget,
             'reminders' => $this->reminders,
+            'rag' => $this->rag,
             default => false,
         };
     }
@@ -78,6 +81,7 @@ final readonly class PlanFeatures
             'maxNotifyEmail' => $this->maxNotifyEmail,
             'maxNotifyTelegram' => $this->maxNotifyTelegram,
             'reminders' => $this->reminders,
+            'rag' => $this->rag,
         ];
     }
 }

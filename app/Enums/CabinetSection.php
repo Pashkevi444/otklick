@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Enums;
+
+use App\Enums\Contracts\HasLabel;
+
+/**
+ * Раздел кабинета, доступ к которому бизнес может ограничивать своим
+ * сотрудникам (операторам). Значение совпадает со вторым сегментом имени
+ * маршрута (`cabinet.<section>.…`) — по нему гейтит EnsureSectionAllowed.
+ */
+enum CabinetSection: string implements HasLabel
+{
+    case Conversations = 'conversations';
+    case Knowledge = 'knowledge';
+    case Analytics = 'analytics';
+    case Channels = 'channels';
+    case Profile = 'profile';
+    case Widget = 'widget';
+    case Notifications = 'notifications';
+    case Integrations = 'integrations';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Conversations => 'Диалоги',
+            self::Knowledge => 'База знаний',
+            self::Analytics => 'Аналитика',
+            self::Channels => 'Каналы',
+            self::Profile => 'Профиль бизнеса',
+            self::Widget => 'Виджет на сайт',
+            self::Notifications => 'Уведомления и эскалация',
+            self::Integrations => 'Интеграции',
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(fn (self $c): string => $c->value, self::cases());
+    }
+}

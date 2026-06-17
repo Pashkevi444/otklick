@@ -12,11 +12,15 @@ use App\Enums\UserRole;
  */
 final readonly class NewUserData
 {
+    /**
+     * @param  list<string>  $permissions  доступные разделы кабинета (для сотрудника)
+     */
     public function __construct(
         public string $name,
         public string $email,
         public string $password,
         public UserRole $role,
         public ?string $tenantId = null,
+        public array $permissions = [],
     ) {}
 }

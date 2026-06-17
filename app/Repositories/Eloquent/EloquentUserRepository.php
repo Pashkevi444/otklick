@@ -28,12 +28,18 @@ final class EloquentUserRepository extends EloquentRepository implements UserRep
             'password' => $data->password, // каст 'hashed' хеширует при записи
             'role' => $data->role,
             'tenant_id' => $data->tenantId,
+            'permissions' => $data->permissions,
         ]);
     }
 
     public function findByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();
+    }
+
+    public function findForCurrentTenant(string $id): ?User
+    {
+        return User::query()->find($id);
     }
 
     public function ownerForCurrentTenant(): ?User
@@ -44,5 +50,25 @@ final class EloquentUserRepository extends EloquentRepository implements UserRep
     public function forCurrentTenant(): Collection
     {
         return User::query()->latest()->get();
+    }
+
+    public function countForCurrentTenant(): int
+    {
+        return User::query()->count();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateUser(User $user, array $attributes): User
+    {
+        $user->forceFill($attributes)->save();
+
+        return $user;
+    }
+
+    public function deleteUser(User $user): void
+    {
+        $user->delete();
     }
 }

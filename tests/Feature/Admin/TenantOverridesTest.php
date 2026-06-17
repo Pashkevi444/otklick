@@ -32,6 +32,7 @@ final class TenantOverridesTest extends TestCase
                 'allChannels' => false,
                 'webWidget' => true,
                 'reminders' => true,
+                'rag' => true,
                 'maxOperators' => 7,
                 'maxNotifyEmail' => 10,
                 'maxNotifyTelegram' => 50,

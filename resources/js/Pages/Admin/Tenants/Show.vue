@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { computed, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 interface Plan {
@@ -15,6 +16,7 @@ interface Features {
     allChannels: boolean;
     webWidget: boolean;
     reminders: boolean;
+    rag: boolean;
     maxNotifyEmail: number;
     maxNotifyTelegram: number;
 }
@@ -39,7 +41,12 @@ interface UserRow {
     role: string;
 }
 
-const props = defineProps<{ tenant: TenantInfo; plans: Plan[]; users: UserRow[] }>();
+const props = defineProps<{
+    tenant: TenantInfo;
+    plans: Plan[];
+    planDefaults: Record<string, Features>;
+    users: UserRow[];
+}>();
 
 const toggles: { key: keyof Features; label: string }[] = [
     { key: 'crm', label: 'CRM-интеграции' },
@@ -49,9 +56,10 @@ const toggles: { key: keyof Features; label: string }[] = [
     { key: 'allChannels', label: 'Все каналы' },
     { key: 'webWidget', label: 'Веб-виджет' },
     { key: 'reminders', label: 'Напоминания о записи' },
+    { key: 'rag', label: 'Умный поиск (RAG)' },
 ];
 const numbers: { key: keyof Features; label: string }[] = [
-    { key: 'maxOperators', label: 'Операторов' },
+    { key: 'maxOperators', label: 'Пользователей кабинета' },
     { key: 'maxNotifyEmail', label: 'Email-получателей' },
     { key: 'maxNotifyTelegram', label: 'Telegram-получателей' },
 ];
@@ -69,12 +77,29 @@ const form = useForm({
     access_expires_at: props.tenant.access_expires_at ?? '',
 });
 
+// Индивидуальная настройка возможностей — только на тарифе «Индивидуальный».
+// Для остальных возможности заданы тарифом: показываем дефолты и блокируем правку.
+const isIndividual = computed(() => form.plan === 'individual');
+const planDefaultsFor = computed<Features>(() => props.planDefaults[form.plan] ?? props.tenant.planDefaults);
+
+// При смене тарифа в селекторе — подставляем галочки/лимиты выбранного тарифа.
+watch(
+    () => form.plan,
+    (plan) => {
+        const def = props.planDefaults[plan];
+        if (def) {
+            Object.assign(ovForm, { ...def });
+        }
+    },
+);
+
 const save = (): void => {
     form.put(`/admin/tenants/${props.tenant.id}`, { preserveScroll: true });
 };
 
 const block = (): void => router.post(`/admin/tenants/${props.tenant.id}/block`);
 const unblock = (): void => router.post(`/admin/tenants/${props.tenant.id}/unblock`);
+const impersonate = (): void => router.post(`/admin/tenants/${props.tenant.id}/impersonate`);
 
 const pwForm = useForm({
     password: '',
@@ -95,7 +120,7 @@ const savePassword = (): void => {
     <AppLayout>
         <Link href="/admin/tenants" class="text-sm text-[#2E74B5] hover:underline">← К списку</Link>
 
-        <div class="mt-2 mb-6 flex items-center gap-3">
+        <div class="mt-2 mb-6 flex flex-wrap items-center gap-3">
             <h1 class="text-2xl font-bold text-[#1F4E79]">{{ tenant.name }}</h1>
             <span
                 class="text-xs rounded-full px-2 py-0.5"
@@ -103,6 +128,13 @@ const savePassword = (): void => {
             >
                 {{ tenant.is_blocked ? 'заблокирован' : tenant.has_active_access ? 'активен' : 'доступ истёк' }}
             </span>
+            <button
+                type="button"
+                class="ml-auto rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]"
+                @click="impersonate"
+            >
+                ➜ Войти в кабинет бизнеса
+            </button>
         </div>
 
         <!-- Подписка -->
@@ -145,23 +177,31 @@ const savePassword = (): void => {
                 <span v-if="tenant.hasOverrides" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">индивидуальные</span>
                 <span v-else class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">по тарифу</span>
             </div>
-            <p class="mb-4 text-sm text-slate-500">Переопределяет возможности тарифа для этого бизнеса (для сделок по договорённости).</p>
+            <p class="mb-3 text-sm text-slate-500">Возможности задаются тарифом. Тонкая настройка под бизнес доступна только на тарифе «Индивидуальный».</p>
 
-            <form class="space-y-4" @submit.prevent="saveOverrides">
+            <div
+                v-if="!isIndividual"
+                class="mb-4 rounded-lg border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+            >
+                Тариф «{{ tenant.plan_label }}» — возможности фиксированы. Чтобы включать/выключать пункты вручную,
+                переключите тариф на «Индивидуальный» в блоке «Подписка» выше и сохраните.
+            </div>
+
+            <form class="space-y-4" :class="!isIndividual ? 'opacity-70' : ''" @submit.prevent="saveOverrides">
                 <div class="grid gap-2 sm:grid-cols-2">
                     <label v-for="t in toggles" :key="t.key" class="flex items-center gap-2 text-sm text-slate-700">
-                        <input v-model="ovForm[t.key] as boolean" type="checkbox" class="rounded border-slate-300" />
+                        <input v-model="ovForm[t.key] as boolean" type="checkbox" :disabled="!isIndividual" class="rounded border-slate-300 disabled:opacity-50" />
                         {{ t.label }}
                     </label>
                 </div>
                 <div class="grid gap-3 sm:grid-cols-3">
                     <div v-for="n in numbers" :key="n.key">
                         <label class="block text-xs font-medium text-slate-600 mb-1">{{ n.label }}</label>
-                        <input v-model.number="ovForm[n.key] as number" type="number" min="0" max="999" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                        <p class="mt-0.5 text-xs text-slate-400">тариф: {{ tenant.planDefaults[n.key] }}</p>
+                        <input v-model.number="ovForm[n.key] as number" type="number" min="0" max="999" :disabled="!isIndividual" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:opacity-60" />
+                        <p class="mt-0.5 text-xs text-slate-400">тариф: {{ planDefaultsFor[n.key] }}</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
+                <div v-if="isIndividual" class="flex items-center gap-3">
                     <button type="submit" :disabled="ovForm.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">
                         Сохранить права
                     </button>

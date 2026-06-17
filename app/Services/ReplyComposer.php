@@ -58,7 +58,11 @@ class ReplyComposer
         // индекс пуст или эмбеддер недоступен — отдаём всю базу (фолбэк).
         $published = $this->knowledge->publishedForCurrentTenant();
         $crm = $this->crmKnowledge->forCurrentTenant();
-        $retrieved = $this->retriever->retrieve($this->lastUserText($history), self::RAG_TOP_K);
+        // Семантический поиск (RAG) — только если возможность включена тарифом/оверрайдом;
+        // иначе в промпт идёт вся база (как и было).
+        $retrieved = $tenant->features()->rag
+            ? $this->retriever->retrieve($this->lastUserText($history), self::RAG_TOP_K)
+            : null;
 
         if ($retrieved !== null) {
             $published = $published->filter(fn (KnowledgeEntry $e): bool => in_array($e->id, $retrieved['manual'], true))->values();

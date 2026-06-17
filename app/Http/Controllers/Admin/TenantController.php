@@ -65,6 +65,11 @@ final class TenantController extends Controller
         return Inertia::render('Admin/Tenants/Show', [
             'tenant' => $this->present($model),
             'plans' => $this->plans(),
+            // Дефолтные возможности каждого тарифа — чтобы при выборе тарифа в СУ
+            // галочки/лимиты подставлялись по тарифу (а правка — только на «Индивидуальном»).
+            'planDefaults' => collect(TenantPlan::cases())
+                ->mapWithKeys(fn (TenantPlan $p): array => [$p->value => $p->features()->toArray()])
+                ->all(),
             'users' => $this->users->listForTenant($model)->map(fn (User $user): array => [
                 'id' => $user->id,
                 'name' => $user->name,

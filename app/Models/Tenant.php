@@ -59,7 +59,7 @@ class Tenant extends Model
     {
         $overrides = $this->settings['overrides'] ?? [];
 
-        return $this->plan->features()->merge(is_array($overrides) ? $overrides : []);
+        return ($this->plan ?? TenantPlan::default())->features()->merge(is_array($overrides) ? $overrides : []);
     }
 
     /**

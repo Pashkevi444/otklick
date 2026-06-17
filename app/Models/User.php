@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\CabinetSection;
 use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToTenant;
 use App\Tenancy\Contracts\TenantOwned;
@@ -17,11 +18,12 @@ use Illuminate\Support\Carbon;
 /**
  * @property string|null $tenant_id
  * @property UserRole $role
+ * @property list<string>|null $permissions
  * @property string|null $two_factor_secret
  * @property array<int, string>|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  */
-#[Fillable(['tenant_id', 'name', 'email', 'password', 'role'])]
+#[Fillable(['tenant_id', 'name', 'email', 'password', 'role', 'permissions'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements TenantOwned
 {
@@ -39,6 +41,7 @@ class User extends Authenticatable implements TenantOwned
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'permissions' => 'array',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
@@ -48,6 +51,36 @@ class User extends Authenticatable implements TenantOwned
     public function isSuperAdmin(): bool
     {
         return $this->role === UserRole::SuperAdmin;
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === UserRole::Owner;
+    }
+
+    /**
+     * Доступен ли раздел кабинета. Владелец и супер-админ — без ограничений;
+     * сотруднику доступны только разделы из его permissions.
+     */
+    public function allows(string $section): bool
+    {
+        if ($this->role === UserRole::Owner || $this->role === UserRole::SuperAdmin) {
+            return true;
+        }
+
+        return in_array($section, $this->permissions ?? [], true);
+    }
+
+    /**
+     * Эффективный список доступных разделов (для UI: владельцу — все).
+     *
+     * @return list<string>
+     */
+    public function allowedSections(): array
+    {
+        return $this->role === UserRole::Owner || $this->role === UserRole::SuperAdmin
+            ? CabinetSection::values()
+            : ($this->permissions ?? []);
     }
 
     /**

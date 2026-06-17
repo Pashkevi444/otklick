@@ -48,6 +48,17 @@ const logout = (): void => {
 
 <template>
     <div class="relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200">
+        <!-- Баннер режима «супер-админ вошёл в кабинет бизнеса» -->
+        <div
+            v-if="page.props.impersonating"
+            class="relative z-40 flex flex-wrap items-center justify-center gap-3 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white"
+        >
+            Вы в кабинете бизнеса от имени супер-админа.
+            <button type="button" class="rounded-md bg-white/20 px-3 py-1 hover:bg-white/30" @click="router.post('/impersonate/leave')">
+                Выйти обратно в админку
+            </button>
+        </div>
+
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
             <span class="orb orb-1"></span>

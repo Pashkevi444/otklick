@@ -5,28 +5,43 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 const page = usePage();
 const tenantName = computed(() => page.props.auth.user?.tenant?.name ?? 'ваш бизнес');
-const hasCrm = computed(() => page.props.auth.user?.tenant?.features?.crm ?? false);
+const features = computed(() => page.props.auth.user?.tenant?.features);
+const isOwner = computed(() => page.props.auth.user?.isOwner ?? false);
+const allowed = computed<string[]>(() => page.props.auth.user?.allowedSections ?? []);
 
 interface Card {
     icon: string;
     label: string;
     text: string;
     href: string;
+    section?: string; // ограничиваемый раздел; если задан — показываем только при доступе оператора
+    feature?: 'analytics' | 'crm'; // зависит от возможности тарифа
 }
 
-const cards = computed<Card[]>(() => {
-    const list: Card[] = [
-        { icon: '📈', label: 'Аналитика', text: 'Лиды, конверсия и что улучшить', href: '/cabinet/analytics' },
-        { icon: '💬', label: 'Диалоги', text: 'Журнал переписок бота с клиентами', href: '/cabinet/conversations' },
-        { icon: '📡', label: 'Каналы', text: 'Подключите Telegram-бота', href: '/cabinet/channels' },
-        { icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget' },
-        { icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile' },
-        { icon: '📚', label: 'База знаний', text: 'Тексты, по которым отвечает бот', href: '/cabinet/knowledge' },
-        { icon: '🔔', label: 'Уведомления и эскалация', text: 'Лиды и записи на почту/в Telegram + ответ клиенту через бота', href: '/cabinet/notifications' },
-    ];
+const allCards: Card[] = [
+    { icon: '📈', label: 'Аналитика', text: 'Лиды, конверсия и что улучшить', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
+    { icon: '💬', label: 'Диалоги', text: 'Журнал переписок бота с клиентами', href: '/cabinet/conversations', section: 'conversations' },
+    { icon: '📡', label: 'Каналы', text: 'Подключите Telegram-бота', href: '/cabinet/channels', section: 'channels' },
+    { icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget', section: 'widget' },
+    { icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile', section: 'profile' },
+    { icon: '📚', label: 'База знаний', text: 'Тексты, по которым отвечает бот', href: '/cabinet/knowledge', section: 'knowledge' },
+    { icon: '🔔', label: 'Уведомления и эскалация', text: 'Лиды и записи на почту/в Telegram + ответ клиенту через бота', href: '/cabinet/notifications', section: 'notifications' },
+    { icon: '🔗', label: 'Интеграции', text: 'Подключение CRM и автозапись', href: '/cabinet/integrations', section: 'integrations', feature: 'crm' },
+];
 
-    if (hasCrm.value) {
-        list.push({ icon: '🔗', label: 'Интеграции', text: 'Подключение CRM и автозапись', href: '/cabinet/integrations' });
+const cards = computed<Card[]>(() => {
+    const list = allCards.filter((c) => {
+        if (c.feature && !features.value?.[c.feature]) {
+            return false; // возможность не входит в тариф
+        }
+        if (c.section && !allowed.value.includes(c.section)) {
+            return false; // раздел закрыт оператору
+        }
+        return true;
+    });
+
+    if (isOwner.value) {
+        list.push({ icon: '👥', label: 'Команда', text: 'Сотрудники и их доступы', href: '/cabinet/team' });
     }
 
     list.push({ icon: '⭐', label: 'Подписка', text: 'Ваш тариф и возможности', href: '/cabinet/subscription' });

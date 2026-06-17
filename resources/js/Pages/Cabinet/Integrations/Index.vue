@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { reactive } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, reactive } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+
+const page = usePage();
+const hasReminders = computed(() => page.props.auth.user?.tenant?.features?.reminders ?? false);
 
 interface Field {
     key: string;
@@ -143,7 +146,7 @@ const disconnect = (id: string): void => {
                     </div>
 
                     <!-- Напоминания клиенту о записи (в рамках этой интеграции) -->
-                    <div class="mt-5 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                    <div v-if="hasReminders" class="mt-5 rounded-xl border border-slate-200 p-4 dark:border-white/10">
                         <label class="flex items-center gap-2 text-sm font-medium text-[#1F4E79] dark:text-sky-200">
                             <input v-model="reminderForms[integration.connection.id].enabled" type="checkbox" class="rounded" />
                             Напоминать клиентам о записи

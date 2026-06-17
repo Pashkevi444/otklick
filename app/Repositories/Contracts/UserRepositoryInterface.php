@@ -17,6 +17,17 @@ interface UserRepositoryInterface
 
     public function findByEmail(string $email): ?User;
 
+    public function findForCurrentTenant(string $id): ?User;
+
+    public function countForCurrentTenant(): int;
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateUser(User $user, array $attributes): User;
+
+    public function deleteUser(User $user): void;
+
     /**
      * Владелец тенанта в текущем тенант-контексте (scoped/RLS).
      */

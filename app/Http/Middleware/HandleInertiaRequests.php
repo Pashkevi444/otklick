@@ -46,6 +46,8 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'role' => $user->role->value,
                     'roleLabel' => $user->role->label(),
+                    'isOwner' => $user->isOwner(),
+                    'allowedSections' => $user->allowedSections(),
                     'tenantId' => $user->tenant_id,
                     'tenant' => $user->tenant_id === null ? null : [
                         'id' => $user->tenant->id,
@@ -64,6 +66,8 @@ class HandleInertiaRequests extends Middleware
                 'status' => fn () => $request->session()->get('status'),
                 'telegramLink' => fn () => $request->session()->get('telegram_link'),
             ],
+            // Супер-админ вошёл в кабинет бизнеса (impersonation) — для баннера выхода.
+            'impersonating' => $request->session()->has('impersonator_id'),
         ];
     }
 }

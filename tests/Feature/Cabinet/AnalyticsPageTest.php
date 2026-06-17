@@ -17,7 +17,7 @@ final class AnalyticsPageTest extends TestCase
 
     public function test_analytics_page_exposes_lead_metrics(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
 
         Conversation::factory()->count(3)->create(['tenant_id' => $tenant->id, 'created_at' => now()->subDay()]);
@@ -47,7 +47,7 @@ final class AnalyticsPageTest extends TestCase
 
     public function test_period_filter_changes_window(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
 
         Conversation::factory()->create(['tenant_id' => $tenant->id, 'created_at' => now()->subDay()]);
@@ -66,7 +66,7 @@ final class AnalyticsPageTest extends TestCase
 
     public function test_custom_date_range_window(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
 
         Conversation::factory()->create(['tenant_id' => $tenant->id, 'created_at' => '2026-05-10 12:00:00']);
@@ -83,7 +83,7 @@ final class AnalyticsPageTest extends TestCase
 
     public function test_refresh_insights_button_populates_ai_block(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
         Conversation::factory()->create(['tenant_id' => $tenant->id, 'created_at' => now()->subDay()]);
 
@@ -102,7 +102,7 @@ final class AnalyticsPageTest extends TestCase
 
     public function test_exports_leads_csv(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
         Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_phone' => '+79991112233', 'created_at' => now()->subDay()]);
 
@@ -115,7 +115,7 @@ final class AnalyticsPageTest extends TestCase
 
     public function test_unknown_export_type_is_404(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
 
         $this->actingAs($owner)->get('/cabinet/analytics/export/bogus')->assertNotFound();

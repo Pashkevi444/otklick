@@ -6,6 +6,8 @@ export interface AuthUser {
     email: string;
     role: UserRole;
     roleLabel: string;
+    isOwner: boolean;
+    allowedSections: string[];
     tenantId: string | null;
     tenant: {
         id: string;
@@ -20,6 +22,10 @@ export interface AuthUser {
             clientBase: boolean;
             allChannels: boolean;
             webWidget: boolean;
+            reminders: boolean;
+            rag: boolean;
+            maxNotifyEmail: number;
+            maxNotifyTelegram: number;
         };
         accessExpiresAt: string | null;
         hasActiveAccess: boolean;
@@ -30,5 +36,6 @@ declare module '@inertiajs/core' {
     interface PageProps {
         auth: { user: AuthUser | null };
         flash: { success: string | null; error: string | null; status: string | null };
+        impersonating?: boolean;
     }
 }
