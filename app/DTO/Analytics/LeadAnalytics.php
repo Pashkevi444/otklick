@@ -17,9 +17,11 @@ final readonly class LeadAnalytics
      * @param  list<array{date: string, label: string, value: int}>  $daily
      * @param  list<BreakdownSlice>  $byChannel
      * @param  list<BreakdownSlice>  $byOutcome
+     * @param  list<BreakdownSlice>  $byDaypart
      * @param  list<FunnelStage>  $funnel
      * @param  list<array{hour: int, value: int}>  $hourly
      * @param  list<array{key: string, label: string, value: int}>  $weekday
+     * @param  list<array{label: string, value: int}>  $engagement
      * @param  list<Gap>  $gaps
      * @param  list<array<string, mixed>>  $recent
      * @param  array<string, int>  $totals
@@ -31,9 +33,11 @@ final readonly class LeadAnalytics
         public array $daily,
         public array $byChannel,
         public array $byOutcome,
+        public array $byDaypart,
         public array $funnel,
         public array $hourly,
         public array $weekday,
+        public array $engagement,
         public array $gaps,
         public array $recent,
         public array $totals,
@@ -51,9 +55,11 @@ final readonly class LeadAnalytics
             'daily' => $this->daily,
             'byChannel' => array_map(fn (BreakdownSlice $s): array => $s->toArray(), $this->byChannel),
             'byOutcome' => array_map(fn (BreakdownSlice $s): array => $s->toArray(), $this->byOutcome),
+            'byDaypart' => array_map(fn (BreakdownSlice $s): array => $s->toArray(), $this->byDaypart),
             'funnel' => array_map(fn (FunnelStage $s): array => $s->toArray(), $this->funnel),
             'hourly' => $this->hourly,
             'weekday' => $this->weekday,
+            'engagement' => $this->engagement,
             'gaps' => array_map(fn (Gap $g): array => $g->toArray(), $this->gaps),
             'recent' => $this->recent,
             'totals' => $this->totals,

@@ -94,6 +94,19 @@ interface ConversationRepositoryInterface
     public function setCrmRecordId(Conversation $conversation, ?string $recordId): void;
 
     /**
+     * Снимок ценности оформленной записи для «Отчёта ценности»: в какую CRM ушла
+     * запись и какую услугу/цену зафиксировали в момент записи. Цена — рубли,
+     * null если CRM её не отдала.
+     */
+    public function recordBookingValue(
+        Conversation $conversation,
+        string $crmConnectionId,
+        ?string $serviceId,
+        ?string $serviceTitle,
+        ?int $servicePrice,
+    ): void;
+
+    /**
      * Последний диалог чата (по каналу и external_chat_id) с непустым
      * crm_record_id — для отмены ранее оформленной записи. null, если такой нет.
      */

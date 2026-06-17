@@ -42,6 +42,7 @@ final class BookingFlowTest extends TestCase
     private function flow(FakeCrmGateway $crm, bool $connected = true, ?LlmClient $llm = null): BookingFlow
     {
         $connection = new CrmConnection;
+        $connection->id = 'crm-1';
         $connection->provider = CrmProvider::Yclients;
 
         $connections = Mockery::mock(CrmConnectionRepositoryInterface::class);
@@ -70,6 +71,14 @@ final class BookingFlowTest extends TestCase
         );
         $conversations->shouldReceive('lastWithCrmRecordForChat')->andReturn(null)->byDefault();
         $conversations->shouldReceive('setBookedFor');
+        $conversations->shouldReceive('recordBookingValue')->andReturnUsing(
+            function (Conversation $c, string $connId, ?string $sid, ?string $title, ?int $price): void {
+                $c->crm_connection_id = $connId;
+                $c->booked_service_id = $sid;
+                $c->booked_service_title = $title;
+                $c->booked_service_price = $price;
+            },
+        );
 
         return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient);
     }
@@ -91,7 +100,7 @@ final class BookingFlowTest extends TestCase
     private function crm(): FakeCrmGateway
     {
         $crm = new FakeCrmGateway;
-        $crm->services = [new CrmService('s1', 'Маникюр'), new CrmService('s2', 'Педикюр')];
+        $crm->services = [new CrmService('s1', 'Маникюр', 1500), new CrmService('s2', 'Педикюр', 2000)];
         $crm->staff = [new CrmStaff('m1', 'Анна'), new CrmStaff('m2', 'Ольга')];
         $crm->slots = [new TimeSlot('2026-06-17T10:00:00+03:00'), new TimeSlot('2026-06-17T11:30:00+03:00')];
 
@@ -141,6 +150,25 @@ final class BookingFlowTest extends TestCase
         $this->assertSame('m1', $booking->staffId);
         $this->assertSame('2026-06-17T10:00:00+03:00', $booking->start);
         $this->assertSame('+79990000000', $booking->clientPhone);
+    }
+
+    public function test_booking_captures_value_snapshot_for_value_report(): void
+    {
+        $crm = $this->crm();
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1'); // Маникюр (s1, 1500 ₽)
+        $flow->advance($this->tenant(), $c, '2'); // мастер
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $flow->advance($this->tenant(), $c, '1'); // слот → запись
+
+        // Снимок ценности: CRM-подключение + услуга и её цена на момент записи.
+        $this->assertSame('crm-1', $c->crm_connection_id);
+        $this->assertSame('s1', $c->booked_service_id);
+        $this->assertSame('Маникюр', $c->booked_service_title);
+        $this->assertSame(1500, $c->booked_service_price);
     }
 
     public function test_single_service_is_auto_selected(): void

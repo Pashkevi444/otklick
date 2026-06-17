@@ -47,6 +47,11 @@ final readonly class LeadAnalyticsService
         'spam' => '#94a3b8',
     ];
 
+    /** Граница «нерабочего времени»: до 8:00 и с 20:00 — обращения «в нерабочее». */
+    private const int DAY_START = 8;
+
+    private const int DAY_END = 20;
+
     public function __construct(
         private LeadAnalyticsRepositoryInterface $repository,
     ) {}
@@ -76,9 +81,11 @@ final readonly class LeadAnalyticsService
             daily: $this->daily($leads, $range),
             byChannel: $this->byChannel($leads),
             byOutcome: $this->byOutcome($leads),
+            byDaypart: $this->byDaypart($leads),
             funnel: $this->funnel($now),
             hourly: $this->hourly($leads),
             weekday: $this->weekday($leads),
+            engagement: $this->engagement($leads),
             gaps: $this->gaps($now),
             recent: $this->recent(),
             totals: [
@@ -87,6 +94,7 @@ final readonly class LeadAnalyticsService
                 'needsHuman' => $now['needsHuman'],
                 'withPhone' => $now['withPhone'],
                 'engaged' => $now['engaged'],
+                'afterHours' => $now['afterHours'],
             ],
         );
     }
@@ -103,6 +111,7 @@ final readonly class LeadAnalyticsService
         $withPhone = $leads->filter(fn (Conversation $c): bool => $this->filled($c->contact_phone))->count();
         $withName = $leads->filter(fn (Conversation $c): bool => $this->hasRealName($c))->count();
         $engaged = $leads->filter(fn (Conversation $c): bool => (int) $c->getAttribute('inbound_count') >= 2)->count();
+        $afterHours = $leads->filter(fn (Conversation $c): bool => $this->isAfterHours($c))->count();
         $clarSum = $leads->sum(fn (Conversation $c): int => (int) $c->clarification_attempts);
 
         return [
@@ -112,10 +121,12 @@ final readonly class LeadAnalyticsService
             'withPhone' => $withPhone,
             'withName' => $withName,
             'engaged' => $engaged,
+            'afterHours' => $afterHours,
             'conversionRate' => $this->rate($booked, $count),
             'contactRate' => $this->rate($withPhone, $count),
             'needsHumanRate' => $this->rate($needsHuman, $count),
             'engagementRate' => $this->rate($engaged, $count),
+            'afterHoursRate' => $this->rate($afterHours, $count),
             'avgClarifications' => $count > 0 ? round($clarSum / $count, 2) : 0.0,
         ];
     }
@@ -243,6 +254,69 @@ final readonly class LeadAnalyticsService
         }
 
         return $slices;
+    }
+
+    /**
+     * Покрытие 24/7: рабочее время vs «вне рабочих часов» (когда без бота лиды
+     * терялись бы). Две доли для пончика.
+     *
+     * @param  Collection<int, Conversation>  $leads
+     * @return list<BreakdownSlice>
+     */
+    private function byDaypart(Collection $leads): array
+    {
+        $dated = $leads->filter(fn (Conversation $c): bool => $c->created_at !== null);
+        $total = $dated->count();
+        $night = $dated->filter(fn (Conversation $c): bool => $this->isAfterHours($c))->count();
+        $day = $total - $night;
+
+        $slices = [];
+        if ($day > 0) {
+            $slices[] = new BreakdownSlice('day', 'Рабочее время (8–20)', $day, $this->rate($day, $total), '#38bdf8');
+        }
+        if ($night > 0) {
+            $slices[] = new BreakdownSlice('night', 'Вне рабочих часов', $night, $this->rate($night, $total), '#6366f1');
+        }
+
+        return $slices;
+    }
+
+    /**
+     * Глубина диалога: распределение лидов по числу входящих сообщений — видно,
+     * как глубоко бот вовлекает клиентов. Ряд для столбчатой диаграммы.
+     *
+     * @param  Collection<int, Conversation>  $leads
+     * @return list<array{label: string, value: int}>
+     */
+    private function engagement(Collection $leads): array
+    {
+        $buckets = [
+            ['label' => '1', 'min' => 1, 'max' => 1],
+            ['label' => '2–3', 'min' => 2, 'max' => 3],
+            ['label' => '4–6', 'min' => 4, 'max' => 6],
+            ['label' => '7+', 'min' => 7, 'max' => PHP_INT_MAX],
+        ];
+
+        return array_map(fn (array $b): array => [
+            'label' => $b['label'],
+            'value' => $leads->filter(function (Conversation $c) use ($b): bool {
+                $n = (int) $c->getAttribute('inbound_count');
+
+                return $n >= $b['min'] && $n <= $b['max'];
+            })->count(),
+        ], $buckets);
+    }
+
+    /** Обращение пришло «в нерабочее время» (до 8:00 или с 20:00). */
+    private function isAfterHours(Conversation $c): bool
+    {
+        if ($c->created_at === null) {
+            return false;
+        }
+
+        $hour = (int) $c->created_at->format('G');
+
+        return $hour < self::DAY_START || $hour >= self::DAY_END;
     }
 
     /**

@@ -16,6 +16,7 @@ const PAD = 10;
 
 const gid = `grad-${Math.random().toString(36).slice(2)}`;
 const shown = ref(false);
+const hovered = ref<number | null>(null);
 
 const max = computed<number>(() => Math.max(1, ...props.points.map((p) => p.value)));
 
@@ -42,6 +43,20 @@ const area = computed<string>(() => {
 
 const lastPoint = computed<{ x: number; y: number } | null>(() => coords.value[coords.value.length - 1] ?? null);
 
+// Точка под курсором: ближайшая по горизонтали — для вертикальной направляющей и тултипа.
+const hoveredCoord = computed<{ x: number; y: number } | null>(() =>
+    hovered.value !== null ? (coords.value[hovered.value] ?? null) : null,
+);
+const hoveredPoint = computed<Point | null>(() => (hovered.value !== null ? (props.points[hovered.value] ?? null) : null));
+
+const onMove = (e: MouseEvent): void => {
+    const n = props.points.length;
+    if (n === 0) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const ratio = rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
+    hovered.value = Math.max(0, Math.min(n - 1, Math.round(ratio * (n - 1))));
+};
+
 const ticks = computed<{ label: string; left: number }[]>(() => {
     const n = props.points.length;
     if (n === 0) return [];
@@ -61,23 +76,42 @@ onMounted(() => requestAnimationFrame(() => (shown.value = true)));
 
 <template>
     <div>
-        <svg :viewBox="`0 0 ${W} ${height}`" preserveAspectRatio="none" class="w-full" :style="{ height: `${height}px` }">
-            <defs>
-                <linearGradient :id="gid" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" :stop-color="color" stop-opacity="0.35" />
-                    <stop offset="100%" :stop-color="color" stop-opacity="0" />
-                </linearGradient>
-            </defs>
+        <div class="relative" @mousemove="onMove" @mouseleave="hovered = null">
+            <svg :viewBox="`0 0 ${W} ${height}`" preserveAspectRatio="none" class="w-full" :style="{ height: `${height}px` }">
+                <defs>
+                    <linearGradient :id="gid" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" :stop-color="color" stop-opacity="0.35" />
+                        <stop offset="100%" :stop-color="color" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
 
-            <!-- сетка -->
-            <line v-for="g in 3" :key="g" x1="0" :x2="W" :y1="(height / 3) * (g - 1) + PAD / 2" :y2="(height / 3) * (g - 1) + PAD / 2"
-                stroke="currentColor" stroke-opacity="0.08" stroke-width="1" />
+                <!-- сетка -->
+                <line v-for="g in 3" :key="g" x1="0" :x2="W" :y1="(height / 3) * (g - 1) + PAD / 2" :y2="(height / 3) * (g - 1) + PAD / 2"
+                    stroke="currentColor" stroke-opacity="0.08" stroke-width="1" />
 
-            <path :d="area" :fill="`url(#${gid})`" class="area" :class="{ shown }" />
-            <path :d="line" fill="none" :stroke="color" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
-                pathLength="1" class="line" :class="{ shown }" />
-            <circle v-if="lastPoint" :cx="lastPoint.x" :cy="lastPoint.y" r="4" :fill="color" class="dot" :class="{ shown }" />
-        </svg>
+                <path :d="area" :fill="`url(#${gid})`" class="area" :class="{ shown }" />
+                <path :d="line" fill="none" :stroke="color" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
+                    pathLength="1" class="line" :class="{ shown }" />
+
+                <!-- направляющая и точка под курсором -->
+                <template v-if="hoveredCoord">
+                    <line :x1="hoveredCoord.x" :x2="hoveredCoord.x" :y1="PAD / 2" :y2="height - PAD" :stroke="color" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="3 3" />
+                    <circle :cx="hoveredCoord.x" :cy="hoveredCoord.y" r="5" fill="white" :stroke="color" stroke-width="2.5" />
+                </template>
+
+                <circle v-if="lastPoint && hovered === null" :cx="lastPoint.x" :cy="lastPoint.y" r="4" :fill="color" class="dot" :class="{ shown }" />
+            </svg>
+
+            <!-- тултип -->
+            <div
+                v-if="hoveredCoord && hoveredPoint"
+                class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#1F4E79] px-2 py-1 text-center text-[11px] leading-tight text-white shadow-lg dark:bg-sky-600"
+                :style="{ left: `${(hoveredCoord.x / W) * 100}%`, top: `${hoveredCoord.y - 8}px` }"
+            >
+                <div class="font-semibold">{{ hoveredPoint.value }}</div>
+                <div class="opacity-75">{{ hoveredPoint.label }}</div>
+            </div>
+        </div>
 
         <div class="relative mt-1 h-4 text-[10px] text-slate-400">
             <span v-for="t in ticks" :key="t.label + t.left" class="absolute -translate-x-1/2" :style="{ left: `${t.left}%` }">

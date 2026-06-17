@@ -17,6 +17,7 @@ interface Features {
     webWidget: boolean;
     reminders: boolean;
     rag: boolean;
+    aiInsights: boolean;
     maxNotifyEmail: number;
     maxNotifyTelegram: number;
 }
@@ -57,6 +58,7 @@ const toggles: { key: keyof Features; label: string }[] = [
     { key: 'webWidget', label: 'Веб-виджет' },
     { key: 'reminders', label: 'Напоминания о записи' },
     { key: 'rag', label: 'Умный поиск (RAG)' },
+    { key: 'aiInsights', label: 'ИИ-рекомендации' },
 ];
 const numbers: { key: keyof Features; label: string }[] = [
     { key: 'maxOperators', label: 'Пользователей кабинета' },

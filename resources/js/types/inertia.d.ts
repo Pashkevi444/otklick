@@ -24,6 +24,7 @@ export interface AuthUser {
             webWidget: boolean;
             reminders: boolean;
             rag: boolean;
+            aiInsights: boolean;
             maxNotifyEmail: number;
             maxNotifyTelegram: number;
         };

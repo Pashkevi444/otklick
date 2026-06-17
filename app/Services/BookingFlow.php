@@ -97,12 +97,17 @@ class BookingFlow
                 'step' => BookingStep::Service->value,
                 'service_id' => $services[0]->id,
                 'service_title' => $services[0]->title,
+                'service_prices' => $this->servicePrices($services),
             ];
 
             return $this->enterStaff($conversation, $state, $connection, $gateway);
         }
 
-        $state = ['step' => BookingStep::Service->value, 'options' => $this->serviceOptions($services)];
+        $state = [
+            'step' => BookingStep::Service->value,
+            'options' => $this->serviceOptions($services),
+            'service_prices' => $this->servicePrices($services),
+        ];
         $this->conversations->setBookingState($conversation, $state);
 
         return $this->ask("Отлично, запишу вас! 💈\n".$this->menu('Какую услугу вы хотите?', $state['options']));
@@ -376,6 +381,16 @@ class BookingFlow
         if ($result->externalId !== null) {
             $this->conversations->setCrmRecordId($conversation, $result->externalId);
         }
+
+        // Снимок ценности для «Отчёта ценности»: в какую CRM ушла запись + услуга
+        // и её цена на момент записи (выручка считается точно по записям).
+        $this->conversations->recordBookingValue(
+            $conversation,
+            (string) $connection->id,
+            isset($state['service_id']) ? (string) $state['service_id'] : null,
+            isset($state['service_title']) ? (string) $state['service_title'] : null,
+            $this->bookedPrice($state),
+        );
 
         // Время визита — для напоминаний клиенту (слот пришёл из CRM как есть).
         try {
@@ -665,6 +680,39 @@ class BookingFlow
     private function serviceOptions(array $services): array
     {
         return array_map(fn (CrmService $s): array => ['id' => $s->id, 'title' => $s->title], $services);
+    }
+
+    /**
+     * Цены услуг (рубли) по id — снимок для «Отчёта ценности». null, если CRM
+     * цену не отдала.
+     *
+     * @param  list<CrmService>  $services
+     * @return array<string, int|null>
+     */
+    private function servicePrices(array $services): array
+    {
+        $prices = [];
+
+        foreach ($services as $service) {
+            $prices[$service->id] = $service->price;
+        }
+
+        return $prices;
+    }
+
+    /**
+     * Цена выбранной услуги из снимка в состоянии записи. null — услуга без цены
+     * в CRM или цена не была захвачена.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    private function bookedPrice(array $state): ?int
+    {
+        $serviceId = isset($state['service_id']) ? (string) $state['service_id'] : null;
+        $prices = is_array($state['service_prices'] ?? null) ? $state['service_prices'] : [];
+        $price = $serviceId !== null ? ($prices[$serviceId] ?? null) : null;
+
+        return is_numeric($price) ? (int) $price : null;
     }
 
     /**

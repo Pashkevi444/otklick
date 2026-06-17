@@ -22,6 +22,8 @@ final readonly class PlanFeatures
         public int $maxNotifyTelegram = 4,
         public bool $reminders = false,
         public bool $rag = false,
+        /** ИИ-рекомендации в аналитике («чего и где не хватает», разбор LLM). */
+        public bool $aiInsights = false,
     ) {}
 
     /**
@@ -44,6 +46,7 @@ final readonly class PlanFeatures
             maxNotifyTelegram: (int) ($o['maxNotifyTelegram'] ?? $this->maxNotifyTelegram),
             reminders: (bool) ($o['reminders'] ?? $this->reminders),
             rag: (bool) ($o['rag'] ?? $this->rag),
+            aiInsights: (bool) ($o['aiInsights'] ?? $this->aiInsights),
         );
     }
 
@@ -61,6 +64,7 @@ final readonly class PlanFeatures
             'webWidget' => $this->webWidget,
             'reminders' => $this->reminders,
             'rag' => $this->rag,
+            'aiInsights' => $this->aiInsights,
             default => false,
         };
     }
@@ -82,6 +86,7 @@ final readonly class PlanFeatures
             'maxNotifyTelegram' => $this->maxNotifyTelegram,
             'reminders' => $this->reminders,
             'rag' => $this->rag,
+            'aiInsights' => $this->aiInsights,
         ];
     }
 }

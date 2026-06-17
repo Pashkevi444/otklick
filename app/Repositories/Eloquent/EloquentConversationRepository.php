@@ -192,6 +192,21 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill(['crm_record_id' => $recordId])->save();
     }
 
+    public function recordBookingValue(
+        Conversation $conversation,
+        string $crmConnectionId,
+        ?string $serviceId,
+        ?string $serviceTitle,
+        ?int $servicePrice,
+    ): void {
+        $conversation->forceFill([
+            'crm_connection_id' => $crmConnectionId,
+            'booked_service_id' => $serviceId,
+            'booked_service_title' => $serviceTitle,
+            'booked_service_price' => $servicePrice,
+        ])->save();
+    }
+
     public function lastWithCrmRecordForChat(string $channelId, string $externalChatId): ?Conversation
     {
         return Conversation::query()

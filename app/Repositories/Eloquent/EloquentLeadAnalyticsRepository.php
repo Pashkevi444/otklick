@@ -44,4 +44,29 @@ final class EloquentLeadAnalyticsRepository implements LeadAnalyticsRepositoryIn
             ->limit($limit)
             ->get();
     }
+
+    public function bookingsForCrm(string $crmConnectionId, Carbon $from, Carbon $to): Collection
+    {
+        return Conversation::query()
+            ->where('crm_connection_id', $crmConnectionId)
+            ->whereNotNull('booked_at')
+            ->whereBetween('booked_at', [$from, $to])
+            ->get();
+    }
+
+    public function cancelledCountForCrm(string $crmConnectionId, Carbon $from, Carbon $to): int
+    {
+        return Conversation::query()
+            ->where('crm_connection_id', $crmConnectionId)
+            ->whereNotNull('cancelled_at')
+            ->whereBetween('cancelled_at', [$from, $to])
+            ->count();
+    }
+
+    public function leadsCount(Carbon $from, Carbon $to): int
+    {
+        return Conversation::query()
+            ->whereBetween('created_at', [$from, $to])
+            ->count();
+    }
 }

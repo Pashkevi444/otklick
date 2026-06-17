@@ -13,6 +13,7 @@ interface PlanFeatures {
     webWidget: boolean;
     reminders: boolean;
     rag: boolean;
+    aiInsights: boolean;
 }
 
 interface Plan {
@@ -42,6 +43,7 @@ const rows = computed(() => [
     { label: 'Дополнительные каналы (MAX, Avito)', on: f.value.allChannels },
     { label: 'Рассылки и уведомления', on: f.value.broadcasts },
     { label: 'Расширенная аналитика и статистика', on: f.value.analytics },
+    { label: 'ИИ-рекомендации в аналитике (чего не хватает)', on: f.value.aiInsights },
     { label: 'База клиентов и маркетинговые рекомендации', on: f.value.clientBase },
 ]);
 </script>

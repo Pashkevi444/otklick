@@ -25,6 +25,7 @@ final class UpdateTenantOverridesRequest extends AbstractFormRequest
             'webWidget' => ['required', 'boolean'],
             'reminders' => ['required', 'boolean'],
             'rag' => ['required', 'boolean'],
+            'aiInsights' => ['required', 'boolean'],
             'maxOperators' => ['required', 'integer', 'min:0', 'max:999'],
             'maxNotifyEmail' => ['required', 'integer', 'min:0', 'max:999'],
             'maxNotifyTelegram' => ['required', 'integer', 'min:0', 'max:999'],
@@ -37,7 +38,7 @@ final class UpdateTenantOverridesRequest extends AbstractFormRequest
     public function overrides(): array
     {
         return $this->only([
-            'crm', 'analytics', 'broadcasts', 'clientBase', 'allChannels', 'webWidget', 'reminders', 'rag',
+            'crm', 'analytics', 'broadcasts', 'clientBase', 'allChannels', 'webWidget', 'reminders', 'rag', 'aiInsights',
             'maxOperators', 'maxNotifyEmail', 'maxNotifyTelegram',
         ]);
     }

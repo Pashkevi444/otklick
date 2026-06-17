@@ -30,6 +30,10 @@ use Illuminate\Support\Carbon;
  * @property ConversationOutcome|null $outcome_override
  * @property array<string, mixed>|null $booking_state
  * @property string|null $crm_record_id
+ * @property string|null $crm_connection_id
+ * @property string|null $booked_service_id
+ * @property string|null $booked_service_title
+ * @property int|null $booked_service_price
  * @property Carbon|null $booked_for
  * @property list<int>|null $reminders_sent
  * @property Carbon|null $last_message_at
@@ -53,6 +57,10 @@ class Conversation extends TenantOwnedModel
         'outcome_override',
         'booking_state',
         'crm_record_id',
+        'crm_connection_id',
+        'booked_service_id',
+        'booked_service_title',
+        'booked_service_price',
         'booked_for',
         'reminders_sent',
         'last_message_at',
@@ -67,6 +75,7 @@ class Conversation extends TenantOwnedModel
             'cancelled_at' => 'datetime',
             'outcome_override' => ConversationOutcome::class,
             'booking_state' => 'array',
+            'booked_service_price' => 'integer',
             'booked_for' => 'datetime',
             'reminders_sent' => 'array',
             'last_message_at' => 'datetime',
@@ -105,6 +114,16 @@ class Conversation extends TenantOwnedModel
     public function channel(): BelongsTo
     {
         return $this->belongsTo(Channel::class);
+    }
+
+    /**
+     * CRM-подключение, в которое бот оформил запись (для атрибуции выручки по CRM).
+     *
+     * @return BelongsTo<CrmConnection, $this>
+     */
+    public function crmConnection(): BelongsTo
+    {
+        return $this->belongsTo(CrmConnection::class);
     }
 
     /**

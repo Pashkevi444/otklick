@@ -35,4 +35,24 @@ interface LeadAnalyticsRepositoryInterface
      * @return Collection<int, Conversation>
      */
     public function recentLeads(int $limit): Collection;
+
+    /**
+     * Записи, оформленные ботом в конкретную CRM за окно [from, to] (для «Отчёта
+     * ценности»): диалоги этого подключения с непустым booked_at. Несут снимок
+     * услуги/цены (booked_service_*) и reminders_sent.
+     *
+     * @return Collection<int, Conversation>
+     */
+    public function bookingsForCrm(string $crmConnectionId, Carbon $from, Carbon $to): Collection;
+
+    /**
+     * Число отмен записей этой CRM за окно [from, to] (упущенная выручка).
+     */
+    public function cancelledCountForCrm(string $crmConnectionId, Carbon $from, Carbon $to): int;
+
+    /**
+     * Всего лидов (диалогов), созданных в окне [from, to] — знаменатель конверсии
+     * «лид → запись».
+     */
+    public function leadsCount(Carbon $from, Carbon $to): int;
 }

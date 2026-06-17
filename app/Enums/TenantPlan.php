@@ -73,6 +73,7 @@ enum TenantPlan: string implements HasLabel
                 maxNotifyTelegram: 80,
                 reminders: true,
                 rag: true,
+                aiInsights: true,
             ),
             // Макс — всё включено, удвоенные лимиты относительно прежнего премиума.
             self::Max => new PlanFeatures(
@@ -87,6 +88,7 @@ enum TenantPlan: string implements HasLabel
                 maxNotifyTelegram: 40,
                 reminders: true,
                 rag: true,
+                aiInsights: true,
             ),
             default => new PlanFeatures(
                 maxOperators: 2,

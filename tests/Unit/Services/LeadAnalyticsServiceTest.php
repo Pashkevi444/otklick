@@ -126,6 +126,30 @@ final class LeadAnalyticsServiceTest extends TestCase
         $this->assertContains('Канал не подключён: Веб-виджет', $titles);
     }
 
+    public function test_daypart_coverage_and_engagement_depth(): void
+    {
+        $day = $this->lead(ChannelType::Telegram, '+79990000001', 'A', 1, ConversationStatus::Open, false);
+        $day->created_at = now()->setTime(12, 0); // рабочее время, 1 сообщение
+        $night = $this->lead(ChannelType::Telegram, null, null, 5, ConversationStatus::Open, false);
+        $night->created_at = now()->setTime(23, 0); // нерабочее, 5 сообщений
+        $early = $this->lead(ChannelType::Web, null, null, 3, ConversationStatus::Open, false);
+        $early->created_at = now()->setTime(6, 0); // нерабочее, 3 сообщения
+
+        $analytics = $this->service([$day, $night, $early])->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
+
+        // Покрытие 24/7: 1 в рабочее время, 2 — вне рабочих часов.
+        $nightSlice = collect($analytics->byDaypart)->firstOrFail(fn (BreakdownSlice $s): bool => $s->key === 'night');
+        $this->assertSame(2, $nightSlice->value);
+        $this->assertSame(2, $analytics->totals['afterHours']);
+
+        // Глубина диалога: бакеты по числу входящих сообщений.
+        $byLabel = collect($analytics->engagement)->keyBy('label');
+        $this->assertSame(1, $byLabel['1']['value']);
+        $this->assertSame(1, $byLabel['2–3']['value']);
+        $this->assertSame(1, $byLabel['4–6']['value']);
+        $this->assertSame(0, $byLabel['7+']['value']);
+    }
+
     public function test_empty_period_reports_no_leads_gap(): void
     {
         $analytics = $this->service([])->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));

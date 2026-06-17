@@ -53,9 +53,11 @@ interface Analytics {
     daily: { date: string; label: string; value: number }[];
     byChannel: Slice[];
     byOutcome: Slice[];
+    byDaypart: Slice[];
     funnel: Stage[];
     hourly: { hour: number; value: number }[];
     weekday: { key: string; label: string; value: number }[];
+    engagement: { label: string; value: number }[];
     gaps: GapItem[];
     recent: RecentLead[];
     totals: Record<string, number>;
@@ -66,8 +68,26 @@ interface Insights {
     generatedAt: string;
     period: string;
 }
+interface ServiceRevenueRow {
+    title: string;
+    bookings: number;
+    revenue: number;
+}
+interface ValueReport {
+    crmConnectionId: string;
+    crmLabel: string;
+    kpis: Kpi[];
+    topServices: ServiceRevenueRow[];
+    note: string | null;
+}
 
-const props = defineProps<{ analytics: Analytics; insights: Insights | null }>();
+const props = defineProps<{ analytics: Analytics; insights: Insights | null; valueReports: ValueReport[]; aiInsights: boolean }>();
+
+const activeCrm = ref(0);
+const activeReport = computed<ValueReport | null>(() => props.valueReports[activeCrm.value] ?? props.valueReports[0] ?? null);
+const valueExportUrl = (crmId: string): string =>
+    `/cabinet/analytics/export/value?crm=${encodeURIComponent(crmId)}&${new URLSearchParams(rangeParams()).toString()}`;
+const fmtMoney = (n: number): string => n.toLocaleString('ru-RU');
 
 const refreshing = ref(false);
 
@@ -89,7 +109,7 @@ const rangeParams = (): Record<string, string> =>
     isCustom.value ? { from: props.analytics.period.from, to: props.analytics.period.to } : { period: props.analytics.period.key };
 
 const setPeriod = (key: string): void => {
-    router.get('/cabinet/analytics', { period: key }, { preserveScroll: true, preserveState: true, only: ['analytics', 'insights'] });
+    router.get('/cabinet/analytics', { period: key }, { preserveScroll: true, preserveState: true, only: ['analytics', 'insights', 'valueReports'] });
 };
 
 const applyCustom = (): void => {
@@ -97,7 +117,7 @@ const applyCustom = (): void => {
     router.get(
         '/cabinet/analytics',
         { from: customFrom.value, to: customTo.value },
-        { preserveScroll: true, preserveState: true, only: ['analytics', 'insights'] },
+        { preserveScroll: true, preserveState: true, only: ['analytics', 'insights', 'valueReports'] },
     );
 };
 
@@ -114,6 +134,13 @@ const exportUrl = (type: string): string =>
 
 const hourBars = computed(() => props.analytics.hourly.map((h) => ({ label: String(h.hour), value: h.value })));
 const weekBars = computed(() => props.analytics.weekday.map((w) => ({ label: w.label, value: w.value })));
+
+const afterHoursCaption = computed<string>(() => {
+    const n = props.analytics.totals.afterHours ?? 0;
+    return n > 0
+        ? `${n} обращений пришли вне рабочих часов (до 8:00 и после 20:00) — их не пропустил бот`
+        : 'Все обращения за период пришли в рабочее время';
+});
 
 // ИИ-разбор, если посчитан; иначе — базовый разбор по правилам (мгновенно).
 const gapItems = computed<GapItem[]>(() => props.insights?.items ?? props.analytics.gaps);
@@ -199,6 +226,69 @@ const statusClass = (s: string): string =>
         </div>
 
         <div :key="analytics.period.key" class="ui-fade-in space-y-5">
+            <!-- Отчёт ценности (по каждой CRM) -->
+            <div
+                v-if="valueReports.length > 0"
+                class="rounded-2xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-5 dark:border-sky-400/20 dark:bg-none dark:bg-white/5"
+            >
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">💰 Отчёт ценности — что бот принёс в деньгах</div>
+                    <a
+                        v-if="activeReport"
+                        :href="valueExportUrl(activeReport.crmConnectionId)"
+                        class="rounded-xl border border-slate-200 bg-white/60 px-3 py-1.5 text-sm font-medium text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-sky-300"
+                    >⬇ Записи CSV</a>
+                </div>
+
+                <!-- Несколько CRM — вкладки; одна — просто подпись. -->
+                <div v-if="valueReports.length > 1" class="mb-3 flex flex-wrap gap-2">
+                    <button
+                        v-for="(r, i) in valueReports"
+                        :key="r.crmConnectionId"
+                        type="button"
+                        class="rounded-lg px-3 py-1 text-sm font-medium transition"
+                        :class="i === activeCrm ? 'bg-[#2E74B5] text-white shadow' : 'bg-white/60 text-slate-500 hover:text-[#1F4E79] dark:bg-white/5 dark:text-slate-300'"
+                        @click="activeCrm = i"
+                    >
+                        {{ r.crmLabel }}
+                    </button>
+                </div>
+                <div v-else class="mb-3 text-xs text-slate-500 dark:text-slate-400">{{ activeReport?.crmLabel }}</div>
+
+                <template v-if="activeReport">
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                        <div
+                            v-for="k in activeReport.kpis"
+                            :key="k.key"
+                            class="rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-100 dark:border-white/10 dark:bg-white/5 dark:hover:shadow-none"
+                            :title="k.hint"
+                        >
+                            <div class="text-xs font-medium text-slate-500">{{ k.label }}</div>
+                            <div class="mt-1 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">
+                                <CountUp :value="k.value" :suffix="k.unit" />
+                            </div>
+                            <div class="mt-1 text-xs" :class="deltaClass(k)">{{ deltaText(k) }}</div>
+                        </div>
+                    </div>
+
+                    <p v-if="activeReport.note" class="mt-2 text-xs text-amber-600 dark:text-amber-400">⚠️ {{ activeReport.note }}</p>
+
+                    <div v-if="activeReport.topServices.length > 0" class="mt-4">
+                        <div class="mb-2 text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Топ услуг по выручке</div>
+                        <div class="space-y-1.5">
+                            <div
+                                v-for="s in activeReport.topServices"
+                                :key="s.title"
+                                class="flex items-center justify-between rounded-lg bg-white/70 px-3 py-1.5 text-sm dark:bg-white/5"
+                            >
+                                <span class="text-slate-700 dark:text-slate-200">{{ s.title }}</span>
+                                <span class="text-slate-500 dark:text-slate-400">{{ s.bookings }} зап. · <b class="text-[#1F4E79] dark:text-sky-200">{{ fmtMoney(s.revenue) }} ₽</b></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <!-- KPI -->
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <div
@@ -235,6 +325,20 @@ const statusClass = (s: string): string =>
                 </div>
             </div>
 
+            <!-- Покрытие 24/7 + глубина диалога -->
+            <div class="grid gap-4 lg:grid-cols-2">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">🌙 Покрытие 24/7</div>
+                    <p class="mb-3 mt-0.5 text-xs text-slate-400">{{ afterHoursCaption }}</p>
+                    <DonutChart :slices="analytics.byDaypart" center-label="обращений" :center-value="analytics.totals.leads" />
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">💬 Глубина диалога</div>
+                    <p class="mb-3 mt-0.5 text-xs text-slate-400">Сколько сообщений клиенты пишут боту — выше столбики справа значат более вовлечённые диалоги.</p>
+                    <BarChart :bars="analytics.engagement" :height="150" />
+                </div>
+            </div>
+
             <!-- Воронка + дни недели -->
             <div class="grid gap-4 lg:grid-cols-2">
                 <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
@@ -263,8 +367,8 @@ const statusClass = (s: string): string =>
                 <BarChart :bars="hourBars" :label-step="3" />
             </div>
 
-            <!-- ИИ-разбор «чего не хватает» -->
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <!-- ИИ-разбор «чего не хватает» — премиум (Макс+) -->
+            <div v-if="aiInsights" class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div class="font-semibold text-[#1F4E79] dark:text-sky-200">Чего и где не хватает</div>
                     <div class="flex items-center gap-2 text-xs text-slate-400">
