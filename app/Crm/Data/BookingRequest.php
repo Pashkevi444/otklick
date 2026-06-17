@@ -16,5 +16,6 @@ final readonly class BookingRequest
         public string $clientName,
         public string $clientPhone,
         public ?string $comment = null,
+        public ?string $clientEmail = null,
     ) {}
 }

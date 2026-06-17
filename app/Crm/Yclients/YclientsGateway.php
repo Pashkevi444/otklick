@@ -138,6 +138,8 @@ final readonly class YclientsGateway implements CrmGateway
             $response = $this->request($connection)->post("{$this->apiUrl}/book_record/{$companyId}", [
                 'phone' => $request->clientPhone,
                 'fullname' => $request->clientName,
+                // YClients требует параметр email обязательно (даже пустым).
+                'email' => $request->clientEmail ?? '',
                 'comment' => $request->comment ?? '',
                 'appointments' => [[
                     'id' => 1,
