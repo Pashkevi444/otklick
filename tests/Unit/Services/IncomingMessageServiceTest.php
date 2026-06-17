@@ -129,6 +129,7 @@ final class IncomingMessageServiceTest extends TestCase
 
         $responder = Mockery::mock(BotResponder::class);
         $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Отменил запись.', escalate: false, cancelled: true));
+        $responder->shouldReceive('cancelBookingInCrm')->once()->with($conversation);
 
         $gateway = Mockery::mock(MessengerGateway::class);
         $gateway->shouldReceive('send')->once();

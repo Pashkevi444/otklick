@@ -155,7 +155,9 @@ class ReplyComposer
      */
     private function history(Conversation $conversation): array
     {
-        return $this->messages->recentForConversation($conversation, self::HISTORY_LIMIT)
+        // История по ЧАТУ (через все диалоги клиента), чтобы бот помнил прошлое
+        // общение — например, оформленную ранее запись — после закрытия диалога.
+        return $this->messages->recentForChat((string) $conversation->channel_id, (string) $conversation->external_chat_id, self::HISTORY_LIMIT)
             ->map(fn (Message $m): array => [
                 'role' => $m->direction === MessageDirection::Inbound ? 'user' : 'assistant',
                 'content' => (string) $m->text,

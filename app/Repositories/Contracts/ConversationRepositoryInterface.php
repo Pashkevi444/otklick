@@ -88,6 +88,18 @@ interface ConversationRepositoryInterface
     public function setBookingState(Conversation $conversation, ?array $state): void;
 
     /**
+     * Сохраняет идентификатор записи в CRM (для последующей отмены). null —
+     * запись отменена/отсутствует.
+     */
+    public function setCrmRecordId(Conversation $conversation, ?string $recordId): void;
+
+    /**
+     * Последний диалог чата (по каналу и external_chat_id) с непустым
+     * crm_record_id — для отмены ранее оформленной записи. null, если такой нет.
+     */
+    public function lastWithCrmRecordForChat(string $channelId, string $externalChatId): ?Conversation;
+
+    /**
      * Диалоги текущего тенанта (scoped/RLS) для журнала: с каналом, последним
      * сообщением и числом сообщений, новые сверху.
      *

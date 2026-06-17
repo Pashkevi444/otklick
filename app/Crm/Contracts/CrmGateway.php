@@ -50,4 +50,9 @@ interface CrmGateway
     public function availableSlots(CrmConnection $connection, SlotQuery $query): array;
 
     public function createBooking(CrmConnection $connection, BookingRequest $request): BookingResult;
+
+    /**
+     * Отменяет ранее созданную запись по её идентификатору в CRM.
+     */
+    public function cancelBooking(CrmConnection $connection, string $externalId): BookingResult;
 }

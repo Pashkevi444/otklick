@@ -45,6 +45,9 @@ class BookingFlow
     /** staff_id «любой свободный» в терминах CRM. */
     private const string ANY_STAFF = '0';
 
+    /** Сколько свободных окон показывать списком (больше — просим назвать время). */
+    private const int SLOTS_TO_LIST = 6;
+
     public function __construct(
         private readonly CrmConnectionRepositoryInterface $connections,
         private readonly CrmGatewayResolver $gateways,
@@ -202,7 +205,10 @@ class BookingFlow
         $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
         if ($choice === null) {
-            return $this->ask($this->menu('Уточните, пожалуйста, время — можно номером:', $state['options'] ?? []));
+            // Названное время не подошло — показываем компактный список ближайших окон.
+            $preview = array_slice($state['options'] ?? [], 0, self::SLOTS_TO_LIST);
+
+            return $this->ask($this->menu('Не нашёл такого свободного времени. Вот ближайшие окна (напишите время или номер):', $preview));
         }
 
         $state['slot'] = $choice['id'];
@@ -316,7 +322,19 @@ class BookingFlow
         $state['options'] = $this->slotOptions($slots);
         $this->conversations->setBookingState($conversation, $state);
 
-        return $this->ask($this->menu('Свободное время на '.$this->humanDate((string) $state['date']).':', $state['options']));
+        $date = $this->humanDate((string) $state['date']);
+
+        // Мало окон — показываем списком; много — не спамим, просим назвать время
+        // (его сопоставим с реальными слотами), а полный список даём только если
+        // названное время не подошло.
+        if (count($state['options']) <= self::SLOTS_TO_LIST) {
+            return $this->ask($this->menu("Свободное время на {$date}:", $state['options']));
+        }
+
+        $first = $state['options'][0]['title'];
+        $last = $state['options'][count($state['options']) - 1]['title'];
+
+        return $this->ask("На {$date} есть свободное время с {$first} до {$last}. Во сколько вам удобно? Напишите время, например «{$first}».");
     }
 
     /**
@@ -354,7 +372,48 @@ class BookingFlow
             );
         }
 
+        // Сохраняем id записи в CRM — пригодится, если клиент попросит её отменить.
+        if ($result->externalId !== null) {
+            $this->conversations->setCrmRecordId($conversation, $result->externalId);
+        }
+
         return new BotReply($this->confirmation($state), escalate: false, booked: true);
+    }
+
+    /**
+     * Отменяет в CRM последнюю запись этого чата (по просьбе клиента, сигнал
+     * [[CANCELLED]]). Закрытие диалога делает вызывающий слой; здесь — только CRM.
+     */
+    public function cancelLastBooking(Conversation $conversation): void
+    {
+        $connection = $this->connections->activeForCurrentTenant();
+
+        if ($connection === null) {
+            return;
+        }
+
+        $booked = $this->conversations->lastWithCrmRecordForChat(
+            (string) $conversation->channel_id,
+            (string) $conversation->external_chat_id,
+        );
+
+        if (! $booked instanceof Conversation || $booked->crm_record_id === null) {
+            return;
+        }
+
+        $recordId = $booked->crm_record_id;
+        $result = $this->gateways->for($connection->provider)->cancelBooking($connection, $recordId);
+
+        Log::info('booking.cancel_result', [
+            'conversation_id' => $booked->id ?? null,
+            'record_id' => $recordId,
+            'success' => $result->success,
+        ]);
+
+        // Успешно отменили — снимаем id, чтобы не пытаться отменить повторно.
+        if ($result->success) {
+            $this->conversations->setCrmRecordId($booked, null);
+        }
     }
 
     /**

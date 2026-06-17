@@ -186,4 +186,19 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     {
         $conversation->forceFill(['booking_state' => $state])->save();
     }
+
+    public function setCrmRecordId(Conversation $conversation, ?string $recordId): void
+    {
+        $conversation->forceFill(['crm_record_id' => $recordId])->save();
+    }
+
+    public function lastWithCrmRecordForChat(string $channelId, string $externalChatId): ?Conversation
+    {
+        return Conversation::query()
+            ->where('channel_id', $channelId)
+            ->where('external_chat_id', $externalChatId)
+            ->whereNotNull('crm_record_id')
+            ->latest()
+            ->first();
+    }
 }

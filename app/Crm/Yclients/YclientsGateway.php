@@ -169,6 +169,33 @@ final readonly class YclientsGateway implements CrmGateway
         }
     }
 
+    public function cancelBooking(CrmConnection $connection, string $externalId): BookingResult
+    {
+        $companyId = $this->companyId($connection);
+
+        Log::info('crm.yclients.cancel_request', ['company_id' => $companyId, 'record_id' => $externalId]);
+
+        try {
+            $response = $this->request($connection)->delete("{$this->apiUrl}/record/{$companyId}/{$externalId}");
+
+            Log::info('crm.yclients.cancel_response', [
+                'company_id' => $companyId,
+                'record_id' => $externalId,
+                'status' => $response->status(),
+                'body' => $response->json() ?? $response->body(),
+            ]);
+
+            $response->throw();
+
+            return BookingResult::ok($externalId);
+        } catch (Throwable $e) {
+            report($e);
+            Log::error('crm.yclients.cancel_failed', ['company_id' => $companyId, 'record_id' => $externalId, 'error' => $e->getMessage()]);
+
+            return BookingResult::failed('Не удалось отменить запись в YClients.');
+        }
+    }
+
     private function request(CrmConnection $connection): PendingRequest
     {
         return Http::withHeaders([

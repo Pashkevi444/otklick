@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $cancelled_at
  * @property ConversationOutcome|null $outcome_override
  * @property array<string, mixed>|null $booking_state
+ * @property string|null $crm_record_id
  * @property Carbon|null $last_message_at
  */
 class Conversation extends TenantOwnedModel
@@ -49,6 +50,7 @@ class Conversation extends TenantOwnedModel
         'cancelled_at',
         'outcome_override',
         'booking_state',
+        'crm_record_id',
         'last_message_at',
     ];
 

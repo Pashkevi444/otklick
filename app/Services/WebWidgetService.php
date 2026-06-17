@@ -77,7 +77,8 @@ final readonly class WebWidgetService
             // Запись оформлена — закрываем диалог и фиксируем конверсию.
             $this->conversations->markBooked($conversation);
         } elseif ($reply->cancelled) {
-            // Клиент отменил запись — закрываем диалог как отменённый.
+            // Клиент отменил запись — отменяем в CRM и закрываем диалог.
+            $this->responder->cancelBookingInCrm($conversation);
             $this->conversations->markCancelled($conversation);
         }
 

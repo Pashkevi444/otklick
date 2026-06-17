@@ -28,7 +28,7 @@ final class ReplyComposerTest extends TestCase
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection);
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
-        $messages->shouldReceive('recentForConversation')->andReturn(new Collection);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
 
         return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations());
     }

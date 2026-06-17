@@ -10,6 +10,7 @@ use App\Enums\MessageStatus;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 final class EloquentMessageRepository implements MessageRepositoryInterface
@@ -18,6 +19,19 @@ final class EloquentMessageRepository implements MessageRepositoryInterface
     {
         return Message::query()
             ->where('conversation_id', $conversation->id)
+            ->latest()
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+    }
+
+    public function recentForChat(string $channelId, string $externalChatId, int $limit): Collection
+    {
+        return Message::query()
+            ->whereHas('conversation', fn (Builder $q): Builder => $q
+                ->where('channel_id', $channelId)
+                ->where('external_chat_id', $externalChatId))
             ->latest()
             ->limit($limit)
             ->get()

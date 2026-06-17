@@ -33,10 +33,15 @@ final class FakeCrmGateway implements CrmGateway
 
     public bool $failBooking = false;
 
+    public bool $failCancel = false;
+
     public bool $throwOnServices = false;
 
     /** @var list<BookingRequest> */
     public array $createdBookings = [];
+
+    /** @var list<string> */
+    public array $cancelledRecords = [];
 
     public function provider(): CrmProvider
     {
@@ -79,5 +84,14 @@ final class FakeCrmGateway implements CrmGateway
         return $this->failBooking
             ? BookingResult::failed('CRM отказала')
             : BookingResult::ok('rec-1');
+    }
+
+    public function cancelBooking(CrmConnection $connection, string $externalId): BookingResult
+    {
+        $this->cancelledRecords[] = $externalId;
+
+        return $this->failCancel
+            ? BookingResult::failed('CRM отказала в отмене')
+            : BookingResult::ok($externalId);
     }
 }

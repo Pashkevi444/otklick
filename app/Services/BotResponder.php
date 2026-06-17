@@ -42,4 +42,12 @@ class BotResponder
 
         return $reply;
     }
+
+    /**
+     * Клиент отменяет запись ([[CANCELLED]]) — отменяем её и в CRM.
+     */
+    public function cancelBookingInCrm(Conversation $conversation): void
+    {
+        $this->booking->cancelLastBooking($conversation);
+    }
 }

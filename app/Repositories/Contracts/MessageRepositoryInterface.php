@@ -23,6 +23,15 @@ interface MessageRepositoryInterface
     public function recentForConversation(Conversation $conversation, int $limit): Collection;
 
     /**
+     * Последние сообщения ЧАТА (по каналу и external_chat_id) через все его
+     * диалоги — чтобы бот помнил прошлое общение (напр. оформленную запись) даже
+     * после закрытия диалога и старта нового. В хронологическом порядке.
+     *
+     * @return Collection<int, Message>
+     */
+    public function recentForChat(string $channelId, string $externalChatId, int $limit): Collection;
+
+    /**
      * Все сообщения диалога в хронологическом порядке (для журнала переписок).
      *
      * @return Collection<int, Message>

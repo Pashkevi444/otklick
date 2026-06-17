@@ -63,6 +63,12 @@ final class BookingFlowTest extends TestCase
                 $c->contact_name = $name;
             },
         );
+        $conversations->shouldReceive('setCrmRecordId')->andReturnUsing(
+            function (Conversation $c, ?string $id): void {
+                $c->crm_record_id = $id;
+            },
+        );
+        $conversations->shouldReceive('lastWithCrmRecordForChat')->andReturn(null)->byDefault();
 
         return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient);
     }
@@ -205,6 +211,32 @@ final class BookingFlowTest extends TestCase
         $this->assertStringContainsString('10:00', $r->text);
     }
 
+    public function test_many_slots_ask_for_time_instead_of_listing(): void
+    {
+        $crm = $this->crm();
+        $crm->slots = array_map(
+            fn (int $h): TimeSlot => new TimeSlot(sprintf('2026-06-17T%02d:00:00+07:00', $h)),
+            range(10, 20), // 11 окон
+        );
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $r = $flow->advance($this->tenant(), $c, 'завтра');
+
+        // Не вываливаем весь список — спрашиваем удобное время.
+        $this->assertStringContainsStringIgnoringCase('во сколько', $r->text);
+        $this->assertStringNotContainsString('12:00', $r->text); // полного перечня нет
+        $this->assertSame('slot', $c->booking_state['step']);
+
+        // Клиент называет время — сопоставляем с реальным слотом.
+        $r = $flow->advance($this->tenant(), $c, 'в 14:00');
+        $this->assertTrue($r->booked);
+        $this->assertSame('2026-06-17T14:00:00+07:00', $crm->createdBookings[0]->start);
+    }
+
     public function test_no_slots_asks_for_another_day(): void
     {
         $crm = $this->crm();
@@ -305,6 +337,47 @@ final class BookingFlowTest extends TestCase
         $this->assertNull($c->booking_state);
         // В статусе неудачи — телефон бизнеса для связи.
         $this->assertStringContainsString('+7 383 000-00-00', $r->text);
+    }
+
+    public function test_cancel_last_booking_cancels_in_crm(): void
+    {
+        $crm = $this->crm();
+        $connection = new CrmConnection;
+        $connection->provider = CrmProvider::Yclients;
+
+        $booked = new Conversation;
+        $booked->crm_record_id = 'rec-77';
+
+        $connections = Mockery::mock(CrmConnectionRepositoryInterface::class);
+        $connections->shouldReceive('activeForCurrentTenant')->andReturn($connection);
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('lastWithCrmRecordForChat')->once()->with('ch-1', '9001')->andReturn($booked);
+        $conversations->shouldReceive('setCrmRecordId')->once()->with($booked, null); // снят после отмены
+
+        $flow = new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, new FakeLlmClient);
+
+        $current = new Conversation;
+        $current->channel_id = 'ch-1';
+        $current->external_chat_id = '9001';
+
+        $flow->cancelLastBooking($current);
+
+        $this->assertSame(['rec-77'], $crm->cancelledRecords);
+    }
+
+    public function test_cancel_does_nothing_without_prior_record(): void
+    {
+        $crm = $this->crm();
+        $flow = $this->flow($crm); // lastWithCrmRecordForChat → null по умолчанию
+
+        $c = $this->conversation();
+        $c->channel_id = 'ch-1';
+        $c->external_chat_id = '9001';
+
+        $flow->cancelLastBooking($c);
+
+        $this->assertCount(0, $crm->cancelledRecords);
     }
 
     public function test_crm_error_on_start_escalates(): void
