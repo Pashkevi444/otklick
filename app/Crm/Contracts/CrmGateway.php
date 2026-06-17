@@ -8,6 +8,7 @@ use App\Crm\CrmGatewayResolver;
 use App\Crm\Data\BookingRequest;
 use App\Crm\Data\BookingResult;
 use App\Crm\Data\CredentialField;
+use App\Crm\Data\CrmCompany;
 use App\Crm\Data\CrmService;
 use App\Crm\Data\CrmStaff;
 use App\Crm\Data\SlotQuery;
@@ -33,6 +34,11 @@ interface CrmGateway
     public function credentialFields(): array;
 
     public function verifyConnection(CrmConnection $connection): bool;
+
+    /**
+     * Сведения о филиале/компании (для базы знаний). null — недоступно.
+     */
+    public function company(CrmConnection $connection): ?CrmCompany;
 
     /**
      * @return list<CrmService>

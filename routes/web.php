@@ -15,6 +15,7 @@ use App\Http\Controllers\Cabinet\BusinessOverviewController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\ConversationController;
+use App\Http\Controllers\Cabinet\CrmKnowledgeController;
 use App\Http\Controllers\Cabinet\DashboardController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
@@ -115,6 +116,10 @@ $onDomain(config('app.business_domain'), function (): void {
                 ->name('integrations.store');
             Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
             Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
+
+            // База знаний из CRM (нередактируемая, выгружается фоновой задачей).
+            Route::get('/knowledge-crm', [CrmKnowledgeController::class, 'index'])->name('knowledge.crm');
+            Route::post('/knowledge-crm/sync', [CrmKnowledgeController::class, 'sync'])->name('knowledge.crm.sync');
         });
     });
 

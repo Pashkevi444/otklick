@@ -12,6 +12,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 
@@ -38,6 +39,7 @@ class ReplyComposer
         private readonly KnowledgeEntryRepositoryInterface $knowledge,
         private readonly MessageRepositoryInterface $messages,
         private readonly ConversationRepositoryInterface $conversations,
+        private readonly CrmKnowledgeRepositoryInterface $crmKnowledge,
     ) {}
 
     public function compose(Tenant $tenant, Conversation $conversation, bool $bookingEnabled = false): BotReply
@@ -49,6 +51,7 @@ class ReplyComposer
             $profile,
             $this->knowledge->publishedForCurrentTenant(),
             $bookingEnabled,
+            $this->crmKnowledge->forCurrentTenant(),
         );
 
         $answer = trim($this->llm->generate($systemPrompt, $this->history($conversation)));

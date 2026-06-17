@@ -8,6 +8,7 @@ use App\Llm\Contracts\LlmClient;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\PromptBuilder;
@@ -30,7 +31,10 @@ final class ReplyComposerTest extends TestCase
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
 
-        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations());
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+
+        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations(), $crmKnowledge);
     }
 
     /**

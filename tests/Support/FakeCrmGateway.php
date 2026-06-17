@@ -8,6 +8,7 @@ use App\Crm\Contracts\CrmGateway;
 use App\Crm\Data\BookingRequest;
 use App\Crm\Data\BookingResult;
 use App\Crm\Data\CredentialField;
+use App\Crm\Data\CrmCompany;
 use App\Crm\Data\CrmService;
 use App\Crm\Data\CrmStaff;
 use App\Crm\Data\SlotQuery;
@@ -53,9 +54,16 @@ final class FakeCrmGateway implements CrmGateway
         return [new CredentialField('company_id', 'ID филиала')];
     }
 
+    public ?CrmCompany $company = null;
+
     public function verifyConnection(CrmConnection $connection): bool
     {
         return true;
+    }
+
+    public function company(CrmConnection $connection): ?CrmCompany
+    {
+        return $this->company;
     }
 
     public function services(CrmConnection $connection): array

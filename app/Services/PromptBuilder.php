@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\BusinessProfile;
+use App\Models\CrmKnowledgeEntry;
 use App\Models\KnowledgeEntry;
 use Illuminate\Support\Collection;
 
@@ -35,8 +36,11 @@ final class PromptBuilder
      * @param  bool  $bookingEnabled  подключена ли у тенанта CRM с автозаписью
      *                                (тогда вместо «фиктивной» записи бот передаёт
      *                                диалог пошаговому мастеру записи через [[BOOK]]).
+     * @param  Collection<int, CrmKnowledgeEntry>|null  $crmEntries  справочник из CRM
+     *                                                               (услуги/цены/мастера/филиал) — приоритетнее
+     *                                                               клиентской базы при расхождении.
      */
-    public function build(string $businessName, BusinessProfile $profile, Collection $entries, bool $bookingEnabled = false): string
+    public function build(string $businessName, BusinessProfile $profile, Collection $entries, bool $bookingEnabled = false, ?Collection $crmEntries = null): string
     {
         $sections = [];
 
@@ -80,6 +84,13 @@ final class PromptBuilder
 
         if ($profile->escalationNote !== null && $profile->escalationNote !== '') {
             $sections[] = 'Передавай вопрос администратору (верни '.self::ESCALATE.') в этих случаях: '.$profile->escalationNote;
+        }
+
+        // Справочник из CRM — приоритетный источник (актуальные услуги/цены/мастера).
+        if ($crmEntries !== null && $crmEntries->isNotEmpty()) {
+            $sections[] = 'Данные из системы записи (CRM) — самые актуальные. При расхождении с остальными сведениями '.
+                "считай верными именно их:\n".
+                $crmEntries->map(fn (CrmKnowledgeEntry $e): string => '• '.$e->title.': '.$e->content)->implode("\n");
         }
 
         $sections[] = $entries->isEmpty()

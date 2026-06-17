@@ -83,7 +83,7 @@ const disconnect = (id: string): void => {
                         <dt class="text-slate-500">Подключён</dt>
                         <dd class="font-medium">{{ integration.connection.connected_at }}</dd>
                     </dl>
-                    <div class="flex gap-3">
+                    <div class="flex flex-wrap items-center gap-3">
                         <button
                             type="button"
                             class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -91,6 +91,12 @@ const disconnect = (id: string): void => {
                         >
                             Проверить связь
                         </button>
+                        <a
+                            href="/cabinet/knowledge-crm"
+                            class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5"
+                        >
+                            📚 База знаний из CRM
+                        </a>
                         <button
                             type="button"
                             class="text-sm text-red-600 hover:underline"

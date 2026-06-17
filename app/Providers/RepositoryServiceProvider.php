@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\EmailChangeCodeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
@@ -19,6 +20,7 @@ use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentChannelRepository;
 use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
+use App\Repositories\Eloquent\EloquentCrmKnowledgeRepository;
 use App\Repositories\Eloquent\EloquentEmailChangeCodeRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
 use App\Repositories\Eloquent\EloquentLeadAnalyticsRepository;
@@ -47,6 +49,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         LeadAnalyticsRepositoryInterface::class => EloquentLeadAnalyticsRepository::class,
         NotificationRecipientRepositoryInterface::class => EloquentNotificationRecipientRepository::class,
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
+        CrmKnowledgeRepositoryInterface::class => EloquentCrmKnowledgeRepository::class,
         EmailChangeCodeRepositoryInterface::class => EloquentEmailChangeCodeRepository::class,
         SiteSettingsRepositoryInterface::class => EloquentSiteSettingsRepository::class,
         PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,

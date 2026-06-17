@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\DTO\BusinessProfile;
+use App\Models\CrmKnowledgeEntry;
 use App\Models\KnowledgeEntry;
 use App\Services\PromptBuilder;
 use Illuminate\Support\Collection;
@@ -55,6 +56,18 @@ final class PromptBuilderTest extends TestCase
         $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, $entries);
 
         $this->assertStringContainsString('Прайс-лист — https://ex.com/p', $prompt);
+    }
+
+    public function test_crm_knowledge_is_included_as_priority_source(): void
+    {
+        $crm = new Collection([
+            new CrmKnowledgeEntry(['category' => 'service', 'title' => 'Стрижка', 'content' => 'Стрижка — 1500 ₽']),
+        ]);
+
+        $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection, false, $crm);
+
+        $this->assertStringContainsString('из системы записи', mb_strtolower($prompt));
+        $this->assertStringContainsString('• Стрижка: Стрижка — 1500 ₽', $prompt);
     }
 
     public function test_handles_empty_knowledge_base(): void

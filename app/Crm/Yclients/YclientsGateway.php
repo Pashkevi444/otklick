@@ -8,6 +8,7 @@ use App\Crm\Contracts\CrmGateway;
 use App\Crm\Data\BookingRequest;
 use App\Crm\Data\BookingResult;
 use App\Crm\Data\CredentialField;
+use App\Crm\Data\CrmCompany;
 use App\Crm\Data\CrmService;
 use App\Crm\Data\CrmStaff;
 use App\Crm\Data\SlotQuery;
@@ -67,6 +68,33 @@ final readonly class YclientsGateway implements CrmGateway
             Log::warning('crm.yclients.verify_failed', ['company_id' => $this->companyId($connection), 'error' => $e->getMessage()]);
 
             return false;
+        }
+    }
+
+    public function company(CrmConnection $connection): ?CrmCompany
+    {
+        try {
+            $data = $this->request($connection)
+                ->get("{$this->apiUrl}/company/{$this->companyId($connection)}")
+                ->throw()
+                ->json('data', []);
+
+            Log::info('crm.yclients.company', ['company_id' => $this->companyId($connection), 'ok' => $data !== []]);
+
+            if (! is_array($data) || $data === []) {
+                return null;
+            }
+
+            return new CrmCompany(
+                title: (string) ($data['title'] ?? $data['public_title'] ?? 'Филиал'),
+                address: isset($data['address']) ? (string) $data['address'] : null,
+                phone: isset($data['phone']) ? (string) $data['phone'] : null,
+            );
+        } catch (Throwable $e) {
+            report($e);
+            Log::warning('crm.yclients.company_failed', ['company_id' => $this->companyId($connection), 'error' => $e->getMessage()]);
+
+            return null;
         }
     }
 

@@ -138,6 +138,9 @@ HTTP / Console / Job  →  Service (бизнес-логика)  →  Repository 
 | `App\Enums\CrmProvider` | CRM-провайдер (`yclients`; расширяется). |
 | `App\Crm\Contracts\CrmGateway` | Стратегия CRM (verify + услуги/мастера/слоты/создание и отмена записи; DTO в `App\Crm\Data`). Реестр стратегий `CrmGatewayResolver` по тегу `crm.gateways` — новый CRM = новый адаптер. Реализация: `App\Crm\Yclients\YclientsGateway`. |
 | `App\Services\CrmConnectionService` | Подключение/проверка/отключение CRM + делегирование booking-операций (таб «Интеграции»). |
+| `App\Services\CrmKnowledgeSyncService` + `App\Jobs\SyncCrmKnowledge` | Фоновая выгрузка справочника CRM (услуги+цены, мастера, филиал; слоты НЕ выгружаются — они реал-тайм) в отдельную нередактируемую базу знаний `crm_knowledge_entries`. Кнопка в кабинете вешает задачу на очередь (Horizon); выгрузка `replaceForCurrentTenant` атомарна (delete+insert). Клиентская БЗ (`knowledge_entries`) не трогается. |
+| `App\Models\CrmKnowledgeEntry` (`crm_knowledge_entries`, RLS) | Нередактируемая запись из CRM (категория `service`/`staff`/`company`). В промпте бота — приоритетный источник: при расхождении с клиентской БЗ верны данные CRM (актуальнее). |
+| `App\Http\Controllers\Cabinet\CrmKnowledgeController` | Вкладка «База знаний из CRM» (`GET /cabinet/knowledge-crm`, только чтение, сгруппировано) + запуск выгрузки (`POST /cabinet/knowledge-crm/sync`). Гейт `plan:crm` («Макс»). |
 | `App\Channels\Contracts\MessengerGateway` | Порт отправки в мессенджер (реализация `App\Channels\Telegram\TelegramGateway`). |
 | `App\Jobs\ProcessTelegramUpdate` | Асинхронный разбор апдейта в тенант-контексте (Horizon). |
 | `App\Tenancy\TenantInitializer` | Единая точка входа в тенант-контекст (in-memory + `app.current_tenant` для RLS). |
