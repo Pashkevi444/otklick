@@ -13,6 +13,7 @@ use App\Http\Requests\Admin\UpdateTenantRequest;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Services\BusinessProvisioningService;
 use App\Services\TenantService;
 use App\Services\UserService;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +30,7 @@ final class TenantController extends Controller
         private readonly TenantRepositoryInterface $tenants,
         private readonly TenantService $tenantService,
         private readonly UserService $users,
+        private readonly BusinessProvisioningService $provisioning,
     ) {}
 
     public function index(): Response
@@ -41,14 +43,11 @@ final class TenantController extends Controller
 
     public function store(StoreTenantRequest $request): RedirectResponse
     {
-        $tenant = $this->tenantService->register(
+        // Тенант + владелец создаются атомарно (см. BusinessProvisioningService).
+        $tenant = $this->provisioning->createWithOwner(
             (string) $request->string('name'),
             TenantPlan::from((string) $request->string('plan')),
             $request->input('access_expires_at'),
-        );
-
-        $this->users->createOwner(
-            $tenant,
             (string) $request->string('owner_name'),
             (string) $request->string('owner_email'),
             (string) $request->string('owner_password'),
