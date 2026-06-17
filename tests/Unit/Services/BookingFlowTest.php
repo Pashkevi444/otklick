@@ -11,6 +11,7 @@ use App\Crm\Data\TimeSlot;
 use App\Enums\CrmProvider;
 use App\Models\Conversation;
 use App\Models\CrmConnection;
+use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Services\BookingFlow;
@@ -68,6 +69,11 @@ final class BookingFlowTest extends TestCase
         return $c;
     }
 
+    private function tenant(): Tenant
+    {
+        return new Tenant(['name' => 'Барбершоп', 'settings' => ['profile' => ['phone' => '+7 383 000-00-00']]]);
+    }
+
     private function crm(): FakeCrmGateway
     {
         $crm = new FakeCrmGateway;
@@ -86,7 +92,7 @@ final class BookingFlowTest extends TestCase
 
     public function test_start_returns_null_without_connection(): void
     {
-        $this->assertNull($this->flow($this->crm(), connected: false)->start($this->conversation()));
+        $this->assertNull($this->flow($this->crm(), connected: false)->start($this->tenant(), $this->conversation()));
     }
 
     public function test_full_happy_path_creates_booking(): void
@@ -95,22 +101,22 @@ final class BookingFlowTest extends TestCase
         $flow = $this->flow($crm);
         $c = $this->conversation();
 
-        $r = $flow->start($c);
+        $r = $flow->start($this->tenant(), $c);
         $this->assertStringContainsString('Маникюр', $r->text);
         $this->assertStringContainsString('Педикюр', $r->text);
 
-        $r = $flow->advance($c, '1'); // Маникюр
+        $r = $flow->advance($this->tenant(), $c, '1'); // Маникюр
         $this->assertStringContainsString('Анна', $r->text);
         $this->assertStringContainsString('Любой', $r->text);
 
-        $r = $flow->advance($c, '2'); // первый мастер (1 = «любой»)
+        $r = $flow->advance($this->tenant(), $c, '2'); // первый мастер (1 = «любой»)
         $this->assertStringContainsStringIgnoringCase('день', $r->text);
 
-        $r = $flow->advance($c, 'завтра'); // 2026-06-17, есть слоты
+        $r = $flow->advance($this->tenant(), $c, 'завтра'); // 2026-06-17, есть слоты
         $this->assertStringContainsString('10:00', $r->text);
         $this->assertStringContainsString('11:30', $r->text);
 
-        $r = $flow->advance($c, '1'); // 10:00
+        $r = $flow->advance($this->tenant(), $c, '1'); // 10:00
 
         $this->assertTrue($r->booked);
         $this->assertFalse($r->escalate);
@@ -129,7 +135,7 @@ final class BookingFlowTest extends TestCase
         $crm->services = [new CrmService('s1', 'Стрижка')];
         $c = $this->conversation();
 
-        $r = $this->flow($crm)->start($c);
+        $r = $this->flow($crm)->start($this->tenant(), $c);
 
         // Сразу шаг мастера, а не выбора услуги.
         $this->assertSame('staff', $c->booking_state['step']);
@@ -142,11 +148,11 @@ final class BookingFlowTest extends TestCase
         $flow = $this->flow($crm);
         $c = $this->conversation();
 
-        $flow->start($c);
-        $flow->advance($c, '1');      // услуга
-        $flow->advance($c, 'любой');  // мастер: «Любой свободный»
-        $flow->advance($c, 'завтра');
-        $flow->advance($c, '1');
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');      // услуга
+        $flow->advance($this->tenant(), $c, 'любой');  // мастер: «Любой свободный»
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $flow->advance($this->tenant(), $c, '1');
 
         $this->assertSame('0', $crm->createdBookings[0]->staffId);
     }
@@ -158,10 +164,10 @@ final class BookingFlowTest extends TestCase
         $flow = $this->flow($crm);
         $c = $this->conversation();
 
-        $flow->start($c);
-        $flow->advance($c, '1');
-        $flow->advance($c, '2');
-        $r = $flow->advance($c, 'завтра');
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $r = $flow->advance($this->tenant(), $c, 'завтра');
 
         $this->assertStringContainsStringIgnoringCase('нет свободного', $r->text);
         $this->assertSame('date', $c->booking_state['step']); // остаёмся на дне
@@ -174,16 +180,16 @@ final class BookingFlowTest extends TestCase
         $flow = $this->flow($crm);
         $c = $this->conversation(phone: null);
 
-        $flow->start($c);
-        $flow->advance($c, '1');
-        $flow->advance($c, '2');
-        $flow->advance($c, 'завтра');
-        $r = $flow->advance($c, '1'); // слот выбран, телефона нет
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '1'); // слот выбран, телефона нет
         $this->assertStringContainsStringIgnoringCase('телефон', $r->text);
         $this->assertSame('contact', $c->booking_state['step']);
         $this->assertCount(0, $crm->createdBookings);
 
-        $r = $flow->advance($c, 'мой номер +7 999 123-45-67');
+        $r = $flow->advance($this->tenant(), $c, 'мой номер +7 999 123-45-67');
         $this->assertTrue($r->booked);
         $this->assertCount(1, $crm->createdBookings);
         $this->assertSame('+79991234567', $crm->createdBookings[0]->clientPhone);
@@ -196,15 +202,17 @@ final class BookingFlowTest extends TestCase
         $flow = $this->flow($crm);
         $c = $this->conversation();
 
-        $flow->start($c);
-        $flow->advance($c, '1');
-        $flow->advance($c, '2');
-        $flow->advance($c, 'завтра');
-        $r = $flow->advance($c, '1');
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '1');
 
         $this->assertTrue($r->escalate);
         $this->assertFalse($r->booked);
         $this->assertNull($c->booking_state);
+        // В статусе неудачи — телефон бизнеса для связи.
+        $this->assertStringContainsString('+7 383 000-00-00', $r->text);
     }
 
     public function test_crm_error_on_start_escalates(): void
@@ -213,7 +221,7 @@ final class BookingFlowTest extends TestCase
         $crm->throwOnServices = true;
         $c = $this->conversation();
 
-        $r = $this->flow($crm)->start($c);
+        $r = $this->flow($crm)->start($this->tenant(), $c);
 
         $this->assertNotNull($r);
         $this->assertTrue($r->escalate);

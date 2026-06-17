@@ -12,9 +12,11 @@ use App\Crm\Data\CrmStaff;
 use App\Crm\Data\SlotQuery;
 use App\Crm\Data\TimeSlot;
 use App\DTO\BotReply;
+use App\DTO\BusinessProfile;
 use App\Enums\BookingStep;
 use App\Models\Conversation;
 use App\Models\CrmConnection;
+use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Support\PhoneExtractor;
@@ -58,7 +60,7 @@ class BookingFlow
      * (нет подключения) — тогда вызывающий слой откатывается на обычное
      * поведение/эскалацию.
      */
-    public function start(Conversation $conversation): ?BotReply
+    public function start(Tenant $tenant, Conversation $conversation): ?BotReply
     {
         $connection = $this->connections->activeForCurrentTenant();
 
@@ -73,11 +75,11 @@ class BookingFlow
         } catch (Throwable $e) {
             report($e);
 
-            return $this->abort($conversation);
+            return $this->abort($tenant, $conversation);
         }
 
         if ($services === []) {
-            return $this->abort($conversation);
+            return $this->abort($tenant, $conversation);
         }
 
         if (count($services) === 1) {
@@ -93,24 +95,24 @@ class BookingFlow
         $state = ['step' => BookingStep::Service->value, 'options' => $this->serviceOptions($services)];
         $this->conversations->setBookingState($conversation, $state);
 
-        return $this->ask($this->menu('Какую услугу вы хотите записать?', $state['options']));
+        return $this->ask("Отлично, запишу вас! 💈\n".$this->menu('Какую услугу вы хотите?', $state['options']));
     }
 
     /**
      * Обрабатывает очередное сообщение клиента в активном сценарии записи.
      */
-    public function advance(Conversation $conversation, string $text): BotReply
+    public function advance(Tenant $tenant, Conversation $conversation, string $text): BotReply
     {
         $state = $conversation->booking_state;
 
         if (! is_array($state) || $state === []) {
-            return $this->abort($conversation);
+            return $this->abort($tenant, $conversation);
         }
 
         $connection = $this->connections->activeForCurrentTenant();
 
         if ($connection === null) {
-            return $this->abort($conversation);
+            return $this->abort($tenant, $conversation);
         }
 
         $gateway = $this->gateways->for($connection->provider);
@@ -120,13 +122,13 @@ class BookingFlow
                 BookingStep::Service => $this->onService($conversation, $state, $text, $connection, $gateway),
                 BookingStep::Staff => $this->onStaff($conversation, $state, $text, $connection, $gateway),
                 BookingStep::Date => $this->onDate($conversation, $state, $text, $connection, $gateway),
-                BookingStep::Slot => $this->onSlot($conversation, $state, $text, $connection, $gateway),
-                BookingStep::Contact => $this->onContact($conversation, $state, $text, $connection, $gateway),
+                BookingStep::Slot => $this->onSlot($tenant, $conversation, $state, $text, $connection, $gateway),
+                BookingStep::Contact => $this->onContact($tenant, $conversation, $state, $text, $connection, $gateway),
             };
         } catch (Throwable $e) {
             report($e);
 
-            return $this->abort($conversation);
+            return $this->abort($tenant, $conversation);
         }
     }
 
@@ -183,7 +185,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function onSlot(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onSlot(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
         $choice = $this->match($state['options'] ?? [], $text);
 
@@ -201,13 +203,13 @@ class BookingFlow
             return $this->ask('Отлично! Оставьте, пожалуйста, номер телефона для записи — например, +7 999 123-45-67.');
         }
 
-        return $this->book($conversation, $state, $connection, $gateway);
+        return $this->book($tenant, $conversation, $state, $connection, $gateway);
     }
 
     /**
      * @param  array<string, mixed>  $state
      */
-    private function onContact(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onContact(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
         $phone = PhoneExtractor::fromText($text);
 
@@ -217,7 +219,7 @@ class BookingFlow
 
         $this->conversations->setContactPhone($conversation, $phone);
 
-        return $this->book($conversation, $state, $connection, $gateway);
+        return $this->book($tenant, $conversation, $state, $connection, $gateway);
     }
 
     /**
@@ -283,7 +285,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function book(Conversation $conversation, array $state, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function book(Tenant $tenant, Conversation $conversation, array $state, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
         $result = $gateway->createBooking($connection, new BookingRequest(
             serviceId: (string) $state['service_id'],
@@ -295,9 +297,11 @@ class BookingFlow
 
         $this->conversations->setBookingState($conversation, null);
 
+        // Запись не удалась: честно сообщаем, даём телефон бизнеса и эскалируем —
+        // администратор увидит обращение и оформит вручную.
         if (! $result->success) {
             return new BotReply(
-                'Не получилось оформить запись автоматически — передаю администратору, он свяжется с вами.',
+                $this->withPhone('К сожалению, не получилось оформить запись автоматически. 😔 Я уже передал заявку администратору — он скоро свяжется с вами и поможет записаться.', $tenant),
                 escalate: true,
             );
         }
@@ -316,22 +320,35 @@ class BookingFlow
             ? " к мастеру {$state['staff_name']}"
             : '';
 
-        return "Готово! Записал вас: {$state['service_title']}{$master}, {$date} в {$time}. Будем ждать!";
+        return "✅ Готово, записал вас! {$state['service_title']}{$master}, {$date} в {$time}. Будем ждать вас! Если планы изменятся — напишите нам.";
     }
 
     /**
-     * Прерывает сценарий: чистит состояние и эскалирует на администратора.
+     * Прерывает сценарий: чистит состояние, даёт телефон бизнеса и эскалирует на
+     * администратора.
      */
-    private function abort(Conversation $conversation): BotReply
+    private function abort(Tenant $tenant, Conversation $conversation): BotReply
     {
         if (is_array($conversation->booking_state)) {
             $this->conversations->setBookingState($conversation, null);
         }
 
         return new BotReply(
-            'Секунду — передаю ваш запрос администратору, он поможет с записью.',
+            $this->withPhone('Секунду — передаю ваш запрос администратору, он поможет с записью.', $tenant),
             escalate: true,
         );
+    }
+
+    /**
+     * Добавляет к сообщению телефон бизнеса для прямой связи, если он указан.
+     */
+    private function withPhone(string $text, Tenant $tenant): string
+    {
+        $phone = BusinessProfile::fromArray($tenant->settings['profile'] ?? [])->phone;
+
+        return $phone !== null && $phone !== ''
+            ? $text." Если удобнее — позвоните нам: {$phone}."
+            : $text;
     }
 
     private function ask(string $text): BotReply

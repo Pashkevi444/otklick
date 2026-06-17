@@ -30,13 +30,13 @@ class BotResponder
         $state = $conversation->booking_state;
 
         if (is_array($state) && $state !== []) {
-            return $this->booking->advance($conversation, $text);
+            return $this->booking->advance($tenant, $conversation, $text);
         }
 
         $reply = $this->composer->compose($tenant, $conversation, $this->booking->isAvailable());
 
         if ($reply->startBooking) {
-            return $this->booking->start($conversation)
+            return $this->booking->start($tenant, $conversation)
                 ?? new BotReply($reply->text, escalate: true);
         }
 

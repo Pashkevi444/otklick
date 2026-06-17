@@ -29,7 +29,7 @@ final class BotResponderTest extends TestCase
         $conversation->booking_state = ['step' => 'service'];
 
         $booking = Mockery::mock(BookingFlow::class);
-        $booking->shouldReceive('advance')->once()->with($conversation, 'хочу 1')
+        $booking->shouldReceive('advance')->once()->with(Mockery::type(Tenant::class), $conversation, 'хочу 1')
             ->andReturn(new BotReply('шаг записи', escalate: false));
 
         $composer = Mockery::mock(ReplyComposer::class);
@@ -46,7 +46,7 @@ final class BotResponderTest extends TestCase
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('isAvailable')->once()->andReturnTrue();
-        $booking->shouldReceive('start')->once()->with($conversation)
+        $booking->shouldReceive('start')->once()->with(Mockery::type(Tenant::class), $conversation)
             ->andReturn(new BotReply('Какую услугу?', escalate: false));
 
         $composer = Mockery::mock(ReplyComposer::class);
