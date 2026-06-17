@@ -14,6 +14,7 @@ use App\Crm\Data\TimeSlot;
 use App\DTO\BotReply;
 use App\DTO\BusinessProfile;
 use App\Enums\BookingStep;
+use App\Llm\Contracts\LlmClient;
 use App\Models\Conversation;
 use App\Models\CrmConnection;
 use App\Models\Tenant;
@@ -22,6 +23,7 @@ use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Support\PhoneExtractor;
 use App\Support\RussianDateParser;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -47,6 +49,7 @@ class BookingFlow
         private readonly CrmConnectionRepositoryInterface $connections,
         private readonly CrmGatewayResolver $gateways,
         private readonly ConversationRepositoryInterface $conversations,
+        private readonly LlmClient $llm,
     ) {}
 
     /** Доступна ли автозапись тенанту (есть активное CRM-подключение). */
@@ -65,6 +68,8 @@ class BookingFlow
         $connection = $this->connections->activeForCurrentTenant();
 
         if ($connection === null) {
+            $this->log('start.no_connection', $conversation);
+
             return null;
         }
 
@@ -72,8 +77,10 @@ class BookingFlow
 
         try {
             $services = $gateway->services($connection);
+            $this->log('start', $conversation, ['provider' => $connection->provider->value, 'services' => count($services)]);
         } catch (Throwable $e) {
             report($e);
+            $this->log('start.services_failed', $conversation, ['error' => $e->getMessage()]);
 
             return $this->abort($tenant, $conversation);
         }
@@ -116,9 +123,11 @@ class BookingFlow
         }
 
         $gateway = $this->gateways->for($connection->provider);
+        $step = BookingStep::from((string) $state['step']);
+        $this->log('advance', $conversation, ['step' => $step->value, 'text' => $text]);
 
         try {
-            return match (BookingStep::from((string) $state['step'])) {
+            return match ($step) {
                 BookingStep::Service => $this->onService($conversation, $state, $text, $connection, $gateway),
                 BookingStep::Staff => $this->onStaff($conversation, $state, $text, $connection, $gateway),
                 BookingStep::Date => $this->onDate($conversation, $state, $text, $connection, $gateway),
@@ -127,6 +136,7 @@ class BookingFlow
             };
         } catch (Throwable $e) {
             report($e);
+            $this->log('advance.failed', $conversation, ['step' => $step->value, 'error' => $e->getMessage()]);
 
             return $this->abort($tenant, $conversation);
         }
@@ -137,10 +147,10 @@ class BookingFlow
      */
     private function onService(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
-        $choice = $this->match($state['options'] ?? [], $text);
+        $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
         if ($choice === null) {
-            return $this->ask($this->menu('Не понял, выберите услугу номером:', $state['options'] ?? []));
+            return $this->ask($this->menu('Уточните, пожалуйста, какую услугу — можно номером:', $state['options'] ?? []));
         }
 
         $state['service_id'] = $choice['id'];
@@ -154,10 +164,10 @@ class BookingFlow
      */
     private function onStaff(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
-        $choice = $this->match($state['options'] ?? [], $text);
+        $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
         if ($choice === null) {
-            return $this->ask($this->menu('Не понял, выберите мастера номером:', $state['options'] ?? []));
+            return $this->ask($this->menu('Уточните, пожалуйста, к какому мастеру — можно номером:', $state['options'] ?? []));
         }
 
         $state['staff_id'] = $choice['id'];
@@ -171,10 +181,12 @@ class BookingFlow
      */
     private function onDate(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
-        $date = RussianDateParser::parse($text, Carbon::now());
+        // Сначала детерминированный разбор, затем — ИИ для свободных формулировок
+        // («на следующей неделе в среду», «через пару дней»).
+        $date = RussianDateParser::parse($text, Carbon::now()) ?? $this->parseDateWithLlm($text, Carbon::now());
 
         if ($date === null) {
-            return $this->ask('Не понял дату. Напишите, пожалуйста, например «завтра» или «18.06».');
+            return $this->ask('Подскажите, пожалуйста, день записи — например, «завтра», «в субботу» или «18.06».');
         }
 
         $state['date'] = $date;
@@ -187,20 +199,21 @@ class BookingFlow
      */
     private function onSlot(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
-        $choice = $this->match($state['options'] ?? [], $text);
+        $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
         if ($choice === null) {
-            return $this->ask($this->menu('Не понял, выберите время номером:', $state['options'] ?? []));
+            return $this->ask($this->menu('Уточните, пожалуйста, время — можно номером:', $state['options'] ?? []));
         }
 
         $state['slot'] = $choice['id'];
 
-        if ($conversation->contact_phone === null || $conversation->contact_phone === '') {
+        // Перед записью обязательно имя и телефон.
+        if (! $this->hasName($conversation) || ! $this->hasPhone($conversation)) {
             $state['step'] = BookingStep::Contact->value;
             unset($state['options']);
             $this->conversations->setBookingState($conversation, $state);
 
-            return $this->ask('Отлично! Оставьте, пожалуйста, номер телефона для записи — например, +7 999 123-45-67.');
+            return $this->ask($this->contactPrompt($conversation));
         }
 
         return $this->book($tenant, $conversation, $state, $connection, $gateway);
@@ -211,13 +224,36 @@ class BookingFlow
      */
     private function onContact(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
-        $phone = PhoneExtractor::fromText($text);
-
-        if ($phone === null) {
-            return $this->ask('Не вижу номера телефона. Напишите его, пожалуйста — например, +7 999 123-45-67.');
+        // Имя/телефон мог уже распознать ContactCapture (ИИ) в вызывающем слое;
+        // здесь — детерминированный фолбэк, чтобы запись точно получила оба поля.
+        if (! $this->hasPhone($conversation)) {
+            $phone = PhoneExtractor::fromText($text);
+            if ($phone !== null) {
+                $this->conversations->setContactPhone($conversation, $phone);
+            }
         }
 
-        $this->conversations->setContactPhone($conversation, $phone);
+        if (! $this->hasName($conversation)) {
+            $name = $this->extractName($text);
+            if ($name !== null) {
+                $this->conversations->setContactName($conversation, $name);
+            }
+        }
+
+        // Чего-то всё ещё не хватает — переспрашиваем, но не зацикливаемся:
+        // после нескольких попыток передаём администратору.
+        if (! $this->hasName($conversation) || ! $this->hasPhone($conversation)) {
+            $attempts = (int) ($state['contact_attempts'] ?? 0) + 1;
+
+            if ($attempts >= 3) {
+                return $this->abort($tenant, $conversation);
+            }
+
+            $state['contact_attempts'] = $attempts;
+            $this->conversations->setBookingState($conversation, $state);
+
+            return $this->ask($this->contactPrompt($conversation));
+        }
 
         return $this->book($tenant, $conversation, $state, $connection, $gateway);
     }
@@ -266,6 +302,7 @@ class BookingFlow
             date: (string) $state['date'],
             serviceId: $state['service_id'] ?? null,
         ));
+        $this->log('slots', $conversation, ['date' => $state['date'], 'staff_id' => $state['staff_id'], 'count' => count($slots)]);
 
         if ($slots === []) {
             $state['step'] = BookingStep::Date->value;
@@ -287,6 +324,12 @@ class BookingFlow
      */
     private function book(Tenant $tenant, Conversation $conversation, array $state, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
+        $this->log('create_request', $conversation, [
+            'service_id' => $state['service_id'] ?? null,
+            'staff_id' => $state['staff_id'] ?? null,
+            'slot' => $state['slot'] ?? null,
+        ]);
+
         $result = $gateway->createBooking($connection, new BookingRequest(
             serviceId: (string) $state['service_id'],
             staffId: (string) $state['staff_id'],
@@ -296,6 +339,11 @@ class BookingFlow
         ));
 
         $this->conversations->setBookingState($conversation, null);
+        $this->log('create_result', $conversation, [
+            'success' => $result->success,
+            'external_id' => $result->externalId,
+            'message' => $result->message,
+        ]);
 
         // Запись не удалась: честно сообщаем, даём телефон бизнеса и эскалируем —
         // администратор увидит обращение и оформит вручную.
@@ -351,9 +399,143 @@ class BookingFlow
             : $text;
     }
 
+    /** Есть ли у клиента указанное имя (а не плейсхолдер «Гость»). */
+    private function hasName(Conversation $conversation): bool
+    {
+        $name = $conversation->contact_name;
+
+        return $name !== null && $name !== '' && ! in_array($name, ['Гость', 'Гость сайта'], true);
+    }
+
+    private function hasPhone(Conversation $conversation): bool
+    {
+        return $conversation->contact_phone !== null && $conversation->contact_phone !== '';
+    }
+
+    /** Запрос недостающих контактов (имя и/или телефон) для записи. */
+    private function contactPrompt(Conversation $conversation): string
+    {
+        $needName = ! $this->hasName($conversation);
+        $needPhone = ! $this->hasPhone($conversation);
+
+        if ($needName && $needPhone) {
+            return 'Чтобы записать вас, подскажите, пожалуйста, как вас зовут и оставьте номер телефона для связи (например, Павел, +7 999 123-45-67).';
+        }
+
+        if ($needName) {
+            return 'Как вас зовут? Имя нужно для записи.';
+        }
+
+        return 'Оставьте, пожалуйста, номер телефона для записи — например, +7 999 123-45-67.';
+    }
+
+    /**
+     * Детерминированный фолбэк извлечения имени из ответа на вопрос «Как вас
+     * зовут?»: убираем телефон и вводные слова, берём оставшееся имя.
+     */
+    private function extractName(string $text): ?string
+    {
+        // Убираем телефоноподобные последовательности.
+        $t = (string) preg_replace('/[\d\-+()]{5,}/u', ' ', $text);
+        // Убираем вводные («меня зовут», «зовут», «это», «я»).
+        $t = (string) preg_replace('/\b(меня\s+зовут|зовут|это|я)\b/iu', ' ', $t);
+        $t = trim((string) preg_replace('/[^\p{L}\s-]+/u', ' ', $t));
+
+        if (preg_match('/\p{L}[\p{L}-]+(?:\s+\p{L}[\p{L}-]+)?/u', $t, $m) !== 1) {
+            return null;
+        }
+
+        return mb_convert_case(trim($m[0]), MB_CASE_TITLE, 'UTF-8');
+    }
+
     private function ask(string $text): BotReply
     {
         return new BotReply($text, escalate: false);
+    }
+
+    /**
+     * Распознаёт выбор клиента: сначала детерминированно (номер/совпадение
+     * названия), затем — ИИ для свободных формулировок («давайте к савелию»,
+     * «можно фейд»). Возвращает выбранный пункт или null.
+     *
+     * @param  list<array{id: string, title: string}>  $options
+     * @return array{id: string, title: string}|null
+     */
+    private function resolveChoice(array $options, string $text): ?array
+    {
+        return $this->match($options, $text) ?? $this->matchWithLlm($options, $text);
+    }
+
+    /**
+     * ИИ-резолвер: просим модель выбрать номер пункта по свободному ответу.
+     * Возвращает пункт или null (в т.ч. при сбое LLM или «ничего не подходит»).
+     *
+     * @param  list<array{id: string, title: string}>  $options
+     * @return array{id: string, title: string}|null
+     */
+    private function matchWithLlm(array $options, string $text): ?array
+    {
+        if ($options === []) {
+            return null;
+        }
+
+        $system = 'Клиент выбирает один пункт из списка. Верни ТОЛЬКО номер подходящего пункта одной цифрой. '
+            ."Если явно ничего не подходит — верни 0.\nСписок:\n".$this->menu('', $options);
+
+        try {
+            $answer = $this->llm->generate($system, [['role' => 'user', 'content' => $text]]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        if (preg_match('/\d+/', $answer, $m) === 1) {
+            $i = (int) $m[0];
+
+            if ($i >= 1 && $i <= count($options)) {
+                return $options[$i - 1];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ИИ-фолбэк разбора даты, когда детерминированный парсер не справился.
+     * Возвращает дату Y-m-d или null.
+     */
+    private function parseDateWithLlm(string $text, Carbon $today): ?string
+    {
+        $system = "Сегодня {$today->format('Y-m-d')}. Клиент называет желаемый день записи. "
+            .'Верни дату СТРОГО в формате YYYY-MM-DD и больше ничего. Если день понять нельзя — верни NONE.';
+
+        try {
+            $answer = $this->llm->generate($system, [['role' => 'user', 'content' => $text]]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        if (preg_match('/(\d{4})-(\d{2})-(\d{2})/', $answer, $m) === 1 && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return "{$m[1]}-{$m[2]}-{$m[3]}";
+        }
+
+        return null;
+    }
+
+    /**
+     * Структурный лог события записи (для разбора проблем по конкретному клиенту).
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function log(string $event, Conversation $conversation, array $context = []): void
+    {
+        Log::info("booking.{$event}", [
+            'conversation_id' => $conversation->id ?? null,
+            ...$context,
+        ]);
     }
 
     /**

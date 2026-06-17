@@ -9,6 +9,8 @@ use App\Crm\Data\CrmService;
 use App\Crm\Data\CrmStaff;
 use App\Crm\Data\TimeSlot;
 use App\Enums\CrmProvider;
+use App\Llm\Contracts\LlmClient;
+use App\Llm\FakeLlmClient;
 use App\Models\Conversation;
 use App\Models\CrmConnection;
 use App\Models\Tenant;
@@ -37,7 +39,7 @@ final class BookingFlowTest extends TestCase
         parent::tearDown();
     }
 
-    private function flow(FakeCrmGateway $crm, bool $connected = true): BookingFlow
+    private function flow(FakeCrmGateway $crm, bool $connected = true, ?LlmClient $llm = null): BookingFlow
     {
         $connection = new CrmConnection;
         $connection->provider = CrmProvider::Yclients;
@@ -56,8 +58,13 @@ final class BookingFlowTest extends TestCase
                 $c->contact_phone = $phone;
             },
         );
+        $conversations->shouldReceive('setContactName')->andReturnUsing(
+            function (Conversation $c, string $name): void {
+                $c->contact_name = $name;
+            },
+        );
 
-        return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations);
+        return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient);
     }
 
     private function conversation(?string $phone = '+79990000000'): Conversation
@@ -157,6 +164,26 @@ final class BookingFlowTest extends TestCase
         $this->assertSame('0', $crm->createdBookings[0]->staffId);
     }
 
+    public function test_llm_resolves_freeform_master_choice(): void
+    {
+        $crm = $this->crm();
+        $crm->staff = [new CrmStaff('m9', 'Савелий')];
+
+        // «давайте к савелию» не совпадает дословно — выручает ИИ (возвращает номер).
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->andReturn('2');
+
+        $flow = $this->flow($crm, llm: $llm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1'); // услуга
+        $flow->advance($this->tenant(), $c, 'давайте к савелию');
+
+        $this->assertSame('date', $c->booking_state['step']);
+        $this->assertSame('Савелий', $c->booking_state['staff_name']);
+    }
+
     public function test_no_slots_asks_for_another_day(): void
     {
         $crm = $this->crm();
@@ -193,6 +220,50 @@ final class BookingFlowTest extends TestCase
         $this->assertTrue($r->booked);
         $this->assertCount(1, $crm->createdBookings);
         $this->assertSame('+79991234567', $crm->createdBookings[0]->clientPhone);
+    }
+
+    public function test_requires_name_before_booking(): void
+    {
+        $crm = $this->crm();
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+        $c->contact_name = null; // имени нет, телефон есть
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '1'); // слот выбран, имени нет
+
+        $this->assertStringContainsStringIgnoringCase('зовут', $r->text);
+        $this->assertSame('contact', $c->booking_state['step']);
+        $this->assertCount(0, $crm->createdBookings);
+
+        $r = $flow->advance($this->tenant(), $c, 'Павел');
+        $this->assertTrue($r->booked);
+        $this->assertSame('Павел', $crm->createdBookings[0]->clientName);
+    }
+
+    public function test_requires_both_name_and_phone(): void
+    {
+        $crm = $this->crm();
+        $flow = $this->flow($crm);
+        $c = $this->conversation(phone: null);
+        $c->contact_name = null; // нет ни имени, ни телефона
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '1');
+
+        $this->assertStringContainsStringIgnoringCase('зовут', $r->text);
+        $this->assertStringContainsStringIgnoringCase('телефон', $r->text);
+
+        $r = $flow->advance($this->tenant(), $c, 'Павел, 8923-333-22-11');
+        $this->assertTrue($r->booked);
+        $this->assertSame('Павел', $crm->createdBookings[0]->clientName);
+        $this->assertSame('+79233332211', $crm->createdBookings[0]->clientPhone);
     }
 
     public function test_booking_failure_escalates_and_clears_state(): void

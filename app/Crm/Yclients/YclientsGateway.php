@@ -16,6 +16,7 @@ use App\Enums\CrmProvider;
 use App\Models\CrmConnection;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -58,8 +59,13 @@ final readonly class YclientsGateway implements CrmGateway
     public function verifyConnection(CrmConnection $connection): bool
     {
         try {
-            return $this->request($connection)->get("{$this->apiUrl}/company/{$this->companyId($connection)}")->successful();
-        } catch (Throwable) {
+            $status = $this->request($connection)->get("{$this->apiUrl}/company/{$this->companyId($connection)}")->status();
+            Log::info('crm.yclients.verify', ['company_id' => $this->companyId($connection), 'status' => $status]);
+
+            return $status >= 200 && $status < 300;
+        } catch (Throwable $e) {
+            Log::warning('crm.yclients.verify_failed', ['company_id' => $this->companyId($connection), 'error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -70,6 +76,8 @@ final readonly class YclientsGateway implements CrmGateway
             ->get("{$this->apiUrl}/book_services/{$this->companyId($connection)}")
             ->throw()
             ->json('data.services', []);
+
+        Log::info('crm.yclients.services', ['company_id' => $this->companyId($connection), 'count' => count($services)]);
 
         return array_map(fn (array $s): CrmService => new CrmService(
             id: (string) $s['id'],
@@ -86,6 +94,8 @@ final readonly class YclientsGateway implements CrmGateway
             ->throw()
             ->json('data', []);
 
+        Log::info('crm.yclients.staff', ['company_id' => $this->companyId($connection), 'count' => count($staff)]);
+
         return array_map(fn (array $s): CrmStaff => new CrmStaff(
             id: (string) $s['id'],
             name: (string) ($s['name'] ?? ''),
@@ -100,6 +110,13 @@ final readonly class YclientsGateway implements CrmGateway
             ->throw()
             ->json('data', []);
 
+        Log::info('crm.yclients.slots', [
+            'company_id' => $this->companyId($connection),
+            'staff_id' => $query->staffId,
+            'date' => $query->date,
+            'count' => count($slots),
+        ]);
+
         return array_values(array_map(
             fn (array $slot): TimeSlot => new TimeSlot(start: (string) ($slot['datetime'] ?? $slot['time'] ?? '')),
             $slots,
@@ -108,8 +125,17 @@ final readonly class YclientsGateway implements CrmGateway
 
     public function createBooking(CrmConnection $connection, BookingRequest $request): BookingResult
     {
+        $companyId = $this->companyId($connection);
+
+        Log::info('crm.yclients.create_request', [
+            'company_id' => $companyId,
+            'service_id' => $request->serviceId,
+            'staff_id' => $request->staffId,
+            'datetime' => $request->start,
+        ]);
+
         try {
-            $response = $this->request($connection)->post("{$this->apiUrl}/book_record/{$this->companyId($connection)}", [
+            $response = $this->request($connection)->post("{$this->apiUrl}/book_record/{$companyId}", [
                 'phone' => $request->clientPhone,
                 'fullname' => $request->clientName,
                 'comment' => $request->comment ?? '',
@@ -119,13 +145,23 @@ final readonly class YclientsGateway implements CrmGateway
                     'staff_id' => (int) $request->staffId,
                     'datetime' => $request->start,
                 ]],
-            ])->throw();
+            ]);
+
+            // Логируем статус и тело (без заголовков/токенов) — для разбора отказов CRM.
+            Log::info('crm.yclients.create_response', [
+                'company_id' => $companyId,
+                'status' => $response->status(),
+                'body' => $response->json() ?? $response->body(),
+            ]);
+
+            $response->throw();
 
             $externalId = $response->json('data.0.record_id') ?? $response->json('data.0.id');
 
             return BookingResult::ok((string) $externalId);
         } catch (Throwable $e) {
             report($e);
+            Log::error('crm.yclients.create_failed', ['company_id' => $companyId, 'error' => $e->getMessage()]);
 
             return BookingResult::failed('Не удалось создать запись в YClients.');
         }
