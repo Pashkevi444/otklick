@@ -377,6 +377,13 @@ class BookingFlow
             $this->conversations->setCrmRecordId($conversation, $result->externalId);
         }
 
+        // Время визита — для напоминаний клиенту (слот пришёл из CRM как есть).
+        try {
+            $this->conversations->setBookedFor($conversation, Carbon::parse((string) $state['slot']));
+        } catch (Throwable) {
+            // некорректный слот — без напоминаний, запись всё равно оформлена
+        }
+
         return new BotReply($this->confirmation($state), escalate: false, booked: true);
     }
 

@@ -115,6 +115,7 @@ $onDomain(config('app.business_domain'), function (): void {
                 ->whereIn('provider', array_map(fn (CrmProvider $p): string => $p->value, CrmProvider::cases()))
                 ->name('integrations.store');
             Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
+            Route::put('/integrations/{connection}/reminders', [IntegrationController::class, 'reminders'])->name('integrations.reminders');
             Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
 
             // База знаний из CRM (нередактируемая, выгружается фоновой задачей).

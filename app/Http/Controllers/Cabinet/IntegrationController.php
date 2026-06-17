@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cabinet;
 
 use App\Crm\Data\CredentialField;
+use App\DTO\ReminderSettings;
 use App\Enums\CrmProvider;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\StoreCrmConnectionRequest;
@@ -12,6 +13,7 @@ use App\Models\CrmConnection;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Services\CrmConnectionService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -88,6 +90,37 @@ final class IntegrationController extends Controller
             ->with('success', 'Интеграция отключена.');
     }
 
+    /**
+     * Сохраняет настройки напоминаний клиенту о записи (в рамках этой CRM).
+     */
+    public function reminders(Request $request, string $connection): RedirectResponse
+    {
+        $conn = $this->findOrFail($connection);
+
+        $validated = $request->validate([
+            'enabled' => ['boolean'],
+            'offsets_hours' => ['array', 'max:5'],
+            'offsets_hours.*' => ['numeric', 'min:0.25', 'max:168'],
+        ]);
+
+        $offsetsMinutes = array_map(
+            static fn ($hours): int => (int) round(((float) $hours) * 60),
+            $validated['offsets_hours'] ?? [],
+        );
+
+        $settings = $conn->settings;
+        $settings['reminders'] = ReminderSettings::fromArray([
+            'enabled' => (bool) ($validated['enabled'] ?? false),
+            'offsets' => $offsetsMinutes,
+        ])->toArray();
+
+        $this->connections->updateSettings($conn, $settings);
+
+        return redirect()
+            ->route('cabinet.integrations.index')
+            ->with('success', 'Напоминания сохранены.');
+    }
+
     private function findOrFail(string $id): CrmConnection
     {
         $connection = $this->connections->find($id);
@@ -111,11 +144,18 @@ final class IntegrationController extends Controller
             }
         }
 
+        $reminders = ReminderSettings::fromArray($connection->settings['reminders'] ?? []);
+
         return [
             'id' => $connection->id,
             'is_active' => $connection->is_active,
             'connected_at' => $connection->created_at?->toDateString(),
             'summary' => $summary,
+            'reminders' => [
+                'enabled' => $reminders->enabled,
+                // Часы — удобнее для формы; в минуты переводим при сохранении.
+                'offsets_hours' => array_map(static fn (int $m): float => round($m / 60, 2), $reminders->offsetsMinutes),
+            ],
         ];
     }
 }

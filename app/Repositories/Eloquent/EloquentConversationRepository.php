@@ -201,4 +201,26 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->latest()
             ->first();
     }
+
+    public function setBookedFor(Conversation $conversation, Carbon $bookedFor): void
+    {
+        $conversation->forceFill(['booked_for' => $bookedFor, 'reminders_sent' => []])->save();
+    }
+
+    public function markReminderSent(Conversation $conversation, int $offsetMinutes): void
+    {
+        $sent = $conversation->reminders_sent ?? [];
+        $sent[] = $offsetMinutes;
+        $conversation->forceFill(['reminders_sent' => array_values(array_unique($sent))])->save();
+    }
+
+    public function upcomingBookedForCurrentTenant(Carbon $from, Carbon $to): Collection
+    {
+        return Conversation::query()
+            ->with('channel')
+            ->whereNotNull('crm_record_id')
+            ->whereNotNull('booked_for')
+            ->whereBetween('booked_for', [$from, $to])
+            ->get();
+    }
 }

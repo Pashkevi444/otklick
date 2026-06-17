@@ -100,6 +100,25 @@ interface ConversationRepositoryInterface
     public function lastWithCrmRecordForChat(string $channelId, string $externalChatId): ?Conversation;
 
     /**
+     * Время визита (из слота CRM) для напоминаний; сбрасывает отметки об
+     * отправленных напоминаниях.
+     */
+    public function setBookedFor(Conversation $conversation, Carbon $bookedFor): void;
+
+    /**
+     * Отмечает, что напоминание за $offsetMinutes до визита отправлено.
+     */
+    public function markReminderSent(Conversation $conversation, int $offsetMinutes): void;
+
+    /**
+     * Диалоги текущего тенанта с активной записью (есть crm_record_id), чьё
+     * время визита между $from и $to — кандидаты на напоминание. С каналом.
+     *
+     * @return Collection<int, Conversation>
+     */
+    public function upcomingBookedForCurrentTenant(Carbon $from, Carbon $to): Collection;
+
+    /**
      * Диалоги текущего тенанта (scoped/RLS) для журнала: с каналом, последним
      * сообщением и числом сообщений, новые сверху.
      *

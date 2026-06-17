@@ -69,6 +69,7 @@ final class BookingFlowTest extends TestCase
             },
         );
         $conversations->shouldReceive('lastWithCrmRecordForChat')->andReturn(null)->byDefault();
+        $conversations->shouldReceive('setBookedFor');
 
         return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient);
     }

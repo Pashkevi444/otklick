@@ -51,6 +51,11 @@ final class EloquentCrmConnectionRepository extends EloquentRepository implement
         return CrmConnection::query()->latest()->get();
     }
 
+    public function updateSettings(CrmConnection $connection, array $settings): void
+    {
+        $connection->forceFill(['settings' => $settings])->save();
+    }
+
     public function delete(CrmConnection $connection): void
     {
         $this->remove($connection);

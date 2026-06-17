@@ -31,5 +31,10 @@ interface CrmConnectionRepositoryInterface
      */
     public function forCurrentTenant(): Collection;
 
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    public function updateSettings(CrmConnection $connection, array $settings): void;
+
     public function delete(CrmConnection $connection): void;
 }

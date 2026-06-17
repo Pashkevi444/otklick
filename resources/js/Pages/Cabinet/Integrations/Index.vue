@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { reactive } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 interface Field {
@@ -8,11 +9,16 @@ interface Field {
     secret: boolean;
     hint: string | null;
 }
+interface Reminders {
+    enabled: boolean;
+    offsets_hours: number[];
+}
 interface Connection {
     id: string;
     is_active: boolean;
     connected_at: string | null;
     summary: Record<string, string | null>;
+    reminders: Reminders;
 }
 interface Integration {
     provider: string;
@@ -22,6 +28,36 @@ interface Integration {
 }
 
 const props = defineProps<{ integrations: Integration[] }>();
+
+// Локальное состояние формы напоминаний на каждое подключение.
+const reminderForms: Record<string, Reminders> = reactive({});
+for (const integration of props.integrations) {
+    if (integration.connection) {
+        reminderForms[integration.connection.id] = {
+            enabled: integration.connection.reminders.enabled,
+            offsets_hours: [...integration.connection.reminders.offsets_hours],
+        };
+    }
+}
+
+const addOffset = (id: string): void => {
+    if (reminderForms[id].offsets_hours.length < 5) {
+        reminderForms[id].offsets_hours.push(24);
+    }
+};
+
+const removeOffset = (id: string, index: number): void => {
+    reminderForms[id].offsets_hours.splice(index, 1);
+};
+
+const saveReminders = (id: string): void => {
+    const form = reminderForms[id];
+    router.put(
+        `/cabinet/integrations/${id}/reminders`,
+        { enabled: form.enabled, offsets_hours: [...form.offsets_hours] },
+        { preserveScroll: true },
+    );
+};
 
 // Форма подключения на каждый ещё не подключённый провайдер.
 const forms: Record<string, ReturnType<typeof useForm>> = {};
@@ -103,6 +139,55 @@ const disconnect = (id: string): void => {
                             @click="disconnect(integration.connection.id)"
                         >
                             Отключить
+                        </button>
+                    </div>
+
+                    <!-- Напоминания клиенту о записи (в рамках этой интеграции) -->
+                    <div class="mt-5 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                        <label class="flex items-center gap-2 text-sm font-medium text-[#1F4E79] dark:text-sky-200">
+                            <input v-model="reminderForms[integration.connection.id].enabled" type="checkbox" class="rounded" />
+                            Напоминать клиентам о записи
+                        </label>
+                        <p class="mt-1 text-xs text-slate-400">
+                            Бот напомнит клиенту о визите за указанное время. Можно добавить несколько напоминаний.
+                        </p>
+
+                        <div v-if="reminderForms[integration.connection.id].enabled" class="mt-3 space-y-2">
+                            <div
+                                v-for="(_, i) in reminderForms[integration.connection.id].offsets_hours"
+                                :key="i"
+                                class="flex items-center gap-2"
+                            >
+                                <span class="text-sm text-slate-500">За</span>
+                                <input
+                                    v-model.number="reminderForms[integration.connection.id].offsets_hours[i]"
+                                    type="number"
+                                    min="0.25"
+                                    max="168"
+                                    step="0.25"
+                                    class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                                />
+                                <span class="text-sm text-slate-500">ч до визита</span>
+                                <button type="button" class="text-sm text-red-600 hover:underline" @click="removeOffset(integration.connection.id, i)">
+                                    убрать
+                                </button>
+                            </div>
+                            <button
+                                v-if="reminderForms[integration.connection.id].offsets_hours.length < 5"
+                                type="button"
+                                class="text-sm text-[#2E74B5] hover:underline"
+                                @click="addOffset(integration.connection.id)"
+                            >
+                                + добавить напоминание
+                            </button>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="mt-3 rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5"
+                            @click="saveReminders(integration.connection.id)"
+                        >
+                            Сохранить напоминания
                         </button>
                     </div>
                 </div>

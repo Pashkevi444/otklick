@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Закрываем «протухшие» открытые диалоги (потерянные лиды) — раз в 5 минут.
 Schedule::command('conversations:close-stale')->everyFiveMinutes()->withoutOverlapping();
+
+// Напоминания клиентам о записи (ставятся в очередь) — раз в 5 минут.
+Schedule::command('appointments:send-reminders')->everyFiveMinutes()->withoutOverlapping();
