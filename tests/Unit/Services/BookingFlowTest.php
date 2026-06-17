@@ -184,6 +184,27 @@ final class BookingFlowTest extends TestCase
         $this->assertSame('Савелий', $c->booking_state['staff_name']);
     }
 
+    public function test_llm_resolves_date_typo(): void
+    {
+        $crm = $this->crm();
+
+        // «завтрв» — опечатка; детерминированный парсер не справится, выручает ИИ.
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->andReturn('2026-06-17');
+
+        $flow = $this->flow($crm, llm: $llm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1'); // услуга
+        $flow->advance($this->tenant(), $c, '2'); // мастер
+        $r = $flow->advance($this->tenant(), $c, 'завтрв'); // опечатка → ИИ → дата
+
+        // Дату распознали и перешли к выбору времени (слоты подгрузились).
+        $this->assertSame('slot', $c->booking_state['step']);
+        $this->assertStringContainsString('10:00', $r->text);
+    }
+
     public function test_no_slots_asks_for_another_day(): void
     {
         $crm = $this->crm();
