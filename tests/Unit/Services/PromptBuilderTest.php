@@ -34,6 +34,15 @@ final class PromptBuilderTest extends TestCase
         $this->assertStringContainsString(PromptBuilder::CLARIFY, $prompt);
     }
 
+    public function test_prompt_instructs_proactive_help(): void
+    {
+        $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection);
+
+        // Бот должен сам предлагать помощь/варианты, а не только отвечать на прямой вопрос.
+        $this->assertStringContainsString('проактивным', $prompt);
+        $this->assertStringContainsString('конкретных варианта', $prompt);
+    }
+
     public function test_prompt_instructs_to_clarify_before_escalating(): void
     {
         $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection);
