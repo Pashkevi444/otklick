@@ -24,12 +24,18 @@ const navItems = computed<NavItem[]>(() => {
     }
 
     // Меню короткое: всё по разделам — на дашборде. Здесь только ключевое.
-    return [
-        { label: 'Дашборд', href: '/cabinet' },
-        { label: 'Аналитика', href: '/cabinet/analytics' },
-        { label: 'Подписка', href: '/cabinet/subscription' },
-        { label: 'Оплата', href: '/cabinet/billing' },
-    ];
+    const items: NavItem[] = [{ label: 'Дашборд', href: '/cabinet' }];
+
+    // Аналитика — только если доступна (входит в тариф и разрешена оператору).
+    const hasAnalytics = (user.value?.tenant?.features?.analytics ?? false)
+        && (user.value?.allowedSections?.includes('analytics') ?? false);
+    if (hasAnalytics) {
+        items.push({ label: 'Аналитика', href: '/cabinet/analytics' });
+    }
+
+    items.push({ label: 'Подписка', href: '/cabinet/subscription' }, { label: 'Оплата', href: '/cabinet/billing' });
+
+    return items;
 });
 
 // Куда ведёт логотип «Отклик»: супер-админа — в список бизнесов, владельца — на

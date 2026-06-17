@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 interface Plan {
@@ -39,6 +39,8 @@ const submit = (): void => {
         },
     });
 };
+
+const impersonate = (id: string): void => router.post(`/admin/tenants/${id}/impersonate`);
 
 const statusLabel = (t: TenantRow): string =>
     t.is_blocked ? 'заблокирован' : t.has_active_access ? 'активен' : 'истёк';
@@ -113,6 +115,13 @@ const statusClass = (t: TenantRow): string =>
                     <span>Тариф: {{ tenant.plan_label }}</span>
                     <span>Доступ до: {{ tenant.access_expires_at ?? '∞' }}</span>
                 </div>
+                <button
+                    type="button"
+                    class="mt-3 rounded-lg bg-[#2E74B5] px-3 py-1.5 text-xs font-medium text-white"
+                    @click.stop.prevent="impersonate(tenant.id)"
+                >
+                    ➜ Войти в бизнес
+                </button>
             </Link>
             <div v-if="tenants.length === 0" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-400">
                 Бизнесов пока нет.
@@ -128,6 +137,7 @@ const statusClass = (t: TenantRow): string =>
                         <th class="px-5 py-3 font-medium">Тариф</th>
                         <th class="px-5 py-3 font-medium">Доступ до</th>
                         <th class="px-5 py-3 font-medium">Статус</th>
+                        <th class="px-5 py-3 font-medium"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -140,9 +150,18 @@ const statusClass = (t: TenantRow): string =>
                         <td class="px-5 py-3">
                             <span class="text-xs rounded-full px-2 py-0.5" :class="statusClass(tenant)">{{ statusLabel(tenant) }}</span>
                         </td>
+                        <td class="px-5 py-3 text-right">
+                            <button
+                                type="button"
+                                class="rounded-lg border border-[#2E74B5]/40 px-3 py-1.5 text-xs font-medium text-[#2E74B5] hover:bg-[#2E74B5]/5"
+                                @click="impersonate(tenant.id)"
+                            >
+                                ➜ Войти
+                            </button>
+                        </td>
                     </tr>
                     <tr v-if="tenants.length === 0">
-                        <td colspan="4" class="px-5 py-8 text-center text-slate-400">Бизнесов пока нет.</td>
+                        <td colspan="5" class="px-5 py-8 text-center text-slate-400">Бизнесов пока нет.</td>
                     </tr>
                 </tbody>
             </table>

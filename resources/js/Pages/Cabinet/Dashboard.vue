@@ -21,7 +21,7 @@ interface Card {
 const allCards: Card[] = [
     { icon: '📈', label: 'Аналитика', text: 'Лиды, конверсия и что улучшить', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
     { icon: '💬', label: 'Диалоги', text: 'Журнал переписок бота с клиентами', href: '/cabinet/conversations', section: 'conversations' },
-    { icon: '📡', label: 'Каналы', text: 'Подключите Telegram-бота', href: '/cabinet/channels', section: 'channels' },
+    { icon: '📡', label: 'Каналы', text: 'Telegram и другие каналы общения с клиентами', href: '/cabinet/channels', section: 'channels' },
     { icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget', section: 'widget' },
     { icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile', section: 'profile' },
     { icon: '📚', label: 'База знаний', text: 'Тексты, по которым отвечает бот', href: '/cabinet/knowledge', section: 'knowledge' },
@@ -44,8 +44,7 @@ const cards = computed<Card[]>(() => {
         list.push({ icon: '👥', label: 'Команда', text: 'Сотрудники и их доступы', href: '/cabinet/team' });
     }
 
-    list.push({ icon: '⭐', label: 'Подписка', text: 'Ваш тариф и возможности', href: '/cabinet/subscription' });
-
+    // Подписка и оплата — не функционал, оставлены только в меню.
     return list;
 });
 </script>
