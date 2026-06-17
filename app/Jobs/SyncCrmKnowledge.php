@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Services\CrmKnowledgeSyncService;
+use App\Services\CrmSyncStatus;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 /**
  * Фоновая выгрузка справочника CRM (услуги/мастера/филиал) в базу знаний CRM.
@@ -21,8 +23,20 @@ final class SyncCrmKnowledge implements ShouldQueue
 
     public function __construct(public readonly string $tenantId) {}
 
-    public function handle(TenantInitializer $tenancy, CrmKnowledgeSyncService $sync): void
+    public function handle(TenantInitializer $tenancy, CrmKnowledgeSyncService $sync, CrmSyncStatus $status): void
     {
-        $tenancy->run($this->tenantId, fn () => $sync->sync());
+        $status->begin($this->tenantId);
+
+        try {
+            $tenancy->run(
+                $this->tenantId,
+                fn () => $sync->sync(fn (int $percent) => $status->report($this->tenantId, $percent)),
+            );
+            $status->succeed($this->tenantId);
+        } catch (Throwable $e) {
+            $status->fail($this->tenantId);
+
+            throw $e;
+        }
     }
 }

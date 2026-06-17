@@ -120,6 +120,7 @@ $onDomain(config('app.business_domain'), function (): void {
             // База знаний из CRM (нередактируемая, выгружается фоновой задачей).
             Route::get('/knowledge-crm', [CrmKnowledgeController::class, 'index'])->name('knowledge.crm');
             Route::post('/knowledge-crm/sync', [CrmKnowledgeController::class, 'sync'])->name('knowledge.crm.sync');
+            Route::get('/knowledge-crm/status', [CrmKnowledgeController::class, 'status'])->name('knowledge.crm.status');
         });
     });
 

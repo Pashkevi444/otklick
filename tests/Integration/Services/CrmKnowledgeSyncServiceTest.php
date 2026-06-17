@@ -75,6 +75,17 @@ final class CrmKnowledgeSyncServiceTest extends TestCase
         $this->assertDatabaseMissing('crm_knowledge_entries', ['title' => 'Савелий']);
     }
 
+    public function test_reports_progress_up_to_100(): void
+    {
+        $seen = [];
+        $this->app->make(CrmKnowledgeSyncService::class)->sync(function (int $p) use (&$seen): void {
+            $seen[] = $p;
+        });
+
+        $this->assertNotEmpty($seen);
+        $this->assertSame(100, end($seen));
+    }
+
     public function test_client_knowledge_base_is_untouched(): void
     {
         KnowledgeEntry::query()->create(['tenant_id' => $this->tenant->id, 'title' => 'Моя заметка', 'content' => 'текст', 'is_published' => true]);

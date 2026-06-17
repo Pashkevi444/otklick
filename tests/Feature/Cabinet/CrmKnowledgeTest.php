@@ -38,6 +38,21 @@ final class CrmKnowledgeTest extends TestCase
         $this->actingAs($owner)->post('/cabinet/knowledge-crm/sync')->assertStatus(422);
     }
 
+    public function test_status_endpoint_reports_progress(): void
+    {
+        Queue::fake();
+
+        $tenant = Tenant::factory()->max()->create();
+        CrmConnection::factory()->create(['tenant_id' => $tenant->id]);
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)->post('/cabinet/knowledge-crm/sync');
+
+        $this->actingAs($owner)->getJson('/cabinet/knowledge-crm/status')
+            ->assertOk()
+            ->assertJson(['state' => 'running']);
+    }
+
     public function test_page_renders_for_max_plan(): void
     {
         $tenant = Tenant::factory()->max()->create();

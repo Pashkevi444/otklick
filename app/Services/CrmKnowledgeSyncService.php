@@ -28,8 +28,17 @@ final readonly class CrmKnowledgeSyncService
         private CrmKnowledgeRepositoryInterface $knowledge,
     ) {}
 
-    public function sync(): void
+    /**
+     * @param  (callable(int): void)|null  $onProgress  колбэк прогресса 0–100% по этапам
+     */
+    public function sync(?callable $onProgress = null): void
     {
+        $progress = static function (int $percent) use ($onProgress): void {
+            if ($onProgress !== null) {
+                $onProgress($percent);
+            }
+        };
+
         $connection = $this->connections->activeForCurrentTenant();
 
         if ($connection === null) {
@@ -38,11 +47,17 @@ final readonly class CrmKnowledgeSyncService
             return;
         }
 
+        $progress(10);
         $gateway = $this->gateways->for($connection->provider);
 
         $services = $gateway->services($connection);
+        $progress(40);
+
         $staff = $gateway->staff($connection);
+        $progress(65);
+
         $company = $gateway->company($connection);
+        $progress(85);
 
         $rows = [
             ...array_map($this->serviceRow(...), $services),
@@ -54,6 +69,7 @@ final readonly class CrmKnowledgeSyncService
         }
 
         $this->knowledge->replaceForCurrentTenant($rows);
+        $progress(100);
 
         Log::info('crm_knowledge.sync.done', [
             'provider' => $connection->provider->value,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { onUnmounted, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 interface Entry {
@@ -14,9 +15,50 @@ const props = defineProps<{
     groups: Record<string, Entry[]>;
 }>();
 
-const sync = (): void => {
-    router.post('/cabinet/knowledge-crm/sync', {}, { preserveScroll: true });
+const syncing = ref(false);
+const percent = ref(0);
+let timer: ReturnType<typeof setInterval> | null = null;
+
+const stopPolling = (): void => {
+    if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+    }
 };
+
+const poll = async (): Promise<void> => {
+    const res = await fetch('/cabinet/knowledge-crm/status', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+    });
+    const data: { percent: number; state: string } = await res.json();
+    percent.value = data.percent ?? 0;
+
+    if (data.state === 'done') {
+        percent.value = 100;
+        stopPolling();
+        router.reload({ only: ['groups', 'lastSyncedAt'], onFinish: () => (syncing.value = false) });
+    } else if (data.state === 'failed') {
+        stopPolling();
+        syncing.value = false;
+    }
+};
+
+const sync = (): void => {
+    syncing.value = true;
+    percent.value = 0;
+    router.post('/cabinet/knowledge-crm/sync', {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            void poll();
+            timer = setInterval(() => void poll(), 1500);
+        },
+        onError: () => (syncing.value = false),
+    });
+};
+
+onUnmounted(stopPolling);
 
 const hasEntries = (): boolean => Object.keys(props.groups).length > 0;
 
@@ -37,13 +79,24 @@ const formattedSync = (): string =>
         <div class="mb-5 flex items-center gap-3">
             <button
                 type="button"
-                :disabled="!connected"
+                :disabled="!connected || syncing"
                 class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5 disabled:opacity-50"
                 @click="sync"
             >
-                🔄 Загрузить данные из CRM
+                {{ syncing ? `Загрузка… ${percent}%` : '🔄 Загрузить данные из CRM' }}
             </button>
-            <span class="text-xs text-slate-400">Обновлено: {{ formattedSync() }}</span>
+            <span v-if="!syncing" class="text-xs text-slate-400">Обновлено: {{ formattedSync() }}</span>
+        </div>
+
+        <!-- Прогресс выгрузки из CRM -->
+        <div v-if="syncing" class="mb-5 max-w-md">
+            <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                <div
+                    class="h-full rounded-full bg-[#2E74B5] transition-all duration-500"
+                    :style="{ width: percent + '%' }"
+                ></div>
+            </div>
+            <div class="mt-1 text-xs text-slate-400">Загружаем данные из CRM… {{ percent }}%</div>
         </div>
 
         <div v-if="!connected" class="rounded-xl border border-amber-300/50 bg-amber-50 p-4 text-sm text-amber-900">

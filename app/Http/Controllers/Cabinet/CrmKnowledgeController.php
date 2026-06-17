@@ -9,6 +9,8 @@ use App\Jobs\SyncCrmKnowledge;
 use App\Models\CrmKnowledgeEntry;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
+use App\Services\CrmSyncStatus;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,6 +25,7 @@ final class CrmKnowledgeController extends Controller
     public function __construct(
         private readonly CrmKnowledgeRepositoryInterface $knowledge,
         private readonly CrmConnectionRepositoryInterface $connections,
+        private readonly CrmSyncStatus $status,
     ) {}
 
     public function index(): Response
@@ -49,10 +52,19 @@ final class CrmKnowledgeController extends Controller
 
         abort_if($this->connections->activeForCurrentTenant() === null, 422, 'Сначала подключите CRM.');
 
+        $this->status->begin((string) $tenantId);
         SyncCrmKnowledge::dispatch((string) $tenantId);
 
         return redirect()
             ->route('cabinet.knowledge.crm')
             ->with('success', 'Загрузка данных из CRM запущена — записи появятся через минуту.');
+    }
+
+    /**
+     * Прогресс фоновой выгрузки (для индикатора в %).
+     */
+    public function status(): JsonResponse
+    {
+        return response()->json($this->status->get((string) request()->user()->tenant_id));
     }
 }
