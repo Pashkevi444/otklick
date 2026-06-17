@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Channels\Telegram\TelegramGateway;
+use App\Channels\Vk\VkGateway;
 use App\DTO\NewChannelData;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Бизнес-логика подключения каналов к тенанту. Работает с БД через репозиторий,
@@ -21,6 +23,7 @@ final readonly class ChannelService
     public function __construct(
         private ChannelRepositoryInterface $channels,
         private TelegramGateway $telegram,
+        private VkGateway $vk,
     ) {}
 
     /**
@@ -47,6 +50,33 @@ final readonly class ChannelService
             ));
 
             $this->telegram->deleteWebhook($channel);
+
+            return $channel;
+        });
+    }
+
+    /**
+     * Подключает сообщество ВКонтакте к тенанту: создаёт канал с зашифрованными
+     * кредами (токен сообщества + group_id). Бот работает через Bots Long Poll
+     * (`vk:poll`), публичный вебхук не нужен.
+     *
+     * Валидация токена/группы — запрос groups.getById внутри транзакции: если
+     * VK не подтверждает сообщество (битый токен/нет прав/неверный group_id),
+     * канал не остаётся полу-подключённым.
+     */
+    public function connectVk(string $tenantId, string $accessToken, string $groupId): Channel
+    {
+        return DB::transaction(function () use ($tenantId, $accessToken, $groupId): Channel {
+            $channel = $this->channels->create(new NewChannelData(
+                tenantId: $tenantId,
+                type: ChannelType::Vk,
+                externalId: $groupId,
+                credentials: ['access_token' => $accessToken, 'group_id' => $groupId],
+            ));
+
+            if ($this->vk->groupName($channel) === null) {
+                throw new RuntimeException('VK не подтвердил сообщество: проверьте токен сообщества и его id.');
+            }
 
             return $channel;
         });

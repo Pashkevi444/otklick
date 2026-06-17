@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Channels\Contracts\MessengerGateway;
+use App\Channels\ChannelGatewayResolver;
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
 use App\Enums\ConversationStatus;
@@ -29,7 +29,7 @@ final readonly class IncomingMessageService
     public function __construct(
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
-        private MessengerGateway $gateway,
+        private ChannelGatewayResolver $gateways,
         private BotResponder $responder,
         private ContactCapture $contacts,
     ) {}
@@ -58,7 +58,9 @@ final readonly class IncomingMessageService
         $status = MessageStatus::Sent;
 
         try {
-            $this->gateway->send($channel, $incoming->externalChatId, $reply->text);
+            // Ответ уходит через шлюз того канала, откуда пришло сообщение
+            // (Telegram/VK/…), а не через жёстко зашитый мессенджер.
+            $this->gateways->for($channel->type)->send($channel, $incoming->externalChatId, $reply->text);
         } catch (Throwable $e) {
             $status = MessageStatus::Failed;
             report($e);

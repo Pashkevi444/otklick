@@ -36,4 +36,39 @@ final class ChannelServiceTest extends TestCase
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/deleteWebhook'));
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/setWebhook'));
     }
+
+    public function test_connect_vk_creates_channel_and_validates_group(): void
+    {
+        Http::fake(['*/groups.getById' => Http::response(['response' => ['groups' => [['name' => 'Барбершоп']]]])]);
+
+        $tenant = Tenant::factory()->create();
+        $this->app->make(TenantContext::class)->set($tenant->id);
+
+        $channel = $this->app->make(ChannelService::class)->connectVk($tenant->id, 'community-token', '42');
+
+        $this->assertSame(ChannelType::Vk, $channel->type);
+        $this->assertSame('42', $channel->external_id);
+        $this->assertSame('community-token', $channel->credential('access_token'));
+        $this->assertSame('42', $channel->credential('group_id'));
+        $this->assertDatabaseHas('channels', ['id' => $channel->id, 'type' => 'vk']);
+    }
+
+    public function test_connect_vk_rolls_back_when_group_not_confirmed(): void
+    {
+        // Битый токен/нет прав — groups.getById вернёт ошибку, groupName → null.
+        Http::fake(['*/groups.getById' => Http::response(['error' => ['error_code' => 5]])]);
+
+        $tenant = Tenant::factory()->create();
+        $this->app->make(TenantContext::class)->set($tenant->id);
+
+        try {
+            $this->app->make(ChannelService::class)->connectVk($tenant->id, 'bad-token', '42');
+            $this->fail('Ожидали исключение при неподтверждённом сообществе.');
+        } catch (\RuntimeException) {
+            // ожидаемо
+        }
+
+        // Канал не остался полу-подключённым (транзакция откатилась).
+        $this->assertDatabaseCount('channels', 0);
+    }
 }

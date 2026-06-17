@@ -18,6 +18,13 @@ final readonly class NewChannelData
         public ?string $externalId,
         public ?string $botToken = null,
         public ?string $secretToken = null,
+        /**
+         * Произвольные креды канала (provider-специфика: например VK
+         * access_token/group_id). Сливаются с bot_token/secret_token.
+         *
+         * @var array<string, string|null>
+         */
+        public array $credentials = [],
         /** @var array<string, mixed> */
         public array $settings = [],
     ) {}

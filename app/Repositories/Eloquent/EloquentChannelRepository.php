@@ -21,10 +21,10 @@ final class EloquentChannelRepository extends EloquentRepository implements Chan
 
     public function create(NewChannelData $data): Channel
     {
-        $credentials = array_filter([
+        $credentials = array_filter(array_merge([
             'bot_token' => $data->botToken,
             'secret_token' => $data->secretToken,
-        ], static fn (?string $v): bool => $v !== null);
+        ], $data->credentials), static fn (?string $v): bool => $v !== null);
 
         return Channel::create([
             'tenant_id' => $data->tenantId,

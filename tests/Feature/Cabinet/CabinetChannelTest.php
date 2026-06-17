@@ -54,6 +54,53 @@ final class CabinetChannelTest extends TestCase
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/deleteWebhook'));
     }
 
+    public function test_owner_connects_vk_community(): void
+    {
+        Http::fake(['*/groups.getById' => Http::response(['response' => ['groups' => [['name' => 'Барбершоп']]]])]);
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->post('/cabinet/channels', ['type' => 'vk', 'access_token' => 'community-token', 'group_id' => '123456'])
+            ->assertRedirect(route('cabinet.channels.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('channels', [
+            'tenant_id' => $tenant->id,
+            'type' => 'vk',
+            'external_id' => '123456',
+        ]);
+    }
+
+    public function test_vk_requires_access_token_and_group_id(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->post('/cabinet/channels', ['type' => 'vk', 'access_token' => '', 'group_id' => ''])
+            ->assertSessionHasErrors(['access_token', 'group_id']);
+
+        $this->assertDatabaseCount('channels', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_index_shows_both_telegram_and_vk(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        Channel::factory()->create(['tenant_id' => $tenant->id]);
+        Channel::factory()->vk()->create(['tenant_id' => $tenant->id]);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/channels')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Cabinet/Channels/Index')
+                ->has('channels', 2));
+    }
+
     public function test_invalid_token_is_rejected(): void
     {
         Http::fake();

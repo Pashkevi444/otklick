@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Channels\Telegram;
 
-use App\Channels\Contracts\MessengerGateway;
+use App\Channels\Contracts\ChannelGateway;
+use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
@@ -17,12 +18,17 @@ use Illuminate\Support\Facades\Http;
  * IPv6 для вебхука Telegram не принимает), поэтому апдейты тянем long polling'ом
  * (getUpdates) — это исходящий запрос, который ходит по IPv6.
  */
-final readonly class TelegramGateway implements MessengerGateway
+final readonly class TelegramGateway implements ChannelGateway
 {
     public function __construct(
         private string $apiUrl,
         private bool $forceIpv6 = false,
     ) {}
+
+    public function provider(): ChannelType
+    {
+        return ChannelType::Telegram;
+    }
 
     public function send(Channel $channel, string $chatId, string $text): void
     {

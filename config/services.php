@@ -73,6 +73,11 @@ return [
         ],
     ],
 
+    'vk' => [
+        'api_url' => env('VK_API_URL', 'https://api.vk.com/method'),
+        'version' => env('VK_API_VERSION', '5.199'),
+    ],
+
     'embedder' => [
         // fake — детерминированный локальный (по умолчанию). yandex — Yandex Cloud.
         'driver' => env('EMBEDDER_DRIVER', 'fake'),

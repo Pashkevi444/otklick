@@ -12,6 +12,7 @@ use App\Enums\Contracts\HasLabel;
 enum ChannelType: string implements HasLabel
 {
     case Telegram = 'telegram';
+    case Vk = 'vk';
     case WhatsApp = 'whatsapp';
     case Web = 'web';
 
@@ -19,8 +20,20 @@ enum ChannelType: string implements HasLabel
     {
         return match ($this) {
             self::Telegram => 'Telegram',
+            self::Vk => 'ВКонтакте',
             self::WhatsApp => 'WhatsApp',
             self::Web => 'Веб-виджет',
         };
+    }
+
+    /**
+     * Каналы-мессенджеры, которые сервер опрашивает long polling'ом
+     * (приём входящих). Веб-виджет получает сообщения по HTTP, его тут нет.
+     *
+     * @return list<self>
+     */
+    public static function pollable(): array
+    {
+        return [self::Telegram, self::Vk];
     }
 }

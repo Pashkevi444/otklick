@@ -34,4 +34,23 @@ class ChannelFactory extends Factory
             'settings' => [],
         ];
     }
+
+    /**
+     * Канал ВКонтакте: токен сообщества + group_id вместо bot_token.
+     */
+    public function vk(): static
+    {
+        return $this->state(function (): array {
+            $groupId = (string) fake()->unique()->numberBetween(100000, 999999999);
+
+            return [
+                'type' => ChannelType::Vk,
+                'external_id' => $groupId,
+                'credentials' => [
+                    'access_token' => 'vk1.a.'.Str::random(80),
+                    'group_id' => $groupId,
+                ],
+            ];
+        });
+    }
 }

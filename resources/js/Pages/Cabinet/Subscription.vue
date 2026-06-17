@@ -32,14 +32,14 @@ const f = computed(() => props.plan.features);
 
 // Полный список возможностей: что доступно сейчас и что откроется на «Макс».
 const rows = computed(() => [
-    { label: 'AI-ответы 24/7 в Telegram', on: true },
+    { label: 'AI-ответы 24/7 в Telegram и ВКонтакте', on: true },
     { label: 'Виджет на сайт', on: f.value.webWidget },
     { label: 'База знаний (тексты, ссылки, фото)', on: true },
     { label: `Пользователи кабинета (сотрудники): до ${f.value.maxOperators}`, on: true },
     { label: 'Интеграция с любой CRM (например, YClients) и автозапись', on: f.value.crm },
     { label: 'Напоминания клиентам о записи', on: f.value.reminders },
     { label: 'Умный поиск по базе знаний (RAG)', on: f.value.rag },
-    { label: 'Все каналы (ВКонтакте, MAX, Avito)', on: f.value.allChannels },
+    { label: 'Дополнительные каналы (MAX, Avito)', on: f.value.allChannels },
     { label: 'Рассылки и уведомления', on: f.value.broadcasts },
     { label: 'Расширенная аналитика и статистика', on: f.value.analytics },
     { label: 'База клиентов и маркетинговые рекомендации', on: f.value.clientBase },
@@ -93,7 +93,7 @@ const rows = computed(() => [
             <div v-if="!plan.isMax" class="mt-8 rounded-xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-6 dark:border-sky-400/20 dark:bg-none dark:bg-white/5">
                 <div class="font-semibold text-[#1F4E79]">Перейти на тариф «Макс»</div>
                 <p class="mt-2 text-sm text-slate-600">
-                    Подключение всех каналов (ВКонтакте, MAX, Avito), интеграция с CRM и автозапись, рассылки,
+                    Дополнительные каналы (MAX, Avito), интеграция с CRM и автозапись, рассылки,
                     расширенная аналитика, база клиентов, до 5 операторов и приоритетная поддержка.
                 </p>
                 <p class="mt-3 text-sm text-slate-500">Тариф «Макс» подключается по договорённости — напишите нам, и мы всё настроим.</p>

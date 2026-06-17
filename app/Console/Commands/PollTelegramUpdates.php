@@ -34,8 +34,16 @@ final class PollTelegramUpdates extends Command
     public function handle(TelegramGateway $telegram): int
     {
         do {
-            foreach ($this->activeChannels() as $channel) {
+            $channels = $this->activeChannels();
+
+            foreach ($channels as $channel) {
                 $this->pollChannel($telegram, $channel);
+            }
+
+            // Нет активных каналов — пустой foreach не блокируется на long poll,
+            // поэтому ждём сами, иначе цикл крутит CPU на 100%.
+            if ($channels->isEmpty() && ! $this->option('once')) {
+                sleep(5);
             }
         } while (! $this->option('once'));
 

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Channels\Contracts\MessengerGateway;
+use App\Channels\ChannelGatewayResolver;
+use App\Channels\Contracts\ChannelGateway;
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
 use App\Enums\ChannelType;
@@ -49,13 +50,14 @@ final class IncomingMessageServiceTest extends TestCase
             ->once()->with(Mockery::type(Tenant::class), $conversation, 'есть ли доставка?')
             ->andReturn(new BotReply('Доставка бесплатно от 1000₽', escalate: false));
 
-        $gateway = Mockery::mock(MessengerGateway::class);
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
         $gateway->shouldReceive('send')->once()->with($channel, '555', 'Доставка бесплатно от 1000₽');
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'есть ли доставка?');
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
     }
 
     public function test_escalation_marks_conversation_needs_human(): void
@@ -76,13 +78,14 @@ final class IncomingMessageServiceTest extends TestCase
         $responder = Mockery::mock(BotResponder::class);
         $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Передаю администратору.', escalate: true));
 
-        $gateway = Mockery::mock(MessengerGateway::class);
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
         $gateway->shouldReceive('send')->once();
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
     }
 
     public function test_booking_closes_conversation(): void
@@ -103,13 +106,14 @@ final class IncomingMessageServiceTest extends TestCase
         $responder = Mockery::mock(BotResponder::class);
         $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Записал вас!', escalate: false, booked: true));
 
-        $gateway = Mockery::mock(MessengerGateway::class);
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
         $gateway->shouldReceive('send')->once();
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
     }
 
     public function test_cancellation_marks_conversation_cancelled(): void
@@ -131,13 +135,14 @@ final class IncomingMessageServiceTest extends TestCase
         $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Отменил запись.', escalate: false, cancelled: true));
         $responder->shouldReceive('cancelBookingInCrm')->once()->with($conversation);
 
-        $gateway = Mockery::mock(MessengerGateway::class);
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
         $gateway->shouldReceive('send')->once();
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
     }
 
     public function test_duplicate_inbound_does_nothing(): void
@@ -158,13 +163,14 @@ final class IncomingMessageServiceTest extends TestCase
         $responder = Mockery::mock(BotResponder::class);
         $responder->shouldNotReceive('respond');
 
-        $gateway = Mockery::mock(MessengerGateway::class);
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
         $gateway->shouldNotReceive('send');
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldNotReceive('fromInbound');
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
     }
 
     public function test_failed_send_is_recorded_as_failed(): void
@@ -186,13 +192,14 @@ final class IncomingMessageServiceTest extends TestCase
         $responder = Mockery::mock(BotResponder::class);
         $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Ответ', escalate: false));
 
-        $gateway = Mockery::mock(MessengerGateway::class);
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
         $gateway->shouldReceive('send')->once()->andThrow(new RuntimeException('down'));
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, $gateway, $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
     }
 
     private function channel(): Channel
