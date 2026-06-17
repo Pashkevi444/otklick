@@ -26,6 +26,7 @@ const navLinks = [
     { href: '#features', label: 'Возможности' },
     { href: '#how', label: 'Как работает' },
     { href: '#integrations', label: 'Интеграции' },
+    { href: '#roadmap', label: 'Планы' },
     { href: '#pricing', label: 'Тарифы' },
     { href: '#reliability', label: 'Надёжность' },
     { href: '#contacts', label: 'Контакты' },
@@ -54,7 +55,16 @@ const steps = [
 ];
 
 const integrationsNow = ['Telegram', 'Виджет на сайте', 'YClients'];
-const integrationsSoon = ['MAX', 'Avito', 'ВКонтакте', 'Телефония'];
+
+// Планы по внедрению инструментов бизнеса (ещё не в продакшене — честно отдельным блоком).
+const roadmap = [
+    { icon: '💚', title: 'WhatsApp', text: 'Ответы и запись в самом массовом мессенджере.' },
+    { icon: '🟢', title: 'Avito', text: 'Обработка обращений с объявлений Авито.' },
+    { icon: '🔵', title: 'ВКонтакте', text: 'Сообщения сообщества — в том же помощнике.' },
+    { icon: '📞', title: 'Телефония', text: 'Голосовой ассистент и пропущенные звонки.' },
+    { icon: '📨', title: 'Рассылки и база клиентов', text: 'Возврат клиентов и акции — с согласием (152-ФЗ).' },
+    { icon: '🔗', title: 'Другие CRM', text: 'Altegio, amoCRM, Bitrix24 — подключаем под бизнес.' },
+];
 
 const reliability = [
     { icon: '🔒', title: 'Безопасность', text: 'Шифрование канала (TLS), доступы под ролями, никаких данных за пределами РФ.' },
@@ -77,18 +87,27 @@ const pricing = [
         name: 'Стандарт',
         price: '9 900 ₽',
         period: 'в месяц',
-        highlight: true,
+        highlight: false,
         note: 'Для большинства локальных бизнесов.',
         features: ['Telegram и виджет на сайт', 'База знаний (фото, ссылки, цены)', 'AI-ответы 24/7 + передача администратору', 'До 2 операторов', 'Базовая статистика'],
         cta: 'Получить доступ',
     },
     {
         name: 'Макс',
-        price: 'по договорённости',
-        period: 'индивидуально',
+        price: '14 900 ₽',
+        period: 'в месяц',
+        highlight: true,
+        note: 'Всё включено и удвоенные лимиты.',
+        features: ['Всё из «Стандарта»', 'CRM YClients: автозапись, отмена, напоминания клиентам', 'База знаний из CRM (услуги, цены, мастера)', 'Умный поиск по знаниям (RAG)', 'Расширенная аналитика и ИИ-рекомендации', 'До 10 операторов', 'Больше получателей уведомлений', 'Приоритетная поддержка'],
+        cta: 'Получить доступ',
+    },
+    {
+        name: 'Индивидуальный',
+        price: '4 000 000 ₽',
+        period: 'в месяц',
         highlight: false,
-        note: 'Когда нужны все каналы, CRM и аналитика.',
-        features: ['Всё из «Стандарта»', 'Все каналы: + ВКонтакте, MAX, Avito', 'Интеграция с любой CRM (например, YClients) и автозапись', 'До 5 операторов', 'Рассылки и уведомления', 'Расширенная аналитика и база клиентов', 'Маркетинговые рекомендации', 'Приоритетная поддержка'],
+        note: 'Корпоративный: всё из «Макс» и кратно бо́льшие лимиты, по договору.',
+        features: ['Всё из «Макс»', 'Кратно бо́льшие лимиты операторов и уведомлений', 'Приоритетное внедрение новых каналов', 'Индивидуальные доработки и SLA'],
         cta: 'Обсудить',
     },
 ];
@@ -321,14 +340,6 @@ onBeforeUnmount(() => {
                     {{ i }}
                 </span>
             </div>
-            <div data-reveal style="transition-delay: 120ms" class="mt-7 text-center">
-                <div class="mb-3 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Скоро</div>
-                <div class="flex flex-wrap justify-center gap-3">
-                    <span v-for="i in integrationsSoon" :key="i" class="rounded-full border border-white/60 bg-white/40 px-5 py-2.5 text-sm text-slate-400 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-slate-500">
-                        {{ i }}
-                    </span>
-                </div>
-            </div>
             <div data-reveal style="transition-delay: 200ms" class="mx-auto mt-8 max-w-2xl">
                 <div class="glass rounded-2xl p-6 text-center">
                     <div class="font-semibold text-[#1F4E79] dark:text-sky-200">Своя CRM? Подключим под вас</div>
@@ -336,6 +347,32 @@ onBeforeUnmount(() => {
                         Интеграцию с вашей CRM настроим по договорённости. На данный момент поддерживается
                         <span class="font-medium text-[#1F4E79] dark:text-sky-200">YClients</span> — остальные подключаем индивидуально.
                     </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Планы по внедрению инструментов бизнеса (roadmap) -->
+        <section id="roadmap" class="mx-auto max-w-6xl px-6 py-16">
+            <div data-reveal class="mb-10 text-center">
+                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Планы по внедрению инструментов бизнеса</h2>
+                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">
+                    Над чем работаем дальше. Этого пока нет в продукте — добавляем по мере готовности.
+                </p>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                    v-for="(r, i) in roadmap"
+                    :key="r.title"
+                    data-reveal
+                    :style="{ transitionDelay: i * 70 + 'ms' }"
+                    class="glass rounded-3xl p-6"
+                >
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">{{ r.icon }}</span>
+                        <span class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ r.title }}</span>
+                        <span class="ml-auto rounded-full border border-white/60 bg-white/40 px-2.5 py-0.5 text-[11px] text-slate-400 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-slate-500">в планах</span>
+                    </div>
+                    <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ r.text }}</p>
                 </div>
             </div>
         </section>
@@ -367,7 +404,7 @@ onBeforeUnmount(() => {
                 <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Тарифы</h2>
                 <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Пробный период включён в любой тариф — оцените результат до оплаты.</p>
             </div>
-            <div class="grid items-start gap-5 lg:grid-cols-3">
+            <div class="grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <div
                     v-for="(p, i) in pricing"
                     :key="p.name"

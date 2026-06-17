@@ -11,6 +11,7 @@ interface PlanFeatures {
     clientBase: boolean;
     allChannels: boolean;
     webWidget: boolean;
+    reminders: boolean;
 }
 
 interface Plan {
@@ -35,6 +36,7 @@ const rows = computed(() => [
     { label: 'База знаний (тексты, ссылки, фото)', on: true },
     { label: `Операторы (пользователи кабинета): ${f.value.maxOperators}`, on: true },
     { label: 'Интеграция с любой CRM (например, YClients) и автозапись', on: f.value.crm },
+    { label: 'Напоминания клиентам о записи', on: f.value.reminders },
     { label: 'Все каналы (ВКонтакте, MAX, Avito)', on: f.value.allChannels },
     { label: 'Рассылки и уведомления', on: f.value.broadcasts },
     { label: 'Расширенная аналитика и статистика', on: f.value.analytics },

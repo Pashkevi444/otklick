@@ -49,10 +49,33 @@ final class TenantPlanTest extends TestCase
         $this->assertTrue(TenantPlan::Max->features()->crm);
 
         $this->assertSame(2, TenantPlan::Standard->features()->maxOperators);
-        $this->assertSame(5, TenantPlan::Max->features()->maxOperators);
+        $this->assertSame(10, TenantPlan::Max->features()->maxOperators); // удвоено
 
         // Виджет на сайт — на всех тарифах.
         $this->assertTrue(TenantPlan::Trial->features()->webWidget);
         $this->assertTrue(TenantPlan::Max->features()->webWidget);
+    }
+
+    public function test_reminders_only_on_premium(): void
+    {
+        $this->assertFalse(TenantPlan::Standard->features()->reminders);
+        $this->assertTrue(TenantPlan::Max->features()->reminders);
+        $this->assertTrue(TenantPlan::Individual->features()->reminders);
+    }
+
+    public function test_individual_includes_everything_with_bigger_limits(): void
+    {
+        $f = TenantPlan::Individual->features();
+
+        $this->assertTrue($f->crm && $f->analytics && $f->allChannels);
+        $this->assertGreaterThan(TenantPlan::Max->features()->maxOperators, $f->maxOperators);
+    }
+
+    public function test_prices(): void
+    {
+        $this->assertSame(0, TenantPlan::Trial->priceRub());
+        $this->assertSame(9900, TenantPlan::Standard->priceRub());
+        $this->assertSame(14900, TenantPlan::Max->priceRub());
+        $this->assertSame(4000000, TenantPlan::Individual->priceRub());
     }
 }

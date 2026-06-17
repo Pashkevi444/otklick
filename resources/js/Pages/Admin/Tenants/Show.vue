@@ -14,6 +14,7 @@ interface Features {
     clientBase: boolean;
     allChannels: boolean;
     webWidget: boolean;
+    reminders: boolean;
     maxNotifyEmail: number;
     maxNotifyTelegram: number;
 }
@@ -47,6 +48,7 @@ const toggles: { key: keyof Features; label: string }[] = [
     { key: 'clientBase', label: 'База клиентов' },
     { key: 'allChannels', label: 'Все каналы' },
     { key: 'webWidget', label: 'Веб-виджет' },
+    { key: 'reminders', label: 'Напоминания о записи' },
 ];
 const numbers: { key: keyof Features; label: string }[] = [
     { key: 'maxOperators', label: 'Операторов' },

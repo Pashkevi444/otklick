@@ -10,15 +10,17 @@ use App\Enums\Contracts\HasLabel;
 /**
  * Тарифный план тенанта (клиента-бизнеса).
  *
- * - Trial (Пробный)     — бесплатный пробный период; возможности уровня «Стандарт».
- * - Standard (Стандарт) — базовый платный тариф.
- * - Max (Макс)          — премиум; продаётся по договорённости (назначает супер-админ).
+ * - Trial (Пробный)             — бесплатный пробный период; возможности уровня «Стандарт».
+ * - Standard (Стандарт)         — базовый платный тариф.
+ * - Max (Макс)                  — премиум: всё включено, удвоенные лимиты.
+ * - Individual (Индивидуальный) — корпоративный: всё + кратно бо́льшие лимиты, по договору.
  */
 enum TenantPlan: string implements HasLabel
 {
     case Trial = 'trial';
     case Standard = 'standard';
     case Max = 'max';
+    case Individual = 'individual';
 
     public function label(): string
     {
@@ -26,6 +28,20 @@ enum TenantPlan: string implements HasLabel
             self::Trial => 'Пробный',
             self::Standard => 'Стандарт',
             self::Max => 'Макс',
+            self::Individual => 'Индивидуальный',
+        };
+    }
+
+    /**
+     * Цена в рублях за месяц. Для Пробного — 0 (бесплатно).
+     */
+    public function priceRub(): int
+    {
+        return match ($this) {
+            self::Trial => 0,
+            self::Standard => 9900,
+            self::Max => 14900,
+            self::Individual => 4000000,
         };
     }
 
@@ -43,16 +59,31 @@ enum TenantPlan: string implements HasLabel
     public function features(): PlanFeatures
     {
         return match ($this->tier()) {
-            self::Max => new PlanFeatures(
-                maxOperators: 5,
+            // Индивидуальный — всё включено и кратно бо́льшие лимиты.
+            self::Individual => new PlanFeatures(
+                maxOperators: 20,
                 crm: true,
                 analytics: true,
                 broadcasts: true,
                 clientBase: true,
                 allChannels: true,
                 webWidget: true,
-                maxNotifyEmail: 5,
-                maxNotifyTelegram: 20,
+                maxNotifyEmail: 20,
+                maxNotifyTelegram: 80,
+                reminders: true,
+            ),
+            // Макс — всё включено, удвоенные лимиты относительно прежнего премиума.
+            self::Max => new PlanFeatures(
+                maxOperators: 10,
+                crm: true,
+                analytics: true,
+                broadcasts: true,
+                clientBase: true,
+                allChannels: true,
+                webWidget: true,
+                maxNotifyEmail: 10,
+                maxNotifyTelegram: 40,
+                reminders: true,
             ),
             default => new PlanFeatures(
                 maxOperators: 2,
@@ -64,6 +95,7 @@ enum TenantPlan: string implements HasLabel
                 webWidget: true,
                 maxNotifyEmail: 1,
                 maxNotifyTelegram: 4,
+                reminders: false,
             ),
         };
     }

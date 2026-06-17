@@ -36,6 +36,12 @@ final class SendAppointmentReminders extends Command
 
         Tenant::query()->pluck('id')->each(function (string $tenantId) use ($tenancy, $conversations, $connections, &$dispatched): void {
             $dispatched += $tenancy->run($tenantId, function () use ($tenantId, $conversations, $connections): int {
+                // Напоминания — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
+                $tenant = Tenant::query()->find($tenantId);
+                if ($tenant === null || ! $tenant->features()->reminders) {
+                    return 0;
+                }
+
                 $connection = $connections->activeForCurrentTenant();
                 if ($connection === null) {
                     return 0;

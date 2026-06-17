@@ -31,6 +31,7 @@ final class TenantOverridesTest extends TestCase
                 'clientBase' => false,
                 'allChannels' => false,
                 'webWidget' => true,
+                'reminders' => true,
                 'maxOperators' => 7,
                 'maxNotifyEmail' => 10,
                 'maxNotifyTelegram' => 50,
@@ -39,6 +40,7 @@ final class TenantOverridesTest extends TestCase
 
         $tenant->refresh();
         $this->assertTrue($tenant->features()->crm);                 // Standard обычно без CRM
+        $this->assertTrue($tenant->features()->reminders);           // включили оверрайдом
         $this->assertSame(10, $tenant->features()->maxNotifyEmail);
         $this->assertSame(50, $tenant->features()->maxNotifyTelegram);
     }
