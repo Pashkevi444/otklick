@@ -6,8 +6,11 @@ use App\Channels\Contracts\MessengerGateway;
 use App\Channels\Telegram\TelegramGateway;
 use App\Crm\CrmGatewayResolver;
 use App\Crm\Yclients\YclientsGateway;
+use App\Llm\Contracts\Embedder;
 use App\Llm\Contracts\LlmClient;
+use App\Llm\FakeEmbedder;
 use App\Llm\FakeLlmClient;
+use App\Llm\YandexEmbedder;
 use App\Llm\YandexGptClient;
 use App\Notifications\EmailNotifier;
 use App\Notifications\NotifierResolver;
@@ -64,6 +67,35 @@ class AppServiceProvider extends ServiceProvider
                 ),
             };
         });
+
+        $this->app->singleton(Embedder::class, function (): Embedder {
+            $dimension = (int) config('services.embedder.dimension');
+            $driver = (string) config('services.embedder.driver');
+
+            return match ($driver) {
+                'fake' => new FakeEmbedder($dimension),
+                'yandex' => $this->makeYandexEmbedder($dimension),
+                default => throw new RuntimeException("Эмбеддер «{$driver}» не настроен. Доступны fake и yandex."),
+            };
+        });
+    }
+
+    private function makeYandexEmbedder(int $dimension): YandexEmbedder
+    {
+        $apiKey = (string) config('services.embedder.yandex.api_key');
+        $folderId = (string) config('services.embedder.yandex.folder_id');
+
+        if ($apiKey === '' || $folderId === '') {
+            throw new RuntimeException('Yandex-эмбеддер не настроен: задайте YANDEX_API_KEY и YANDEX_FOLDER_ID.');
+        }
+
+        return new YandexEmbedder(
+            apiUrl: (string) config('services.embedder.yandex.api_url'),
+            apiKey: $apiKey,
+            folderId: $folderId,
+            model: (string) config('services.embedder.yandex.model'),
+            dimension: $dimension,
+        );
     }
 
     private function makeYandexGptClient(): YandexGptClient

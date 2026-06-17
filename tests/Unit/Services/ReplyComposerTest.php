@@ -11,6 +11,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Services\KnowledgeRetriever;
 use App\Services\PromptBuilder;
 use App\Services\ReplyComposer;
 use Illuminate\Support\Collection;
@@ -34,7 +35,11 @@ final class ReplyComposerTest extends TestCase
         $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
         $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
 
-        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations(), $crmKnowledge);
+        // По умолчанию ретривер не находит индекс → фолбэк на всю базу (текущее поведение).
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever->shouldReceive('retrieve')->andReturn(null)->byDefault();
+
+        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations(), $crmKnowledge, $retriever);
     }
 
     /**

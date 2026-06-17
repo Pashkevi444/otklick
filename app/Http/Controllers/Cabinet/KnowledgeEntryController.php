@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Cabinet;
 use App\DTO\KnowledgeEntryData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\KnowledgeEntryRequest;
+use App\Jobs\IndexKnowledge;
 use App\Models\KnowledgeEntry;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Services\KnowledgeBaseService;
@@ -41,6 +42,8 @@ final class KnowledgeEntryController extends Controller
 
         $this->knowledge->create($this->data($request, $uploaded));
 
+        IndexKnowledge::dispatch($this->tenantId($request));
+
         return redirect()
             ->route('cabinet.knowledge.index')
             ->with('success', 'Запись добавлена.');
@@ -72,6 +75,8 @@ final class KnowledgeEntryController extends Controller
 
         $this->knowledge->update($model, $this->data($request, [...$kept, ...$uploaded]));
 
+        IndexKnowledge::dispatch($this->tenantId($request));
+
         return redirect()
             ->route('cabinet.knowledge.index')
             ->with('success', 'Запись обновлена.');
@@ -82,7 +87,10 @@ final class KnowledgeEntryController extends Controller
         $model = $this->findOrFail($entry);
 
         $this->images->delete(array_column($model->images, 'path'));
+        $tenantId = (string) $model->tenant_id;
         $this->knowledge->delete($model);
+
+        IndexKnowledge::dispatch($tenantId);
 
         return redirect()
             ->route('cabinet.knowledge.index')

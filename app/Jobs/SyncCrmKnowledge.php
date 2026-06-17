@@ -33,6 +33,9 @@ final class SyncCrmKnowledge implements ShouldQueue
                 fn () => $sync->sync(fn (int $percent) => $status->report($this->tenantId, $percent)),
             );
             $status->succeed($this->tenantId);
+
+            // Свежие данные из CRM сразу попадают в векторный индекс (RAG).
+            IndexKnowledge::dispatch($this->tenantId);
         } catch (Throwable $e) {
             $status->fail($this->tenantId);
 

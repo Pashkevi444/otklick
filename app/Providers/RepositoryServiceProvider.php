@@ -9,6 +9,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\EmailChangeCodeRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeChunkRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
@@ -22,6 +23,7 @@ use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
 use App\Repositories\Eloquent\EloquentCrmKnowledgeRepository;
 use App\Repositories\Eloquent\EloquentEmailChangeCodeRepository;
+use App\Repositories\Eloquent\EloquentKnowledgeChunkRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
 use App\Repositories\Eloquent\EloquentLeadAnalyticsRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
@@ -50,6 +52,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         NotificationRecipientRepositoryInterface::class => EloquentNotificationRecipientRepository::class,
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
         CrmKnowledgeRepositoryInterface::class => EloquentCrmKnowledgeRepository::class,
+        KnowledgeChunkRepositoryInterface::class => EloquentKnowledgeChunkRepository::class,
         EmailChangeCodeRepositoryInterface::class => EloquentEmailChangeCodeRepository::class,
         SiteSettingsRepositoryInterface::class => EloquentSiteSettingsRepository::class,
         PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,

@@ -9,6 +9,8 @@ use App\DTO\BusinessProfile;
 use App\Enums\MessageDirection;
 use App\Llm\Contracts\LlmClient;
 use App\Models\Conversation;
+use App\Models\CrmKnowledgeEntry;
+use App\Models\KnowledgeEntry;
 use App\Models\Message;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
@@ -33,6 +35,9 @@ class ReplyComposer
     /** Сколько уточняющих вопросов подряд бот задаёт, прежде чем звать человека. */
     private const int MAX_CLARIFICATIONS = 3;
 
+    /** Сколько релевантных записей знаний подмешивать в промпт (RAG). */
+    private const int RAG_TOP_K = 6;
+
     public function __construct(
         private readonly LlmClient $llm,
         private readonly PromptBuilder $prompt,
@@ -40,21 +45,29 @@ class ReplyComposer
         private readonly MessageRepositoryInterface $messages,
         private readonly ConversationRepositoryInterface $conversations,
         private readonly CrmKnowledgeRepositoryInterface $crmKnowledge,
+        private readonly KnowledgeRetriever $retriever,
     ) {}
 
     public function compose(Tenant $tenant, Conversation $conversation, bool $bookingEnabled = false): BotReply
     {
         $profile = BusinessProfile::fromArray($tenant->settings['profile'] ?? []);
 
-        $systemPrompt = $this->prompt->build(
-            $tenant->name,
-            $profile,
-            $this->knowledge->publishedForCurrentTenant(),
-            $bookingEnabled,
-            $this->crmKnowledge->forCurrentTenant(),
-        );
+        $history = $this->history($conversation);
 
-        $answer = trim($this->llm->generate($systemPrompt, $this->history($conversation)));
+        // RAG: по вопросу клиента достаём только релевантные записи знаний; если
+        // индекс пуст или эмбеддер недоступен — отдаём всю базу (фолбэк).
+        $published = $this->knowledge->publishedForCurrentTenant();
+        $crm = $this->crmKnowledge->forCurrentTenant();
+        $retrieved = $this->retriever->retrieve($this->lastUserText($history), self::RAG_TOP_K);
+
+        if ($retrieved !== null) {
+            $published = $published->filter(fn (KnowledgeEntry $e): bool => in_array($e->id, $retrieved['manual'], true))->values();
+            $crm = $crm->filter(fn (CrmKnowledgeEntry $e): bool => in_array($e->id, $retrieved['crm'], true))->values();
+        }
+
+        $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm);
+
+        $answer = trim($this->llm->generate($systemPrompt, $history));
 
         // Сентинелы ищем в ЛЮБОМ месте ответа (модель не всегда ставит их строго
         // в начало) и вырезаем из видимого текста.
@@ -166,6 +179,22 @@ class ReplyComposer
                 'content' => (string) $m->text,
             ])
             ->all();
+    }
+
+    /**
+     * Последняя реплика клиента из истории — запрос для семантического поиска.
+     *
+     * @param  list<array{role: 'user'|'assistant', content: string}>  $history
+     */
+    private function lastUserText(array $history): string
+    {
+        foreach (array_reverse($history) as $message) {
+            if ($message['role'] === 'user') {
+                return $message['content'];
+            }
+        }
+
+        return '';
     }
 
     private function fallback(BusinessProfile $profile): string

@@ -73,4 +73,18 @@ return [
         ],
     ],
 
+    'embedder' => [
+        // fake — детерминированный локальный (по умолчанию). yandex — Yandex Cloud.
+        'driver' => env('EMBEDDER_DRIVER', 'fake'),
+        // Размерность вектора. ДОЛЖНА совпадать со схемой knowledge_chunks.
+        'dimension' => (int) env('EMBEDDING_DIM', 256),
+
+        'yandex' => [
+            'api_url' => env('YANDEX_EMBED_API_URL', 'https://llm.api.cloud.yandex.net/foundationModels/v1/textEmbedding'),
+            'api_key' => env('YANDEX_API_KEY'),
+            'folder_id' => env('YANDEX_FOLDER_ID'),
+            'model' => env('YANDEX_EMBED_MODEL', 'text-search-query'),
+        ],
+    ],
+
 ];
