@@ -76,6 +76,6 @@ final class TenantPlanTest extends TestCase
         $this->assertSame(0, TenantPlan::Trial->priceRub());
         $this->assertSame(9900, TenantPlan::Standard->priceRub());
         $this->assertSame(14900, TenantPlan::Max->priceRub());
-        $this->assertSame(4000000, TenantPlan::Individual->priceRub());
+        $this->assertSame(0, TenantPlan::Individual->priceRub()); // по договорённости
     }
 }

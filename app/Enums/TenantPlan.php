@@ -33,7 +33,8 @@ enum TenantPlan: string implements HasLabel
     }
 
     /**
-     * Цена в рублях за месяц. Для Пробного — 0 (бесплатно).
+     * Цена в рублях за месяц. 0 — бесплатно (Пробный) или «по договорённости»
+     * (Индивидуальный): фиксированной цены нет, обсуждается индивидуально.
      */
     public function priceRub(): int
     {
@@ -41,7 +42,7 @@ enum TenantPlan: string implements HasLabel
             self::Trial => 0,
             self::Standard => 9900,
             self::Max => 14900,
-            self::Individual => 4000000,
+            self::Individual => 0,
         };
     }
 
