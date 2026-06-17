@@ -6,7 +6,6 @@ namespace App\Repositories\Eloquent;
 
 use App\Repositories\Contracts\KnowledgeChunkRepositoryInterface;
 use App\Tenancy\TenantContext;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -44,7 +43,7 @@ final readonly class EloquentKnowledgeChunkRepository implements KnowledgeChunkR
         });
     }
 
-    public function searchForCurrentTenant(array $queryEmbedding, int $k): Collection
+    public function searchForCurrentTenant(array $queryEmbedding, int $k): array
     {
         $tenantId = (string) $this->tenant->id();
 
@@ -54,10 +53,10 @@ final readonly class EloquentKnowledgeChunkRepository implements KnowledgeChunkR
                 [$tenantId, $this->literal($queryEmbedding), $k],
             );
 
-            return collect($rows)->map(fn (object $r): array => [
+            return array_map(fn (object $r): array => [
                 'source' => (string) $r->source,
                 'entry_id' => $r->entry_id !== null ? (string) $r->entry_id : null,
-            ]);
+            ], $rows);
         }
 
         // sqlite (тесты): косинус в PHP по чанкам тенанта.
@@ -72,7 +71,8 @@ final readonly class EloquentKnowledgeChunkRepository implements KnowledgeChunkR
             ->sortByDesc('score')
             ->take($k)
             ->map(fn (array $r): array => ['source' => $r['source'], 'entry_id' => $r['entry_id']])
-            ->values();
+            ->values()
+            ->all();
     }
 
     private function isPgsql(): bool

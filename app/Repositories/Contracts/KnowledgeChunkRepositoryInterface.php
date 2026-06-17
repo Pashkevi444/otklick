@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repositories\Contracts;
 
-use Illuminate\Support\Collection;
-
 /**
  * Векторный индекс знаний (RAG). Скоупится текущим тенантом (RLS на pgsql +
  * явный фильтр). Поиск: pgvector `<=>` на PostgreSQL, косинус в PHP на sqlite.
@@ -23,7 +21,7 @@ interface KnowledgeChunkRepositoryInterface
      * Топ-K наиболее близких к запросу чанков (по эмбеддингу).
      *
      * @param  list<float>  $queryEmbedding
-     * @return Collection<int, array{source: string, entry_id: string|null}>
+     * @return list<array{source: string, entry_id: string|null}>
      */
-    public function searchForCurrentTenant(array $queryEmbedding, int $k): Collection;
+    public function searchForCurrentTenant(array $queryEmbedding, int $k): array;
 }

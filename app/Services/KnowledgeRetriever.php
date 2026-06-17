@@ -42,7 +42,7 @@ class KnowledgeRetriever
             return null;
         }
 
-        if ($hits->isEmpty()) {
+        if ($hits === []) {
             return null;
         }
 
