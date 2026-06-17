@@ -19,13 +19,13 @@ use Inertia\Response;
 use Throwable;
 
 /**
- * Каналы тенанта в кабинете (Telegram, ВКонтакте). Данные автоматически
+ * Каналы тенанта в кабинете (Telegram, ВКонтакте, MAX). Данные автоматически
  * скоупятся текущим тенантом (контекст ставит BindTenantToRequest).
  */
 final class ChannelController extends Controller
 {
     /** Каналы-мессенджеры, которыми управляют на вкладке «Каналы». */
-    private const array MANAGED = [ChannelType::Telegram, ChannelType::Vk];
+    private const array MANAGED = [ChannelType::Telegram, ChannelType::Vk, ChannelType::Max];
 
     public function __construct(
         private readonly ChannelRepositoryInterface $channels,
@@ -48,7 +48,7 @@ final class ChannelController extends Controller
     {
         $type = ChannelType::from((string) $request->string('type'));
         $tenantId = (string) $request->user()->tenant_id;
-        $field = $type === ChannelType::Vk ? 'access_token' : 'bot_token';
+        $field = $type === ChannelType::Telegram ? 'bot_token' : 'access_token';
 
         try {
             $this->connect($type, $tenantId, $request);
@@ -105,6 +105,10 @@ final class ChannelController extends Controller
                 (string) $request->string('access_token'),
                 (string) $request->string('group_id'),
             ),
+            ChannelType::Max => $this->channelService->connectMax(
+                $tenantId,
+                (string) $request->string('access_token'),
+            ),
             default => $this->channelService->connectTelegram(
                 $tenantId,
                 (string) $request->string('bot_token'),
@@ -115,15 +119,21 @@ final class ChannelController extends Controller
 
     private function rejectedMessage(ChannelType $type): string
     {
-        return $type === ChannelType::Vk
-            ? 'ВКонтакте не подтвердил сообщество. Проверьте токен сообщества (с правами на сообщения) и его id.'
-            : 'Telegram отклонил запрос. Проверьте токен бота и публичный HTTPS-адрес '.
-                '(TELEGRAM_WEBHOOK_BASE_URL); localhost Telegram не принимает.';
+        return match ($type) {
+            ChannelType::Vk => 'ВКонтакте не подтвердил сообщество. Проверьте токен сообщества (с правами на сообщения) и его id.',
+            ChannelType::Max => 'MAX отклонил токен. Проверьте токен бота, выданный @MasterBot.',
+            default => 'Telegram отклонил запрос. Проверьте токен бота и публичный HTTPS-адрес '.
+                '(TELEGRAM_WEBHOOK_BASE_URL); localhost Telegram не принимает.',
+        };
     }
 
     private function timeoutMessage(ChannelType $type): string
     {
-        $service = $type === ChannelType::Vk ? 'ВКонтакте (api.vk.com)' : 'Telegram (api.telegram.org)';
+        $service = match ($type) {
+            ChannelType::Vk => 'ВКонтакте (api.vk.com)',
+            ChannelType::Max => 'MAX (botapi.max.ru)',
+            default => 'Telegram (api.telegram.org)',
+        };
 
         return "Не удалось связаться с {$service} (таймаут сети). Попробуйте ещё раз через минуту.";
     }
@@ -144,11 +154,15 @@ final class ChannelController extends Controller
         ];
     }
 
-    /** Подпись под каналом: для VK — id сообщества, для Telegram — URL вебхука. */
+    /** Подпись под каналом: VK — id сообщества, MAX — бот, Telegram — URL вебхука. */
     private function detail(Channel $channel): string
     {
         if ($channel->type === ChannelType::Vk) {
             return 'Сообщество #'.$channel->external_id;
+        }
+
+        if ($channel->type === ChannelType::Max) {
+            return 'Бот MAX (long polling)';
         }
 
         $baseUrl = rtrim((string) config('services.telegram.webhook_base_url'), '/');

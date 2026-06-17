@@ -118,14 +118,15 @@ HTTP / Console / Job  →  Service (бизнес-логика)  →  Repository 
 | `App\Models\Channel` | Канал тенанта. Креды шифруются (`encrypted:array`): Telegram — `bot_token`/`secret_token`, ВКонтакте — `access_token`/`group_id`. Доступ к произвольному креду — `credential(key)`. |
 | `App\Models\Conversation` | Диалог с клиентом в рамках канала (один `external_chat_id` — один диалог). |
 | `App\Models\Message` | Сообщение диалога; уникальность `(conversation_id, direction, external_message_id)` — идемпотентность ретраев. |
-| `App\Enums\ChannelType` | `telegram` / `vk` / `whatsapp` / `web`. `pollable()` — каналы, которые сервер опрашивает long polling'ом (Telegram, VK). |
+| `App\Enums\ChannelType` | `telegram` / `vk` / `max` / `whatsapp` / `web`. `pollable()` — каналы, которые сервер опрашивает long polling'ом (Telegram, VK, MAX). |
 | `App\Channels\ChannelGatewayResolver` | Реестр стратегий каналов (тег `channel.gateways`): отдаёт `ChannelGateway` по `ChannelType`. Новый канал = новый шлюз в теге, резолвер не трогаем. |
 | `App\Enums\MessageDirection` | `inbound` / `outbound`. |
 | `App\Enums\MessageStatus` | `received` / `sent` / `failed`. |
 | `App\Enums\ConversationStatus` | `open` / `needs_human` / `closed`. Закрыть/вернуть диалог можно вручную из кабинета (`PUT /cabinet/conversations/{id}/status`). |
-| `App\Services\ChannelService` | Подключение каналов к тенанту: `connectTelegram` (создание канала + `deleteWebhook`, бот через long polling — вебхуки в РФ не доставляются), `connectVk` (создание канала + валидация сообщества через `groups.getById` внутри транзакции, бот через Bots Long Poll), `connectWeb`/`setWidgetOrigins` (веб-виджет). |
+| `App\Services\ChannelService` | Подключение каналов к тенанту: `connectTelegram` (создание канала + `deleteWebhook`, бот через long polling — вебхуки в РФ не доставляются), `connectVk` (создание канала + валидация сообщества через `groups.getById` внутри транзакции, бот через Bots Long Poll), `connectMax` (создание канала + валидация токена через `GET /me` внутри транзакции, бот через long polling), `connectWeb`/`setWidgetOrigins` (веб-виджет). |
 | `App\Console\Commands\PollTelegramUpdates` (`telegram:poll`) | Long polling Telegram: сервер сам тянет апдейты (getUpdates по IPv6) и кладёт их в ту же очередь, что и вебхук. Отдельный контейнер `telegram` в проде. Нужно в РФ, где входящий путь Telegram→IPv4 заблокирован. |
 | `App\Console\Commands\PollVkUpdates` (`vk:poll`) | Bots Long Poll ВКонтакте: двухшаговый протокол — `groups.getLongPollServer`, затем опрос сервера (`a_check`). Состояние `{server,key,ts}` в кэше; `failed`-коды VK (1 — обновить ts; 2/3 — переинициализировать сервер). Диспатчит `ProcessVkUpdate`. Отдельный контейнер `vk` в проде. |
+| `App\Console\Commands\PollMaxUpdates` (`max:poll`) | Long polling MAX (botapi.max.ru): `GET /updates` с маркером (токен — в заголовке `Authorization`). Позиция чтения `marker` в кэше. Диспатчит `ProcessMaxUpdate`. Отдельный контейнер `max` в проде. |
 | `App\Services\IncomingMessageService` | Обработка входящего (канало-агностична): фиксация диалога/сообщения, захват контактов (`ContactCapture`), ответ через `ReplyComposer`, отправка **через шлюз канала сообщения** (`ChannelGatewayResolver->for($channel->type)` — Telegram/VK/…); при эскалации — статус `needs_human`. Уведомление операторам при эскалации в Telegram не дублируется (его шлёт `TelegramRelayService`). |
 | `App\Services\TelegramRelayService` | Живой мост «оператор ↔ клиент» через бот бизнеса при эскалации. Пока диалог в статусе `needs_human`, ИИ молчит: сообщения клиента пересылаются всем telegram-получателям (операторам), а они отвечают Telegram-«Ответить» на пересланное сообщение. Маппинг «пересланное сообщение → диалог» — в кэше (Redis, TTL 7 дней), без отдельной таблицы. Команды: `/close` (закрыть диалог, дальше отвечает бот) и `/bot` (вернуть диалог боту). Оркеструется в `ProcessTelegramUpdate` (отправители-операторы перехватываются до бизнес-логики через `isOperator`). |
 | `App\Services\ContactCapture` | Достаёт из входящего телефон (`PhoneExtractor`, регулярка) и имя (`NameDetector`, нейросеть — только если бот спрашивал имя) и сохраняет их по диалогу. Имя берётся из того, как клиент представился сам, а не из аккаунта мессенджера. |
@@ -159,8 +160,8 @@ HTTP / Console / Job  →  Service (бизнес-логика)  →  Repository 
 | `App\Services\CrmKnowledgeSyncService` + `App\Jobs\SyncCrmKnowledge` | Фоновая выгрузка справочника CRM (услуги+цены, мастера, филиал; слоты НЕ выгружаются — они реал-тайм) в отдельную нередактируемую базу знаний `crm_knowledge_entries`. Кнопка в кабинете вешает задачу на очередь (Horizon); выгрузка `replaceForCurrentTenant` атомарна (delete+insert). Клиентская БЗ (`knowledge_entries`) не трогается. |
 | `App\Models\CrmKnowledgeEntry` (`crm_knowledge_entries`, RLS) | Нередактируемая запись из CRM (категория `service`/`staff`/`company`). В промпте бота — приоритетный источник: при расхождении с клиентской БЗ верны данные CRM (актуальнее). |
 | `App\Http\Controllers\Cabinet\CrmKnowledgeController` | Вкладка «База знаний из CRM» (`GET /cabinet/knowledge-crm`, только чтение, сгруппировано) + запуск выгрузки (`POST /cabinet/knowledge-crm/sync`). Гейт `plan:crm` («Макс»). |
-| `App\Channels\Contracts\MessengerGateway` / `ChannelGateway` | Порт отправки в мессенджер; `ChannelGateway` добавляет `provider()` (тип канала). Реализации: `Telegram\TelegramGateway`, `Vk\VkGateway`. |
-| `App\Jobs\ProcessTelegramUpdate` / `ProcessVkUpdate` | Асинхронный разбор апдейта в тенант-контексте (Horizon). У VK нет операторского моста (операторы в Telegram), поэтому job проще: parse → `IncomingMessageService::handle`. |
+| `App\Channels\Contracts\MessengerGateway` / `ChannelGateway` | Порт отправки в мессенджер; `ChannelGateway` добавляет `provider()` (тип канала). Реализации: `Telegram\TelegramGateway`, `Vk\VkGateway`, `Max\MaxGateway`. |
+| `App\Jobs\ProcessTelegramUpdate` / `ProcessVkUpdate` / `ProcessMaxUpdate` | Асинхронный разбор апдейта в тенант-контексте (Horizon). У VK/MAX нет операторского моста (операторы в Telegram), поэтому job проще: parse → `IncomingMessageService::handle`. |
 | `App\Tenancy\TenantInitializer` | Единая точка входа в тенант-контекст (in-memory + `app.current_tenant` для RLS). |
 | `App\Repositories\Contracts\{Channel,Conversation,Message}RepositoryInterface` | Доступ к данным каналов/диалогов/сообщений. |
 
@@ -186,6 +187,18 @@ php artisan channel:connect-vk <tenant-uuid> <community-token> <group-id>
 сохраняется. В кабинете эту операцию заменяет форма (вкладка «Каналы» → ВКонтакте).
 В сообществе нужен ключ с правами на сообщения и включённый **Long Poll API**
 (события `message_new`); входящие забирает `vk:poll` (вебхук не требуется).
+
+### Подключение бота MAX
+
+```bash
+php artisan channel:connect-max <tenant-uuid> <bot-token>
+```
+
+MAX — российский мессенджер (max.ru). Бот создаётся через **@MasterBot** (`/newbot`),
+который выдаёт токен. `connectMax` создаёт канал с зашифрованным токеном и проверяет
+его через `GET /me` внутри транзакции (битый токен → 401 → откат). Токен передаётся в
+заголовке `Authorization`. Входящие забирает `max:poll` (long polling, вебхук не нужен).
+В кабинете эту операцию заменяет форма (вкладка «Каналы» → MAX).
 
 ## Веб-интерфейс, роли и доступ (Фаза 2)
 
@@ -272,6 +285,7 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | `TELEGRAM_WEBHOOK_BASE_URL` | Публичный HTTPS-адрес для `setWebhook` | `${APP_URL}` |
 | `VK_API_URL` | Базовый URL VK API | `https://api.vk.com/method` |
 | `VK_API_VERSION` | Версия VK API | `5.199` |
+| `MAX_API_URL` | Базовый URL Bot API мессенджера MAX | `https://botapi.max.ru` |
 | `LLM_DRIVER` | Провайдер LLM: `fake` / `yandexgpt` (gigachat — TODO) | `fake` |
 | `YANDEX_API_KEY` / `YANDEX_FOLDER_ID` | Ключ и folder каталога Yandex Cloud (для `yandexgpt`) | — |
 | `YANDEX_GPT_MODEL` | Модель YandexGPT | `yandexgpt-lite` |

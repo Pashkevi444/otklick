@@ -53,4 +53,16 @@ class ChannelFactory extends Factory
             ];
         });
     }
+
+    /**
+     * Канал MAX: один токен бота (без group_id).
+     */
+    public function max(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => ChannelType::Max,
+            'external_id' => null,
+            'credentials' => ['access_token' => 'max-'.Str::random(50)],
+        ]);
+    }
 }

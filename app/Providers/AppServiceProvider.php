@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Channels\ChannelGatewayResolver;
 use App\Channels\Contracts\MessengerGateway;
+use App\Channels\Max\MaxGateway;
 use App\Channels\Telegram\TelegramGateway;
 use App\Channels\Vk\VkGateway;
 use App\Crm\CrmGatewayResolver;
@@ -39,6 +40,10 @@ class AppServiceProvider extends ServiceProvider
             (string) config('services.vk.version'),
         ));
 
+        $this->app->singleton(MaxGateway::class, fn (): MaxGateway => new MaxGateway(
+            (string) config('services.max.api_url'),
+        ));
+
         $this->app->singleton(YclientsGateway::class, fn (): YclientsGateway => new YclientsGateway(
             (string) config('services.yclients.api_url'),
             config('services.yclients.partner_token'),
@@ -53,7 +58,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Стратегии каналов выбираются по ChannelType. Новый канал = новый
         // ChannelGateway в этом теге.
-        $this->app->tag([TelegramGateway::class, VkGateway::class], 'channel.gateways');
+        $this->app->tag([TelegramGateway::class, VkGateway::class, MaxGateway::class], 'channel.gateways');
         $this->app->singleton(
             ChannelGatewayResolver::class,
             fn ($app): ChannelGatewayResolver => new ChannelGatewayResolver($app->tagged('channel.gateways')),
@@ -145,7 +150,7 @@ class AppServiceProvider extends ServiceProvider
                 '@context' => 'https://schema.org',
                 '@type' => 'Organization',
                 'name' => 'Отклик',
-                'description' => 'AI-администратор для локального бизнеса: автоответы в Telegram, ВКонтакте и на сайте, запись клиентов.',
+                'description' => 'AI-администратор для локального бизнеса: автоответы в Telegram, ВКонтакте, MAX и на сайте, запись клиентов.',
                 'url' => config('app.url'),
                 'telephone' => $site->phone,
                 'email' => $site->email,

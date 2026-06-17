@@ -78,6 +78,12 @@ return [
         'version' => env('VK_API_VERSION', '5.199'),
     ],
 
+    'max' => [
+        // Базовый URL Bot API мессенджера MAX (botapi.max.ru). Токен — в заголовке
+        // Authorization. Сервер сам тянет апдейты через long polling (GET /updates).
+        'api_url' => env('MAX_API_URL', 'https://botapi.max.ru'),
+    ],
+
     'embedder' => [
         // fake — детерминированный локальный (по умолчанию). yandex — Yandex Cloud.
         'driver' => env('EMBEDDER_DRIVER', 'fake'),

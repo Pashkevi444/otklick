@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Channels\Max\MaxGateway;
 use App\Channels\Telegram\TelegramGateway;
 use App\Channels\Vk\VkGateway;
 use App\DTO\NewChannelData;
@@ -24,6 +25,7 @@ final readonly class ChannelService
         private ChannelRepositoryInterface $channels,
         private TelegramGateway $telegram,
         private VkGateway $vk,
+        private MaxGateway $max,
     ) {}
 
     /**
@@ -77,6 +79,29 @@ final readonly class ChannelService
             if ($this->vk->groupName($channel) === null) {
                 throw new RuntimeException('VK не подтвердил сообщество: проверьте токен сообщества и его id.');
             }
+
+            return $channel;
+        });
+    }
+
+    /**
+     * Подключает бота MAX к тенанту: создаёт канал с зашифрованным токеном. Бот
+     * работает через long polling (`max:poll`), публичный вебхук не нужен.
+     *
+     * Валидация токена — запрос GET /me внутри транзакции: битый токен ответит
+     * 401 (исключение), и канал не останется полу-подключённым.
+     */
+    public function connectMax(string $tenantId, string $token): Channel
+    {
+        return DB::transaction(function () use ($tenantId, $token): Channel {
+            $channel = $this->channels->create(new NewChannelData(
+                tenantId: $tenantId,
+                type: ChannelType::Max,
+                externalId: null,
+                credentials: ['access_token' => $token],
+            ));
+
+            $this->max->getMe($channel);
 
             return $channel;
         });

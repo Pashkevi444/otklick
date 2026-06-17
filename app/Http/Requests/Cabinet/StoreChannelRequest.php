@@ -9,11 +9,12 @@ use App\Http\Requests\AbstractFormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Подключение канала тенанта. Тип выбирается полем `type` (telegram/vk); для
+ * Подключение канала тенанта. Тип выбирается полем `type` (telegram/vk/max); для
  * обратной совместимости со старой формой при отсутствии типа считаем Telegram.
  *
  * Telegram: токен бота `<bot_id>:<secret>`.
  * ВКонтакте: токен сообщества + числовой id сообщества.
+ * MAX: токен бота (от @MasterBot).
  */
 final class StoreChannelRequest extends AbstractFormRequest
 {
@@ -30,9 +31,9 @@ final class StoreChannelRequest extends AbstractFormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::enum(ChannelType::class)->only([ChannelType::Telegram, ChannelType::Vk])],
+            'type' => ['required', Rule::enum(ChannelType::class)->only([ChannelType::Telegram, ChannelType::Vk, ChannelType::Max])],
             'bot_token' => ['required_if:type,telegram', 'nullable', 'string', 'regex:/^\d+:[A-Za-z0-9_-]+$/'],
-            'access_token' => ['required_if:type,vk', 'nullable', 'string'],
+            'access_token' => ['required_if:type,vk,max', 'nullable', 'string'],
             'group_id' => ['required_if:type,vk', 'nullable', 'string', 'regex:/^\d+$/'],
         ];
     }
@@ -45,7 +46,7 @@ final class StoreChannelRequest extends AbstractFormRequest
         return [
             'bot_token.required_if' => 'Укажите токен бота от @BotFather.',
             'bot_token.regex' => 'Токен бота должен быть в формате 123456:ABCdef...',
-            'access_token.required_if' => 'Укажите токен сообщества ВКонтакте.',
+            'access_token.required_if' => 'Укажите токен — сообщества ВКонтакте или бота MAX.',
             'group_id.required_if' => 'Укажите id сообщества ВКонтакте.',
             'group_id.regex' => 'id сообщества — это число (без «club»/«public»).',
         ];

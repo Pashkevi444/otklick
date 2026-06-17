@@ -71,4 +71,37 @@ final class ChannelServiceTest extends TestCase
         // Канал не остался полу-подключённым (транзакция откатилась).
         $this->assertDatabaseCount('channels', 0);
     }
+
+    public function test_connect_max_creates_channel_and_validates_token(): void
+    {
+        Http::fake(['*/me' => Http::response(['user_id' => 1, 'name' => 'Бот', 'username' => 'biz_bot'])]);
+
+        $tenant = Tenant::factory()->create();
+        $this->app->make(TenantContext::class)->set($tenant->id);
+
+        $channel = $this->app->make(ChannelService::class)->connectMax($tenant->id, 'max-token');
+
+        $this->assertSame(ChannelType::Max, $channel->type);
+        $this->assertSame('max-token', $channel->credential('access_token'));
+        $this->assertDatabaseHas('channels', ['id' => $channel->id, 'type' => 'max']);
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/me'));
+    }
+
+    public function test_connect_max_rolls_back_on_invalid_token(): void
+    {
+        // Битый токен — GET /me ответит 401, исключение всплывёт, транзакция откатится.
+        Http::fake(['*/me' => Http::response(['code' => 'verify.token'], 401)]);
+
+        $tenant = Tenant::factory()->create();
+        $this->app->make(TenantContext::class)->set($tenant->id);
+
+        try {
+            $this->app->make(ChannelService::class)->connectMax($tenant->id, 'bad-token');
+            $this->fail('Ожидали исключение при битом токене MAX.');
+        } catch (\Throwable) {
+            // ожидаемо (RequestException)
+        }
+
+        $this->assertDatabaseCount('channels', 0);
+    }
 }

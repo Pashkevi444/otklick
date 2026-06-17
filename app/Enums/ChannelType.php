@@ -13,6 +13,7 @@ enum ChannelType: string implements HasLabel
 {
     case Telegram = 'telegram';
     case Vk = 'vk';
+    case Max = 'max';
     case WhatsApp = 'whatsapp';
     case Web = 'web';
 
@@ -21,6 +22,7 @@ enum ChannelType: string implements HasLabel
         return match ($this) {
             self::Telegram => 'Telegram',
             self::Vk => 'ВКонтакте',
+            self::Max => 'MAX',
             self::WhatsApp => 'WhatsApp',
             self::Web => 'Веб-виджет',
         };
@@ -34,6 +36,6 @@ enum ChannelType: string implements HasLabel
      */
     public static function pollable(): array
     {
-        return [self::Telegram, self::Vk];
+        return [self::Telegram, self::Vk, self::Max];
     }
 }

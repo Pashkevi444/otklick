@@ -39,6 +39,7 @@ const disconnect = (id: string): void => {
                     v-for="tab in [
                         { value: 'telegram', label: 'Telegram' },
                         { value: 'vk', label: 'ВКонтакте' },
+                        { value: 'max', label: 'MAX' },
                     ]"
                     :key="tab.value"
                     type="button"
@@ -81,7 +82,7 @@ const disconnect = (id: string): void => {
             </template>
 
             <!-- ВКонтакте -->
-            <template v-else>
+            <template v-else-if="form.type === 'vk'">
                 <div class="font-semibold text-[#1F4E79] mb-1">Подключить сообщество ВКонтакте</div>
                 <ol class="text-sm text-slate-500 mb-3 list-decimal list-inside space-y-0.5">
                     <li>В сообществе: <b>Управление → Настройки → Работа с API → Ключи доступа</b> — создайте ключ с правами на сообщения.</li>
@@ -153,10 +154,61 @@ const disconnect = (id: string): void => {
                     </div>
                 </div>
             </template>
+
+            <!-- MAX -->
+            <template v-else-if="form.type === 'max'">
+                <div class="font-semibold text-[#1F4E79] mb-1">Подключить бота MAX</div>
+                <ol class="text-sm text-slate-500 mb-3 list-decimal list-inside space-y-0.5">
+                    <li>Откройте <b>@MasterBot</b> в мессенджере MAX, команда <code>/newbot</code> — создайте бота.</li>
+                    <li>Скопируйте выданный токен и вставьте ниже.</li>
+                    <li>После подключения бот начнёт принимать сообщения клиентов.</li>
+                </ol>
+
+                <details class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                    <summary class="cursor-pointer font-medium text-[#1F4E79] select-none">Подробная инструкция: как создать и подключить бота MAX</summary>
+                    <div class="mt-3 space-y-3">
+                        <div>
+                            <div class="font-medium text-slate-700">1. Установите MAX и найдите @MasterBot</div>
+                            <p>MAX — российский мессенджер (<a href="https://max.ru" target="_blank" class="text-[#2E74B5] hover:underline">max.ru</a>). Установите приложение, войдите и в поиске найдите официального бота <b>@MasterBot</b> — он управляет созданием ботов.</p>
+                        </div>
+                        <div>
+                            <div class="font-medium text-slate-700">2. Создайте бота</div>
+                            <p>Напишите @MasterBot команду <code>/newbot</code> и следуйте подсказкам (имя бота и его @username). По завершении бот выдаст <b>токен доступа</b> — длинную строку. Храните её как пароль.</p>
+                        </div>
+                        <div>
+                            <div class="font-medium text-slate-700">3. Подключите ниже</div>
+                            <p>Вставьте токен и нажмите «Подключить». Мы проверим его и сразу начнём принимать сообщения (бот работает через long polling — публичный адрес/вебхук не нужен).</p>
+                        </div>
+                        <div class="rounded-md bg-white border border-slate-200 p-3">
+                            <div class="font-medium text-slate-700">Как это работает дальше</div>
+                            <p>Бот отвечает клиентам в MAX по вашей <b>базе знаний</b> (раздел «База знаний»), записывает на услуги (если подключена CRM) и передаёт сложные вопросы администратору. Проверить: напишите боту с другого аккаунта — он ответит, а диалог появится в разделе «Диалоги».</p>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="flex gap-3 items-start">
+                    <div class="flex-1">
+                        <input
+                            v-model="form.access_token"
+                            type="text"
+                            placeholder="Токен бота MAX (от @MasterBot)"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5] outline-none"
+                        />
+                        <p v-if="form.errors.access_token" class="mt-1 text-sm text-red-600">{{ form.errors.access_token }}</p>
+                    </div>
+                    <button
+                        type="submit"
+                        :disabled="form.processing"
+                        class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
+                    >
+                        Подключить
+                    </button>
+                </div>
+            </template>
         </form>
 
         <div v-if="channels.length === 0" class="text-slate-400 text-center py-8">
-            Каналов пока нет. Подключите Telegram-бота или сообщество ВКонтакте выше.
+            Каналов пока нет. Подключите Telegram, ВКонтакте или MAX выше.
         </div>
 
         <div v-else class="space-y-3">

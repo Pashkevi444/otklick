@@ -86,6 +86,34 @@ final class CabinetChannelTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_owner_connects_max_bot(): void
+    {
+        Http::fake(['*/me' => Http::response(['user_id' => 1, 'name' => 'Бот', 'username' => 'biz_bot'])]);
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->post('/cabinet/channels', ['type' => 'max', 'access_token' => 'max-token'])
+            ->assertRedirect(route('cabinet.channels.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('channels', ['tenant_id' => $tenant->id, 'type' => 'max']);
+    }
+
+    public function test_max_requires_token(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->post('/cabinet/channels', ['type' => 'max', 'access_token' => ''])
+            ->assertSessionHasErrors('access_token');
+
+        $this->assertDatabaseCount('channels', 0);
+        Http::assertNothingSent();
+    }
+
     public function test_index_shows_both_telegram_and_vk(): void
     {
         $tenant = Tenant::factory()->create();
