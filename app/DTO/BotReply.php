@@ -6,7 +6,9 @@ namespace App\DTO;
 
 /**
  * Ответ бота: текст для отправки, нужно ли эскалировать на администратора,
- * оформлена ли запись и отменил ли клиент запись (запись/отмена закрывают диалог).
+ * оформлена ли запись, отменил ли клиент запись (запись/отмена закрывают диалог)
+ * и нужно ли запустить пошаговую запись в CRM (startBooking — обрабатывает
+ * BotResponder через BookingFlow).
  */
 final readonly class BotReply
 {
@@ -15,5 +17,6 @@ final readonly class BotReply
         public bool $escalate,
         public bool $booked = false,
         public bool $cancelled = false,
+        public bool $startBooking = false,
     ) {}
 }

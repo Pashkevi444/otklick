@@ -31,7 +31,7 @@ final readonly class WebWidgetService
     public function __construct(
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
-        private ReplyComposer $composer,
+        private BotResponder $responder,
         private ContactCapture $contacts,
     ) {}
 
@@ -66,7 +66,7 @@ final readonly class WebWidgetService
         // Контакты клиента (телефон, имя) — до генерации ответа.
         $this->contacts->fromInbound($conversation, $text);
 
-        $reply = $this->composer->compose($channel->tenant, $conversation);
+        $reply = $this->responder->respond($channel->tenant, $conversation, $text);
 
         $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
         $this->conversations->touchLastMessage($conversation);

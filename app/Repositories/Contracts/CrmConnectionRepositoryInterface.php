@@ -21,6 +21,12 @@ interface CrmConnectionRepositoryInterface
     public function findByProviderForCurrentTenant(CrmProvider $provider): ?CrmConnection;
 
     /**
+     * Первое активное CRM-подключение текущего тенанта (любой провайдер) или
+     * null. Нужно автозаписи, чтобы понять, доступна ли запись в CRM.
+     */
+    public function activeForCurrentTenant(): ?CrmConnection;
+
+    /**
      * @return Collection<int, CrmConnection>
      */
     public function forCurrentTenant(): Collection;

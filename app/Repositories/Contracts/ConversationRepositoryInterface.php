@@ -80,6 +80,14 @@ interface ConversationRepositoryInterface
     public function setContactName(Conversation $conversation, string $name): void;
 
     /**
+     * Сохраняет состояние пошаговой записи (BookingFlow). null очищает —
+     * активной записи больше нет.
+     *
+     * @param  array<string, mixed>|null  $state
+     */
+    public function setBookingState(Conversation $conversation, ?array $state): void;
+
+    /**
      * Диалоги текущего тенанта (scoped/RLS) для журнала: с каналом, последним
      * сообщением и числом сообщений, новые сверху.
      *

@@ -135,6 +135,19 @@ final class ReplyComposerTest extends TestCase
         $this->assertStringContainsString('Хорошо, Паша', $reply->text);
     }
 
+    public function test_book_sentinel_starts_booking(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn(PromptBuilder::BOOK);
+
+        $reply = $this->composer($llm)->compose(new Tenant(['name' => 'Бизнес']), new Conversation, bookingEnabled: true);
+
+        $this->assertTrue($reply->startBooking);
+        $this->assertFalse($reply->escalate);
+        $this->assertFalse($reply->booked);
+        $this->assertStringNotContainsString('[[BOOK]]', $reply->text);
+    }
+
     public function test_cancellation_sentinel_marks_cancelled(): void
     {
         $llm = Mockery::mock(LlmClient::class);

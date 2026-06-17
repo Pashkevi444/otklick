@@ -6,6 +6,7 @@ interface Field {
     key: string;
     label: string;
     secret: boolean;
+    hint: string | null;
 }
 interface Connection {
     id: string;
@@ -109,6 +110,7 @@ const disconnect = (id: string): void => {
                             :type="field.secret ? 'password' : 'text'"
                             class="w-full rounded-lg border border-slate-300 px-3 py-2"
                         />
+                        <p v-if="field.hint" class="mt-1 text-xs text-slate-400">{{ field.hint }}</p>
                         <p
                             v-if="forms[integration.provider].errors[`credentials.${field.key}`]"
                             class="mt-1 text-sm text-red-600"

@@ -40,7 +40,7 @@ class ReplyComposer
         private readonly ConversationRepositoryInterface $conversations,
     ) {}
 
-    public function compose(Tenant $tenant, Conversation $conversation): BotReply
+    public function compose(Tenant $tenant, Conversation $conversation, bool $bookingEnabled = false): BotReply
     {
         $profile = BusinessProfile::fromArray($tenant->settings['profile'] ?? []);
 
@@ -48,6 +48,7 @@ class ReplyComposer
             $tenant->name,
             $profile,
             $this->knowledge->publishedForCurrentTenant(),
+            $bookingEnabled,
         );
 
         $answer = trim($this->llm->generate($systemPrompt, $this->history($conversation)));
@@ -60,6 +61,15 @@ class ReplyComposer
             $this->resetStreak($conversation);
 
             return new BotReply($this->fallback($profile), escalate: true);
+        }
+
+        // Клиент хочет записаться, а у тенанта подключена CRM — запускаем
+        // пошаговый мастер записи (BookingFlow) через BotResponder. Текст здесь
+        // не важен: BotResponder заменит его на первый шаг мастера.
+        if (str_contains($answer, PromptBuilder::BOOK)) {
+            $this->resetStreak($conversation);
+
+            return new BotReply('Секунду, подберу для вас время для записи…', escalate: false, startBooking: true);
         }
 
         // Клиент отменил запись — подтверждаем отмену и закрываем диалог.
@@ -115,7 +125,7 @@ class ReplyComposer
     private function stripSentinels(string $text): string
     {
         $text = str_replace(
-            [PromptBuilder::ESCALATE, PromptBuilder::BOOKED, PromptBuilder::CANCELLED, PromptBuilder::CLARIFY],
+            [PromptBuilder::ESCALATE, PromptBuilder::BOOKED, PromptBuilder::BOOK, PromptBuilder::CANCELLED, PromptBuilder::CLARIFY],
             '',
             $text,
         );

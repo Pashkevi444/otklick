@@ -181,4 +181,9 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     {
         $conversation->forceFill(['contact_name' => $name])->save();
     }
+
+    public function setBookingState(Conversation $conversation, ?array $state): void
+    {
+        $conversation->forceFill(['booking_state' => $state])->save();
+    }
 }

@@ -41,6 +41,11 @@ final class EloquentCrmConnectionRepository extends EloquentRepository implement
         return CrmConnection::query()->where('provider', $provider)->first();
     }
 
+    public function activeForCurrentTenant(): ?CrmConnection
+    {
+        return CrmConnection::query()->where('is_active', true)->latest()->first();
+    }
+
     public function forCurrentTenant(): Collection
     {
         return CrmConnection::query()->latest()->get();

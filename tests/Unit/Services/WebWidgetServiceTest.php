@@ -12,8 +12,8 @@ use App\Models\Message;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Services\BotResponder;
 use App\Services\ContactCapture;
-use App\Services\ReplyComposer;
 use App\Services\WebWidgetService;
 use Illuminate\Support\Facades\Crypt;
 use Mockery;
@@ -44,14 +44,14 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordOutbound')
             ->once()->with($conversation, 'Записал вас!', MessageStatus::Sent)->andReturn(new Message);
 
-        $composer = Mockery::mock(ReplyComposer::class);
-        $composer->shouldReceive('compose')->once()->with(Mockery::any(), $conversation)
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldReceive('respond')->once()->with(Mockery::any(), $conversation, 'да, записывайте')
             ->andReturn(new BotReply('Записал вас!', escalate: false, booked: true));
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'да, записывайте');
 
-        $reply = (new WebWidgetService($conversations, $messages, $composer, $contacts))
+        $reply = (new WebWidgetService($conversations, $messages, $responder, $contacts))
             ->reply($channel, $token, 'да, записывайте');
 
         $this->assertTrue($reply->booked);

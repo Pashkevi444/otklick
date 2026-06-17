@@ -41,8 +41,17 @@ final readonly class YclientsGateway implements CrmGateway
     public function credentialFields(): array
     {
         return [
-            new CredentialField('company_id', 'ID филиала (company_id)'),
-            new CredentialField('api_token', 'API-токен', secret: true),
+            new CredentialField(
+                'company_id',
+                'ID филиала (company_id)',
+                hint: 'В YClients: раздел «Обзор» → «Сводка» в левом меню.',
+            ),
+            new CredentialField(
+                'api_token',
+                'API-токен',
+                secret: true,
+                hint: 'В YClients: раздел «Интеграции» → «Аккаунт разработчика» (для создания связки).',
+            ),
         ];
     }
 

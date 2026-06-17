@@ -28,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $booked_at
  * @property Carbon|null $cancelled_at
  * @property ConversationOutcome|null $outcome_override
+ * @property array<string, mixed>|null $booking_state
  * @property Carbon|null $last_message_at
  */
 class Conversation extends TenantOwnedModel
@@ -47,6 +48,7 @@ class Conversation extends TenantOwnedModel
         'booked_at',
         'cancelled_at',
         'outcome_override',
+        'booking_state',
         'last_message_at',
     ];
 
@@ -58,6 +60,7 @@ class Conversation extends TenantOwnedModel
             'booked_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'outcome_override' => ConversationOutcome::class,
+            'booking_state' => 'array',
             'last_message_at' => 'datetime',
         ];
     }

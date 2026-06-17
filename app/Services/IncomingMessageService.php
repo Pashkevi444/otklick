@@ -30,7 +30,7 @@ final readonly class IncomingMessageService
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
         private MessengerGateway $gateway,
-        private ReplyComposer $composer,
+        private BotResponder $responder,
         private ContactCapture $contacts,
     ) {}
 
@@ -53,7 +53,7 @@ final readonly class IncomingMessageService
         // Контакты клиента (телефон, имя) — до генерации ответа.
         $this->contacts->fromInbound($conversation, $incoming->text);
 
-        $reply = $this->composer->compose($channel->tenant, $conversation);
+        $reply = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
 
         $status = MessageStatus::Sent;
 

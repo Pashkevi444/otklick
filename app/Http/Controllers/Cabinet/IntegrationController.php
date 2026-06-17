@@ -40,6 +40,7 @@ final class IntegrationController extends Controller
                     'key' => $f->key,
                     'label' => $f->label,
                     'secret' => $f->secret,
+                    'hint' => $f->hint,
                 ], $fields),
                 'connection' => $connection === null ? null : $this->present($connection, $fields),
             ];
