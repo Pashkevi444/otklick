@@ -439,6 +439,37 @@ class BookingFlow
     }
 
     /**
+     * Отменяет в CRM запись КОНКРЕТНОГО лида — по его собственной привязке
+     * (`crm_connection_id` + `crm_record_id`), а не по «активной» CRM. Так
+     * корректно работает и при нескольких CRM у бизнеса. Без записи — ничего не
+     * делает. При успехе снимает `crm_record_id` (повторно не отменяем).
+     */
+    public function cancelBookingForConversation(Conversation $conversation): void
+    {
+        if ($conversation->crm_record_id === null || $conversation->crm_connection_id === null) {
+            return;
+        }
+
+        $connection = $this->connections->find($conversation->crm_connection_id);
+        if ($connection === null) {
+            return;
+        }
+
+        $result = $this->gateways->for($connection->provider)->cancelBooking($connection, $conversation->crm_record_id);
+
+        Log::info('booking.cancel_for_conversation', [
+            'conversation_id' => $conversation->id ?? null,
+            'crm_connection_id' => $conversation->crm_connection_id,
+            'record_id' => $conversation->crm_record_id,
+            'success' => $result->success,
+        ]);
+
+        if ($result->success) {
+            $this->conversations->setCrmRecordId($conversation, null);
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $state
      */
     private function confirmation(array $state): string

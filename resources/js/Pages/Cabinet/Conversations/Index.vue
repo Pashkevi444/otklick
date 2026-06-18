@@ -133,11 +133,11 @@ const remove = (id: string): void => {
 </script>
 
 <template>
-    <Head title="Диалоги" />
+    <Head title="Лиды" />
 
-    <AppLayout title="Диалоги">
+    <AppLayout title="Лиды">
         <p class="mb-5 max-w-2xl text-sm text-slate-500">
-            Журнал переписок бота с клиентами — 100% диалогов сохраняется здесь. Ищите, фильтруйте и сортируйте.
+            Все обращения клиентов — 100% лидов и переписки бота сохраняется здесь. Ищите, фильтруйте и сортируйте.
         </p>
 
         <!-- Тулбар: поиск + фильтр статуса -->
@@ -197,7 +197,7 @@ const remove = (id: string): void => {
         </div>
 
         <div v-if="conversations.length === 0" class="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400">
-            {{ state.search || state.status ? 'Ничего не найдено. Измените поиск или фильтр.' : 'Пока нет диалогов. Как только клиент напишет боту — переписка появится здесь.' }}
+            {{ state.search || state.status ? 'Ничего не найдено. Измените поиск или фильтр.' : 'Пока нет лидов. Как только клиент напишет боту — обращение появится здесь.' }}
         </div>
 
         <template v-else>

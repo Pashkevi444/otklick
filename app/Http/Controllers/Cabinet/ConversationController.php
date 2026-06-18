@@ -13,6 +13,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Services\BookingFlow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,7 @@ final class ConversationController extends Controller
     public function __construct(
         private readonly ConversationRepositoryInterface $conversations,
         private readonly MessageRepositoryInterface $messages,
+        private readonly BookingFlow $booking,
     ) {}
 
     public function index(Request $request): Response
@@ -61,8 +63,8 @@ final class ConversationController extends Controller
                 ConversationStatus::cases(),
             ),
             'channels' => array_map(
-                fn (ChannelType $c): array => ['value' => $c->value, 'label' => $c->label()],
-                [ChannelType::Telegram, ChannelType::Vk, ChannelType::Max, ChannelType::Web],
+                fn (string $type): array => ['value' => $type, 'label' => ChannelType::tryFrom($type)?->label() ?? $type],
+                $this->conversations->channelTypesForCurrentTenant(),
             ),
         ]);
     }
@@ -86,6 +88,9 @@ final class ConversationController extends Controller
                 'outcome' => $model->outcome()->value,
                 'outcomeLabel' => $model->outcome()->label(),
                 'createdAt' => $model->created_at?->format('d.m.Y'),
+                // Связь лида с CRM-записью (id записи в CRM + какая CRM).
+                'crmRecordId' => $model->crm_record_id,
+                'crmProvider' => $model->crm_connection_id !== null ? ($model->crmConnection?->provider->label() ?? 'CRM') : null,
             ],
             'outcomes' => array_map(
                 fn (ConversationOutcome $o): array => ['value' => $o->value, 'label' => $o->label()],
@@ -121,6 +126,11 @@ final class ConversationController extends Controller
         $outcome = ConversationOutcome::from((string) $validated['outcome']);
         $this->conversations->setOutcome($model, $outcome);
 
+        // Статус «Отменён» — отменяем и запись в CRM (если у лида она есть).
+        if ($outcome === ConversationOutcome::Cancelled) {
+            $this->booking->cancelBookingForConversation($model);
+        }
+
         return back()->with('success', "Лид: статус «{$outcome->label()}».");
     }
 
@@ -133,6 +143,8 @@ final class ConversationController extends Controller
 
         abort_if($model === null, 404);
 
+        // Удаляем лид — если у него есть запись в CRM, отменяем её там же.
+        $this->booking->cancelBookingForConversation($model);
         $this->conversations->delete($model);
 
         // Со страницы самого диалога back() вернул бы на удалённую страницу

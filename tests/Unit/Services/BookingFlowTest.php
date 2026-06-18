@@ -47,6 +47,7 @@ final class BookingFlowTest extends TestCase
 
         $connections = Mockery::mock(CrmConnectionRepositoryInterface::class);
         $connections->shouldReceive('activeForCurrentTenant')->andReturn($connected ? $connection : null);
+        $connections->shouldReceive('find')->andReturn($connection)->byDefault();
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('setBookingState')->andReturnUsing(
@@ -366,6 +367,31 @@ final class BookingFlowTest extends TestCase
         $this->assertNull($c->booking_state);
         // В статусе неудачи — телефон бизнеса для связи.
         $this->assertStringContainsString('+7 383 000-00-00', $r->text);
+    }
+
+    public function test_cancel_booking_for_conversation_cancels_in_its_crm(): void
+    {
+        $crm = $this->crm();
+        $flow = $this->flow($crm);
+
+        $c = new Conversation;
+        $c->crm_record_id = 'rec-9';
+        $c->crm_connection_id = 'crm-1';
+
+        $flow->cancelBookingForConversation($c);
+
+        $this->assertContains('rec-9', $crm->cancelledRecords);
+        $this->assertNull($c->crm_record_id); // снят после успешной отмены
+    }
+
+    public function test_cancel_booking_for_conversation_noop_without_record(): void
+    {
+        $crm = $this->crm();
+        $c = new Conversation; // нет crm_record_id/crm_connection_id
+
+        $this->flow($crm)->cancelBookingForConversation($c);
+
+        $this->assertSame([], $crm->cancelledRecords);
     }
 
     public function test_cancel_last_booking_cancels_in_crm(): void

@@ -20,7 +20,7 @@ interface Card {
 
 const allCards: Card[] = [
     { icon: '📈', label: 'Аналитика', text: 'Лиды, конверсия и что улучшить', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
-    { icon: '💬', label: 'Диалоги', text: 'Журнал переписок бота с клиентами', href: '/cabinet/conversations', section: 'conversations' },
+    { icon: '💬', label: 'Лиды', text: 'Обращения клиентов и переписка бота', href: '/cabinet/conversations', section: 'conversations' },
     { icon: '👤', label: 'База клиентов', text: 'Карточки клиентов, история и краткое резюме', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
     { icon: '📡', label: 'Каналы', text: 'Telegram и другие каналы общения с клиентами', href: '/cabinet/channels', section: 'channels' },
     { icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget', section: 'widget' },

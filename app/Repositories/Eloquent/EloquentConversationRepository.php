@@ -7,6 +7,7 @@ namespace App\Repositories\Eloquent;
 use App\Enums\ChannelType;
 use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
+use App\Models\Channel;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -197,6 +198,17 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     {
         // Сообщения уходят каскадом (FK conversation_id ON DELETE CASCADE).
         $conversation->delete();
+    }
+
+    public function channelTypesForCurrentTenant(): array
+    {
+        return Channel::query()
+            ->whereHas('conversations')
+            ->orderBy('type')
+            ->distinct()
+            ->pluck('type')
+            ->map(fn ($type): string => $type instanceof \BackedEnum ? (string) $type->value : (string) $type)
+            ->all();
     }
 
     public function setBookingState(Conversation $conversation, ?array $state): void

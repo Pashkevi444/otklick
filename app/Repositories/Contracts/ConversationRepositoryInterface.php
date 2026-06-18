@@ -87,6 +87,14 @@ interface ConversationRepositoryInterface
     public function delete(Conversation $conversation): void;
 
     /**
+     * Типы каналов, по которым у тенанта реально есть диалоги — для фильтра грида
+     * (чтобы не показывать пустые каналы).
+     *
+     * @return list<string>
+     */
+    public function channelTypesForCurrentTenant(): array;
+
+    /**
      * Сохраняет состояние пошаговой записи (BookingFlow). null очищает —
      * активной записи больше нет.
      *

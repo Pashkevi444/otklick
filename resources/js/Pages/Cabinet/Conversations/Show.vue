@@ -23,6 +23,8 @@ interface Conv {
     outcome: string;
     outcomeLabel: string;
     createdAt: string | null;
+    crmRecordId: string | null;
+    crmProvider: string | null;
 }
 interface Outcome {
     value: string;
@@ -95,7 +97,7 @@ const removeLead = (): void => {
     <Head :title="`Переписка — ${conversation.contact}`" />
 
     <AppLayout>
-        <Link href="/cabinet/conversations" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300">← К списку диалогов</Link>
+        <Link href="/cabinet/conversations" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300">← К списку лидов</Link>
 
         <!-- Шапка диалога -->
         <div class="mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
@@ -117,6 +119,9 @@ const removeLead = (): void => {
                     <span v-else>IP: {{ conversation.contactRef }}</span>
                 </div>
                 <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-medium text-[#2E74B5] dark:text-sky-300">📞 {{ conversation.phone }}</a>
+                <div v-if="conversation.crmRecordId" class="mt-0.5 text-xs text-slate-400">
+                    🗂 Запись в CRM ({{ conversation.crmProvider }}): <span class="font-medium text-slate-600 dark:text-slate-300">#{{ conversation.crmRecordId }}</span>
+                </div>
             </div>
             <div class="ml-auto flex items-center gap-2">
                 <span class="rounded-full px-2.5 py-1 text-xs" :class="outcomeClass(conversation.outcome)">{{ conversation.outcomeLabel }}</span>

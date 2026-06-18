@@ -45,7 +45,7 @@ const state = reactive<Filters>({ ...props.filters });
 const sorts = [
     { value: 'last', label: 'Последняя активность' },
     { value: 'name', label: 'Имя' },
-    { value: 'first', label: 'Первый контакт' },
+    { value: 'first', label: 'Первое обращение' },
 ];
 
 const go = (page = 1): void => {

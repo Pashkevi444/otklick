@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
+use App\Crm\CrmGatewayResolver;
 use App\Enums\UserRole;
 use App\Models\Channel;
 use App\Models\Client;
 use App\Models\Conversation;
+use App\Models\CrmConnection;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
+use Tests\Support\FakeCrmGateway;
 use Tests\TestCase;
 
 final class MemberPermissionTest extends TestCase
@@ -57,6 +60,29 @@ final class MemberPermissionTest extends TestCase
             ->delete("/cabinet/conversations/{$lead->id}")
             ->assertRedirect('/cabinet/conversations');
 
+        $this->assertDatabaseMissing('conversations', ['id' => $lead->id]);
+    }
+
+    public function test_deleting_lead_cancels_its_crm_booking(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $crm = CrmConnection::factory()->create(['tenant_id' => $tenant->id]);
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $lead = Conversation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channel_id' => $channel->id,
+            'crm_record_id' => 'rec-42',
+            'crm_connection_id' => $crm->id,
+        ]);
+
+        // Подменяем CRM-шлюз фейком, чтобы поймать отмену.
+        $fake = new FakeCrmGateway;
+        $this->app->instance(CrmGatewayResolver::class, new CrmGatewayResolver([$fake]));
+
+        $this->actingAs($owner)->delete("/cabinet/conversations/{$lead->id}")->assertRedirect();
+
+        $this->assertContains('rec-42', $fake->cancelledRecords); // запись отменена в CRM
         $this->assertDatabaseMissing('conversations', ['id' => $lead->id]);
     }
 

@@ -105,22 +105,22 @@ const can = useCan();
                     </dl>
                 </div>
 
-                <div class="rounded-xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-5">
+                <div class="rounded-xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-5 dark:border-sky-400/20 dark:bg-none dark:bg-white/5">
                     <div class="flex items-center justify-between mb-2">
-                        <div class="font-semibold text-[#1F4E79]">🧠 Краткое резюме</div>
-                        <button v-if="can('clients.edit')" type="button" class="text-xs text-[#2E74B5] hover:underline" @click="refreshSummary">Обновить</button>
+                        <div class="font-semibold text-[#1F4E79] dark:text-sky-200">🧠 Краткое резюме</div>
+                        <button v-if="can('clients.edit')" type="button" class="text-xs text-[#2E74B5] hover:underline dark:text-sky-300" @click="refreshSummary">Обновить</button>
                     </div>
-                    <p v-if="client.summary" class="text-sm text-slate-600 whitespace-pre-line">{{ client.summary }}</p>
+                    <p v-if="client.summary" class="text-sm text-slate-600 whitespace-pre-line dark:text-slate-300">{{ client.summary }}</p>
                     <p v-else class="text-sm text-slate-400">Резюме появится после переписки клиента с ботом — или нажмите «Обновить».</p>
                     <p v-if="client.summary_generated_at" class="mt-2 text-[11px] text-slate-400">Обновлено: {{ client.summary_generated_at }}</p>
                 </div>
             </div>
         </div>
 
-        <!-- Диалоги клиента -->
-        <div class="mt-6 rounded-xl border border-slate-200 bg-white p-5">
-            <div class="font-semibold text-[#1F4E79] mb-3">Диалоги клиента ({{ conversations.length }})</div>
-            <div v-if="conversations.length === 0" class="text-sm text-slate-400 py-4 text-center">Диалогов пока нет.</div>
+        <!-- Лиды клиента -->
+        <div class="mt-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <div class="font-semibold text-[#1F4E79] mb-3 dark:text-sky-200">Лиды клиента ({{ conversations.length }})</div>
+            <div v-if="conversations.length === 0" class="text-sm text-slate-400 py-4 text-center">Лидов пока нет.</div>
             <div v-else class="divide-y divide-slate-100">
                 <div
                     v-for="conv in conversations"

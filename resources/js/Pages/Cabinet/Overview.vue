@@ -65,7 +65,7 @@ interface Shortcut {
 // Главные плашки бизнеса — с гейтингом (тариф/роль/доступ), чтобы недоступные
 // не показывались и не давали 403.
 const allShortcuts: Shortcut[] = [
-    { label: 'Диалоги', icon: '💬', href: '/cabinet/conversations', section: 'conversations' },
+    { label: 'Лиды', icon: '💬', href: '/cabinet/conversations', section: 'conversations' },
     { label: 'База клиентов', icon: '👤', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
     { label: 'Аналитика', icon: '📈', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
     { label: 'Команда', icon: '👥', href: '/cabinet/team', owner: true },

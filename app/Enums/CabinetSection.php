@@ -27,7 +27,7 @@ enum CabinetSection: string implements HasLabel
     public function label(): string
     {
         return match ($this) {
-            self::Conversations => 'Диалоги',
+            self::Conversations => 'Лиды',
             self::Clients => 'База клиентов',
             self::Knowledge => 'База знаний',
             self::Analytics => 'Аналитика',
