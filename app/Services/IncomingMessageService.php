@@ -10,6 +10,7 @@ use App\DTO\IncomingMessage;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -82,6 +83,11 @@ final readonly class IncomingMessageService
         } elseif ($reply->booked) {
             // Запись оформлена — закрываем диалог и фиксируем конверсию.
             $this->conversations->markBooked($conversation);
+
+            // Обновляем резюме клиента по итогам записи (в фоне), если привязан.
+            if ($conversation->client_id !== null) {
+                RefreshClientSummary::dispatch((string) $channel->tenant_id, (string) $conversation->client_id);
+            }
         } elseif ($reply->cancelled) {
             // Клиент отменил запись — отменяем в CRM и закрываем диалог.
             $this->responder->cancelBookingInCrm($conversation);

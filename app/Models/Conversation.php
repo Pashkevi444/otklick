@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $booking_state
  * @property string|null $crm_record_id
  * @property string|null $crm_connection_id
+ * @property string|null $client_id
  * @property string|null $booked_service_id
  * @property string|null $booked_service_title
  * @property int|null $booked_service_price
@@ -58,6 +59,7 @@ class Conversation extends TenantOwnedModel
         'booking_state',
         'crm_record_id',
         'crm_connection_id',
+        'client_id',
         'booked_service_id',
         'booked_service_title',
         'booked_service_price',
@@ -124,6 +126,16 @@ class Conversation extends TenantOwnedModel
     public function crmConnection(): BelongsTo
     {
         return $this->belongsTo(CrmConnection::class);
+    }
+
+    /**
+     * Карточка клиента, к которой привязан лид (по телефону).
+     *
+     * @return BelongsTo<Client, $this>
+     */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
     }
 
     /**

@@ -25,10 +25,11 @@ interface Pagination {
 interface Filters {
     search: string;
     status: string;
+    channel: string;
     sort: string;
     dir: string;
 }
-interface StatusOption {
+interface Option {
     value: string;
     label: string;
 }
@@ -37,7 +38,8 @@ const props = defineProps<{
     conversations: Row[];
     pagination: Pagination;
     filters: Filters;
-    statuses: StatusOption[];
+    statuses: Option[];
+    channels: Option[];
 }>();
 
 const state = reactive<Filters>({ ...props.filters });
@@ -45,7 +47,14 @@ const state = reactive<Filters>({ ...props.filters });
 const go = (page = 1): void => {
     router.get(
         '/cabinet/conversations',
-        { search: state.search || undefined, status: state.status || undefined, sort: state.sort, dir: state.dir, page },
+        {
+            search: state.search || undefined,
+            status: state.status || undefined,
+            channel: state.channel || undefined,
+            sort: state.sort,
+            dir: state.dir,
+            page,
+        },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 };
@@ -61,6 +70,11 @@ watch(
 
 const setStatus = (v: string): void => {
     state.status = v;
+    go();
+};
+
+const setChannel = (v: string): void => {
+    state.channel = v;
     go();
 };
 
@@ -149,6 +163,29 @@ const open = (id: string): void => {
                     {{ s.label }}
                 </button>
             </div>
+        </div>
+
+        <!-- Фильтр по каналу -->
+        <div class="mb-4 flex flex-wrap items-center gap-1.5">
+            <span class="text-xs text-slate-400">Канал:</span>
+            <button
+                type="button"
+                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                :class="state.channel === '' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                @click="setChannel('')"
+            >
+                Все
+            </button>
+            <button
+                v-for="c in channels"
+                :key="c.value"
+                type="button"
+                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                :class="state.channel === c.value ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                @click="setChannel(c.value)"
+            >
+                {{ c.label }}
+            </button>
         </div>
 
         <div v-if="conversations.length === 0" class="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400">

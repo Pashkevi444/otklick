@@ -15,6 +15,7 @@ use App\Http\Controllers\Cabinet\BillingController;
 use App\Http\Controllers\Cabinet\BusinessOverviewController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
+use App\Http\Controllers\Cabinet\ClientController;
 use App\Http\Controllers\Cabinet\ConversationController;
 use App\Http\Controllers\Cabinet\CrmKnowledgeController;
 use App\Http\Controllers\Cabinet\DashboardController;
@@ -98,6 +99,15 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
         Route::put('/conversations/{conversation}/status', [ConversationController::class, 'setStatus'])->name('conversations.status');
+
+        // База клиентов — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
+        Route::middleware('plan:clientBase')->group(function (): void {
+            Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+            Route::get('/clients/{client}', [ClientController::class, 'show'])->name('clients.show');
+            Route::put('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
+            Route::post('/clients/{client}/summary', [ClientController::class, 'refreshSummary'])->name('clients.summary');
+            Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
+        });
 
         Route::get('/knowledge', [KnowledgeEntryController::class, 'index'])->name('knowledge.index');
         Route::post('/knowledge', [KnowledgeEntryController::class, 'store'])->name('knowledge.store');

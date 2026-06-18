@@ -34,10 +34,11 @@ final class ConversationController extends Controller
     {
         $search = trim((string) $request->query('search', '')) ?: null;
         $status = ConversationStatus::tryFrom((string) $request->query('status', ''));
+        $channel = ChannelType::tryFrom((string) $request->query('channel', ''));
         $sort = in_array($request->query('sort'), ['last', 'contact', 'messages'], true) ? (string) $request->query('sort') : 'last';
         $dir = $request->query('dir') === 'asc' ? 'asc' : 'desc';
 
-        $page = $this->conversations->paginateForCurrentTenant($search, $status, $sort, $dir, 15);
+        $page = $this->conversations->paginateForCurrentTenant($search, $status, $channel, $sort, $dir, 15);
 
         return Inertia::render('Cabinet/Conversations/Index', [
             'conversations' => array_map($this->present(...), $page->items()),
@@ -51,12 +52,17 @@ final class ConversationController extends Controller
             'filters' => [
                 'search' => $search ?? '',
                 'status' => $status instanceof ConversationStatus ? $status->value : '',
+                'channel' => $channel instanceof ChannelType ? $channel->value : '',
                 'sort' => $sort,
                 'dir' => $dir,
             ],
             'statuses' => array_map(
                 fn (ConversationStatus $s): array => ['value' => $s->value, 'label' => $s->stageLabel()],
                 ConversationStatus::cases(),
+            ),
+            'channels' => array_map(
+                fn (ChannelType $c): array => ['value' => $c->value, 'label' => $c->label()],
+                [ChannelType::Telegram, ChannelType::Vk, ChannelType::Max, ChannelType::Web],
             ),
         ]);
     }

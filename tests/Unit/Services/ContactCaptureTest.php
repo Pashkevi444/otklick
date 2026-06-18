@@ -8,6 +8,7 @@ use App\Llm\Contracts\LlmClient;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Services\ClientService;
 use App\Services\ContactCapture;
 use App\Services\NameDetector;
 use Mockery;
@@ -92,6 +93,9 @@ final class ContactCaptureTest extends TestCase
         MessageRepositoryInterface $messages,
         LlmClient $llm,
     ): ContactCapture {
-        return new ContactCapture($conversations, $messages, new NameDetector($llm));
+        $clients = Mockery::mock(ClientService::class);
+        $clients->shouldReceive('linkConversation')->byDefault();
+
+        return new ContactCapture($conversations, $messages, new NameDetector($llm), $clients);
     }
 }

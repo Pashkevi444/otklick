@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Contracts;
 
+use App\Enums\ChannelType;
 use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
@@ -79,6 +80,9 @@ interface ConversationRepositoryInterface
      */
     public function setContactName(Conversation $conversation, string $name): void;
 
+    /** Привязывает диалог к карточке клиента (база клиентов). */
+    public function setClientId(Conversation $conversation, string $clientId): void;
+
     /**
      * Сохраняет состояние пошаговой записи (BookingFlow). null очищает —
      * активной записи больше нет.
@@ -142,8 +146,8 @@ interface ConversationRepositoryInterface
     public function findForCurrentTenant(string $id): ?Conversation;
 
     /**
-     * Диалоги текущего тенанта с поиском, фильтром по статусу, сортировкой и
-     * пагинацией (для грид-журнала).
+     * Диалоги текущего тенанта с поиском, фильтрами по статусу и каналу,
+     * сортировкой и пагинацией (для грид-журнала).
      *
      * @param  'last'|'contact'|'messages'  $sort
      * @param  'asc'|'desc'  $direction
@@ -152,6 +156,7 @@ interface ConversationRepositoryInterface
     public function paginateForCurrentTenant(
         ?string $search,
         ?ConversationStatus $status,
+        ?ChannelType $channel,
         string $sort,
         string $direction,
         int $perPage,

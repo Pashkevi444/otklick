@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Enums\ChannelType;
 use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Conversation;
@@ -74,6 +75,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function paginateForCurrentTenant(
         ?string $search,
         ?ConversationStatus $status,
+        ?ChannelType $channel,
         string $sort,
         string $direction,
         int $perPage,
@@ -94,6 +96,10 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
 
         if ($status instanceof ConversationStatus) {
             $query->where('status', $status);
+        }
+
+        if ($channel instanceof ChannelType) {
+            $query->whereHas('channel', fn (Builder $c) => $c->where('type', $channel->value));
         }
 
         $column = match ($sort) {
@@ -180,6 +186,11 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function setContactName(Conversation $conversation, string $name): void
     {
         $conversation->forceFill(['contact_name' => $name])->save();
+    }
+
+    public function setClientId(Conversation $conversation, string $clientId): void
+    {
+        $conversation->forceFill(['client_id' => $clientId])->save();
     }
 
     public function setBookingState(Conversation $conversation, ?array $state): void

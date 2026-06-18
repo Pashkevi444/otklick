@@ -26,6 +26,7 @@ class ContactCapture
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
         private NameDetector $names,
+        private ClientService $clients,
     ) {}
 
     public function fromInbound(Conversation $conversation, string $text): void
@@ -46,6 +47,11 @@ class ContactCapture
             if ($name !== null) {
                 $this->conversations->setContactName($conversation, $name);
             }
+        }
+
+        // Появился телефон — заводим/обновляем карточку клиента и привязываем лид.
+        if ($conversation->contact_phone !== null) {
+            $this->clients->linkConversation($conversation);
         }
     }
 }
