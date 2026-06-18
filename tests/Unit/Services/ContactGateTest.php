@@ -48,6 +48,28 @@ final class ContactGateTest extends TestCase
         $this->assertFalse((bool) $c->contacts_gate_done);
     }
 
+    public function test_question_message_is_not_taken_as_name(): void
+    {
+        // Прод-баг: «а меня нет в базе?» → имя «Нет». Вопрос именем НЕ считаем.
+        $c = new Conversation;
+        $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, 'а меня нет в базе?');
+
+        $this->assertNull($c->contact_name);
+        $this->assertFalse((bool) $c->contacts_gate_done);
+        $this->assertStringNotContainsString('Спасибо', $r->text);
+    }
+
+    public function test_stopword_is_not_taken_as_name(): void
+    {
+        // Телефон уже есть, не хватает имени; «да»/«нет»/«привет» — не имя.
+        $c = new Conversation;
+        $c->contact_phone = '+79991234567';
+        $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, 'да');
+
+        $this->assertNull($c->contact_name);
+        $this->assertStringContainsString('зовут', $r->text); // переспрашиваем имя
+    }
+
     public function test_invalid_phone_is_rejected_with_fix_request(): void
     {
         $c = new Conversation;

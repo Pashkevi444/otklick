@@ -478,6 +478,75 @@ final class BookingFlowTest extends TestCase
         $this->assertNull($this->flow($this->crm())->bookingChoiceMenu($this->conversation()));
     }
 
+    public function test_bare_hour_at_slot_step_picks_that_time_not_ordinal(): void
+    {
+        // Прод-баг: «14» бронировало 14-й слот, а не 14:00.
+        $crm = $this->crm();
+        $crm->slots = array_map(
+            fn (int $h): TimeSlot => new TimeSlot(sprintf('2026-06-17T%02d:00:00+07:00', $h)),
+            range(10, 18), // 9 окон → ветка диапазона
+        );
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '14'); // = 14:00
+
+        $this->assertTrue($r->booked);
+        $this->assertSame('2026-06-17T14:00:00+07:00', $crm->createdBookings[0]->start);
+    }
+
+    public function test_reschedule_intent_is_ignored_during_active_wizard(): void
+    {
+        // «перенеси на 14» ВНУТРИ мастера — это ответ на шаг, а не перезапуск.
+        $booked = new Conversation;
+        $booked->crm_record_id = 'old';
+        $flow = $this->flow($this->crm(), lastBooked: $booked);
+
+        $c = $this->conversation();
+        $c->booking_state = ['step' => 'slot', 'options' => [['id' => 's', 'title' => '14:00']]];
+
+        $this->assertNull($flow->interceptIntent($this->tenant(), $c, 'перенеси на 14'));
+    }
+
+    public function test_confirm_step_reasks_when_phone_changed_but_not_given(): void
+    {
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка')];
+        $crm->staff = [];
+        $flow = $this->flow($crm);
+
+        $c = $this->conversation();
+        $c->client_id = 'cl-1'; // вернувшийся → шаг подтверждения телефона
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $flow->advance($this->tenant(), $c, '1'); // слот → подтверждение
+        $r = $flow->advance($this->tenant(), $c, 'нет, поменялся'); // сменился, но номер не дал
+
+        $this->assertFalse($r->booked); // НЕ бронируем на старый номер
+        $this->assertStringContainsString('актуальный номер', $r->text);
+        $this->assertCount(0, $crm->createdBookings);
+    }
+
+    public function test_service_exact_title_wins_over_substring(): void
+    {
+        // «Стрижка» не должна уехать в «Стрижка машинкой».
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка машинкой'), new CrmService('s2', 'Стрижка')];
+        $crm->staff = [];
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c); // 2 услуги → шаг выбора услуги
+        $flow->advance($this->tenant(), $c, 'Стрижка');
+
+        $this->assertSame('s2', $c->booking_state['service_id'] ?? null);
+    }
+
     public function test_crm_error_on_start_escalates(): void
     {
         $crm = $this->crm();

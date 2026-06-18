@@ -238,8 +238,15 @@ class BookingFlow
             );
         }
 
-        // INTENT_RESCHEDULE — начинаем запись заново; прежнюю (если есть) заменим
-        // (отменим в CRM) только после успешного создания новой.
+        // INTENT_RESCHEDULE — только ВНЕ активного мастера записи. Внутри мастера
+        // «перенеси на 14» / «перенесите на пятницу» — это ответ на текущий шаг,
+        // а не перезапуск всего сценария; пусть его разберёт advance().
+        if ($activeFlow) {
+            return null;
+        }
+
+        // Начинаем запись заново; прежнюю (если есть) заменим — отменим в CRM
+        // только после успешного создания новой.
         $reply = $this->start($tenant, $conversation, $existingRecordId);
 
         if ($reply === null) {
@@ -373,6 +380,13 @@ class BookingFlow
      */
     private function onDate(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
+        // «в 15» / «к 18» — это ВРЕМЯ, а не день. Не отдаём в ИИ (он мог вернуть
+        // 15-е число) — просим сначала выбрать день.
+        if (preg_match('/^\s*(в|к)\s+\d{1,2}([:.]\d{2})?\s*$/u', mb_strtolower($text)) === 1
+            && RussianDateParser::parse($text, Carbon::now()) === null) {
+            return $this->ask('Это похоже на время. 🙂 Сначала выберите ДЕНЬ записи на клавиатуре, потом подберём время.', $this->dateKeyboard());
+        }
+
         // Сначала детерминированный разбор, затем — ИИ для свободных формулировок
         // («на следующей неделе в среду», «через пару дней»).
         $date = RussianDateParser::parse($text, Carbon::now()) ?? $this->parseDateWithLlm($text, Carbon::now());
@@ -397,7 +411,11 @@ class BookingFlow
      */
     private function onSlot(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
     {
-        $choice = $this->resolveChoice($state['options'] ?? [], $text);
+        // На шаге времени голое число — это ЧАС («14» = 14:00), а не номер пункта.
+        // Иначе бронировали не то время (прод-баг). Если час не нашёлся среди окон —
+        // откатываемся к обычному разбору (номер из короткого списка/название).
+        $options = $state['options'] ?? [];
+        $choice = $this->matchSlotByTime($options, $text) ?? $this->resolveChoice($options, $text);
 
         if ($choice === null) {
             // Названное время не подошло — показываем компактный список ближайших окон.
@@ -434,8 +452,9 @@ class BookingFlow
     }
 
     /**
-     * Подтверждение телефона у вернувшегося клиента: если прислал новый номер —
-     * обновляем, иначе считаем текущий актуальным. Затем записываем.
+     * Подтверждение телефона у вернувшегося клиента: прислал новый номер —
+     * обновляем и записываем; подтвердил («да») — записываем на текущий; сказал,
+     * что номер не тот, но нового не дал — переспрашиваем (не бронируем на старый).
      *
      * @param  array<string, mixed>  $state
      */
@@ -443,9 +462,24 @@ class BookingFlow
     {
         $phone = PhoneExtractor::fromText($text);
 
-        if ($phone !== null && $phone !== $conversation->contact_phone) {
-            $this->conversations->setContactPhone($conversation, $phone);
-            $this->log('phone_updated', $conversation);
+        if ($phone !== null) {
+            if ($phone !== $conversation->contact_phone) {
+                $this->conversations->setContactPhone($conversation, $phone);
+                $this->log('phone_updated', $conversation);
+            }
+
+            return $this->book($tenant, $conversation, $state, $connection, $gateway);
+        }
+
+        // Номера в ответе нет. Явное подтверждение — записываем на текущий.
+        $affirmative = preg_match('/(^|\W)(да|ага|угу|верно|правильн|всё\s+верно|тот\s+же|актуал|подтвержд|ок|норм)(\W|$)/u', mb_strtolower($text)) === 1;
+
+        // Один раз переспрашиваем новый номер; повторно — не зацикливаемся.
+        if (! $affirmative && empty($state['confirm_reasked'])) {
+            $state['confirm_reasked'] = true;
+            $this->conversations->setBookingState($conversation, $state);
+
+            return $this->ask('Подскажите, пожалуйста, ваш актуальный номер телефона — например, +7 999 123-45-67.');
         }
 
         return $this->book($tenant, $conversation, $state, $connection, $gateway);
@@ -991,9 +1025,51 @@ class BookingFlow
             return $i >= 1 && $i <= count($options) ? $options[$i - 1] : null;
         }
 
+        // Точное совпадение названия — приоритет (чтобы «Стрижка» не уехала в
+        // «Стрижка машинкой»).
+        foreach ($options as $option) {
+            if (mb_strtolower($option['title']) === $t) {
+                return $option;
+            }
+        }
+
+        // Иначе подстрочное совпадение, но только если оно ЕДИНСТВЕННОЕ; на
+        // нескольких — отдаём на разбор LLM/переспрос, а не берём первое попавшееся.
+        $hits = [];
         foreach ($options as $option) {
             $title = mb_strtolower($option['title']);
             if ($title !== '' && (str_contains($title, $t) || str_contains($t, $title))) {
+                $hits[] = $option;
+            }
+        }
+
+        return count($hits) === 1 ? $hits[0] : null;
+    }
+
+    /**
+     * Сопоставляет «час» из ответа клиента с реальным окном: «14» → первое окно в
+     * 14:00, «14:30» → ровно 14:30. Возвращает окно или null (такого часа нет).
+     *
+     * @param  list<array{id: string, title: string}>  $options
+     * @return array{id: string, title: string}|null
+     */
+    private function matchSlotByTime(array $options, string $text): ?array
+    {
+        if (preg_match('/^\s*(\d{1,2})(?:[:.\s](\d{2}))?\s*$/u', $text, $m) !== 1) {
+            return null;
+        }
+
+        $hour = (int) $m[1];
+        if ($hour > 23) {
+            return null;
+        }
+
+        $exact = isset($m[2]) ? sprintf('%02d:%02d', $hour, (int) $m[2]) : null;
+        $hourPrefix = sprintf('%02d:', $hour);
+
+        foreach ($options as $option) {
+            $title = $option['title']; // «HH:MM»
+            if ($exact !== null ? $title === $exact : str_starts_with($title, $hourPrefix)) {
                 return $option;
             }
         }

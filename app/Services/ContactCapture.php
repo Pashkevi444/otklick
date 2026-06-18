@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Support\NameValidator;
 use App\Support\PhoneExtractor;
 
 /**
@@ -44,7 +45,9 @@ class ContactCapture
             $name = $this->names->fromText($text)
                 ?? $this->names->fromReply($this->messages->latestOutboundText($conversation), $text);
 
-            if ($name !== null) {
+            // ВАЖНО: LLM-имя проверяем тем же `NameValidator`, что и гейт, иначе
+            // вопрос/стоп-слово («а меня нет в базе?» → «Нет») обходит защиту гейта.
+            if ($name !== null && NameValidator::isPlausible($name, $text)) {
                 $this->conversations->setContactName($conversation, $name);
             }
         }

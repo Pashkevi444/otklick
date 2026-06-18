@@ -63,6 +63,22 @@ final class RussianDateParserTest extends TestCase
         $this->assertSame('2026-07-10', $this->parse('10'));
     }
 
+    public function test_explicit_day_month_wins_over_weekday(): void
+    {
+        // «суббота 27 июня» — это 27.06, а не ближайшая суббота (20.06).
+        $this->assertSame('2026-06-27', $this->parse('запишите на субботу 27 июня'));
+        $this->assertSame('2026-06-27', $this->parse('в субботу 27.06'));
+    }
+
+    public function test_next_weekday_and_through_week(): void
+    {
+        // Сегодня вторник 16.06; ближайшая суббота 20.06, «следующая» — 27.06.
+        $this->assertSame('2026-06-27', $this->parse('в следующую субботу'));
+        $this->assertSame('2026-06-23', $this->parse('через неделю'));
+        $this->assertSame('2026-06-30', $this->parse('через 2 недели'));
+        $this->assertSame('2026-06-19', $this->parse('через 3 дня'));
+    }
+
     public function test_weekday_with_time_keeps_the_weekday_not_the_time(): void
     {
         // «в воскресенье в 15» — это воскресенье, а «15» это время, НЕ 15-е число.

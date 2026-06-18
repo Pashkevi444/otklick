@@ -43,10 +43,12 @@ final class RussianDateParser
             return null;
         }
 
+        // Явные дату/месяц («суббота 27 июня») разбираем РАНЬШE дня недели — иначе
+        // «суббота» перебивала «27 июня» и возвращался ближайший, не названный день.
         return self::relative($t, $today)
-            ?? self::weekday($t, $today)
             ?? self::numeric($t, $today)
             ?? self::dayWithMonth($t, $today)
+            ?? self::weekday($t, $today)
             ?? self::bareDay($t, $today);
     }
 
@@ -61,6 +63,15 @@ final class RussianDateParser
         if (str_contains($t, 'сегодня')) {
             return $today->format('Y-m-d');
         }
+        // «через неделю»/«через 2 недели», «через 3 дня».
+        if (str_contains($t, 'через') && str_contains($t, 'недел')) {
+            $weeks = preg_match('/(\d+)\s*недел/u', $t, $m) === 1 ? max(1, (int) $m[1]) : 1;
+
+            return $today->copy()->addDays($weeks * 7)->format('Y-m-d');
+        }
+        if (preg_match('/через\s+(\d+)\s*д(ень|ня|ней)/u', $t, $m) === 1) {
+            return $today->copy()->addDays(max(1, (int) $m[1]))->format('Y-m-d');
+        }
 
         return null;
     }
@@ -74,6 +85,11 @@ final class RussianDateParser
             foreach (self::WEEKDAYS as $stem => $iso) {
                 if (str_starts_with($token, $stem)) {
                     $diff = ($iso - $today->dayOfWeekIso + 7) % 7;
+
+                    // «следующую субботу» — на неделю вперёд от ближайшей.
+                    if (str_contains($t, 'следующ')) {
+                        $diff += 7;
+                    }
 
                     return $today->copy()->addDays($diff)->format('Y-m-d');
                 }

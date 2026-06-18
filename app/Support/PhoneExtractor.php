@@ -50,19 +50,25 @@ final class PhoneExtractor
             : ['status' => 'invalid', 'phone' => null];
     }
 
-    /** Нормализует РФ-номер (+7 и 10 цифр абонента) или null при некорректной длине. */
+    /** Нормализует РФ-номер (+7 и 10 цифр абонента) или null при некорректной длине/структуре. */
     private static function normalizeRu(string $digits): ?string
     {
         $len = strlen($digits);
 
         if ($len === 11 && ($digits[0] === '8' || $digits[0] === '7')) {
-            return '+7'.substr($digits, 1);
+            $subscriber = substr($digits, 1);
+        } elseif ($len === 10) {
+            $subscriber = $digits;
+        } else {
+            return null;
         }
 
-        if ($len === 10) {
-            return '+7'.$digits;
+        // Код абонента РФ (мобильный 9xx / географический 3xx,4xx,8xx) начинается
+        // с 3–9. Отсекаем номера заказов/карт, которые на телефон не похожи.
+        if (! in_array($subscriber[0], ['3', '4', '5', '6', '7', '8', '9'], true)) {
+            return null;
         }
 
-        return null;
+        return '+7'.$subscriber;
     }
 }
