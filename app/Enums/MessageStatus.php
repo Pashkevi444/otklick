@@ -8,13 +8,15 @@ use App\Enums\Contracts\HasLabel;
 
 /**
  * Статус доставки сообщения. Входящее фиксируется как received; исходящее
- * переходит sent при успешной отправке в канал или failed при ошибке.
+ * переходит sent при успешной отправке в канал, queued — поставлено в очередь на
+ * повторную доставку (отправка сорвалась), failed — доставить так и не удалось.
  */
 enum MessageStatus: string implements HasLabel
 {
     case Received = 'received';
     case Sent = 'sent';
     case Failed = 'failed';
+    case Queued = 'queued';
 
     public function label(): string
     {
@@ -22,6 +24,7 @@ enum MessageStatus: string implements HasLabel
             self::Received => 'Получено',
             self::Sent => 'Отправлено',
             self::Failed => 'Ошибка',
+            self::Queued => 'В очереди на отправку',
         };
     }
 }

@@ -81,6 +81,13 @@ final class EloquentMessageRepository implements MessageRepositoryInterface
         ]);
     }
 
+    public function markStatusById(string $messageId, MessageStatus $status): void
+    {
+        // Скоупится текущим тенантом (RLS + глобальный scope) — id чужого
+        // тенанта просто не найдётся.
+        Message::query()->whereKey($messageId)->update(['status' => $status]);
+    }
+
     public function latestOutboundText(Conversation $conversation): ?string
     {
         $text = Message::query()

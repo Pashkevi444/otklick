@@ -69,7 +69,12 @@ class ReplyComposer
             $crm = $crm->filter(fn (CrmKnowledgeEntry $e): bool => in_array($e->id, $retrieved['crm'], true))->values();
         }
 
-        $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm);
+        // Если клиент уже известен (узнали по чату/телефону/нику и перенесли
+        // контакты) — промпт скажет боту звать по имени и не переспрашивать.
+        $knownName = $this->knownName($conversation);
+        $phoneKnown = $conversation->contact_phone !== null && $conversation->contact_phone !== '';
+
+        $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm, $knownName, $phoneKnown);
 
         $answer = trim($this->llm->generate($systemPrompt, $history));
 
@@ -151,6 +156,16 @@ class ReplyComposer
         );
 
         return trim((string) preg_replace('/ {2,}/', ' ', $text));
+    }
+
+    /** Имя клиента, если он его называл (а не плейсхолдер «Гость»); иначе null. */
+    private function knownName(Conversation $conversation): ?string
+    {
+        $name = $conversation->contact_name;
+
+        return $name !== null && $name !== '' && ! in_array($name, ['Гость', 'Гость сайта'], true)
+            ? $name
+            : null;
     }
 
     private function resetStreak(Conversation $conversation): void

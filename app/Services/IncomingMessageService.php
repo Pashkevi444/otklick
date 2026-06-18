@@ -10,6 +10,7 @@ use App\DTO\IncomingMessage;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Jobs\DeliverBotReply;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
@@ -58,18 +59,28 @@ final readonly class IncomingMessageService
 
         $reply = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
 
-        $status = MessageStatus::Sent;
-
         try {
             // Ответ уходит через шлюз того канала, откуда пришло сообщение
             // (Telegram/VK/…), а не через жёстко зашитый мессенджер.
             $this->gateways->for($channel->type)->send($channel, $incoming->externalChatId, $reply->text, $reply->keyboard);
+            $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
         } catch (Throwable $e) {
-            $status = MessageStatus::Failed;
+            // Отправка сорвалась — НЕ теряем реплай и НЕ оставляем диалог висеть:
+            // фиксируем как «в очереди» и добиваем фоновым ретраем с бэкоффом
+            // (если канал так и не оживёт — DeliverBotReply уведёт диалог на человека).
             report($e);
+            $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Queued);
+            DeliverBotReply::dispatch(
+                (string) $channel->tenant_id,
+                $channel->id,
+                $incoming->externalChatId,
+                $reply->text,
+                $reply->keyboard,
+                (string) $outbound->id,
+                (string) $conversation->id,
+            );
         }
 
-        $this->messages->recordOutbound($conversation, $reply->text, $status);
         $this->conversations->touchLastMessage($conversation);
 
         if ($reply->escalate) {

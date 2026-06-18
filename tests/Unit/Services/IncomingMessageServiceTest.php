@@ -11,6 +11,7 @@ use App\DTO\IncomingMessage;
 use App\Enums\ChannelType;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
+use App\Jobs\DeliverBotReply;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -21,6 +22,7 @@ use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BotResponder;
 use App\Services\ContactCapture;
 use App\Services\IncomingMessageService;
+use Illuminate\Support\Facades\Bus;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use RuntimeException;
@@ -59,6 +61,40 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'есть ли доставка?');
 
         (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
+    }
+
+    public function test_failed_send_queues_retry_and_does_not_lose_reply(): void
+    {
+        Bus::fake([DeliverBotReply::class]);
+
+        $channel = $this->channel();
+        $conversation = new Conversation;
+        $incoming = new IncomingMessage('555', '42', 'привет', null);
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once();
+
+        $sent = new Message;
+        $sent->id = 'msg-1';
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        // Отправка сорвалась → реплай фиксируется как «в очереди», а не теряется.
+        $messages->shouldReceive('recordOutbound')->once()->with($conversation, 'Здравствуйте!', MessageStatus::Queued)->andReturn($sent);
+
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Здравствуйте!', escalate: false));
+
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
+        $gateway->shouldReceive('send')->once()->andThrow(new RuntimeException('telegram timeout'));
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
+
+        Bus::assertDispatched(DeliverBotReply::class, fn ($job): bool => $job->messageId === 'msg-1' && $job->text === 'Здравствуйте!');
     }
 
     public function test_escalation_marks_conversation_needs_human(): void
@@ -202,35 +238,6 @@ final class IncomingMessageServiceTest extends TestCase
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldNotReceive('fromInbound');
-
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
-    }
-
-    public function test_failed_send_is_recorded_as_failed(): void
-    {
-        $channel = $this->channel();
-        $conversation = new Conversation;
-        $incoming = new IncomingMessage('555', '42', 'вопрос', null);
-
-        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
-        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
-        $conversations->shouldReceive('touchLastMessage')->once();
-        $conversations->shouldNotReceive('updateStatus');
-
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
-        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
-        $messages->shouldReceive('recordOutbound')
-            ->once()->with($conversation, 'Ответ', MessageStatus::Failed)->andReturn(new Message);
-
-        $responder = Mockery::mock(BotResponder::class);
-        $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Ответ', escalate: false));
-
-        $gateway = Mockery::mock(ChannelGateway::class);
-        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
-        $gateway->shouldReceive('send')->once()->andThrow(new RuntimeException('down'));
-
-        $contacts = Mockery::mock(ContactCapture::class);
-        $contacts->shouldReceive('fromInbound')->once();
 
         (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
     }

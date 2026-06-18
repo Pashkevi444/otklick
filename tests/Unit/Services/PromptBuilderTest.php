@@ -43,6 +43,22 @@ final class PromptBuilderTest extends TestCase
         $this->assertStringContainsString('конкретных варианта', $prompt);
     }
 
+    public function test_known_client_is_addressed_by_name_and_not_reasked(): void
+    {
+        $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection, false, null, 'Алексей', true);
+
+        $this->assertStringContainsString('Алексей', $prompt);
+        $this->assertStringContainsString('УЖЕ знаком', $prompt);
+        $this->assertStringContainsString('Повторно имя и телефон НЕ спрашивай', $prompt);
+    }
+
+    public function test_unknown_client_has_no_known_contact_block(): void
+    {
+        $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection);
+
+        $this->assertStringNotContainsString('УЖЕ знаком', $prompt);
+    }
+
     public function test_prompt_instructs_to_clarify_before_escalating(): void
     {
         $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection);

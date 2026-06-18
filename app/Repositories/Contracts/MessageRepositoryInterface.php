@@ -47,6 +47,12 @@ interface MessageRepositoryInterface
     public function recordOutbound(Conversation $conversation, string $text, MessageStatus $status): Message;
 
     /**
+     * Обновляет статус доставки сообщения по id (для фоновой повторной отправки:
+     * queued → sent при успехе или failed, когда ретраи исчерпаны).
+     */
+    public function markStatusById(string $messageId, MessageStatus $status): void;
+
+    /**
      * Текст последней реплики бота в диалоге (для контекста — например, чтобы
      * понять, спрашивал ли бот имя). null, если бот ещё ничего не отправлял.
      */

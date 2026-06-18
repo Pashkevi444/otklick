@@ -40,7 +40,7 @@ final class PromptBuilder
      *                                                               (услуги/цены/мастера/филиал) — приоритетнее
      *                                                               клиентской базы при расхождении.
      */
-    public function build(string $businessName, BusinessProfile $profile, Collection $entries, bool $bookingEnabled = false, ?Collection $crmEntries = null): string
+    public function build(string $businessName, BusinessProfile $profile, Collection $entries, bool $bookingEnabled = false, ?Collection $crmEntries = null, ?string $clientName = null, bool $clientPhoneKnown = false): string
     {
         $sections = [];
 
@@ -85,6 +85,13 @@ final class PromptBuilder
             "(в любом месте — клиент её не видит). Это сигнал закрыть диалог как отменённый клиентом.\n".
             '— Пиши по-человечески и профессионально, без канцелярита и markdown-разметки.';
 
+        // Контакты клиента уже известны (узнали по чату/телефону/нику) — НЕ
+        // переспрашиваем имя/телефон и обращаемся по имени.
+        $known = $this->knownContactSection($clientName, $clientPhoneKnown);
+        if ($known !== null) {
+            $sections[] = $known;
+        }
+
         $about = $this->about($profile);
         if ($about !== []) {
             $sections[] = "О бизнесе:\n".implode("\n", array_map(fn (string $l): string => "- {$l}", $about));
@@ -124,6 +131,35 @@ final class PromptBuilder
         return '— Когда запись окончательно оформлена (согласованы услуга и дата/время, есть имя и телефон клиента) — '.
             'добавь в ответ метку '.self::BOOKED.' (в любом месте — клиент её не видит), а остальным текстом коротко '.
             "подтверди запись клиенту. Это сигнал закрыть диалог.\n";
+    }
+
+    /**
+     * Блок «клиент уже знаком»: бот не переспрашивает контакты, обращается по
+     * имени и сразу предлагает релевантные действия по услугам/базе знаний.
+     * Возвращает null, если о клиенте ничего не известно.
+     */
+    private function knownContactSection(?string $clientName, bool $phoneKnown): ?string
+    {
+        $name = $clientName !== null ? trim($clientName) : '';
+
+        if ($name === '' && ! $phoneKnown) {
+            return null;
+        }
+
+        $facts = [];
+        if ($name !== '') {
+            $facts[] = "его зовут {$name}";
+        }
+        if ($phoneKnown) {
+            $facts[] = 'телефон уже оставлен';
+        }
+
+        $address = $name !== '' ? " Обращайся к нему по имени, {$name}." : '';
+
+        return 'Клиент УЖЕ знаком ('.implode(', ', $facts).').'.$address.
+            ' Повторно имя и телефон НЕ спрашивай. Сразу помогай по сути и предложи 2–3 '.
+            'конкретных варианта по услугам/базе знаний ниже (например: записаться на услугу, '.
+            'узнать цены, адрес и часы).';
     }
 
     /**
