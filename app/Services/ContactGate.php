@@ -43,16 +43,21 @@ class ContactGate
             return null;
         }
 
-        // Узнанный вернувшийся клиент — форму не показываем, сразу здороваемся.
-        if ($this->hasName($conversation) && $this->hasPhone($conversation)) {
+        $firstContact = $this->messages->latestOutboundText($conversation) === null;
+        $phone = PhoneExtractor::analyze($text);
+
+        // Вернувшийся клиент: контакты известны ещё ДО диалога (перенеслись из
+        // прошлого диалога чата) — то есть присутствуют на ПЕРВОМ сообщении и при
+        // этом НЕ пришли в нём самом. Иначе это новичок, только что заполнивший
+        // форму, — его нельзя приветствовать как «вернувшегося».
+        if ($firstContact && $this->hasName($conversation) && $this->hasPhone($conversation) && $phone['status'] !== 'valid') {
             $this->conversations->markContactsGateDone($conversation);
 
             return $this->welcome($tenant, "С возвращением, {$conversation->contact_name}! 👋 Рады снова вас видеть. Чем могу помочь?");
         }
 
-        // Самое первое сообщение — это запрос клиента, а не ответ на форму. Просто
-        // приветствуем + показываем форму, НЕ вытаскивая «имя» из его вопроса.
-        $firstContact = $this->messages->latestOutboundText($conversation) === null;
+        // Самое первое сообщение нового клиента — это его запрос, а не ответ на
+        // форму. Приветствуем + показываем форму, НЕ вытаскивая «имя» из вопроса.
         if ($firstContact && ! $this->hasPhone($conversation)) {
             return new BotReply(
                 "Здравствуйте! 👋 Рады видеть вас в «{$tenant->name}». Чтобы записать вас и помочь, ".
@@ -63,7 +68,6 @@ class ContactGate
         }
 
         // Это ответ на форму — собираем недостающее.
-        $phone = PhoneExtractor::analyze($text);
         if (! $this->hasPhone($conversation) && $phone['status'] === 'valid') {
             $this->conversations->setContactPhone($conversation, (string) $phone['phone']);
         }

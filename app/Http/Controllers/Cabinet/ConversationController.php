@@ -79,7 +79,7 @@ final class ConversationController extends Controller
             'conversation' => [
                 'id' => $model->id,
                 'contact' => $this->contact($model),
-                'phone' => $model->contact_phone,
+                'phone' => $this->displayPhone($model),
                 'channel' => $model->channel?->type->label() ?? '—',
                 'source' => $this->source($model->channel),
                 'contactRef' => $model->contact_ref,
@@ -164,7 +164,7 @@ final class ConversationController extends Controller
         return [
             'id' => $c->id,
             'contact' => $this->contact($c),
-            'phone' => $c->contact_phone,
+            'phone' => $this->displayPhone($c),
             'channel' => $c->channel?->type->label() ?? '—',
             'source' => $this->source($c->channel),
             'outcome' => $c->outcome()->value,
@@ -176,14 +176,24 @@ final class ConversationController extends Controller
     }
 
     /**
-     * Имя клиента, если он представился; иначе нейтральное «Гость» (без
-     * технического id чата — имя и источник теперь разведены).
+     * Имя клиента для отображения. Источник правды — карточка клиента (по
+     * `client_id`), если лид к ней привязан; иначе захваченное по диалогу имя;
+     * иначе нейтральное «Гость». Так правка имени в карточке отражается на лидах.
      */
     private function contact(Conversation $c): string
     {
-        return $c->contact_name !== null && $c->contact_name !== ''
-            ? $c->contact_name
-            : 'Гость';
+        $client = $c->client; // может быть null: лид без карточки или карточка удалена
+        $name = $client !== null ? $client->name : $c->contact_name;
+
+        return $name !== null && $name !== '' ? $name : 'Гость';
+    }
+
+    /** Телефон для отображения: из карточки клиента, иначе захваченный по диалогу. */
+    private function displayPhone(Conversation $c): ?string
+    {
+        $client = $c->client;
+
+        return $client !== null ? $client->phone : $c->contact_phone;
     }
 
     /**

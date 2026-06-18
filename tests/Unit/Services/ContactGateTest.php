@@ -77,6 +77,22 @@ final class ContactGateTest extends TestCase
         $this->assertContains('Записаться', $r->keyboard->labels());
     }
 
+    public function test_new_client_finishing_form_is_not_greeted_as_returning(): void
+    {
+        // Прод-баг: ContactCapture проставил телефон ДО гейта, имя собрано на
+        // прошлом шаге, форма уже показывалась — это НОВИЧОК, а не «вернувшийся».
+        $c = new Conversation;
+        $c->contact_name = 'Павел';
+        $c->contact_phone = '+79992223323';
+
+        $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, '+79992223323');
+
+        $this->assertNotNull($r);
+        $this->assertStringNotContainsString('возвращением', $r->text);
+        $this->assertStringContainsString('Спасибо', $r->text);
+        $this->assertTrue((bool) $c->contacts_gate_done);
+    }
+
     public function test_returning_known_client_is_welcomed_by_name_without_form(): void
     {
         $c = new Conversation; // контакты перенеслись из прошлого диалога

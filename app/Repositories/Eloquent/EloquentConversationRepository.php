@@ -61,7 +61,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function forCurrentTenant(): Collection
     {
         return Conversation::query()
-            ->with(['channel', 'latestMessage'])
+            ->with(['channel', 'latestMessage', 'client'])
             ->withCount('messages')
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
@@ -70,7 +70,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
 
     public function findForCurrentTenant(string $id): ?Conversation
     {
-        return Conversation::query()->with('channel')->find($id);
+        return Conversation::query()->with(['channel', 'client'])->find($id);
     }
 
     public function paginateForCurrentTenant(
@@ -82,7 +82,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         int $perPage,
     ): LengthAwarePaginator {
         $query = Conversation::query()
-            ->with(['channel', 'latestMessage'])
+            ->with(['channel', 'latestMessage', 'client'])
             ->withCount('messages');
 
         if ($search !== null && $search !== '') {
@@ -91,6 +91,9 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
                 $w->whereRaw('lower(contact_name) like ?', [$needle])
                     ->orWhereRaw('lower(contact_phone) like ?', [$needle])
                     ->orWhereRaw('lower(external_chat_id) like ?', [$needle])
+                    // Ищем и по карточке клиента (источник правды имени/телефона) —
+                    // чтобы переименованного в карточке клиента всё равно находить.
+                    ->orWhereHas('client', fn (Builder $c) => $c->whereRaw('lower(name) like ?', [$needle])->orWhereRaw('lower(phone) like ?', [$needle]))
                     ->orWhereHas('messages', fn (Builder $m) => $m->whereRaw('lower(text) like ?', [$needle]));
             });
         }

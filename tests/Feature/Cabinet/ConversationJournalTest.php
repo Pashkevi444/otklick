@@ -8,6 +8,7 @@ use App\Enums\ChannelType;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Models\Channel;
+use App\Models\Client;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
@@ -41,6 +42,36 @@ final class ConversationJournalTest extends TestCase
                 ->has('conversations', 1)
                 ->where('conversations.0.contact', 'Иван Петров')
                 ->where('conversations.0.messagesCount', 2));
+    }
+
+    public function test_lead_shows_name_and_phone_from_linked_client_card(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $client = Client::factory()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Алексей Петров',   // актуальное имя в карточке клиента
+            'phone' => '+79991112233',
+        ]);
+        $conv = Conversation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'client_id' => $client->id,
+            'contact_name' => 'Алексей',          // устаревшая копия на диалоге
+            'contact_phone' => '+70000000000',
+            'last_message_at' => now(),
+        ]);
+
+        // Грид «Лиды» берёт имя/телефон ИЗ карточки клиента, а не копию диалога.
+        $this->actingAs($owner)->get('/cabinet/conversations')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('conversations.0.contact', 'Алексей Петров')
+                ->where('conversations.0.phone', '+79991112233'));
+
+        // Карточка лида — тоже из клиента.
+        $this->actingAs($owner)->get("/cabinet/conversations/{$conv->id}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('conversation.contact', 'Алексей Петров')
+                ->where('conversation.phone', '+79991112233'));
     }
 
     public function test_owner_opens_full_thread(): void
