@@ -23,6 +23,7 @@ class BotResponder
     public function __construct(
         private readonly ReplyComposer $composer,
         private readonly BookingFlow $booking,
+        private readonly ContactGate $contacts,
     ) {}
 
     public function respond(Tenant $tenant, Conversation $conversation, string $text): BotReply
@@ -34,6 +35,14 @@ class BotResponder
 
         if ($intercept !== null) {
             return $intercept;
+        }
+
+        // Контактная форма в начале диалога: новому клиенту — приветствие + запрос
+        // имени/телефона/email с валидацией; узнанному — здороваемся по имени.
+        $gate = $this->contacts->handle($tenant, $conversation, $text);
+
+        if ($gate !== null) {
+            return $gate;
         }
 
         $state = $conversation->booking_state;

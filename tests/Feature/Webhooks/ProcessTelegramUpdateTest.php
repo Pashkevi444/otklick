@@ -40,6 +40,18 @@ final class ProcessTelegramUpdateTest extends TestCase
         $this->app->call([new ProcessTelegramUpdate($tenant->id, $channel->id, $update), 'handle']);
     }
 
+    /** Контактная форма уже пройдена — тестируем ответы бота по сути диалога. */
+    private function seedGateDone(Tenant $tenant, Channel $channel, string $chatId = '555'): void
+    {
+        Conversation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channel_id' => $channel->id,
+            'external_chat_id' => $chatId,
+            'contacts_gate_done' => true,
+            'status' => 'open',
+        ]);
+    }
+
     public function test_bot_answers_from_published_knowledge(): void
     {
         Http::fake();
@@ -51,6 +63,7 @@ final class ProcessTelegramUpdateTest extends TestCase
             'title' => 'Доставка',
             'content' => 'Доставка бесплатно от 1000 рублей',
         ]);
+        $this->seedGateDone($tenant, $channel);
 
         $this->process($tenant, $channel, $this->update());
 
@@ -73,6 +86,7 @@ final class ProcessTelegramUpdateTest extends TestCase
         Http::fake();
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $this->seedGateDone($tenant, $channel);
 
         $this->process($tenant, $channel, $this->update(['text' => 'шо ты голова']));
 
@@ -88,6 +102,7 @@ final class ProcessTelegramUpdateTest extends TestCase
         Http::fake();
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $this->seedGateDone($tenant, $channel);
 
         // Три подряд непонятных сообщения в одном чате → третье эскалирует на человека.
         $this->process($tenant, $channel, $this->update(['message_id' => 10, 'text' => 'шо ты голова']));

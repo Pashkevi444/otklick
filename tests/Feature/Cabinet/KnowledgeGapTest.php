@@ -6,6 +6,7 @@ namespace Tests\Feature\Cabinet;
 
 use App\Jobs\ProcessTelegramUpdate;
 use App\Models\Channel;
+use App\Models\Conversation;
 use App\Models\KnowledgeGap;
 use App\Models\Tenant;
 use App\Models\User;
@@ -40,6 +41,14 @@ final class KnowledgeGapTest extends TestCase
         Http::fake();
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        // Контактная форма уже пройдена — тестируем фиксацию пробела по сути вопроса.
+        Conversation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channel_id' => $channel->id,
+            'external_chat_id' => '555',
+            'contacts_gate_done' => true,
+            'status' => 'open',
+        ]);
 
         // Три подряд непонятных сообщения → бот эскалирует из-за пробела в базе.
         $this->app->call([new ProcessTelegramUpdate($tenant->id, $channel->id, $this->update(['text' => 'абракадабра один'])), 'handle']);

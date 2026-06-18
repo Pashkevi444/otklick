@@ -6,6 +6,7 @@ namespace Tests\Feature\Max;
 
 use App\Jobs\ProcessMaxUpdate;
 use App\Models\Channel;
+use App\Models\Conversation;
 use App\Models\KnowledgeEntry;
 use App\Models\Message;
 use App\Models\Tenant;
@@ -48,6 +49,14 @@ final class ProcessMaxUpdateTest extends TestCase
             'is_published' => true,
             'title' => 'Доставка',
             'content' => 'Доставка бесплатно от 1000 рублей',
+        ]);
+        // Контактная форма уже пройдена — проверяем ответ по базе знаний.
+        Conversation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channel_id' => $channel->id,
+            'external_chat_id' => '555',
+            'contacts_gate_done' => true,
+            'status' => 'open',
         ]);
 
         $this->process($tenant, $channel, $this->update());

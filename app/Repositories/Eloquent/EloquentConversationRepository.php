@@ -148,6 +148,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             'external_chat_id' => $externalChatId,
             'contact_name' => $contactName ?? $previous?->contact_name,
             'contact_phone' => $previous?->contact_phone,
+            'contact_email' => $previous?->contact_email,
             'contact_ref' => $contactRef ?? $previous?->contact_ref,
             'client_id' => $previous?->client_id,
             'status' => ConversationStatus::Open,
@@ -199,6 +200,16 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function setContactName(Conversation $conversation, string $name): void
     {
         $conversation->forceFill(['contact_name' => $name])->save();
+    }
+
+    public function setContactEmail(Conversation $conversation, string $email): void
+    {
+        $conversation->forceFill(['contact_email' => $email])->save();
+    }
+
+    public function markContactsGateDone(Conversation $conversation): void
+    {
+        $conversation->forceFill(['contacts_gate_done' => true])->save();
     }
 
     public function setClientId(Conversation $conversation, string $clientId): void

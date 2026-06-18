@@ -35,19 +35,21 @@ class ClientService
         }
 
         $name = in_array($conversation->contact_name, self::PLACEHOLDER_NAMES, true) ? null : $conversation->contact_name;
+        $email = $conversation->contact_email;
         $telegram = $this->telegramUsername($conversation->contact_ref);
         $channelType = $conversation->channel?->type->value;
 
         $client = $this->clients->findByPhone($phone) ?? $this->clients->create([
             'phone' => $phone,
             'name' => $name,
+            'email' => $email,
             'telegram_username' => $telegram,
             'first_channel_type' => $channelType,
             'first_seen_at' => now(),
             'last_seen_at' => now(),
         ]);
 
-        $this->backfill($client, $name, $telegram);
+        $this->backfill($client, $name, $telegram, $email);
 
         if ($conversation->client_id !== $client->id) {
             $this->conversations->setClientId($conversation, $client->id);
@@ -55,7 +57,7 @@ class ClientService
     }
 
     /** Дозаполняет пустые поля карточки и двигает «последний контакт». */
-    private function backfill(Client $client, ?string $name, ?string $telegram): void
+    private function backfill(Client $client, ?string $name, ?string $telegram, ?string $email = null): void
     {
         $updates = ['last_seen_at' => now()];
 
@@ -65,6 +67,10 @@ class ClientService
 
         if (($client->telegram_username === null || $client->telegram_username === '') && $telegram !== null) {
             $updates['telegram_username'] = $telegram;
+        }
+
+        if (($client->email === null || $client->email === '') && $email !== null) {
+            $updates['email'] = $email;
         }
 
         $this->clients->update($client, $updates);

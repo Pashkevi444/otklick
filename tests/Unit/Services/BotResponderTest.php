@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Services\BookingFlow;
 use App\Services\BotResponder;
+use App\Services\ContactGate;
 use App\Services\ReplyComposer;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -21,6 +22,15 @@ final class BotResponderTest extends TestCase
     private function tenant(): Tenant
     {
         return new Tenant(['name' => 'Бизнес']);
+    }
+
+    /** Контактная форма «пропускает» (контакты уже есть) — тестируем остальной поток. */
+    private function gate(): ContactGate
+    {
+        $gate = Mockery::mock(ContactGate::class);
+        $gate->shouldReceive('handle')->andReturnNull();
+
+        return $gate;
     }
 
     public function test_active_booking_state_routes_to_flow(): void
@@ -36,7 +46,7 @@ final class BotResponderTest extends TestCase
         $composer = Mockery::mock(ReplyComposer::class);
         $composer->shouldNotReceive('compose');
 
-        $reply = (new BotResponder($composer, $booking))->respond($this->tenant(), $conversation, 'хочу 1');
+        $reply = (new BotResponder($composer, $booking, $this->gate()))->respond($this->tenant(), $conversation, 'хочу 1');
 
         $this->assertSame('шаг записи', $reply->text);
     }
@@ -55,7 +65,7 @@ final class BotResponderTest extends TestCase
         $composer->shouldReceive('compose')->once()->with(Mockery::any(), $conversation, true)
             ->andReturn(new BotReply('Секунду…', escalate: false, startBooking: true));
 
-        $reply = (new BotResponder($composer, $booking))->respond($this->tenant(), $conversation, 'хочу записаться');
+        $reply = (new BotResponder($composer, $booking, $this->gate()))->respond($this->tenant(), $conversation, 'хочу записаться');
 
         $this->assertSame('Какую услугу?', $reply->text);
         $this->assertFalse($reply->startBooking);
@@ -74,7 +84,7 @@ final class BotResponderTest extends TestCase
         $composer->shouldReceive('compose')->once()
             ->andReturn(new BotReply('Подбираю время…', escalate: false, startBooking: true));
 
-        $reply = (new BotResponder($composer, $booking))->respond($this->tenant(), $conversation, 'запишите меня');
+        $reply = (new BotResponder($composer, $booking, $this->gate()))->respond($this->tenant(), $conversation, 'запишите меня');
 
         $this->assertTrue($reply->escalate);
     }
@@ -92,7 +102,7 @@ final class BotResponderTest extends TestCase
         $composer->shouldReceive('compose')->once()->with(Mockery::any(), $conversation, false)
             ->andReturn(new BotReply('Работаем с 9 до 21.', escalate: false));
 
-        $reply = (new BotResponder($composer, $booking))->respond($this->tenant(), $conversation, 'часы работы?');
+        $reply = (new BotResponder($composer, $booking, $this->gate()))->respond($this->tenant(), $conversation, 'часы работы?');
 
         $this->assertSame('Работаем с 9 до 21.', $reply->text);
     }

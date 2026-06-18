@@ -80,6 +80,12 @@ interface ConversationRepositoryInterface
      */
     public function setContactName(Conversation $conversation, string $name): void;
 
+    /** Сохраняет email клиента (необязательное поле контактной формы). */
+    public function setContactEmail(Conversation $conversation, string $email): void;
+
+    /** Отмечает, что контактная форма отработала (имя+телефон собраны/узнаны). */
+    public function markContactsGateDone(Conversation $conversation): void;
+
     /** Привязывает диалог к карточке клиента (база клиентов). */
     public function setClientId(Conversation $conversation, string $clientId): void;
 
