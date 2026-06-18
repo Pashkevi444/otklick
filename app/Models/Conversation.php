@@ -105,6 +105,13 @@ class Conversation extends TenantOwnedModel
         }
 
         if ($this->booked_at !== null) {
+            // Запись оформлена. Пока время визита впереди — лид «в работе» (клиент
+            // может вернуться, перенести или отменить); «Успешный лид» проставляется,
+            // когда время визита уже прошло (услуга оказана) либо оно неизвестно.
+            if ($this->booked_for !== null && $this->booked_for->isFuture()) {
+                return ConversationOutcome::Open;
+            }
+
             return ConversationOutcome::Booked;
         }
 

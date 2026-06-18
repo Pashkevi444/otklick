@@ -24,8 +24,13 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
 
     public function markBooked(Conversation $conversation): void
     {
+        // Запись оформлена, но диалог НЕ закрываем: лид остаётся «в работе» (Open)
+        // с booked_at — клиент может вернуться, перенести/отменить запись, пока
+        // время визита не прошло. «Успешный лид» выводится по booked_for
+        // (Conversation::outcome), а финально закрывает диалог планировщик после
+        // визита (ReconcileBookings).
         $conversation->forceFill([
-            'status' => ConversationStatus::Closed,
+            'status' => ConversationStatus::Open,
             'booked_at' => now(),
         ])->save();
     }
@@ -179,6 +184,18 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->whereNull('booked_at')
             ->whereNotNull('last_message_at')
             ->where('last_message_at', '<', $before)
+            ->update(['status' => ConversationStatus::Closed]);
+    }
+
+    public function closeCompletedBookingsForCurrentTenant(Carbon $now): int
+    {
+        // Запись с CRM-бронью, время визита которой уже прошло, — услуга оказана:
+        // закрываем диалог (станет «Успешный лид» по Conversation::outcome).
+        return Conversation::query()
+            ->where('status', ConversationStatus::Open)
+            ->whereNotNull('crm_record_id')
+            ->whereNotNull('booked_for')
+            ->where('booked_for', '<', $now)
             ->update(['status' => ConversationStatus::Closed]);
     }
 

@@ -7,6 +7,7 @@ namespace Tests\Integration\Repositories;
 use App\DTO\IncomingMessage;
 use App\DTO\NewChannelData;
 use App\Enums\ChannelType;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
@@ -140,6 +141,47 @@ final class MessagingRepositoriesTest extends TestCase
         $this->assertSame(ConversationStatus::Closed, $stale->fresh()->status);
         $this->assertSame(ConversationStatus::Open, $fresh->fresh()->status);
         $this->assertNull($stale->fresh()->booked_at); // потерян, не запись
+    }
+
+    public function test_booking_stays_in_work_until_visit_then_closes_as_successful(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+        $conv = $this->conversations->firstOrCreateForChat($channel->id, 'booked1', null);
+        $this->conversations->markBooked($conv);
+        $this->conversations->setCrmRecordId($conv, 'rec-1');
+        $this->conversations->setBookedFor($conv, now()->addDay()); // визит завтра
+
+        // Запись оформлена, но лид «в работе» (не закрыт), пока визит впереди.
+        $conv->refresh();
+        $this->assertSame(ConversationStatus::Open, $conv->status);
+        $this->assertNotNull($conv->booked_at);
+        $this->assertSame(ConversationOutcome::Open, $conv->outcome());
+
+        // Время визита прошло → планировщик закрывает, лид становится «Успешным».
+        $this->conversations->setBookedFor($conv, now()->subHour());
+        $closed = $this->conversations->closeCompletedBookingsForCurrentTenant(now());
+
+        $this->assertSame(1, $closed);
+        $conv->refresh();
+        $this->assertSame(ConversationStatus::Closed, $conv->status);
+        $this->assertSame(ConversationOutcome::Booked, $conv->outcome());
+    }
+
+    public function test_reconcile_does_not_close_future_or_non_crm_bookings(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+        // Будущая запись — не трогаем.
+        $future = $this->conversations->firstOrCreateForChat($channel->id, 'future', null);
+        $this->conversations->markBooked($future);
+        $this->conversations->setCrmRecordId($future, 'rec-2');
+        $this->conversations->setBookedFor($future, now()->addDays(2));
+
+        $this->assertSame(0, $this->conversations->closeCompletedBookingsForCurrentTenant(now()));
+        $this->assertSame(ConversationStatus::Open, $future->fresh()->status);
     }
 
     public function test_record_inbound_dedupes_by_external_message_id(): void

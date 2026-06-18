@@ -13,3 +13,7 @@ Schedule::command('conversations:close-stale')->everyFiveMinutes()->withoutOverl
 
 // Напоминания клиентам о записи (ставятся в очередь) — раз в 5 минут.
 Schedule::command('appointments:send-reminders')->everyFiveMinutes()->withoutOverlapping();
+
+// Сверка записей с CRM: закрываем заказы, время визита которых прошло (→ «Успешный
+// лид»). Только у тенантов с CRM — раз в час.
+Schedule::command('bookings:reconcile')->hourly()->withoutOverlapping();

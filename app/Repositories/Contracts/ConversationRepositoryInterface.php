@@ -59,6 +59,13 @@ interface ConversationRepositoryInterface
     public function closeStaleOpen(Carbon $before): int;
 
     /**
+     * Закрывает диалоги с CRM-записью, время визита которой уже прошло (услуга
+     * оказана) — лид становится «Успешным» (см. Conversation::outcome). Возвращает
+     * число закрытых. Вызывается планировщиком только у тенантов с CRM.
+     */
+    public function closeCompletedBookingsForCurrentTenant(Carbon $now): int;
+
+    /**
      * Увеличивает счётчик подряд идущих уточняющих вопросов бота и возвращает
      * новое значение.
      */
