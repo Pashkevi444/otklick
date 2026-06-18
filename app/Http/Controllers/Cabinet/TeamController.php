@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cabinet;
 
 use App\Enums\CabinetSection;
+use App\Enums\MemberPermission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\StoreTeamMemberRequest;
 use App\Http\Requests\Cabinet\UpdateTeamMemberRequest;
@@ -31,11 +32,32 @@ final class TeamController extends Controller
         $tenant = $request->user()->tenant;
         $features = $tenant->features();
 
+        // Матрица прав, которую владелец вправе раздавать — ограничена тарифом
+        // (матрица мемберов ⊆ тенантной матрицы). Группируем по разделам:
+        // доступ к разделу + права-действия внутри него.
+        $grantable = MemberPermission::grantableWith($features);
+        $permissionGroups = [];
+        foreach (CabinetSection::cases() as $section) {
+            $inSection = array_filter($grantable, fn (MemberPermission $p): bool => $p->section() === $section);
+            if ($inSection === []) {
+                continue; // раздела нет в тарифе
+            }
+
+            $access = null;
+            $actions = [];
+            foreach ($inSection as $p) {
+                if ($p->isAction()) {
+                    $actions[] = ['key' => $p->value, 'label' => $p->label()];
+                } else {
+                    $access = ['key' => $p->value, 'label' => $section->label()];
+                }
+            }
+
+            $permissionGroups[] = ['access' => $access, 'actions' => $actions];
+        }
+
         return Inertia::render('Cabinet/Team/Index', [
-            'sections' => array_map(
-                fn (CabinetSection $s): array => ['key' => $s->value, 'label' => $s->label()],
-                CabinetSection::cases(),
-            ),
+            'permissionGroups' => $permissionGroups,
             'maxUsers' => $features->maxOperators,
             'usedUsers' => $this->users->listForTenant($tenant)->count(),
             'members' => $this->users->listForTenant($tenant)->map(fn (User $u): array => [
@@ -45,7 +67,7 @@ final class TeamController extends Controller
                 'role' => $u->role->value,
                 'roleLabel' => $u->role->label(),
                 'isOwner' => $u->isOwner(),
-                'permissions' => $u->isOwner() ? CabinetSection::values() : ($u->permissions ?? []),
+                'permissions' => $u->isOwner() ? MemberPermission::values() : ($u->permissions ?? []),
             ])->values()->all(),
         ]);
     }

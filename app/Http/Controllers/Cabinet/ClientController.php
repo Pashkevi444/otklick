@@ -71,6 +71,8 @@ final class ClientController extends Controller
 
     public function update(UpdateClientRequest $request, string $client): RedirectResponse
     {
+        abort_unless($request->user()->allows('clients.edit'), 403);
+
         $model = $this->findOrFail($client);
 
         $this->clients->update($model, [
@@ -85,8 +87,10 @@ final class ClientController extends Controller
     }
 
     /** Пересобрать краткое резюме по переписке (синхронно — владелец ждёт ответ). */
-    public function refreshSummary(string $client): RedirectResponse
+    public function refreshSummary(Request $request, string $client): RedirectResponse
     {
+        abort_unless($request->user()->allows('clients.edit'), 403);
+
         $model = $this->findOrFail($client);
         $summary = $this->summaries->summarize($model);
 
@@ -99,8 +103,10 @@ final class ClientController extends Controller
         return back()->with('success', 'Резюме обновлено.');
     }
 
-    public function destroy(string $client): RedirectResponse
+    public function destroy(Request $request, string $client): RedirectResponse
     {
+        abort_unless($request->user()->allows('clients.delete'), 403);
+
         $this->clients->delete($this->findOrFail($client));
 
         return redirect()->route('cabinet.clients.index')->with('success', 'Клиент удалён.');

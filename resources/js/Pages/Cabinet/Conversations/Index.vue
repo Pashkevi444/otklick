@@ -2,6 +2,7 @@
 import { computed, reactive, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { useCan } from '@/composables/useCan';
 
 interface Row {
     id: string;
@@ -122,6 +123,13 @@ const initials = (name: string): string =>
 const open = (id: string): void => {
     router.visit(`/cabinet/conversations/${id}`);
 };
+
+const can = useCan();
+const remove = (id: string): void => {
+    if (confirm('Удалить лид? Диалог и переписка удалятся безвозвратно.')) {
+        router.delete(`/cabinet/conversations/${id}`, { preserveScroll: true });
+    }
+};
 </script>
 
 <template>
@@ -211,6 +219,7 @@ const open = (id: string): void => {
                         <span>{{ c.source }} · {{ c.messagesCount }} сообщ.</span>
                         <span>{{ c.lastMessageAt }}</span>
                     </div>
+                    <button v-if="can('conversations.delete')" type="button" class="mt-2 text-xs text-red-600 hover:underline" @click.prevent.stop="remove(c.id)">Удалить лид</button>
                 </Link>
             </div>
 
@@ -226,6 +235,7 @@ const open = (id: string): void => {
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('messages')">Сообщений{{ arrow('messages') }}</th>
                             <th class="px-5 py-3 font-medium">Статус</th>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('last')">Обновлён{{ arrow('last') }}</th>
+                            <th v-if="can('conversations.delete')" class="px-5 py-3" />
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -244,6 +254,9 @@ const open = (id: string): void => {
                                 <span class="rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                             </td>
                             <td class="whitespace-nowrap px-5 py-3 text-slate-400">{{ c.lastMessageAt }}</td>
+                            <td v-if="can('conversations.delete')" class="px-5 py-3 text-right" @click.stop>
+                                <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

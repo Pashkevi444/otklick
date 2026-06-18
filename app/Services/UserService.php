@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\NewUserData;
-use App\Enums\CabinetSection;
+use App\Enums\MemberPermission;
 use App\Enums\UserRole;
 use App\Models\Tenant;
 use App\Models\User;
@@ -95,7 +95,7 @@ final readonly class UserService
                 password: $password,
                 role: UserRole::Member,
                 tenantId: $tenant->id,
-                permissions: $this->sanitize($permissions),
+                permissions: $this->sanitize($permissions, $tenant),
             ));
         });
     }
@@ -107,14 +107,14 @@ final readonly class UserService
      */
     public function updateMember(Tenant $tenant, string $userId, ?string $name, array $permissions): ?User
     {
-        return $this->tenancy->run($tenant->id, function () use ($userId, $name, $permissions): ?User {
+        return $this->tenancy->run($tenant->id, function () use ($tenant, $userId, $name, $permissions): ?User {
             $user = $this->users->findForCurrentTenant($userId);
 
             if ($user === null || $user->role !== UserRole::Member) {
                 return null;
             }
 
-            $attributes = ['permissions' => $this->sanitize($permissions)];
+            $attributes = ['permissions' => $this->sanitize($permissions, $tenant)];
             if ($name !== null && $name !== '') {
                 $attributes['name'] = $name;
             }
@@ -142,13 +142,20 @@ final readonly class UserService
     }
 
     /**
-     * Оставляет только валидные ключи разделов.
+     * Оставляет только валидные ключи прав И только те, что доступны бизнесу по
+     * тарифу (матрица мемберов ⊆ тенантной матрицы — нельзя выдать то, чего нет
+     * у бизнеса).
      *
      * @param  list<string>  $permissions
      * @return list<string>
      */
-    private function sanitize(array $permissions): array
+    private function sanitize(array $permissions, Tenant $tenant): array
     {
-        return array_values(array_intersect(CabinetSection::values(), $permissions));
+        $grantable = array_map(
+            fn (MemberPermission $p): string => $p->value,
+            MemberPermission::grantableWith($tenant->features()),
+        );
+
+        return array_values(array_intersect($grantable, $permissions));
     }
 }

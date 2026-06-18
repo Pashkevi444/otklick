@@ -193,6 +193,12 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill(['client_id' => $clientId])->save();
     }
 
+    public function delete(Conversation $conversation): void
+    {
+        // Сообщения уходят каскадом (FK conversation_id ON DELETE CASCADE).
+        $conversation->delete();
+    }
+
     public function setBookingState(Conversation $conversation, ?array $state): void
     {
         $conversation->forceFill(['booking_state' => $state])->save();

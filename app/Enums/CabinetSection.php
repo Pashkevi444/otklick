@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\DTO\PlanFeatures;
 use App\Enums\Contracts\HasLabel;
 
 /**
@@ -35,6 +36,21 @@ enum CabinetSection: string implements HasLabel
             self::Widget => 'Виджет на сайт',
             self::Notifications => 'Уведомления и эскалация',
             self::Integrations => 'Интеграции',
+        };
+    }
+
+    /**
+     * Возможность тарифа, без которой раздел недоступен бизнесу (ключ
+     * {@see PlanFeatures}). null — раздел есть на любом тарифе. Связывает
+     * тенантную матрицу (PlanFeatures) с матрицей мемберов.
+     */
+    public function requiredFeature(): ?string
+    {
+        return match ($this) {
+            self::Analytics => 'analytics',
+            self::Clients => 'clientBase',
+            self::Integrations => 'crm',
+            default => null,
         };
     }
 

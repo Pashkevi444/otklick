@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                     'roleLabel' => $user->role->label(),
                     'isOwner' => $user->isOwner(),
                     'allowedSections' => $user->allowedSections(),
+                    'permissions' => $user->effectivePermissions(),
                     'tenantId' => $user->tenant_id,
                     'tenant' => $user->tenant_id === null ? null : [
                         'id' => $user->tenant->id,

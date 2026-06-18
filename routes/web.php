@@ -99,6 +99,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
         Route::put('/conversations/{conversation}/status', [ConversationController::class, 'setStatus'])->name('conversations.status');
+        Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->name('conversations.destroy');
 
         // База клиентов — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
         Route::middleware('plan:clientBase')->group(function (): void {

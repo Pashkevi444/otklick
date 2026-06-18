@@ -2,6 +2,7 @@
 import { reactive, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { useCan } from '@/composables/useCan';
 
 interface Row {
     id: string;
@@ -87,6 +88,13 @@ const sortBy = (col: string): void => {
 const open = (id: string): void => {
     router.get(`/cabinet/clients/${id}`);
 };
+
+const can = useCan();
+const remove = (id: string): void => {
+    if (confirm('Удалить карточку клиента? Связанные диалоги останутся.')) {
+        router.delete(`/cabinet/clients/${id}`, { preserveScroll: true });
+    }
+};
 </script>
 
 <template>
@@ -157,6 +165,7 @@ const open = (id: string): void => {
                         <th class="px-4 py-3 font-medium">Откуда</th>
                         <th class="px-4 py-3 text-center font-medium">Диалогов</th>
                         <th class="px-4 py-3 font-medium">Активность</th>
+                        <th v-if="can('clients.delete')" class="px-4 py-3" />
                     </tr>
                 </thead>
                 <tbody>
@@ -181,6 +190,9 @@ const open = (id: string): void => {
                         <td class="px-4 py-3 text-slate-500">{{ c.channel || '—' }}</td>
                         <td class="px-4 py-3 text-center text-slate-500">{{ c.conversations_count }}</td>
                         <td class="px-4 py-3 text-slate-400">{{ c.last_seen_at || '—' }}</td>
+                        <td v-if="can('clients.delete')" class="px-4 py-3 text-right" @click.stop>
+                            <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>
+                        </td>
                     </tr>
                 </tbody>
             </table>

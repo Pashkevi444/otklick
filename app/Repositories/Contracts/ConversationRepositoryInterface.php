@@ -83,6 +83,9 @@ interface ConversationRepositoryInterface
     /** Привязывает диалог к карточке клиента (база клиентов). */
     public function setClientId(Conversation $conversation, string $clientId): void;
 
+    /** Удаляет диалог (с каскадом сообщений). */
+    public function delete(Conversation $conversation): void;
+
     /**
      * Сохраняет состояние пошаговой записи (BookingFlow). null очищает —
      * активной записи больше нет.

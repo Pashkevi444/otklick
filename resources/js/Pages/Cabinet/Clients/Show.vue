@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { useCan } from '@/composables/useCan';
 
 interface Client {
     id: string;
@@ -46,6 +47,8 @@ const remove = (): void => {
         router.delete(`/cabinet/clients/${props.client.id}`);
     }
 };
+
+const can = useCan();
 </script>
 
 <template>
@@ -85,8 +88,9 @@ const remove = (): void => {
                     <textarea v-model="form.notes" rows="3" placeholder="Что важно помнить об этом клиенте" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                 </div>
                 <div class="flex items-center justify-between">
-                    <button type="submit" :disabled="form.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">Сохранить</button>
-                    <button type="button" class="text-sm text-red-600 hover:underline" @click="remove">Удалить клиента</button>
+                    <button v-if="can('clients.edit')" type="submit" :disabled="form.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">Сохранить</button>
+                    <span v-else class="text-xs text-slate-400">Только просмотр</span>
+                    <button v-if="can('clients.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="remove">Удалить клиента</button>
                 </div>
             </form>
 
@@ -104,7 +108,7 @@ const remove = (): void => {
                 <div class="rounded-xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-5">
                     <div class="flex items-center justify-between mb-2">
                         <div class="font-semibold text-[#1F4E79]">🧠 Краткое резюме</div>
-                        <button type="button" class="text-xs text-[#2E74B5] hover:underline" @click="refreshSummary">Обновить</button>
+                        <button v-if="can('clients.edit')" type="button" class="text-xs text-[#2E74B5] hover:underline" @click="refreshSummary">Обновить</button>
                     </div>
                     <p v-if="client.summary" class="text-sm text-slate-600 whitespace-pre-line">{{ client.summary }}</p>
                     <p v-else class="text-sm text-slate-400">Резюме появится после переписки клиента с ботом — или нажмите «Обновить».</p>

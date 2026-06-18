@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Cabinet;
 
-use App\Enums\CabinetSection;
+use App\Enums\MemberPermission;
 use App\Http\Requests\AbstractFormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,7 +28,7 @@ final class StoreTeamMemberRequest extends AbstractFormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'max:255'],
             'permissions' => ['array'],
-            'permissions.*' => [Rule::in(CabinetSection::values())],
+            'permissions.*' => [Rule::in(MemberPermission::values())],
         ];
     }
 }

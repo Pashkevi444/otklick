@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\CabinetSection;
+use App\Enums\MemberPermission;
 use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToTenant;
 use App\Tenancy\Contracts\TenantOwned;
@@ -80,6 +81,20 @@ class User extends Authenticatable implements TenantOwned
     {
         return $this->role === UserRole::Owner || $this->role === UserRole::SuperAdmin
             ? CabinetSection::values()
+            : ($this->permissions ?? []);
+    }
+
+    /**
+     * Эффективные права для фронта (разделы + права-действия): владельцу/СУ — все,
+     * сотруднику — его permissions. Фронт по ним показывает/прячет кнопки
+     * (редактирование/удаление в гридах).
+     *
+     * @return list<string>
+     */
+    public function effectivePermissions(): array
+    {
+        return $this->role === UserRole::Owner || $this->role === UserRole::SuperAdmin
+            ? MemberPermission::values()
             : ($this->permissions ?? []);
     }
 

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { useCan } from '@/composables/useCan';
 
 interface Msg {
     id: string;
@@ -81,6 +82,13 @@ const outcomeClass = (o: string): string =>
 const setOutcome = (outcome: string): void => {
     router.put(`/cabinet/conversations/${props.conversation.id}/status`, { outcome }, { preserveScroll: true });
 };
+
+const can = useCan();
+const removeLead = (): void => {
+    if (confirm('Удалить лид? Диалог и переписка удалятся безвозвратно.')) {
+        router.delete(`/cabinet/conversations/${props.conversation.id}`);
+    }
+};
 </script>
 
 <template>
@@ -113,6 +121,7 @@ const setOutcome = (outcome: string): void => {
             <div class="ml-auto flex items-center gap-2">
                 <span class="rounded-full px-2.5 py-1 text-xs" :class="outcomeClass(conversation.outcome)">{{ conversation.outcomeLabel }}</span>
                 <select
+                    v-if="can('conversations.edit')"
                     :value="conversation.outcome"
                     class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 outline-none transition hover:text-[#1F4E79] focus:border-[#2E74B5] dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
                     title="Статус лида"
@@ -120,6 +129,7 @@ const setOutcome = (outcome: string): void => {
                 >
                     <option v-for="o in outcomes" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
+                <button v-if="can('conversations.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="removeLead">Удалить</button>
             </div>
         </div>
 

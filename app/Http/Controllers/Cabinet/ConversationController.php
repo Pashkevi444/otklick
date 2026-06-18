@@ -107,6 +107,9 @@ final class ConversationController extends Controller
      */
     public function setStatus(Request $request, string $conversation): RedirectResponse
     {
+        // Право-действие: редактирование лидов (владелец — всегда).
+        abort_unless($request->user()->allows('conversations.edit'), 403);
+
         $model = $this->conversations->findForCurrentTenant($conversation);
 
         abort_if($model === null, 404);
@@ -119,6 +122,20 @@ final class ConversationController extends Controller
         $this->conversations->setOutcome($model, $outcome);
 
         return back()->with('success', "Лид: статус «{$outcome->label()}».");
+    }
+
+    public function destroy(Request $request, string $conversation): RedirectResponse
+    {
+        // Право-действие: удаление лидов (владелец — всегда).
+        abort_unless($request->user()->allows('conversations.delete'), 403);
+
+        $model = $this->conversations->findForCurrentTenant($conversation);
+
+        abort_if($model === null, 404);
+
+        $this->conversations->delete($model);
+
+        return back()->with('success', 'Лид удалён.');
     }
 
     /**

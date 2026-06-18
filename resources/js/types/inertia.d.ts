@@ -8,6 +8,7 @@ export interface AuthUser {
     roleLabel: string;
     isOwner: boolean;
     allowedSections: string[];
+    permissions: string[];
     tenantId: string | null;
     tenant: {
         id: string;

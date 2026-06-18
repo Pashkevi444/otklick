@@ -2,10 +2,15 @@
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PermissionMatrix from '@/Components/PermissionMatrix.vue';
 
-interface Section {
+interface PermOption {
     key: string;
     label: string;
+}
+interface PermissionGroup {
+    access: PermOption | null;
+    actions: PermOption[];
 }
 interface Member {
     id: string;
@@ -17,7 +22,7 @@ interface Member {
 }
 
 const props = defineProps<{
-    sections: Section[];
+    permissionGroups: PermissionGroup[];
     maxUsers: number;
     usedUsers: number;
     members: Member[];
@@ -81,13 +86,8 @@ const removeMember = (id: string): void => {
                 <p v-for="e in [addForm.errors.name, addForm.errors.email, addForm.errors.password]" v-show="e" :key="e" class="text-sm text-red-600">{{ e }}</p>
 
                 <div>
-                    <div class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Доступные разделы</div>
-                    <div class="grid gap-2 sm:grid-cols-2">
-                        <label v-for="s in sections" :key="s.key" class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                            <input v-model="addForm.permissions" type="checkbox" :value="s.key" class="rounded border-slate-300" />
-                            {{ s.label }}
-                        </label>
-                    </div>
+                    <div class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Права сотрудника</div>
+                    <PermissionMatrix v-model="addForm.permissions" :groups="permissionGroups" />
                 </div>
 
                 <button type="submit" :disabled="addForm.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">
@@ -116,13 +116,8 @@ const removeMember = (id: string): void => {
                 <div v-if="m.isOwner" class="mt-3 text-sm text-slate-500">Владелец — полный доступ ко всем разделам.</div>
 
                 <div v-else class="mt-3">
-                    <div class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Доступные разделы</div>
-                    <div class="grid gap-2 sm:grid-cols-2">
-                        <label v-for="s in sections" :key="s.key" class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                            <input v-model="memberPerms[m.id]" type="checkbox" :value="s.key" class="rounded border-slate-300" />
-                            {{ s.label }}
-                        </label>
-                    </div>
+                    <div class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Права сотрудника</div>
+                    <PermissionMatrix v-model="memberPerms[m.id]" :groups="permissionGroups" />
                     <button type="button" class="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-200" @click="saveMember(m.id)">
                         Сохранить права
                     </button>

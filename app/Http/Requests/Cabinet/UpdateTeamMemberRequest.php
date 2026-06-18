@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Cabinet;
 
-use App\Enums\CabinetSection;
+use App\Enums\MemberPermission;
 use App\Http\Requests\AbstractFormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +26,7 @@ final class UpdateTeamMemberRequest extends AbstractFormRequest
         return [
             'name' => ['nullable', 'string', 'max:255'],
             'permissions' => ['array'],
-            'permissions.*' => [Rule::in(CabinetSection::values())],
+            'permissions.*' => [Rule::in(MemberPermission::values())],
         ];
     }
 }
