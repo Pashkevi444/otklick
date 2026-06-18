@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Channels\Max;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Http\Client\PendingRequest;
@@ -29,17 +30,63 @@ final readonly class MaxGateway implements ChannelGateway
         return ChannelType::Max;
     }
 
-    public function send(Channel $channel, string $chatId, string $text): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
     {
         // chat_id — в query, тело — NewMessageBody {text}. Короткие таймауты:
         // недоступность MAX должна падать быстро с понятной ошибкой.
+        $body = ['text' => $text];
+
+        // MAX-кнопки — inline (callback): нажатие приходит как message_callback с
+        // payload = подпись; его обрабатывает ProcessMaxUpdate как обычный ввод.
+        $attachment = $this->keyboardAttachment($keyboard);
+        if ($attachment !== null) {
+            $body['attachments'] = [$attachment];
+        }
+
         $this->request($channel)
             ->connectTimeout(5)
             ->timeout(8)
             ->retry(2, 300, throw: false)
             ->withQueryParameters(['chat_id' => $chatId])
-            ->post("{$this->apiUrl}/messages", ['text' => $text])
+            ->post("{$this->apiUrl}/messages", $body)
             ->throw();
+    }
+
+    /**
+     * Отвечает на нажатие inline-кнопки (callback) — гасит «часики» у клиента.
+     * Сбой не критичен (само сообщение-ответ уже ушло), поэтому без throw.
+     */
+    public function answerCallback(Channel $channel, string $callbackId): void
+    {
+        $this->request($channel)
+            ->connectTimeout(5)
+            ->timeout(8)
+            ->retry(1, 300, throw: false)
+            ->withQueryParameters(['callback_id' => $callbackId])
+            ->post("{$this->apiUrl}/answers", ['notification' => '']);
+    }
+
+    /**
+     * inline_keyboard-вложение MAX из клавиатуры-подсказки: кнопки типа callback,
+     * payload = подпись (её разбирает шаг записи). null — без клавиатуры.
+     *
+     * @return array{type: string, payload: array{buttons: list<list<array{type: string, text: string, payload: string}>>}}|null
+     */
+    private function keyboardAttachment(?ReplyKeyboard $keyboard): ?array
+    {
+        if ($keyboard === null || $keyboard->isEmpty()) {
+            return null;
+        }
+
+        $buttons = array_map(
+            fn (array $row): array => array_map(
+                fn (string $label): array => ['type' => 'callback', 'text' => $label, 'payload' => $label],
+                $row,
+            ),
+            $keyboard->rows,
+        );
+
+        return ['type' => 'inline_keyboard', 'payload' => ['buttons' => $buttons]];
     }
 
     /**
@@ -118,6 +165,42 @@ final readonly class MaxGateway implements ChannelGateway
             'chatId' => (string) $chatId,
             'text' => $text,
             'id' => (string) ($message['body']['mid'] ?? ''),
+        ];
+    }
+
+    /**
+     * Разбирает нажатие inline-кнопки (message_callback): payload кнопки = выбор
+     * клиента (дата/время/услуга), его подаём в общий разбор как обычный текст.
+     * callbackId нужен, чтобы погасить «часики» (answerCallback).
+     *
+     * @param  array<string, mixed>  $update
+     * @return array{chatId: string, text: string, id: string, callbackId: string}|null
+     */
+    public function parseCallback(array $update): ?array
+    {
+        if (($update['update_type'] ?? null) !== 'message_callback') {
+            return null;
+        }
+
+        $callback = $update['callback'] ?? null;
+        $message = $update['message'] ?? null;
+        if (! is_array($callback) || ! is_array($message)) {
+            return null;
+        }
+
+        $chatId = $message['recipient']['chat_id'] ?? $callback['user']['user_id'] ?? null;
+        $payload = $callback['payload'] ?? null;
+        $callbackId = $callback['callback_id'] ?? null;
+
+        if ($chatId === null || ! is_string($payload) || trim($payload) === '' || ! is_string($callbackId)) {
+            return null;
+        }
+
+        return [
+            'chatId' => (string) $chatId,
+            'text' => $payload,
+            'id' => (string) ($callback['callback_id'] ?? ''),
+            'callbackId' => $callbackId,
         ];
     }
 

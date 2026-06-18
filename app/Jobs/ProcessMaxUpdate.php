@@ -54,6 +54,24 @@ final class ProcessMaxUpdate implements ShouldQueue
                 return;
             }
 
+            // Нажатие inline-кнопки (кликабельный календарь мастера записи)
+            // приходит как message_callback: payload = выбор клиента, подаём его
+            // как обычный ввод и гасим «часики» (answerCallback).
+            $callback = $max->parseCallback($this->update);
+            if ($callback !== null) {
+                $messages->handle($channel, new IncomingMessage(
+                    externalChatId: $callback['chatId'],
+                    externalMessageId: $callback['id'],
+                    text: $callback['text'],
+                    contactName: null,
+                    contactRef: null,
+                    raw: $this->update,
+                ));
+                $max->answerCallback($channel, $callback['callbackId']);
+
+                return;
+            }
+
             $parsed = $max->parseMessage($this->update);
 
             if ($parsed === null) {

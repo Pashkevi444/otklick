@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Channels\Telegram;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Http\Client\PendingRequest;
@@ -30,11 +31,36 @@ final readonly class TelegramGateway implements ChannelGateway
         return ChannelType::Telegram;
     }
 
-    public function send(Channel $channel, string $chatId, string $text): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
     {
         $this->call($channel->botToken(), 'sendMessage', [
             'chat_id' => $chatId,
             'text' => $text,
+            // Reply-кнопки шлют свой текст обычным сообщением; при отсутствии
+            // клавиатуры снимаем прошлую, чтобы не висела на не-мастер-ответах.
+            'reply_markup' => $this->replyMarkup($keyboard),
+        ]);
+    }
+
+    /**
+     * Рендер клавиатуры-подсказки в reply_markup Telegram (JSON-строка):
+     * ReplyKeyboardMarkup (кнопки шлют свой текст) либо снятие клавиатуры.
+     */
+    private function replyMarkup(?ReplyKeyboard $keyboard): string
+    {
+        if ($keyboard === null || $keyboard->isEmpty()) {
+            return (string) json_encode(['remove_keyboard' => true]);
+        }
+
+        $rows = array_map(
+            fn (array $row): array => array_map(fn (string $label): array => ['text' => $label], $row),
+            $keyboard->rows,
+        );
+
+        return (string) json_encode([
+            'keyboard' => $rows,
+            'resize_keyboard' => true,
+            'one_time_keyboard' => true,
         ]);
     }
 

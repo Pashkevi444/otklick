@@ -62,6 +62,9 @@ final readonly class NotificationService
             'contact' => 'Клиент',
             'phone' => 'Телефон',
             'channel' => 'Источник',
+            // Ссылка на аккаунт клиента в мессенджере (VK — vk.com/id…, Telegram —
+            // t.me/…), чтобы владелец мог сразу написать клиенту в его канал.
+            'profile' => 'Профиль',
             'snippet' => 'Сообщение',
         ];
         foreach ($map as $key => $label) {

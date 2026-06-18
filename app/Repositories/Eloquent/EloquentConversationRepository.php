@@ -133,11 +133,23 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             return $active;
         }
 
+        // Узнаём вернувшегося клиента: переносим имя/телефон/ссылку на аккаунт и
+        // привязку к карточке из последнего диалога этого чата, чтобы бот
+        // обращался по имени и не переспрашивал контакты (телефон затем
+        // подтвердит мастер записи — вдруг сменился).
+        $previous = Conversation::query()
+            ->where('channel_id', $channelId)
+            ->where('external_chat_id', $externalChatId)
+            ->latest('created_at')
+            ->first();
+
         return Conversation::create([
             'channel_id' => $channelId,
             'external_chat_id' => $externalChatId,
-            'contact_name' => $contactName,
-            'contact_ref' => $contactRef,
+            'contact_name' => $contactName ?? $previous?->contact_name,
+            'contact_phone' => $previous?->contact_phone,
+            'contact_ref' => $contactRef ?? $previous?->contact_ref,
+            'client_id' => $previous?->client_id,
             'status' => ConversationStatus::Open,
         ]);
     }

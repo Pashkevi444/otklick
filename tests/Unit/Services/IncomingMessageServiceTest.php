@@ -53,7 +53,7 @@ final class IncomingMessageServiceTest extends TestCase
 
         $gateway = Mockery::mock(ChannelGateway::class);
         $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
-        $gateway->shouldReceive('send')->once()->with($channel, '555', 'Доставка бесплатно от 1000₽');
+        $gateway->shouldReceive('send')->once()->with($channel, '555', 'Доставка бесплатно от 1000₽', null);
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'есть ли доставка?');

@@ -17,6 +17,7 @@ use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Services\BookingFlow;
+use App\Support\RussianDateParser;
 use Illuminate\Support\Carbon;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -39,7 +40,7 @@ final class BookingFlowTest extends TestCase
         parent::tearDown();
     }
 
-    private function flow(FakeCrmGateway $crm, bool $connected = true, ?LlmClient $llm = null): BookingFlow
+    private function flow(FakeCrmGateway $crm, bool $connected = true, ?LlmClient $llm = null, ?Conversation $lastBooked = null): BookingFlow
     {
         $connection = new CrmConnection;
         $connection->id = 'crm-1';
@@ -70,7 +71,7 @@ final class BookingFlowTest extends TestCase
                 $c->crm_record_id = $id;
             },
         );
-        $conversations->shouldReceive('lastWithCrmRecordForChat')->andReturn(null)->byDefault();
+        $conversations->shouldReceive('lastWithCrmRecordForChat')->andReturn($lastBooked)->byDefault();
         $conversations->shouldReceive('setBookedFor');
         $conversations->shouldReceive('recordBookingValue')->andReturnUsing(
             function (Conversation $c, string $connId, ?string $sid, ?string $title, ?int $price): void {
@@ -256,9 +257,11 @@ final class BookingFlowTest extends TestCase
         $flow->advance($this->tenant(), $c, '2');
         $r = $flow->advance($this->tenant(), $c, 'завтра');
 
-        // Не вываливаем весь список — спрашиваем удобное время.
-        $this->assertStringContainsStringIgnoringCase('во сколько', $r->text);
-        $this->assertStringNotContainsString('12:00', $r->text); // полного перечня нет
+        // Не вываливаем весь список текстом — предлагаем выбрать время.
+        $this->assertStringContainsStringIgnoringCase('выберите', $r->text);
+        $this->assertStringNotContainsString('12:00', $r->text); // полного перечня в тексте нет
+        $this->assertNotNull($r->keyboard); // зато все окна — кликабельными кнопками
+        $this->assertContains('12:00', $r->keyboard->labels());
         $this->assertSame('slot', $c->booking_state['step']);
 
         // Клиент называет время — сопоставляем с реальным слотом.
@@ -445,5 +448,205 @@ final class BookingFlowTest extends TestCase
 
         $this->assertNotNull($r);
         $this->assertTrue($r->escalate);
+    }
+
+    public function test_past_date_asks_for_future_instead_of_escalating(): void
+    {
+        // Прошедший день не должен валить запрос слотов в CRM (HTTP 422) и
+        // эскалировать — бот просит назвать будущую дату.
+        $crm = $this->crm();
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1'); // услуга
+        $flow->advance($this->tenant(), $c, '2'); // мастер
+        $r = $flow->advance($this->tenant(), $c, '15.06.2026'); // вчера (сегодня 16.06.2026)
+
+        $this->assertStringContainsString('прошедш', mb_strtolower($r->text));
+        $this->assertFalse($r->escalate);
+        $this->assertSame('date', $c->booking_state['step']); // остаёмся на дне
+        $this->assertCount(0, $crm->createdBookings);
+    }
+
+    public function test_no_meta_intent_returns_null(): void
+    {
+        $flow = $this->flow($this->crm());
+        $c = $this->conversation();
+
+        // Обычные ответы шагов не должны распознаваться как «отмена/перенос».
+        $this->assertNull($flow->interceptIntent($this->tenant(), $c, 'завтра в 15'));
+        $this->assertNull($flow->interceptIntent($this->tenant(), $c, 'Павел, +7 999 123-45-67'));
+        $this->assertNull($flow->interceptIntent($this->tenant(), $c, '1'));
+    }
+
+    public function test_cancel_intent_with_existing_booking_signals_cancelled(): void
+    {
+        $booked = new Conversation;
+        $booked->crm_record_id = 'rec-5';
+
+        $flow = $this->flow($this->crm(), lastBooked: $booked);
+        $c = $this->conversation();
+        $c->booking_state = ['step' => 'date']; // активный мастер записи
+
+        $r = $flow->interceptIntent($this->tenant(), $c, 'отмени запись');
+
+        $this->assertNotNull($r);
+        $this->assertTrue($r->cancelled); // вызывающий слой отменит запись в CRM и закроет диалог
+        $this->assertFalse($r->escalate);
+        $this->assertNull($c->booking_state); // недооформленный мастер сброшен
+    }
+
+    public function test_cancel_intent_without_booking_exits_flow_politely(): void
+    {
+        $flow = $this->flow($this->crm()); // прошлой записи нет
+        $c = $this->conversation();
+        $c->booking_state = ['step' => 'slot'];
+
+        $r = $flow->interceptIntent($this->tenant(), $c, 'отмена');
+
+        $this->assertNotNull($r);
+        $this->assertFalse($r->cancelled); // отменять нечего — просто выходим
+        $this->assertFalse($r->escalate);
+        $this->assertNull($c->booking_state);
+    }
+
+    public function test_reschedule_intent_restarts_flow_and_cancels_old_booking_on_success(): void
+    {
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка')]; // авто-выбор услуги
+        $crm->staff = []; // мастеров нет → к любому, сразу шаг даты
+
+        $booked = new Conversation;
+        $booked->crm_record_id = 'old-rec';
+
+        $flow = $this->flow($crm, lastBooked: $booked);
+        $c = $this->conversation();
+        $c->channel_id = 'ch-1';
+        $c->external_chat_id = '9001';
+
+        // Клиент просит перенос — мастер записи стартует заново.
+        $r = $flow->interceptIntent($this->tenant(), $c, 'перенеси мою запись на другой день');
+        $this->assertNotNull($r);
+        $this->assertStringContainsString('перенесём', mb_strtolower($r->text));
+        $this->assertSame('old-rec', $c->booking_state['supersedes_record_id']);
+        $this->assertSame('date', $c->booking_state['step']);
+
+        // Доводим новую запись до конца.
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '1'); // слот → запись
+
+        $this->assertTrue($r->booked);
+        $this->assertCount(1, $crm->createdBookings); // создана новая
+        $this->assertContains('old-rec', $crm->cancelledRecords); // прежняя отменена
+    }
+
+    public function test_date_step_offers_clickable_calendar_whose_buttons_parse(): void
+    {
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка')];
+        $crm->staff = []; // нет мастеров → сразу шаг даты
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+
+        $r = $flow->start($this->tenant(), $c);
+
+        $this->assertSame('date', $c->booking_state['step']);
+        $this->assertNotNull($r->keyboard);
+        $labels = $r->keyboard->labels();
+        $this->assertCount(14, $labels); // горизонт календаря — 2 недели
+
+        // Подпись кнопки распознаётся парсером даты (содержит «dd.mm»),
+        // а нажатие (= отправка подписи) двигает сценарий к выбору времени.
+        $this->assertNotNull(RussianDateParser::parse($labels[1], Carbon::now()));
+        $r = $flow->advance($this->tenant(), $c, $labels[1]); // «нажал» завтрашний день
+        $this->assertSame('slot', $c->booking_state['step']);
+        $this->assertNotNull($r->keyboard); // время — тоже кликабельными кнопками
+    }
+
+    public function test_returning_client_confirms_phone_then_books(): void
+    {
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка')];
+        $crm->staff = [];
+        $flow = $this->flow($crm);
+
+        $c = $this->conversation(); // Иван, +79990000000
+        $c->client_id = 'cl-1'; // узнанный вернувшийся клиент (привязан к карточке)
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '1'); // слот выбран → просим подтвердить телефон
+
+        $this->assertStringContainsString('всё ещё', $r->text);
+        $this->assertStringContainsString('+79990000000', $r->text);
+        $this->assertSame('confirm_contact', $c->booking_state['step']);
+        $this->assertCount(0, $crm->createdBookings); // ещё не записали
+
+        $r = $flow->advance($this->tenant(), $c, 'да, всё верно'); // подтвердил телефон
+        $this->assertTrue($r->booked);
+        $this->assertSame('+79990000000', $crm->createdBookings[0]->clientPhone);
+    }
+
+    public function test_returning_client_with_changed_phone_is_updated_before_booking(): void
+    {
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка')];
+        $crm->staff = [];
+        $flow = $this->flow($crm);
+
+        $c = $this->conversation();
+        $c->client_id = 'cl-1';
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $flow->advance($this->tenant(), $c, '1'); // просим подтвердить телефон
+        $r = $flow->advance($this->tenant(), $c, 'теперь другой, +7 999 777-66-55'); // прислал новый
+
+        $this->assertTrue($r->booked);
+        $this->assertSame('+79997776655', $crm->createdBookings[0]->clientPhone); // запись на новый номер
+    }
+
+    public function test_new_client_is_not_asked_to_confirm_phone(): void
+    {
+        // У нового клиента (без client_id) телефон собирается по ходу — подтверждать
+        // нечего, записываем сразу после ввода контактов.
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка')];
+        $crm->staff = [];
+        $flow = $this->flow($crm);
+
+        $c = $this->conversation(phone: null); // нового клиента ещё не знаем
+        $c->contact_name = null;
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $flow->advance($this->tenant(), $c, '1'); // нет имени/телефона → шаг контактов
+        $r = $flow->advance($this->tenant(), $c, 'Пётр, +7 999 123-45-67');
+
+        $this->assertTrue($r->booked); // без шага подтверждения
+    }
+
+    public function test_reschedule_does_not_cancel_old_when_new_booking_fails(): void
+    {
+        $crm = $this->crm();
+        $crm->services = [new CrmService('s1', 'Стрижка')];
+        $crm->staff = [];
+        $crm->failBooking = true; // новая запись не создастся
+
+        $booked = new Conversation;
+        $booked->crm_record_id = 'old-rec';
+
+        $flow = $this->flow($crm, lastBooked: $booked);
+        $c = $this->conversation();
+        $c->channel_id = 'ch-1';
+        $c->external_chat_id = '9001';
+
+        $flow->interceptIntent($this->tenant(), $c, 'перезапиши меня');
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, '1');
+
+        $this->assertTrue($r->escalate);
+        $this->assertSame([], $crm->cancelledRecords); // прежняя запись цела — клиент не остался без слота
     }
 }

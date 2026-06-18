@@ -10,6 +10,7 @@ use App\Enums\ChannelType;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
+use App\Models\Client;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
@@ -90,6 +91,28 @@ final class MessagingRepositoriesTest extends TestCase
         $this->assertFalse($first->is($second));
         $this->assertSame(ConversationStatus::Open, $second->status);
         $this->assertSame(2, $channel->conversations()->count());
+    }
+
+    public function test_returning_chat_inherits_contact_from_previous_conversation(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+        $client = Client::factory()->create(['tenant_id' => $this->tenant->id]);
+
+        $first = $this->conversations->firstOrCreateForChat($channel->id, '777', null);
+        $this->conversations->setContactName($first, 'Алексей');
+        $this->conversations->setContactPhone($first, '+79991112233');
+        $this->conversations->setClientId($first, $client->id);
+        $this->conversations->updateStatus($first, ConversationStatus::Closed);
+
+        // Тот же чат пишет снова — узнаём клиента: имя/телефон/карточка переносятся.
+        $second = $this->conversations->firstOrCreateForChat($channel->id, '777', null);
+
+        $this->assertFalse($first->is($second));
+        $this->assertSame('Алексей', $second->contact_name);
+        $this->assertSame('+79991112233', $second->contact_phone);
+        $this->assertSame($client->id, $second->client_id);
     }
 
     public function test_close_stale_open_closes_only_inactive_unbooked(): void

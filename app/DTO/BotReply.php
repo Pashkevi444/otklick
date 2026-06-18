@@ -23,5 +23,8 @@ final readonly class BotReply
         public bool $cancelled = false,
         public bool $startBooking = false,
         public bool $knowledgeGap = false,
+        // Клавиатура-подсказка под сообщением (кликабельные дата/время/услуга/мастер
+        // в мастере записи). null — обычный текст без кнопок.
+        public ?ReplyKeyboard $keyboard = null,
     ) {}
 }

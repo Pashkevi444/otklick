@@ -13,6 +13,7 @@ use App\Crm\Data\SlotQuery;
 use App\Crm\Data\TimeSlot;
 use App\DTO\BotReply;
 use App\DTO\BusinessProfile;
+use App\DTO\ReplyKeyboard;
 use App\Enums\BookingStep;
 use App\Llm\Contracts\LlmClient;
 use App\Models\Conversation;
@@ -48,6 +49,17 @@ class BookingFlow
     /** Сколько свободных окон показывать списком (больше — просим назвать время). */
     private const int SLOTS_TO_LIST = 6;
 
+    /** Горизонт кликабельного календаря (дней вперёд, считая сегодня). */
+    private const int DATE_BUTTONS = 14;
+
+    /** Короткие подписи дней недели для кнопок календаря (ISO: Пн=1…Вс=7). */
+    private const array WEEKDAY_ABBR = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 => 'Сб', 7 => 'Вс'];
+
+    /** Мета-намерения клиента, перебивающие обычный сценарий записи. */
+    private const string INTENT_CANCEL = 'cancel';
+
+    private const string INTENT_RESCHEDULE = 'reschedule';
+
     public function __construct(
         private readonly CrmConnectionRepositoryInterface $connections,
         private readonly CrmGatewayResolver $gateways,
@@ -65,8 +77,12 @@ class BookingFlow
      * Начинает сценарий записи. Возвращает null, если автозапись недоступна
      * (нет подключения) — тогда вызывающий слой откатывается на обычное
      * поведение/эскалацию.
+     *
+     * $supersedesRecordId — id ранее оформленной записи, которую этот сценарий
+     * заменяет (перенос/перезапись): её отменяем в CRM только после успешного
+     * создания новой, чтобы клиент не остался без слота, если передумает.
      */
-    public function start(Tenant $tenant, Conversation $conversation): ?BotReply
+    public function start(Tenant $tenant, Conversation $conversation, ?string $supersedesRecordId = null): ?BotReply
     {
         $connection = $this->connections->activeForCurrentTenant();
 
@@ -98,6 +114,10 @@ class BookingFlow
                 'service_id' => $services[0]->id,
                 'service_title' => $services[0]->title,
                 'service_prices' => $this->servicePrices($services),
+                'supersedes_record_id' => $supersedesRecordId,
+                // Телефон уже известен на старте — клиент вернувшийся, его номер
+                // перед записью подтвердим (вдруг сменился).
+                'confirm_phone' => $this->isReturning($conversation),
             ];
 
             return $this->enterStaff($conversation, $state, $connection, $gateway);
@@ -107,10 +127,12 @@ class BookingFlow
             'step' => BookingStep::Service->value,
             'options' => $this->serviceOptions($services),
             'service_prices' => $this->servicePrices($services),
+            'supersedes_record_id' => $supersedesRecordId,
+            'confirm_phone' => $this->isReturning($conversation),
         ];
         $this->conversations->setBookingState($conversation, $state);
 
-        return $this->ask("Отлично, запишу вас! 💈\n".$this->menu('Какую услугу вы хотите?', $state['options']));
+        return $this->ask("Отлично, запишу вас! 💈\n".$this->menu('Какую услугу вы хотите?', $state['options']), $this->optionsKeyboard($state['options'], 2));
     }
 
     /**
@@ -141,6 +163,7 @@ class BookingFlow
                 BookingStep::Date => $this->onDate($conversation, $state, $text, $connection, $gateway),
                 BookingStep::Slot => $this->onSlot($tenant, $conversation, $state, $text, $connection, $gateway),
                 BookingStep::Contact => $this->onContact($tenant, $conversation, $state, $text, $connection, $gateway),
+                BookingStep::ConfirmContact => $this->onConfirmContact($tenant, $conversation, $state, $text, $connection, $gateway),
             };
         } catch (Throwable $e) {
             report($e);
@@ -151,6 +174,111 @@ class BookingFlow
     }
 
     /**
+     * Перехватывает мета-намерение клиента «отменить» / «перенести (перезаписать)»
+     * запись. Работает И во время активного мастера записи, И вне его, поэтому
+     * клиент никогда не «застревает» на текущем шаге, как было раньше (на «отмени
+     * запись» бот талдычил «подскажите день»).
+     *
+     * Возвращает готовый ответ, если намерение распознано и обработано; иначе
+     * null — сообщение обрабатывается обычным потоком (мастер записи / бот по БЗ).
+     */
+    public function interceptIntent(Tenant $tenant, Conversation $conversation, string $text): ?BotReply
+    {
+        $intent = $this->detectIntent($text);
+
+        if ($intent === null) {
+            return null;
+        }
+
+        $activeFlow = is_array($conversation->booking_state) && $conversation->booking_state !== [];
+        $booked = $this->conversations->lastWithCrmRecordForChat(
+            (string) $conversation->channel_id,
+            (string) $conversation->external_chat_id,
+        );
+        $existingRecordId = $booked instanceof Conversation ? $booked->crm_record_id : null;
+        $this->log('intent', $conversation, ['intent' => $intent, 'has_booking' => $existingRecordId !== null, 'active_flow' => $activeFlow]);
+
+        if ($intent === self::INTENT_CANCEL) {
+            // Бросаем недооформленный мастер записи (если был).
+            if ($activeFlow) {
+                $this->conversations->setBookingState($conversation, null);
+            }
+
+            // Отменять нечего: если шёл мастер — вежливо выходим; иначе пусть
+            // отвечает обычный бот (вдруг «отмена» вообще не про запись).
+            if ($existingRecordId === null) {
+                return $activeFlow
+                    ? $this->ask('Хорошо, не записываю. Если передумаете — просто напишите, и я подберу время. 🙂')
+                    : null;
+            }
+
+            // Есть запись — сигналим вызывающему слою отменить её в CRM и закрыть
+            // диалог как «отменён клиентом» (cancelled).
+            return new BotReply(
+                'Готово, отменяю вашу запись. Если захотите записаться снова — просто напишите, я помогу. 🙌',
+                escalate: false,
+                cancelled: true,
+            );
+        }
+
+        // INTENT_RESCHEDULE — начинаем запись заново; прежнюю (если есть) заменим
+        // (отменим в CRM) только после успешного создания новой.
+        $reply = $this->start($tenant, $conversation, $existingRecordId);
+
+        if ($reply === null) {
+            // Автозапись недоступна — передаём администратору.
+            return $this->abort($tenant, $conversation);
+        }
+
+        $lead = $existingRecordId !== null
+            ? 'Конечно, перенесём запись — подберём новое время. '
+            : 'Хорошо, запишемся заново. ';
+
+        return new BotReply($lead.$reply->text, escalate: $reply->escalate, booked: $reply->booked);
+    }
+
+    /**
+     * Распознаёт мета-намерение по тексту (детерминированно, без LLM — дёшево и
+     * без задержки на каждое сообщение). Возвращает INTENT_CANCEL, INTENT_RESCHEDULE
+     * или null. Отмена приоритетнее переноса при явном отказе («не хочу
+     * записываться»), иначе срабатывает перенос.
+     */
+    private function detectIntent(string $text): ?string
+    {
+        $t = mb_strtolower(trim($text));
+
+        if ($t === '') {
+            return null;
+        }
+
+        $has = static function (string $haystack, string ...$needles): bool {
+            foreach ($needles as $needle) {
+                if (str_contains($haystack, $needle)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        // Явная отмена (или отказ от записи) — раньше переноса. «передумал» сюда
+        // НЕ относим: «передумал, сделай новую запись» — это перенос (ниже).
+        if ($has($t, 'отмени', 'отмена', 'отмену', 'отменит', 'отменя', 'аннулир')
+            || ($has($t, 'не надо', 'не хоч', 'не буд', 'отказ') && $has($t, 'запис', 'запиш', 'брон'))) {
+            return self::INTENT_CANCEL;
+        }
+
+        // Перенос / перезапись существующей записи.
+        if ($has($t, 'перенес', 'перенест', 'перезапиш', 'перезаписа', 'переписа на')
+            || (str_contains($t, 'передума') && $has($t, 'запиш', 'запис', 'нов', 'друг'))
+            || ($has($t, 'поменя', 'измен', 'сдвин', 'на друг') && $has($t, 'запис', 'врем', 'дат', 'день', 'час'))) {
+            return self::INTENT_RESCHEDULE;
+        }
+
+        return null;
+    }
+
+    /**
      * @param  array<string, mixed>  $state
      */
     private function onService(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
@@ -158,7 +286,7 @@ class BookingFlow
         $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
         if ($choice === null) {
-            return $this->ask($this->menu('Уточните, пожалуйста, какую услугу — можно номером:', $state['options'] ?? []));
+            return $this->ask($this->menu('Уточните, пожалуйста, какую услугу — можно номером:', $state['options'] ?? []), $this->optionsKeyboard($state['options'] ?? [], 2));
         }
 
         $state['service_id'] = $choice['id'];
@@ -175,7 +303,7 @@ class BookingFlow
         $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
         if ($choice === null) {
-            return $this->ask($this->menu('Уточните, пожалуйста, к какому мастеру — можно номером:', $state['options'] ?? []));
+            return $this->ask($this->menu('Уточните, пожалуйста, к какому мастеру — можно номером:', $state['options'] ?? []), $this->optionsKeyboard($state['options'] ?? [], 2));
         }
 
         $state['staff_id'] = $choice['id'];
@@ -194,7 +322,13 @@ class BookingFlow
         $date = RussianDateParser::parse($text, Carbon::now()) ?? $this->parseDateWithLlm($text, Carbon::now());
 
         if ($date === null) {
-            return $this->ask('Подскажите, пожалуйста, день записи — например, «завтра», «в субботу» или «18.06».');
+            return $this->ask('Подскажите, пожалуйста, день записи — выберите на клавиатуре или напишите «18.06».', $this->dateKeyboard());
+        }
+
+        // Прошедший день: в CRM за расписанием не сходишь (вернёт 422), да и
+        // записать в прошлое нельзя — просим будущую дату, а не падаем/эскалируем.
+        if (Carbon::parse($date)->startOfDay()->lt(Carbon::now()->startOfDay())) {
+            return $this->ask('Это уже прошедший день. 🙂 Выберите, пожалуйста, будущую дату на клавиатуре.', $this->dateKeyboard());
         }
 
         $state['date'] = $date;
@@ -213,7 +347,7 @@ class BookingFlow
             // Названное время не подошло — показываем компактный список ближайших окон.
             $preview = array_slice($state['options'] ?? [], 0, self::SLOTS_TO_LIST);
 
-            return $this->ask($this->menu('Не нашёл такого свободного времени. Вот ближайшие окна (напишите время или номер):', $preview));
+            return $this->ask($this->menu('Не нашёл такого свободного времени. Вот ближайшие окна (нажмите время или напишите):', $preview), $this->optionsKeyboard($preview, 3));
         }
 
         $state['slot'] = $choice['id'];
@@ -225,6 +359,37 @@ class BookingFlow
             $this->conversations->setBookingState($conversation, $state);
 
             return $this->ask($this->contactPrompt($conversation));
+        }
+
+        // Вернувшийся клиент: телефон уже был известен на старте — подтверждаем
+        // его (вдруг сменился), прежде чем записать.
+        if (! empty($state['confirm_phone'])) {
+            $state['step'] = BookingStep::ConfirmContact->value;
+            unset($state['options']);
+            $this->conversations->setBookingState($conversation, $state);
+
+            return $this->ask(
+                "Записываю вас, {$conversation->contact_name}. 📞 Ваш телефон всё ещё {$conversation->contact_phone}? Если поменялся — пришлите новый номер, иначе нажмите «Да».",
+                new ReplyKeyboard([['Да, всё верно']]),
+            );
+        }
+
+        return $this->book($tenant, $conversation, $state, $connection, $gateway);
+    }
+
+    /**
+     * Подтверждение телефона у вернувшегося клиента: если прислал новый номер —
+     * обновляем, иначе считаем текущий актуальным. Затем записываем.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    private function onConfirmContact(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    {
+        $phone = PhoneExtractor::fromText($text);
+
+        if ($phone !== null && $phone !== $conversation->contact_phone) {
+            $this->conversations->setContactPhone($conversation, $phone);
+            $this->log('phone_updated', $conversation);
         }
 
         return $this->book($tenant, $conversation, $state, $connection, $gateway);
@@ -288,7 +453,7 @@ class BookingFlow
         $state['options'] = $this->staffOptions($staff);
         $this->conversations->setBookingState($conversation, $state);
 
-        return $this->ask($this->menu('К какому мастеру вас записать?', $state['options']));
+        return $this->ask($this->menu('К какому мастеру вас записать?', $state['options']), $this->optionsKeyboard($state['options'], 2));
     }
 
     /**
@@ -300,7 +465,7 @@ class BookingFlow
         unset($state['options']);
         $this->conversations->setBookingState($conversation, $state);
 
-        return $this->ask('На какой день вас записать? Напишите, например, «завтра» или «18.06».');
+        return $this->ask('На какой день вас записать? Выберите день на клавиатуре или напишите, например «18.06».', $this->dateKeyboard());
     }
 
     /**
@@ -320,7 +485,7 @@ class BookingFlow
             unset($state['options']);
             $this->conversations->setBookingState($conversation, $state);
 
-            return $this->ask('На '.$this->humanDate((string) $state['date']).' нет свободного времени. Назовите, пожалуйста, другой день.');
+            return $this->ask('На '.$this->humanDate((string) $state['date']).' нет свободного времени. Выберите, пожалуйста, другой день.', $this->dateKeyboard());
         }
 
         $state['step'] = BookingStep::Slot->value;
@@ -328,18 +493,19 @@ class BookingFlow
         $this->conversations->setBookingState($conversation, $state);
 
         $date = $this->humanDate((string) $state['date']);
+        // Время — кликабельными кнопками (4 в ряд); их же можно набрать текстом.
+        $keyboard = $this->optionsKeyboard($state['options'], 4);
 
-        // Мало окон — показываем списком; много — не спамим, просим назвать время
-        // (его сопоставим с реальными слотами), а полный список даём только если
-        // названное время не подошло.
+        // Мало окон — показываем списком в тексте; много — не спамим перечнем, а
+        // даём диапазон в тексте, при этом все окна доступны кнопками.
         if (count($state['options']) <= self::SLOTS_TO_LIST) {
-            return $this->ask($this->menu("Свободное время на {$date}:", $state['options']));
+            return $this->ask($this->menu("Свободное время на {$date} — выберите:", $state['options']), $keyboard);
         }
 
         $first = $state['options'][0]['title'];
         $last = $state['options'][count($state['options']) - 1]['title'];
 
-        return $this->ask("На {$date} есть свободное время с {$first} до {$last}. Во сколько вам удобно? Напишите время, например «{$first}».");
+        return $this->ask("На {$date} свободно с {$first} до {$last}. Выберите удобное время на клавиатуре или напишите, например «{$first}».", $keyboard);
     }
 
     /**
@@ -369,12 +535,20 @@ class BookingFlow
         ]);
 
         // Запись не удалась: честно сообщаем, даём телефон бизнеса и эскалируем —
-        // администратор увидит обращение и оформит вручную.
+        // администратор увидит обращение и оформит вручную. Прежнюю запись (при
+        // переносе) НЕ трогаем — клиент остаётся со старым слотом, а не без слота.
         if (! $result->success) {
             return new BotReply(
                 $this->withPhone('К сожалению, не получилось оформить запись автоматически. 😔 Я уже передал заявку администратору — он скоро свяжется с вами и поможет записаться.', $tenant),
                 escalate: true,
             );
+        }
+
+        // Перенос: новая запись создана — теперь отменяем прежнюю в CRM. Делаем
+        // это ДО сохранения нового id, чтобы поиск «последней записи чата» нашёл
+        // именно старую (а не только что созданную).
+        if (! empty($state['supersedes_record_id'])) {
+            $this->cancelSuperseded($conversation, $connection, $gateway, (string) $state['supersedes_record_id']);
         }
 
         // Сохраняем id записи в CRM — пригодится, если клиент попросит её отменить.
@@ -435,6 +609,39 @@ class BookingFlow
         // Успешно отменили — снимаем id, чтобы не пытаться отменить повторно.
         if ($result->success) {
             $this->conversations->setCrmRecordId($booked, null);
+        }
+    }
+
+    /**
+     * Отменяет в CRM прежнюю запись чата при переносе (после успешного создания
+     * новой) и снимает её id с того диалога, где она висела. Сбой отмены не
+     * валит запись — новая уже создана; просто логируем (старая «зависнет», её
+     * увидит администратор).
+     */
+    private function cancelSuperseded(Conversation $conversation, CrmConnection $connection, CrmGateway $gateway, string $recordId): void
+    {
+        try {
+            $result = $gateway->cancelBooking($connection, $recordId);
+            $this->log('supersede_cancel', $conversation, ['record_id' => $recordId, 'success' => $result->success]);
+        } catch (Throwable $e) {
+            report($e);
+            $this->log('supersede_cancel.failed', $conversation, ['record_id' => $recordId, 'error' => $e->getMessage()]);
+
+            return;
+        }
+
+        if (! $result->success) {
+            return;
+        }
+
+        // Снимаем id с прежнего диалога этого чата (его запись теперь отменена).
+        $old = $this->conversations->lastWithCrmRecordForChat(
+            (string) $conversation->channel_id,
+            (string) $conversation->external_chat_id,
+        );
+
+        if ($old instanceof Conversation && $old->crm_record_id === $recordId) {
+            $this->conversations->setCrmRecordId($old, null);
         }
     }
 
@@ -524,6 +731,17 @@ class BookingFlow
         return $conversation->contact_phone !== null && $conversation->contact_phone !== '';
     }
 
+    /**
+     * Вернувшийся узнанный клиент: телефон уже известен на старте И диалог
+     * привязан к карточке клиента (перенесена из прошлого диалога чата). Тогда
+     * номер перед записью подтверждаем; у нового клиента (телефон даёт по ходу)
+     * подтверждать нечего.
+     */
+    private function isReturning(Conversation $conversation): bool
+    {
+        return $this->hasPhone($conversation) && $conversation->client_id !== null;
+    }
+
     /** Запрос недостающих контактов (имя и/или телефон) для записи. */
     private function contactPrompt(Conversation $conversation): string
     {
@@ -560,9 +778,37 @@ class BookingFlow
         return mb_convert_case(trim($m[0]), MB_CASE_TITLE, 'UTF-8');
     }
 
-    private function ask(string $text): BotReply
+    private function ask(string $text, ?ReplyKeyboard $keyboard = null): BotReply
     {
-        return new BotReply($text, escalate: false);
+        return new BotReply($text, escalate: false, keyboard: $keyboard);
+    }
+
+    /**
+     * Клавиатура-подсказка из пунктов меню (услуги/мастера/слоты): подпись кнопки
+     * = название пункта, его распознаёт `resolveChoice`.
+     *
+     * @param  list<array{id: string, title: string}>  $options
+     */
+    private function optionsKeyboard(array $options, int $perRow): ReplyKeyboard
+    {
+        return ReplyKeyboard::grid(array_map(fn (array $o): string => $o['title'], $options), $perRow);
+    }
+
+    /**
+     * Кликабельный календарь: кнопки на ближайшие дни. Подпись «Пн 23.06» —
+     * `RussianDateParser` берёт из неё «23.06» (день недели игнорируется).
+     */
+    private function dateKeyboard(): ReplyKeyboard
+    {
+        $today = Carbon::now()->startOfDay();
+
+        $labels = [];
+        for ($i = 0; $i < self::DATE_BUTTONS; $i++) {
+            $day = $today->copy()->addDays($i);
+            $labels[] = self::WEEKDAY_ABBR[$day->dayOfWeekIso].' '.$day->format('d.m');
+        }
+
+        return ReplyKeyboard::grid($labels, 3);
     }
 
     /**

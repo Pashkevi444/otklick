@@ -24,4 +24,7 @@ enum BookingStep: string
 
     /** Сбор телефона, если его ещё нет. */
     case Contact = 'contact';
+
+    /** Подтверждение телефона у вернувшегося клиента (вдруг сменился). */
+    case ConfirmContact = 'confirm_contact';
 }

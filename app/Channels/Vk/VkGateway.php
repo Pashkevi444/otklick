@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Channels\Vk;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Http\Client\Response;
@@ -31,19 +32,48 @@ final readonly class VkGateway implements ChannelGateway
         return ChannelType::Vk;
     }
 
-    public function send(Channel $channel, string $chatId, string $text): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
     {
-        $this->ensureOk(
+        $params = [
+            'peer_id' => $chatId,
+            'message' => $text,
             // random_id у VK — знаковый int32 (используется для дедупа); шире — ошибка 100.
-            $this->method($channel, 'messages.send', [
-                'peer_id' => $chatId,
-                'message' => $text,
-                'random_id' => random_int(1, 2_147_483_647),
-                'group_id' => $channel->credential('group_id'),
-            ]),
+            'random_id' => random_int(1, 2_147_483_647),
+            'group_id' => $channel->credential('group_id'),
+        ];
+
+        $markup = $this->keyboard($keyboard);
+        if ($markup !== null) {
+            $params['keyboard'] = $markup;
+        }
+
+        $this->ensureOk(
+            $this->method($channel, 'messages.send', $params),
             'messages.send',
             ['channel_id' => $channel->id, 'peer_id' => $chatId],
         );
+    }
+
+    /**
+     * Рендер клавиатуры-подсказки в параметр keyboard VK (JSON-строка): text-кнопки
+     * (нажатие шлёт подпись обычным сообщением). null — параметр не передаём
+     * (висящую клавиатуру VK снимать не нужно: one_time скрывает её после нажатия).
+     */
+    private function keyboard(?ReplyKeyboard $keyboard): ?string
+    {
+        if ($keyboard === null || $keyboard->isEmpty()) {
+            return null;
+        }
+
+        $buttons = array_map(
+            fn (array $row): array => array_map(
+                fn (string $label): array => ['action' => ['type' => 'text', 'label' => $label]],
+                $row,
+            ),
+            $keyboard->rows,
+        );
+
+        return (string) json_encode(['one_time' => true, 'buttons' => $buttons], JSON_UNESCAPED_UNICODE);
     }
 
     /**

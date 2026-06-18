@@ -29,6 +29,7 @@ final class BotResponderTest extends TestCase
         $conversation->booking_state = ['step' => 'service'];
 
         $booking = Mockery::mock(BookingFlow::class);
+        $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('advance')->once()->with(Mockery::type(Tenant::class), $conversation, 'хочу 1')
             ->andReturn(new BotReply('шаг записи', escalate: false));
 
@@ -45,6 +46,7 @@ final class BotResponderTest extends TestCase
         $conversation = new Conversation;
 
         $booking = Mockery::mock(BookingFlow::class);
+        $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('isAvailable')->once()->andReturnTrue();
         $booking->shouldReceive('start')->once()->with(Mockery::type(Tenant::class), $conversation)
             ->andReturn(new BotReply('Какую услугу?', escalate: false));
@@ -64,6 +66,7 @@ final class BotResponderTest extends TestCase
         $conversation = new Conversation;
 
         $booking = Mockery::mock(BookingFlow::class);
+        $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('isAvailable')->once()->andReturnTrue();
         $booking->shouldReceive('start')->once()->andReturnNull();
 
@@ -81,6 +84,7 @@ final class BotResponderTest extends TestCase
         $conversation = new Conversation;
 
         $booking = Mockery::mock(BookingFlow::class);
+        $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('isAvailable')->once()->andReturnFalse();
         $booking->shouldNotReceive('start');
 

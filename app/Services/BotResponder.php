@@ -27,6 +27,15 @@ class BotResponder
 
     public function respond(Tenant $tenant, Conversation $conversation, string $text): BotReply
     {
+        // Мета-намерение «отменить»/«перенести» запись перебивает всё: работает и
+        // во время активного мастера записи, и вне его — чтобы клиент не застревал
+        // на текущем шаге (раньше «отмени запись» в середине сценария игнорилось).
+        $intercept = $this->booking->interceptIntent($tenant, $conversation, $text);
+
+        if ($intercept !== null) {
+            return $intercept;
+        }
+
         $state = $conversation->booking_state;
 
         if (is_array($state) && $state !== []) {

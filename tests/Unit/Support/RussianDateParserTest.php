@@ -58,8 +58,22 @@ final class RussianDateParserTest extends TestCase
     {
         $this->assertSame('2026-06-20', $this->parse('20'));
         $this->assertSame('2026-06-20', $this->parse('20 числа'));
+        $this->assertSame('2026-06-20', $this->parse('на 20'));
         // День уже прошёл в этом месяце — следующий месяц.
         $this->assertSame('2026-07-10', $this->parse('10'));
+    }
+
+    public function test_weekday_with_time_keeps_the_weekday_not_the_time(): void
+    {
+        // «в воскресенье в 15» — это воскресенье, а «15» это время, НЕ 15-е число.
+        $this->assertSame('2026-06-21', $this->parse('в воскресенье в 15'));
+    }
+
+    public function test_bare_time_is_not_a_date(): void
+    {
+        // «в 15» — это время («в 15:00»), а не день месяца: пусть переспросят/ИИ.
+        $this->assertNull($this->parse('в 15'));
+        $this->assertNull($this->parse('в 11'));
     }
 
     public function test_returns_null_for_garbage(): void

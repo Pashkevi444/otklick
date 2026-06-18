@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Channels;
 
 use App\Channels\Vk\VkGateway;
+use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Support\Facades\Http;
@@ -40,6 +41,31 @@ final class VkGatewayTest extends TestCase
                 && $request['access_token'] === 'community-token'
                 && $request['v'] === '5.199';
         });
+    }
+
+    public function test_send_with_keyboard_passes_text_buttons(): void
+    {
+        Http::fake(['*/messages.send' => Http::response(['response' => 123])]);
+
+        $this->gateway()->send($this->channel(), '555', 'Выберите день', ReplyKeyboard::grid(['Пн 23.06', 'Вт 24.06'], 1));
+
+        Http::assertSent(function ($request): bool {
+            $keyboard = json_decode((string) $request['keyboard'], true);
+
+            return is_array($keyboard)
+                && $keyboard['one_time'] === true
+                && $keyboard['buttons'][0][0]['action']['type'] === 'text'
+                && $keyboard['buttons'][0][0]['action']['label'] === 'Пн 23.06';
+        });
+    }
+
+    public function test_send_without_keyboard_omits_keyboard_param(): void
+    {
+        Http::fake(['*/messages.send' => Http::response(['response' => 123])]);
+
+        $this->gateway()->send($this->channel(), '555', 'привет');
+
+        Http::assertSent(fn ($request): bool => ! isset($request['keyboard']));
     }
 
     public function test_send_throws_on_vk_error_body(): void

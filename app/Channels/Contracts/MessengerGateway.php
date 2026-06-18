@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Channels\Contracts;
 
+use App\DTO\ReplyKeyboard;
 use App\Models\Channel;
 
 /**
@@ -11,10 +12,11 @@ use App\Models\Channel;
  * канала (Telegram, далее WhatsApp). Бизнес-логика работает с портом, не зная
  * деталей конкретного мессенджера.
  *
- * Сейчас реализован только Telegram и биндится напрямую. Когда появится второй
- * канал — добавится резолвер реализации по ChannelType.
+ * $keyboard — необязательная клавиатура-подсказка (кликабельные варианты в
+ * мастере записи). Каждый канал рендерит её в свой формат (Telegram/VK —
+ * reply-кнопки, MAX — inline-кнопки с callback); null — обычный текст.
  */
 interface MessengerGateway
 {
-    public function send(Channel $channel, string $chatId, string $text): void;
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void;
 }

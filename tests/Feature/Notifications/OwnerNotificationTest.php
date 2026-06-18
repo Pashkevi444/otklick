@@ -56,6 +56,24 @@ final class OwnerNotificationTest extends TestCase
         Mail::assertQueued(OwnerEventMail::class);
     }
 
+    public function test_notification_includes_client_profile_link(): void
+    {
+        Mail::fake();
+
+        $tenant = Tenant::factory()->create();
+        $this->app->make(TenantContext::class)->set($tenant->id);
+        NotificationRecipient::factory()->create(['tenant_id' => $tenant->id]);
+
+        // Ссылка на аккаунт клиента (VK/Telegram) должна попасть в уведомление,
+        // чтобы владелец мог написать клиенту в его канал.
+        $this->app->make(NotificationService::class)->send($tenant, OwnerEvent::NewLead, [
+            'contact' => 'Гость',
+            'profile' => 'https://vk.com/id777',
+        ]);
+
+        Mail::assertQueued(OwnerEventMail::class, fn (OwnerEventMail $mail): bool => str_contains($mail->render(), 'https://vk.com/id777'));
+    }
+
     public function test_owner_event_mail_renders(): void
     {
         // Рендер markdown-шаблона не должен падать («No hint path for [mail]»).

@@ -91,6 +91,29 @@ final class ProcessMaxUpdateTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_callback_tap_is_handled_as_text_and_answered(): void
+    {
+        Http::fake();
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->max()->create(['tenant_id' => $tenant->id]);
+
+        // Нажатие inline-кнопки календаря: payload «есть ли доставка?» — обрабатываем
+        // как обычный ввод (записываем входящее) и гасим «часики» (/answers).
+        $this->process($tenant, $channel, [
+            'update_type' => 'message_callback',
+            'callback' => ['callback_id' => 'cb9', 'payload' => 'есть ли доставка?', 'user' => ['user_id' => 777]],
+            'message' => ['recipient' => ['chat_id' => 555]],
+        ]);
+
+        $this->assertDatabaseHas('messages', [
+            'tenant_id' => $tenant->id,
+            'direction' => 'inbound',
+            'text' => 'есть ли доставка?',
+        ]);
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/answers')
+            && str_contains($request->url(), 'callback_id=cb9'));
+    }
+
     public function test_non_message_event_is_ignored(): void
     {
         Http::fake();

@@ -63,7 +63,7 @@ final readonly class IncomingMessageService
         try {
             // Ответ уходит через шлюз того канала, откуда пришло сообщение
             // (Telegram/VK/…), а не через жёстко зашитый мессенджер.
-            $this->gateways->for($channel->type)->send($channel, $incoming->externalChatId, $reply->text);
+            $this->gateways->for($channel->type)->send($channel, $incoming->externalChatId, $reply->text, $reply->keyboard);
         } catch (Throwable $e) {
             $status = MessageStatus::Failed;
             report($e);
@@ -125,10 +125,16 @@ final readonly class IncomingMessageService
             return;
         }
 
+        // Ссылка на аккаунт клиента — только настоящий URL мессенджера (VK/Telegram),
+        // а не IP веб-виджета: чтобы владелец мог написать клиенту в его канал.
+        $profile = (string) $conversation->contact_ref;
+        $profile = str_starts_with($profile, 'http') ? $profile : '';
+
         SendOwnerNotification::dispatch($tenantId, $event->value, [
             'contact' => $conversation->contact_name ?? 'Гость',
             'phone' => (string) $conversation->contact_phone,
             'channel' => $channel->type->label(),
+            'profile' => $profile,
             'snippet' => $snippet,
             'conversationId' => $conversation->id,
         ]);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Channels;
 
 use App\Channels\Max\MaxGateway;
+use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Http\Client\RequestException;
@@ -39,6 +40,60 @@ final class MaxGatewayTest extends TestCase
                 && $request['text'] === 'привет'
                 && $request->hasHeader('Authorization', 'max-token');
         });
+    }
+
+    public function test_send_with_keyboard_attaches_inline_callback_buttons(): void
+    {
+        Http::fake(['*/messages*' => Http::response(['message' => ['body' => ['mid' => 'm1']]])]);
+
+        $this->gateway()->send($this->channel(), '555', 'Выберите день', ReplyKeyboard::grid(['Пн 23.06', 'Вт 24.06'], 2));
+
+        Http::assertSent(function ($request): bool {
+            $attachment = $request['attachments'][0] ?? null;
+
+            return $attachment !== null
+                && $attachment['type'] === 'inline_keyboard'
+                && $attachment['payload']['buttons'][0][0]['type'] === 'callback'
+                && $attachment['payload']['buttons'][0][0]['text'] === 'Пн 23.06'
+                && $attachment['payload']['buttons'][0][0]['payload'] === 'Пн 23.06';
+        });
+    }
+
+    public function test_send_without_keyboard_has_no_attachments(): void
+    {
+        Http::fake(['*/messages*' => Http::response(['message' => ['body' => ['mid' => 'm1']]])]);
+
+        $this->gateway()->send($this->channel(), '555', 'привет');
+
+        Http::assertSent(fn ($request): bool => ! isset($request['attachments']));
+    }
+
+    public function test_parse_callback_extracts_payload_chat_and_callback_id(): void
+    {
+        $parsed = $this->gateway()->parseCallback([
+            'update_type' => 'message_callback',
+            'callback' => ['callback_id' => 'cb1', 'payload' => '10:00', 'user' => ['user_id' => 777]],
+            'message' => ['recipient' => ['chat_id' => 555]],
+        ]);
+
+        $this->assertSame('555', $parsed['chatId']);
+        $this->assertSame('10:00', $parsed['text']); // payload = выбор клиента
+        $this->assertSame('cb1', $parsed['callbackId']);
+    }
+
+    public function test_parse_callback_ignores_non_callback(): void
+    {
+        $this->assertNull($this->gateway()->parseCallback(['update_type' => 'message_created', 'message' => []]));
+    }
+
+    public function test_answer_callback_posts_callback_id(): void
+    {
+        Http::fake(['*/answers*' => Http::response([])]);
+
+        $this->gateway()->answerCallback($this->channel(), 'cb1');
+
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/answers')
+            && str_contains($request->url(), 'callback_id=cb1'));
     }
 
     public function test_get_me_returns_bot_info(): void
