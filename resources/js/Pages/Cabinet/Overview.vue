@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+
+const page = usePage();
+const features = computed(() => page.props.auth.user?.tenant?.features);
+const isOwner = computed<boolean>(() => page.props.auth.user?.isOwner ?? false);
+const allowedSections = computed<string[]>(() => page.props.auth.user?.allowedSections ?? []);
 
 interface Business {
     name: string;
@@ -48,12 +53,32 @@ const facts = computed<Fact[]>(() => {
     return out;
 });
 
-const shortcuts = [
-    { label: 'База знаний', icon: '📚', href: '/cabinet/knowledge' },
-    { label: 'Диалоги', icon: '💬', href: '/cabinet/conversations' },
-    { label: 'Каналы', icon: '🔌', href: '/cabinet/channels' },
-    { label: 'Виджет на сайт', icon: '🪟', href: '/cabinet/widget' },
+interface Shortcut {
+    label: string;
+    icon: string;
+    href: string;
+    section?: string; // раздел из allowedSections (доступ оператора)
+    feature?: 'analytics' | 'clientBase'; // возможность тарифа
+    owner?: boolean; // только владелец
+}
+
+// Главные плашки бизнеса — с гейтингом (тариф/роль/доступ), чтобы недоступные
+// не показывались и не давали 403.
+const allShortcuts: Shortcut[] = [
+    { label: 'Диалоги', icon: '💬', href: '/cabinet/conversations', section: 'conversations' },
+    { label: 'База клиентов', icon: '👤', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
+    { label: 'Аналитика', icon: '📈', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
+    { label: 'Команда', icon: '👥', href: '/cabinet/team', owner: true },
 ];
+
+const shortcuts = computed<Shortcut[]>(() =>
+    allShortcuts.filter((s) => {
+        if (s.owner && !isOwner.value) return false;
+        if (s.feature && !features.value?.[s.feature]) return false;
+        if (s.section && !allowedSections.value.includes(s.section)) return false;
+        return true;
+    }),
+);
 </script>
 
 <template>
@@ -108,7 +133,7 @@ const shortcuts = [
         </div>
 
         <!-- Быстрые переходы -->
-        <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div v-if="shortcuts.length" class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Link
                 v-for="s in shortcuts"
                 :key="s.href"
