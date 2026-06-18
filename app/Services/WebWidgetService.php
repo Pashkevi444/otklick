@@ -9,6 +9,7 @@ use App\DTO\IncomingMessage;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -55,7 +56,10 @@ final readonly class WebWidgetService
     {
         $sessionId = $this->sessionFromToken($channel, $token);
 
-        $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, 'Гость сайта', $clientIp);
+        // contactName=null: имя поставит ContactCapture/ContactGate, а у
+        // вернувшегося посетителя оно перенесётся из прошлого диалога (раньше
+        // жёсткое «Гость сайта» затирало перенесённое имя).
+        $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null, $clientIp);
 
         $this->messages->recordInbound($conversation, new IncomingMessage(
             externalChatId: $sessionId,
@@ -74,8 +78,12 @@ final readonly class WebWidgetService
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
         } elseif ($reply->booked) {
-            // Запись оформлена — закрываем диалог и фиксируем конверсию.
+            // Запись оформлена (лид «в работе» до визита) — фиксируем + обновляем
+            // резюме клиента (как в Telegram-пути).
             $this->conversations->markBooked($conversation);
+            if ($conversation->client_id !== null) {
+                RefreshClientSummary::dispatch((string) $channel->tenant_id, (string) $conversation->client_id);
+            }
         } elseif ($reply->cancelled) {
             // Клиент отменил запись — отменяем в CRM и закрываем диалог.
             $this->responder->cancelBookingInCrm($conversation);

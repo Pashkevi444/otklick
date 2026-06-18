@@ -322,6 +322,9 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->whereNotNull('crm_record_id')
             ->whereNotNull('booked_for')
             ->whereBetween('booked_for', [$from, $to])
+            // Не напоминаем об отменённой или закрытой администратором записи.
+            ->whereNull('cancelled_at')
+            ->where('status', '!=', ConversationStatus::Closed)
             ->get();
     }
 }

@@ -35,7 +35,7 @@ final class WebWidgetServiceTest extends TestCase
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')
-            ->once()->with('web-1', 'sess-1', 'Гость сайта', null)->andReturn($conversation);
+            ->once()->with('web-1', 'sess-1', null, null)->andReturn($conversation);
         $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
         $conversations->shouldReceive('markBooked')->once()->with($conversation);
 

@@ -12,6 +12,7 @@ use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Models\Client;
+use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
@@ -193,6 +194,26 @@ final class MessagingRepositoriesTest extends TestCase
         // Время визита прошло — запись больше не «активна».
         $this->conversations->setBookedFor($conv, now()->subDay());
         $this->assertCount(0, $this->conversations->activeBookingsForChat($channel->id, 'c1'));
+    }
+
+    public function test_upcoming_bookings_exclude_cancelled_and_closed(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+        $make = fn (array $a) => Conversation::factory()->create(array_merge(
+            ['tenant_id' => $this->tenant->id, 'channel_id' => $channel->id, 'crm_record_id' => 'r', 'booked_for' => now()->addHours(2)],
+            $a,
+        ));
+
+        $make(['external_chat_id' => 'a', 'status' => 'open', 'crm_record_id' => 'r1']);                       // активна — попадёт
+        $make(['external_chat_id' => 'b', 'status' => 'closed', 'crm_record_id' => 'r2', 'cancelled_at' => now()]); // отменена — нет
+        $make(['external_chat_id' => 'c', 'status' => 'closed', 'crm_record_id' => 'r3']);                     // закрыта админом — нет
+
+        $upcoming = $this->conversations->upcomingBookedForCurrentTenant(now(), now()->addDay());
+
+        $this->assertCount(1, $upcoming);
+        $this->assertSame('r1', $upcoming->first()?->crm_record_id);
     }
 
     public function test_reconcile_does_not_close_future_or_non_crm_bookings(): void

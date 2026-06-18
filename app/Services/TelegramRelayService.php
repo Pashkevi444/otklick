@@ -88,6 +88,15 @@ final readonly class TelegramRelayService
             return;
         }
 
+        // Диалог уже не в режиме оператора (бот возобновлён через /bot или закрыт)
+        // — не подмешиваем ответ оператора в бот-диалог (напр. ответ на старое
+        // кешированное сообщение спустя время).
+        if ($conversation->status !== ConversationStatus::NeedsHuman) {
+            $this->telegram->send($channel, $chatId, 'Этот диалог уже не в режиме оператора — бот отвечает сам или диалог закрыт. Ответ клиенту не отправлен.');
+
+            return;
+        }
+
         // Пересылаем ответ оператора клиенту.
         $this->telegram->send($channel, $conversation->external_chat_id, $text);
         $this->messages->recordOutbound($conversation, $text, MessageStatus::Sent);
