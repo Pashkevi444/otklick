@@ -169,6 +169,32 @@ final class MessagingRepositoriesTest extends TestCase
         $this->assertSame(ConversationOutcome::Booked, $conv->outcome());
     }
 
+    public function test_active_bookings_for_chat_returns_only_upcoming_with_record(): void
+    {
+        // Схема: один активный диалог на чат (partial-unique), поэтому у чата
+        // максимум одна активная запись.
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+
+        $conv = $this->conversations->firstOrCreateForChat($channel->id, 'c1', null);
+        $this->conversations->setCrmRecordId($conv, 'r1');
+        $this->conversations->setBookedFor($conv, now()->addDay());
+
+        // Другой чат — в выборку c1 не попадает.
+        $other = $this->conversations->firstOrCreateForChat($channel->id, 'c2', null);
+        $this->conversations->setCrmRecordId($other, 'r3');
+        $this->conversations->setBookedFor($other, now()->addDay());
+
+        $active = $this->conversations->activeBookingsForChat($channel->id, 'c1');
+        $this->assertCount(1, $active);
+        $this->assertSame('r1', $active->first()?->crm_record_id);
+
+        // Время визита прошло — запись больше не «активна».
+        $this->conversations->setBookedFor($conv, now()->subDay());
+        $this->assertCount(0, $this->conversations->activeBookingsForChat($channel->id, 'c1'));
+    }
+
     public function test_reconcile_does_not_close_future_or_non_crm_bookings(): void
     {
         $channel = $this->channels->create(new NewChannelData(

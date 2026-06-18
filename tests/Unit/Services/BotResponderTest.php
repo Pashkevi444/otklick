@@ -40,6 +40,7 @@ final class BotResponderTest extends TestCase
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
+        $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('advance')->once()->with(Mockery::type(Tenant::class), $conversation, 'хочу 1')
             ->andReturn(new BotReply('шаг записи', escalate: false));
 
@@ -57,6 +58,7 @@ final class BotResponderTest extends TestCase
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
+        $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('isAvailable')->once()->andReturnTrue();
         $booking->shouldReceive('start')->once()->with(Mockery::type(Tenant::class), $conversation)
             ->andReturn(new BotReply('Какую услугу?', escalate: false));
@@ -77,6 +79,7 @@ final class BotResponderTest extends TestCase
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
+        $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('isAvailable')->once()->andReturnTrue();
         $booking->shouldReceive('start')->once()->andReturnNull();
 
@@ -89,12 +92,50 @@ final class BotResponderTest extends TestCase
         $this->assertTrue($reply->escalate);
     }
 
+    public function test_existing_booking_offers_choice_menu_instead_of_second_booking(): void
+    {
+        $conversation = new Conversation;
+        $menu = new BotReply('У вас уже есть запись: Стрижка — 20.06 в 15:00…', escalate: false);
+
+        $booking = Mockery::mock(BookingFlow::class);
+        $booking->shouldReceive('interceptIntent')->andReturnNull();
+        $booking->shouldReceive('isAvailable')->andReturnTrue();
+        // Есть активная запись → меню выбора, а не молча вторая запись.
+        $booking->shouldReceive('bookingChoiceMenu')->once()->with($conversation)->andReturn($menu);
+        $booking->shouldNotReceive('start');
+
+        $composer = Mockery::mock(ReplyComposer::class);
+        $composer->shouldReceive('compose')->once()->andReturn(new BotReply('Секунду…', escalate: false, startBooking: true));
+
+        $reply = (new BotResponder($composer, $booking, $this->gate()))->respond($this->tenant(), $conversation, 'хочу записаться');
+
+        $this->assertStringContainsString('уже есть запись', $reply->text);
+    }
+
+    public function test_new_booking_choice_starts_fresh_wizard_bypassing_llm(): void
+    {
+        $conversation = new Conversation;
+
+        $booking = Mockery::mock(BookingFlow::class);
+        $booking->shouldReceive('interceptIntent')->andReturnNull();
+        $booking->shouldReceive('start')->once()->andReturn(new BotReply('Какую услугу?', escalate: false));
+        $booking->shouldNotReceive('bookingChoiceMenu');
+
+        $composer = Mockery::mock(ReplyComposer::class);
+        $composer->shouldNotReceive('compose'); // «Новая запись» минует LLM и меню
+
+        $reply = (new BotResponder($composer, $booking, $this->gate()))->respond($this->tenant(), $conversation, 'Новая запись');
+
+        $this->assertSame('Какую услугу?', $reply->text);
+    }
+
     public function test_normal_reply_passes_through(): void
     {
         $conversation = new Conversation;
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
+        $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('isAvailable')->once()->andReturnFalse();
         $booking->shouldNotReceive('start');
 

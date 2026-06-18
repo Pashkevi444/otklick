@@ -19,6 +19,7 @@ use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Services\BookingFlow;
 use App\Support\RussianDateParser;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\Support\FakeCrmGateway;
@@ -40,7 +41,7 @@ final class BookingFlowTest extends TestCase
         parent::tearDown();
     }
 
-    private function flow(FakeCrmGateway $crm, bool $connected = true, ?LlmClient $llm = null, ?Conversation $lastBooked = null): BookingFlow
+    private function flow(FakeCrmGateway $crm, bool $connected = true, ?LlmClient $llm = null, ?Conversation $lastBooked = null, ?Collection $activeBookings = null): BookingFlow
     {
         $connection = new CrmConnection;
         $connection->id = 'crm-1';
@@ -72,6 +73,7 @@ final class BookingFlowTest extends TestCase
             },
         );
         $conversations->shouldReceive('lastWithCrmRecordForChat')->andReturn($lastBooked)->byDefault();
+        $conversations->shouldReceive('activeBookingsForChat')->andReturn($activeBookings ?? collect())->byDefault();
         $conversations->shouldReceive('setBookedFor');
         $conversations->shouldReceive('recordBookingValue')->andReturnUsing(
             function (Conversation $c, string $connId, ?string $sid, ?string $title, ?int $price): void {
@@ -438,6 +440,35 @@ final class BookingFlowTest extends TestCase
         $this->assertCount(0, $crm->cancelledRecords);
     }
 
+    public function test_booking_choice_menu_lists_active_booking_with_action_buttons(): void
+    {
+        $booked = new Conversation;
+        $booked->booked_service_title = 'Стрижка';
+        $booked->booked_for = Carbon::parse('2026-06-20 15:00');
+
+        $flow = $this->flow($this->crm(), activeBookings: collect([$booked]));
+        $c = $this->conversation();
+        $c->channel_id = 'ch-1';
+        $c->external_chat_id = '9001';
+
+        $r = $flow->bookingChoiceMenu($c);
+
+        $this->assertNotNull($r);
+        $this->assertStringContainsString('Стрижка', $r->text);
+        $this->assertStringContainsString('20.06', $r->text);
+        $this->assertNotNull($r->keyboard);
+        $labels = $r->keyboard->labels();
+        $this->assertContains('Перенести запись', $labels);
+        $this->assertContains('Отменить запись', $labels);
+        $this->assertContains('Новая запись', $labels);
+    }
+
+    public function test_booking_choice_menu_is_null_without_active_bookings(): void
+    {
+        // Нет предстоящих записей → обычная новая запись (меню не показываем).
+        $this->assertNull($this->flow($this->crm())->bookingChoiceMenu($this->conversation()));
+    }
+
     public function test_crm_error_on_start_escalates(): void
     {
         $crm = $this->crm();
@@ -495,6 +526,27 @@ final class BookingFlowTest extends TestCase
         $this->assertTrue($r->cancelled); // вызывающий слой отменит запись в CRM и закроет диалог
         $this->assertFalse($r->escalate);
         $this->assertNull($c->booking_state); // недооформленный мастер сброшен
+    }
+
+    public function test_cancel_escalates_when_crm_cancel_fails_instead_of_lying(): void
+    {
+        // Прод-баг: без partner-token YClients отмена падает с 401. Бот не должен
+        // врать «отменил» — он передаёт диалог администратору.
+        $crm = $this->crm();
+        $crm->failCancel = true;
+
+        $booked = new Conversation;
+        $booked->crm_record_id = 'rec-9';
+
+        $flow = $this->flow($crm, lastBooked: $booked);
+        $c = $this->conversation();
+
+        $r = $flow->interceptIntent($this->tenant(), $c, 'отмени запись');
+
+        $this->assertNotNull($r);
+        $this->assertFalse($r->cancelled);
+        $this->assertTrue($r->escalate);
+        $this->assertStringContainsString('администратор', mb_strtolower($r->text));
     }
 
     public function test_cancel_intent_without_booking_exits_flow_politely(): void

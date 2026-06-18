@@ -289,6 +289,20 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->first();
     }
 
+    public function activeBookingsForChat(string $channelId, string $externalChatId): Collection
+    {
+        // Предстоящие записи чата (визит ещё не прошёл) — для меню «перенести/
+        // отменить/новая» у вернувшегося клиента.
+        return Conversation::query()
+            ->where('channel_id', $channelId)
+            ->where('external_chat_id', $externalChatId)
+            ->whereNotNull('crm_record_id')
+            ->whereNotNull('booked_for')
+            ->where('booked_for', '>', now())
+            ->orderBy('booked_for')
+            ->get();
+    }
+
     public function setBookedFor(Conversation $conversation, Carbon $bookedFor): void
     {
         $conversation->forceFill(['booked_for' => $bookedFor, 'reminders_sent' => []])->save();

@@ -212,12 +212,20 @@ class BookingFlow
                     : null;
             }
 
-            // Есть запись — сигналим вызывающему слою отменить её в CRM и закрыть
-            // диалог как «отменён клиентом» (cancelled).
+            // Отменяем в CRM СРАЗУ и честно: подтверждаем только при успехе. Если
+            // CRM-отмена не прошла (напр. нет partner-token YClients) — НЕ врём
+            // клиенту «отменил», а передаём администратору.
+            if ($this->cancelLastBooking($conversation)) {
+                return new BotReply(
+                    'Готово, отменил вашу запись. Если захотите записаться снова — просто напишите, я помогу. 🙌',
+                    escalate: false,
+                    cancelled: true,
+                );
+            }
+
             return new BotReply(
-                'Готово, отменяю вашу запись. Если захотите записаться снова — просто напишите, я помогу. 🙌',
-                escalate: false,
-                cancelled: true,
+                $this->withPhone('Не получилось отменить запись автоматически. 😔 Передаю администратору — он отменит её и свяжется с вами.', $tenant),
+                escalate: true,
             );
         }
 
@@ -235,6 +243,45 @@ class BookingFlow
             : 'Хорошо, запишемся заново. ';
 
         return new BotReply($lead.$reply->text, escalate: $reply->escalate, booked: $reply->booked);
+    }
+
+    /**
+     * Меню для вернувшегося клиента, у которого УЖЕ есть предстоящая запись:
+     * перечисляем её и предлагаем перенести / отменить / записаться ещё раз
+     * (кликабельными кнопками). Возвращает null, если активных записей нет —
+     * тогда заводим обычную новую запись.
+     */
+    public function bookingChoiceMenu(Conversation $conversation): ?BotReply
+    {
+        $active = $this->conversations->activeBookingsForChat(
+            (string) $conversation->channel_id,
+            (string) $conversation->external_chat_id,
+        );
+
+        if ($active->isEmpty()) {
+            return null;
+        }
+
+        $lines = $active->map(fn (Conversation $c): string => '• '.$this->describeBooking($c))->all();
+        $word = $active->count() === 1 ? 'запись' : 'записи';
+
+        return new BotReply(
+            "У вас уже есть {$word}:\n".implode("\n", $lines).
+            "\n\nХотите перенести, отменить или записаться ещё раз?",
+            escalate: false,
+            keyboard: new ReplyKeyboard([['Перенести запись', 'Отменить запись'], ['Новая запись']]),
+        );
+    }
+
+    /** Человекочитаемое описание записи: услуга + дата и время визита. */
+    private function describeBooking(Conversation $conversation): string
+    {
+        $service = $conversation->booked_service_title ?? 'Запись';
+        $when = $conversation->booked_for !== null
+            ? $conversation->booked_for->format('d.m').' в '.$conversation->booked_for->format('H:i')
+            : '';
+
+        return $when !== '' ? "{$service} — {$when}" : $service;
     }
 
     /**
@@ -580,12 +627,17 @@ class BookingFlow
      * Отменяет в CRM последнюю запись этого чата (по просьбе клиента, сигнал
      * [[CANCELLED]]). Закрытие диалога делает вызывающий слой; здесь — только CRM.
      */
-    public function cancelLastBooking(Conversation $conversation): void
+    /**
+     * Отменяет в CRM последнюю запись чата. Возвращает true, если отменять нечего
+     * или отмена прошла успешно; false — если CRM-отмена сорвалась (тогда
+     * вызывающий слой не должен подтверждать клиенту отмену).
+     */
+    public function cancelLastBooking(Conversation $conversation): bool
     {
         $connection = $this->connections->activeForCurrentTenant();
 
         if ($connection === null) {
-            return;
+            return false;
         }
 
         $booked = $this->conversations->lastWithCrmRecordForChat(
@@ -594,7 +646,7 @@ class BookingFlow
         );
 
         if (! $booked instanceof Conversation || $booked->crm_record_id === null) {
-            return;
+            return true; // отменять нечего (записи нет или уже снята)
         }
 
         $recordId = $booked->crm_record_id;
@@ -609,7 +661,11 @@ class BookingFlow
         // Успешно отменили — снимаем id, чтобы не пытаться отменить повторно.
         if ($result->success) {
             $this->conversations->setCrmRecordId($booked, null);
+
+            return true;
         }
+
+        return false;
     }
 
     /**

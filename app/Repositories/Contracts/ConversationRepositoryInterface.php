@@ -141,6 +141,14 @@ interface ConversationRepositoryInterface
     public function lastWithCrmRecordForChat(string $channelId, string $externalChatId): ?Conversation;
 
     /**
+     * Предстоящие записи чата (есть `crm_record_id`, `booked_for` в будущем) —
+     * для меню «перенести/отменить/новая запись» у вернувшегося клиента.
+     *
+     * @return Collection<int, Conversation>
+     */
+    public function activeBookingsForChat(string $channelId, string $externalChatId): Collection;
+
+    /**
      * Время визита (из слота CRM) для напоминаний; сбрасывает отметки об
      * отправленных напоминаниях.
      */

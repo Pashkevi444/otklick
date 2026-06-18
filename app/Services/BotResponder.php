@@ -51,9 +51,23 @@ class BotResponder
             return $this->booking->advance($tenant, $conversation, $text);
         }
 
+        // Явный выбор «Новая запись» из меню записей — заводим свежую запись,
+        // минуя меню и LLM (иначе [[BOOK]] снова показал бы меню — зацикливание).
+        if (mb_strtolower(trim($text)) === 'новая запись') {
+            return $this->booking->start($tenant, $conversation)
+                ?? new BotReply($text, escalate: true);
+        }
+
         $reply = $this->composer->compose($tenant, $conversation, $this->booking->isAvailable());
 
         if ($reply->startBooking) {
+            // У клиента уже есть предстоящая запись → предлагаем выбор (перенести/
+            // отменить/новая), а не молча заводим вторую.
+            $menu = $this->booking->bookingChoiceMenu($conversation);
+            if ($menu !== null) {
+                return $menu;
+            }
+
             return $this->booking->start($tenant, $conversation)
                 ?? new BotReply($reply->text, escalate: true);
         }
