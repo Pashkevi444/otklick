@@ -98,7 +98,7 @@ final class BookingFlowTest extends TestCase
 
     private function tenant(): Tenant
     {
-        return new Tenant(['name' => 'Барбершоп', 'settings' => ['profile' => ['phone' => '+7 383 000-00-00']]]);
+        return new Tenant(['name' => 'Барбершоп', 'settings' => ['overrides' => ['crm' => true], 'profile' => ['phone' => '+7 383 000-00-00']]]);
     }
 
     private function crm(): FakeCrmGateway
@@ -120,6 +120,15 @@ final class BookingFlowTest extends TestCase
     public function test_start_returns_null_without_connection(): void
     {
         $this->assertNull($this->flow($this->crm(), connected: false)->start($this->tenant(), $this->conversation()));
+    }
+
+    public function test_start_returns_null_without_crm_feature(): void
+    {
+        // Право на CRM (YClients) отозвано → запись недоступна даже при подключении
+        // (интеграция «резко отключаема» правом).
+        $noCrm = new Tenant(['name' => 'X', 'settings' => ['overrides' => ['crm' => false]]]);
+
+        $this->assertNull($this->flow($this->crm())->start($noCrm, $this->conversation()));
     }
 
     public function test_full_happy_path_creates_booking(): void

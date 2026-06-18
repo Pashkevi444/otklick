@@ -88,11 +88,11 @@ const disconnect = (id: string): void => {
 </script>
 
 <template>
-    <Head title="Интеграции" />
+    <Head title="YClients" />
 
-    <AppLayout title="Интеграции">
+    <AppLayout title="YClients">
         <p class="text-slate-500 text-sm mb-6 max-w-2xl">
-            Подключите CRM, чтобы бот мог записывать клиентов.
+            Подключите YClients, чтобы бот мог записывать клиентов.
         </p>
 
         <div class="space-y-4 max-w-2xl">
@@ -134,7 +134,7 @@ const disconnect = (id: string): void => {
                             href="/cabinet/knowledge-crm"
                             class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5"
                         >
-                            📚 База знаний из CRM
+                            📚 База знаний из YClients
                         </a>
                         <button
                             type="button"

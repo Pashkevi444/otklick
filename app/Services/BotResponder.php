@@ -58,7 +58,10 @@ class BotResponder
                 ?? new BotReply($text, escalate: true);
         }
 
-        $reply = $this->composer->compose($tenant, $conversation, $this->booking->isAvailable());
+        // Запись предлагаем только при праве на CRM-интеграцию (YClients) И активном
+        // подключении. Нет права — бот не зовёт к записи (она уходит на человека).
+        $bookingEnabled = $tenant->features()->crm && $this->booking->isAvailable();
+        $reply = $this->composer->compose($tenant, $conversation, $bookingEnabled);
 
         if ($reply->startBooking) {
             // У клиента уже есть предстоящая запись → предлагаем выбор (перенести/

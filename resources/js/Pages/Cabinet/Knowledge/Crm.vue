@@ -67,12 +67,12 @@ const formattedSync = (): string =>
 </script>
 
 <template>
-    <Head title="База знаний из CRM" />
+    <Head title="База знаний из YClients" />
 
-    <AppLayout title="База знаний из CRM">
+    <AppLayout title="База знаний из YClients">
         <p class="mb-3 max-w-2xl text-sm text-slate-500">
-            Услуги, цены, мастера и филиал, выгруженные из вашей CRM. Эти записи бот использует как
-            <b>приоритетные</b> (они всегда актуальнее) и редактировать их вручную нельзя — обновляются из CRM.
+            Услуги, цены, мастера и филиал, выгруженные из YClients. Эти записи бот использует как
+            <b>приоритетные</b> (они всегда актуальнее) и редактировать их вручную нельзя — обновляются из YClients.
             Ваша обычная «База знаний» при этом не трогается.
         </p>
 
@@ -83,7 +83,7 @@ const formattedSync = (): string =>
                 class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5 disabled:opacity-50"
                 @click="sync"
             >
-                {{ syncing ? `Загрузка… ${percent}%` : '🔄 Загрузить данные из CRM' }}
+                {{ syncing ? `Загрузка… ${percent}%` : '🔄 Загрузить данные из YClients' }}
             </button>
             <span v-if="!syncing" class="text-xs text-slate-400">Обновлено: {{ formattedSync() }}</span>
         </div>
@@ -96,15 +96,15 @@ const formattedSync = (): string =>
                     :style="{ width: percent + '%' }"
                 ></div>
             </div>
-            <div class="mt-1 text-xs text-slate-400">Загружаем данные из CRM… {{ percent }}%</div>
+            <div class="mt-1 text-xs text-slate-400">Загружаем данные из YClients… {{ percent }}%</div>
         </div>
 
         <div v-if="!connected" class="rounded-xl border border-amber-300/50 bg-amber-50 p-4 text-sm text-amber-900">
-            Сначала подключите CRM в разделе «Интеграции».
+            Сначала подключите YClients в разделе «YClients».
         </div>
 
         <div v-else-if="!hasEntries()" class="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-            Пока пусто. Нажмите «Загрузить данные из CRM» — записи появятся через минуту (загрузка идёт в фоне).
+            Пока пусто. Нажмите «Загрузить данные из YClients» — записи появятся через минуту (загрузка идёт в фоне).
         </div>
 
         <div v-else class="space-y-6">

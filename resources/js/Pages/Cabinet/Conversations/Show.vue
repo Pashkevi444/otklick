@@ -120,7 +120,7 @@ const removeLead = (): void => {
                 </div>
                 <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-medium text-[#2E74B5] dark:text-sky-300">📞 {{ conversation.phone }}</a>
                 <div v-if="conversation.crmRecordId" class="mt-0.5 text-xs text-slate-400">
-                    🗂 Запись в CRM ({{ conversation.crmProvider }}): <span class="font-medium text-slate-600 dark:text-slate-300">#{{ conversation.crmRecordId }}</span>
+                    🗂 Запись в {{ conversation.crmProvider }}: <span class="font-medium text-slate-600 dark:text-slate-300">#{{ conversation.crmRecordId }}</span>
                 </div>
             </div>
             <div class="ml-auto flex items-center gap-2">

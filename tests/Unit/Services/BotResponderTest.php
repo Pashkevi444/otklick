@@ -21,7 +21,7 @@ final class BotResponderTest extends TestCase
 
     private function tenant(): Tenant
     {
-        return new Tenant(['name' => 'Бизнес']);
+        return new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['crm' => true]]]);
     }
 
     /** Контактная форма «пропускает» (контакты уже есть) — тестируем остальной поток. */

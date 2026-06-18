@@ -84,6 +84,15 @@ class BookingFlow
      */
     public function start(Tenant $tenant, Conversation $conversation, ?string $supersedesRecordId = null): ?BotReply
     {
+        // Запись на услугу — возможность CRM-интеграции (сейчас YClients). Нет права
+        // на CRM (тариф/оверрайд СУ) → запись недоступна, диалог уходит на человека.
+        // Так интеграция «резко отключаема» правом, а не только наличием подключения.
+        if (! $tenant->features()->crm) {
+            $this->log('start.no_crm_feature', $conversation);
+
+            return null;
+        }
+
         $connection = $this->connections->activeForCurrentTenant();
 
         if ($connection === null) {

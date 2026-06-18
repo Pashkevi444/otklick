@@ -50,7 +50,7 @@ const props = defineProps<{
 }>();
 
 const toggles: { key: keyof Features; label: string }[] = [
-    { key: 'crm', label: 'CRM-интеграции' },
+    { key: 'crm', label: 'YClients (запись)' },
     { key: 'analytics', label: 'Аналитика' },
     { key: 'broadcasts', label: 'Рассылки' },
     { key: 'clientBase', label: 'База клиентов' },

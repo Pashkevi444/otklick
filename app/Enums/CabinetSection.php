@@ -35,7 +35,7 @@ enum CabinetSection: string implements HasLabel
             self::Profile => 'Профиль бизнеса',
             self::Widget => 'Виджет на сайт',
             self::Notifications => 'Уведомления и эскалация',
-            self::Integrations => 'Интеграции',
+            self::Integrations => 'YClients',
         };
     }
 

@@ -27,7 +27,7 @@ const allCards: Card[] = [
     { icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile', section: 'profile' },
     { icon: '📚', label: 'База знаний', text: 'Тексты, по которым отвечает бот', href: '/cabinet/knowledge', section: 'knowledge' },
     { icon: '🔔', label: 'Уведомления и эскалация', text: 'Лиды и записи на почту/в Telegram + ответ клиенту через бота', href: '/cabinet/notifications', section: 'notifications' },
-    { icon: '🔗', label: 'Интеграции', text: 'Подключение CRM и автозапись', href: '/cabinet/integrations', section: 'integrations', feature: 'crm' },
+    { icon: '🔗', label: 'YClients', text: 'Запись клиентов в YClients', href: '/cabinet/integrations', section: 'integrations', feature: 'crm' },
 ];
 
 const cards = computed<Card[]>(() => {
