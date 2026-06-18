@@ -14,6 +14,7 @@ use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use Throwable;
 
@@ -32,6 +33,7 @@ final readonly class IncomingMessageService
         private ChannelGatewayResolver $gateways,
         private BotResponder $responder,
         private ContactCapture $contacts,
+        private KnowledgeGapRepositoryInterface $gaps,
     ) {}
 
     public function handle(Channel $channel, IncomingMessage $incoming): void
@@ -71,6 +73,12 @@ final readonly class IncomingMessageService
 
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+
+            // Бот не нашёл ответа в базе знаний — фиксируем вопрос в «пробелах
+            // бота», чтобы бизнес дополнил базу (рост доверия → удержание).
+            if ($reply->knowledgeGap) {
+                $this->gaps->record($incoming->text, (string) $conversation->id, $channel->type->value);
+            }
         } elseif ($reply->booked) {
             // Запись оформлена — закрываем диалог и фиксируем конверсию.
             $this->conversations->markBooked($conversation);

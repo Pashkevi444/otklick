@@ -16,6 +16,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BotResponder;
 use App\Services\ContactCapture;
@@ -57,7 +58,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'есть ли доставка?');
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
     }
 
     public function test_escalation_marks_conversation_needs_human(): void
@@ -85,7 +86,39 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
+    }
+
+    public function test_knowledge_gap_escalation_records_question(): void
+    {
+        $channel = $this->channel();
+        $conversation = new Conversation;
+        $incoming = new IncomingMessage('555', '42', 'а есть ли парковка?', null);
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once();
+        $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::NeedsHuman);
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $messages->shouldReceive('recordOutbound')->once()->andReturn(new Message);
+
+        // Эскалация именно из-за пробела в базе знаний.
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Передаю администратору.', escalate: true, knowledgeGap: true));
+
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
+        $gateway->shouldReceive('send')->once();
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        $gaps = Mockery::mock(KnowledgeGapRepositoryInterface::class);
+        $gaps->shouldReceive('record')->once()->with('а есть ли парковка?', Mockery::any(), 'telegram');
+
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, $gaps))->handle($channel, $incoming);
     }
 
     public function test_booking_closes_conversation(): void
@@ -113,7 +146,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
     }
 
     public function test_cancellation_marks_conversation_cancelled(): void
@@ -142,7 +175,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
     }
 
     public function test_duplicate_inbound_does_nothing(): void
@@ -170,7 +203,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldNotReceive('fromInbound');
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
     }
 
     public function test_failed_send_is_recorded_as_failed(): void
@@ -199,7 +232,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
     }
 
     private function channel(): Channel

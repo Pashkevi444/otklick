@@ -21,10 +21,32 @@ interface Entry {
     images: ImageItem[];
     updated_at: string | null;
 }
+interface Gap {
+    id: string;
+    question: string;
+    occurrences: number;
+    channel: string | null;
+    conversation_id: string | null;
+    last_seen_at: string | null;
+}
 
-defineProps<{ entries: Entry[] }>();
+defineProps<{ entries: Entry[]; gaps: Gap[] }>();
 
+const tab = ref<'entries' | 'gaps'>('entries');
 const showForm = ref(false);
+
+// «Развитие бота»: вопрос → черновик записи; скрыть/удалить как нерелевантный.
+const promoteGap = (id: string): void => {
+    router.post(`/cabinet/knowledge-gaps/${id}/to-knowledge`);
+};
+const dismissGap = (id: string): void => {
+    router.post(`/cabinet/knowledge-gaps/${id}/dismiss`, {}, { preserveScroll: true });
+};
+const removeGap = (id: string): void => {
+    if (confirm('Удалить этот вопрос?')) {
+        router.delete(`/cabinet/knowledge-gaps/${id}`, { preserveScroll: true });
+    }
+};
 
 const form = useForm<{
     title: string;
@@ -68,10 +90,33 @@ const remove = (id: string): void => {
     <Head title="База знаний" />
 
     <AppLayout title="База знаний">
-        <p class="text-slate-500 text-sm mb-4 max-w-2xl">
-            Добавляйте то, о чём чаще всего спрашивают клиенты: услуги, цены, условия, частые вопросы.
-            К записи можно прикрепить ссылки (прайс, соцсети) и картинки — примеры работ.
-        </p>
+        <!-- Табы -->
+        <div class="flex gap-2 mb-5 border-b border-slate-200">
+            <button
+                type="button"
+                class="px-4 py-2 text-sm font-medium border-b-2 -mb-px"
+                :class="tab === 'entries' ? 'border-[#2E74B5] text-[#1F4E79]' : 'border-transparent text-slate-500 hover:text-[#1F4E79]'"
+                @click="tab = 'entries'"
+            >
+                Записи
+            </button>
+            <button
+                type="button"
+                class="px-4 py-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-2"
+                :class="tab === 'gaps' ? 'border-[#2E74B5] text-[#1F4E79]' : 'border-transparent text-slate-500 hover:text-[#1F4E79]'"
+                @click="tab = 'gaps'"
+            >
+                Развитие бота
+                <span v-if="gaps.length" class="rounded-full bg-amber-100 text-amber-700 text-xs px-2 py-0.5">{{ gaps.length }}</span>
+            </button>
+        </div>
+
+        <!-- Вкладка: записи -->
+        <div v-if="tab === 'entries'">
+            <p class="text-slate-500 text-sm mb-4 max-w-2xl">
+                Добавляйте то, о чём чаще всего спрашивают клиенты: услуги, цены, условия, частые вопросы.
+                К записи можно прикрепить ссылки (прайс, соцсети) и картинки — примеры работ.
+            </p>
 
         <div class="flex justify-end mb-4">
             <button
@@ -164,6 +209,40 @@ const remove = (id: string): void => {
                     <div class="flex items-center gap-3 shrink-0">
                         <Link :href="`/cabinet/knowledge/${entry.id}/edit`" class="text-sm text-[#2E74B5] hover:underline">Изменить</Link>
                         <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(entry.id)">Удалить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Вкладка: развитие бота -->
+        <div v-else>
+            <p class="text-slate-500 text-sm mb-4 max-w-2xl">
+                Вопросы клиентов, на которые бот не смог дать ответ по базе знаний. Добавьте ответ в базу — и бот будет
+                отвечать на них сам. Число справа — сколько раз вопрос задавали.
+            </p>
+
+            <div v-if="gaps.length === 0" class="text-slate-400 text-center py-8">
+                Пока пусто — бот отвечает на всё. Сюда попадут вопросы, на которые он не нашёл ответа.
+            </div>
+
+            <div v-else class="space-y-3">
+                <div v-for="gap in gaps" :key="gap.id" class="bg-white rounded-xl border border-slate-200 p-5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <div class="font-medium text-slate-700">«{{ gap.question }}»</div>
+                            <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                                <span>Спрашивали: <b class="text-slate-600">{{ gap.occurrences }}</b></span>
+                                <span v-if="gap.channel">Канал: {{ gap.channel }}</span>
+                                <span v-if="gap.last_seen_at">Последний раз: {{ gap.last_seen_at }}</span>
+                                <Link v-if="gap.conversation_id" :href="`/cabinet/conversations/${gap.conversation_id}`" class="text-[#2E74B5] hover:underline">Диалог →</Link>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <button type="button" class="rounded-lg bg-[#2E74B5] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#255f96]" @click="promoteGap(gap.id)">В базу знаний</button>
+                            <button type="button" class="text-sm text-slate-500 hover:underline" @click="dismissGap(gap.id)">Скрыть</button>
+                            <button type="button" class="text-sm text-red-600 hover:underline" @click="removeGap(gap.id)">Удалить</button>
+                        </div>
                     </div>
                 </div>
             </div>

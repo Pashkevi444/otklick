@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cabinet;
 
 use App\DTO\KnowledgeEntryData;
+use App\Enums\ChannelType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\KnowledgeEntryRequest;
 use App\Jobs\IndexKnowledge;
 use App\Models\KnowledgeEntry;
+use App\Models\KnowledgeGap;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Services\KnowledgeBaseService;
 use App\Support\KnowledgeImageStorage;
 use Illuminate\Http\RedirectResponse;
@@ -27,12 +30,16 @@ final class KnowledgeEntryController extends Controller
         private readonly KnowledgeBaseService $knowledge,
         private readonly KnowledgeEntryRepositoryInterface $entries,
         private readonly KnowledgeImageStorage $images,
+        private readonly KnowledgeGapRepositoryInterface $gaps,
     ) {}
 
     public function index(): Response
     {
+        // «Развитие бота» — вопросы клиентов, на которые бот не нашёл ответ
+        // (отдельный таб). Бизнес видит их и дополняет базу знаний.
         return Inertia::render('Cabinet/KnowledgeBase/Index', [
             'entries' => $this->knowledge->list()->map($this->present(...))->all(),
+            'gaps' => $this->gaps->openForCurrentTenant()->map($this->presentGap(...))->all(),
         ]);
     }
 
@@ -146,6 +153,23 @@ final class KnowledgeEntryController extends Controller
             'links' => $entry->links,
             'images' => $entry->images,
             'updated_at' => $entry->updated_at?->toDateString(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function presentGap(KnowledgeGap $gap): array
+    {
+        return [
+            'id' => $gap->id,
+            'question' => $gap->question,
+            'occurrences' => $gap->occurrences,
+            'channel' => $gap->channel_type !== null
+                ? (ChannelType::tryFrom($gap->channel_type)?->label() ?? $gap->channel_type)
+                : null,
+            'conversation_id' => $gap->conversation_id,
+            'last_seen_at' => $gap->last_seen_at?->toDateString(),
         ];
     }
 }

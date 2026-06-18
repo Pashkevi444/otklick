@@ -20,6 +20,7 @@ use App\Http\Controllers\Cabinet\CrmKnowledgeController;
 use App\Http\Controllers\Cabinet\DashboardController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
+use App\Http\Controllers\Cabinet\KnowledgeGapController;
 use App\Http\Controllers\Cabinet\NotificationController;
 use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
@@ -103,6 +104,11 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/knowledge/{entry}/edit', [KnowledgeEntryController::class, 'edit'])->name('knowledge.edit');
         Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
         Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
+
+        // «Развитие бота»: вопросы без ответа (вкладка в базе знаний).
+        Route::post('/knowledge-gaps/{gap}/to-knowledge', [KnowledgeGapController::class, 'promote'])->name('knowledge.gaps.promote');
+        Route::post('/knowledge-gaps/{gap}/dismiss', [KnowledgeGapController::class, 'dismiss'])->name('knowledge.gaps.dismiss');
+        Route::delete('/knowledge-gaps/{gap}', [KnowledgeGapController::class, 'destroy'])->name('knowledge.gaps.destroy');
 
         // Уведомления владельцу о событиях (email/Telegram).
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

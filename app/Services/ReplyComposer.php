@@ -80,7 +80,7 @@ class ReplyComposer
         if ($answer === '' || str_contains($answer, PromptBuilder::ESCALATE)) {
             $this->resetStreak($conversation);
 
-            return new BotReply($this->fallback($profile), escalate: true);
+            return new BotReply($this->fallback($profile), escalate: true, knowledgeGap: true);
         }
 
         // Клиент хочет записаться, а у тенанта подключена CRM — запускаем
@@ -125,7 +125,7 @@ class ReplyComposer
             if ($attempts >= self::MAX_CLARIFICATIONS) {
                 $this->conversations->resetClarificationAttempts($conversation);
 
-                return new BotReply($this->fallback($profile), escalate: true);
+                return new BotReply($this->fallback($profile), escalate: true, knowledgeGap: true);
             }
 
             $question = $this->stripSentinels($answer);

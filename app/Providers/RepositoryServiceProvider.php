@@ -11,6 +11,7 @@ use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\EmailChangeCodeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeChunkRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\NotificationRecipientRepositoryInterface;
@@ -25,6 +26,7 @@ use App\Repositories\Eloquent\EloquentCrmKnowledgeRepository;
 use App\Repositories\Eloquent\EloquentEmailChangeCodeRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeChunkRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
+use App\Repositories\Eloquent\EloquentKnowledgeGapRepository;
 use App\Repositories\Eloquent\EloquentLeadAnalyticsRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
 use App\Repositories\Eloquent\EloquentNotificationRecipientRepository;
@@ -48,6 +50,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         MessageRepositoryInterface::class => EloquentMessageRepository::class,
         UserRepositoryInterface::class => EloquentUserRepository::class,
         KnowledgeEntryRepositoryInterface::class => EloquentKnowledgeEntryRepository::class,
+        KnowledgeGapRepositoryInterface::class => EloquentKnowledgeGapRepository::class,
         LeadAnalyticsRepositoryInterface::class => EloquentLeadAnalyticsRepository::class,
         NotificationRecipientRepositoryInterface::class => EloquentNotificationRecipientRepository::class,
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
