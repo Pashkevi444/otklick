@@ -43,6 +43,16 @@ final class PromptBuilderTest extends TestCase
         $this->assertStringContainsString('конкретных варианта', $prompt);
     }
 
+    public function test_booking_rule_distinguishes_question_from_booking_intent(): void
+    {
+        // При подключённой CRM бот не должен прыгать в запись на вопрос про цену.
+        $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection, true);
+
+        $this->assertStringContainsString('Различай ВОПРОС и НАМЕРЕНИЕ', $prompt);
+        $this->assertStringContainsString('сколько стоит стрижка', $prompt);
+        $this->assertStringContainsString(PromptBuilder::BOOK, $prompt);
+    }
+
     public function test_known_client_is_addressed_by_name_and_not_reasked(): void
     {
         $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection, false, null, 'Алексей', true);
