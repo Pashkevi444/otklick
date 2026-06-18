@@ -107,9 +107,16 @@ final class ClientController extends Controller
     {
         abort_unless($request->user()->allows('clients.delete'), 403);
 
-        $this->clients->delete($this->findOrFail($client));
+        $model = $this->findOrFail($client);
+        $this->clients->delete($model);
 
-        return redirect()->route('cabinet.clients.index')->with('success', 'Клиент удалён.');
+        // Из карточки клиента back() вёл бы на удалённую страницу — уходим в грид;
+        // из грида back() сохраняет фильтры/страницу.
+        $fromDetail = str_contains((string) $request->headers->get('referer', ''), "/cabinet/clients/{$model->id}");
+
+        return $fromDetail
+            ? redirect()->route('cabinet.clients.index')->with('success', 'Клиент удалён.')
+            : back()->with('success', 'Клиент удалён.');
     }
 
     private function findOrFail(string $id): Client

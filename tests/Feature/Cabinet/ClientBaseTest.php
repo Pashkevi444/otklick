@@ -99,6 +99,20 @@ final class ClientBaseTest extends TestCase
         $this->assertNotNull($client->summary_generated_at);
     }
 
+    public function test_deleting_client_from_detail_redirects_to_grid(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $client = Client::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->actingAs($owner)
+            ->from("/cabinet/clients/{$client->id}")
+            ->delete("/cabinet/clients/{$client->id}")
+            ->assertRedirect('/cabinet/clients');
+
+        $this->assertDatabaseMissing('clients', ['id' => $client->id]);
+    }
+
     public function test_destroy_deletes_client(): void
     {
         $tenant = Tenant::factory()->max()->create();
@@ -106,8 +120,9 @@ final class ClientBaseTest extends TestCase
         $client = Client::factory()->create(['tenant_id' => $tenant->id]);
 
         $this->actingAs($owner)
+            ->from('/cabinet/clients')
             ->delete("/cabinet/clients/{$client->id}")
-            ->assertRedirect(route('cabinet.clients.index'));
+            ->assertRedirect('/cabinet/clients'); // из грида — назад в грид
 
         $this->assertDatabaseMissing('clients', ['id' => $client->id]);
     }

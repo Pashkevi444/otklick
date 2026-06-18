@@ -135,7 +135,13 @@ final class ConversationController extends Controller
 
         $this->conversations->delete($model);
 
-        return back()->with('success', 'Лид удалён.');
+        // Со страницы самого диалога back() вернул бы на удалённую страницу
+        // (ошибка) — уходим в журнал; из грида back() сохраняет фильтры/страницу.
+        $fromDetail = str_contains((string) $request->headers->get('referer', ''), "/cabinet/conversations/{$model->id}");
+
+        return $fromDetail
+            ? redirect()->route('cabinet.conversations.index')->with('success', 'Лид удалён.')
+            : back()->with('success', 'Лид удалён.');
     }
 
     /**

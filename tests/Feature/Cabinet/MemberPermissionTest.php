@@ -45,6 +45,21 @@ final class MemberPermissionTest extends TestCase
         $this->assertDatabaseMissing('conversations', ['id' => $lead->id]);
     }
 
+    public function test_deleting_lead_from_detail_page_redirects_to_grid(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $lead = $this->lead($tenant);
+
+        // Удаление со страницы самого диалога не должно вести на удалённую страницу.
+        $this->actingAs($owner)
+            ->from("/cabinet/conversations/{$lead->id}")
+            ->delete("/cabinet/conversations/{$lead->id}")
+            ->assertRedirect('/cabinet/conversations');
+
+        $this->assertDatabaseMissing('conversations', ['id' => $lead->id]);
+    }
+
     public function test_member_without_delete_right_cannot_delete_lead(): void
     {
         $tenant = Tenant::factory()->create();
