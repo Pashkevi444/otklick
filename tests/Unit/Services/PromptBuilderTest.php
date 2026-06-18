@@ -48,7 +48,7 @@ final class PromptBuilderTest extends TestCase
         // При подключённой CRM бот не должен прыгать в запись на вопрос про цену.
         $prompt = (new PromptBuilder)->build('Бизнес', new BusinessProfile, new Collection, true);
 
-        $this->assertStringContainsString('Различай ВОПРОС и НАМЕРЕНИЕ', $prompt);
+        $this->assertStringContainsString('ЖЕЛАНИЕ ЗАПИСАТЬСЯ', $prompt);
         $this->assertStringContainsString('сколько стоит стрижка', $prompt);
         $this->assertStringContainsString(PromptBuilder::BOOK, $prompt);
     }
