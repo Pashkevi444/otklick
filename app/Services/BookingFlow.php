@@ -155,6 +155,12 @@ class BookingFlow
             return $this->abort($tenant, $conversation);
         }
 
+        // Право на CRM могли отозвать посреди сценария — дальше не записываем,
+        // передаём администратору (запись «резко отключаема» правом и в середине).
+        if (! $tenant->features()->crm) {
+            return $this->abort($tenant, $conversation);
+        }
+
         $connection = $this->connections->activeForCurrentTenant();
 
         if ($connection === null) {
