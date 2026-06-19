@@ -95,7 +95,7 @@ const failedRows = computed(() => props.deliveries.filter((d) => d.status === 'f
                                 {{ d.status === 'sent' ? 'Доставлено' : 'Ошибка' }}
                             </span>
                         </td>
-                        <td class="px-5 py-2 max-w-xs truncate text-red-600" :title="d.error ?? ''">{{ d.error ?? '—' }}</td>
+                        <td class="px-5 py-2 max-w-md whitespace-pre-wrap break-words text-xs text-red-600">{{ d.error ?? '—' }}</td>
                         <td class="px-5 py-2 text-slate-400">{{ fmt(d.at) }}</td>
                     </tr>
                 </tbody>

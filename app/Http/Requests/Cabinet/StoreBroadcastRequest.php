@@ -37,6 +37,9 @@ final class StoreBroadcastRequest extends FormRequest
             'mode' => ['required', Rule::in(['now', 'schedule'])],
             'scheduled_at' => ['required_if:mode,schedule', 'nullable', 'date', 'after:now'],
             'recurrence' => ['nullable', Rule::in(array_map(fn (BroadcastRecurrence $r): string => $r->value, BroadcastRecurrence::cases()))],
+            'audience' => ['required', Rule::in(['all', 'selected'])],
+            'client_ids' => ['required_if:audience,selected', 'array'],
+            'client_ids.*' => ['string', 'uuid'],
         ];
     }
 
@@ -50,12 +53,17 @@ final class StoreBroadcastRequest extends FormRequest
             ? Carbon::parse((string) $this->input('scheduled_at'))
             : null;
 
+        $clientIds = $this->input('audience') === 'selected'
+            ? array_values(array_unique(array_map('strval', (array) $this->input('client_ids', []))))
+            : null;
+
         return new BroadcastData(
             title: (string) $this->input('title'),
             body: (string) $this->input('body'),
             channels: $channels,
             recurrence: BroadcastRecurrence::from((string) ($this->input('recurrence') ?? 'none')),
             scheduledAt: $scheduledAt,
+            clientIds: $clientIds,
         );
     }
 

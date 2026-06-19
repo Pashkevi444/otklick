@@ -36,6 +36,7 @@ final class BroadcastController extends Controller
                 ->map(fn (Broadcast $b): array => $this->present($b))
                 ->all(),
             'audienceCount' => $this->clients->marketingAudienceCountForCurrentTenant(),
+            'clients' => $this->clients->pickerListForCurrentTenant(),
             'channelOptions' => [
                 ['value' => 'telegram', 'label' => 'Telegram'],
                 ['value' => 'vk', 'label' => 'ВКонтакте'],

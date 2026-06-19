@@ -55,14 +55,23 @@ interface ClientRepositoryInterface
     /**
      * Аудитория рассылки: клиенты тенанта без отписки (marketing_opt_out=false),
      * с подгруженными диалогами и каналами — чтобы по ним вычислить достижимые
-     * цели (мессенджеры + email).
+     * цели (мессенджеры + email). Если задан $clientIds — только эти клиенты
+     * (отписка всё равно исключает).
      *
+     * @param  list<string>|null  $clientIds  null/пусто — вся база
      * @return Collection<int, Client>
      */
-    public function marketingAudienceForCurrentTenant(): Collection;
+    public function marketingAudienceForCurrentTenant(?array $clientIds = null): Collection;
 
     /**
      * Число клиентов в аудитории рассылки (без отписки) — для предпросмотра.
      */
     public function marketingAudienceCountForCurrentTenant(): int;
+
+    /**
+     * Лёгкий список клиентов для выбора получателей (id, имя, телефон, отписка).
+     *
+     * @return list<array{id: string, name: string, phone: string|null, opted_out: bool}>
+     */
+    public function pickerListForCurrentTenant(): array;
 }

@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string $title
  * @property string $body
  * @property list<string> $channels
+ * @property list<string>|null $client_ids
  * @property BroadcastStatus $status
  * @property BroadcastRecurrence $recurrence
  * @property Carbon|null $scheduled_at
@@ -38,6 +39,7 @@ class Broadcast extends TenantOwnedModel
         'title',
         'body',
         'channels',
+        'client_ids',
         'status',
         'recurrence',
         'scheduled_at',
@@ -52,6 +54,7 @@ class Broadcast extends TenantOwnedModel
     {
         return [
             'channels' => 'array',
+            'client_ids' => 'array',
             'status' => BroadcastStatus::class,
             'recurrence' => BroadcastRecurrence::class,
             'scheduled_at' => 'datetime',

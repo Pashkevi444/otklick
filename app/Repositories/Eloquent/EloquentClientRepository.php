@@ -81,10 +81,11 @@ final class EloquentClientRepository implements ClientRepositoryInterface
             ->all();
     }
 
-    public function marketingAudienceForCurrentTenant(): Collection
+    public function marketingAudienceForCurrentTenant(?array $clientIds = null): Collection
     {
         return Client::query()
             ->where('marketing_opt_out', false)
+            ->when($clientIds !== null && $clientIds !== [], fn (Builder $q) => $q->whereIn('id', $clientIds))
             ->with(['conversations' => fn ($q) => $q->whereNotNull('external_chat_id')->with('channel')])
             ->get();
     }
@@ -92,5 +93,19 @@ final class EloquentClientRepository implements ClientRepositoryInterface
     public function marketingAudienceCountForCurrentTenant(): int
     {
         return Client::query()->where('marketing_opt_out', false)->count();
+    }
+
+    public function pickerListForCurrentTenant(): array
+    {
+        return Client::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone', 'marketing_opt_out'])
+            ->map(fn (Client $c): array => [
+                'id' => $c->id,
+                'name' => $c->name ?? 'Без имени',
+                'phone' => $c->phone,
+                'opted_out' => $c->marketing_opt_out,
+            ])
+            ->all();
     }
 }

@@ -15,6 +15,7 @@ final readonly class BroadcastData
 {
     /**
      * @param  list<string>  $channels
+     * @param  list<string>|null  $clientIds  null/пусто — вся база
      */
     public function __construct(
         public string $title,
@@ -22,5 +23,6 @@ final readonly class BroadcastData
         public array $channels,
         public BroadcastRecurrence $recurrence = BroadcastRecurrence::None,
         public ?Carbon $scheduledAt = null,
+        public ?array $clientIds = null,
     ) {}
 }

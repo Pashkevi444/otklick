@@ -8,6 +8,7 @@ use App\Enums\BroadcastStatus;
 use App\Jobs\SendBroadcast;
 use App\Models\Broadcast;
 use App\Models\BroadcastDelivery;
+use App\Models\Client;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -53,6 +54,7 @@ final class BroadcastsTest extends TestCase
             'channels' => ['telegram', 'email'],
             'mode' => 'now',
             'recurrence' => 'none',
+            'audience' => 'all',
         ])->assertRedirect(route('cabinet.broadcasts.index'))->assertSessionHas('success');
 
         $broadcast = Broadcast::query()->where('tenant_id', $tenant->id)->firstOrFail();
@@ -73,12 +75,46 @@ final class BroadcastsTest extends TestCase
             'mode' => 'schedule',
             'scheduled_at' => now()->addDay()->toDateTimeString(),
             'recurrence' => 'weekly',
+            'audience' => 'all',
         ])->assertRedirect(route('cabinet.broadcasts.index'))->assertSessionHas('success');
 
         $broadcast = Broadcast::query()->where('tenant_id', $tenant->id)->firstOrFail();
         $this->assertSame(BroadcastStatus::Scheduled, $broadcast->status);
         $this->assertNotNull($broadcast->next_run_at);
         Queue::assertNotPushed(SendBroadcast::class);
+    }
+
+    public function test_store_with_selected_clients_persists_client_ids(): void
+    {
+        Queue::fake();
+        [$tenant, $owner] = $this->tenantWithOwner();
+        $client = Client::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->actingAs($owner)->post('/cabinet/broadcasts', [
+            'title' => 'T',
+            'body' => 'B',
+            'channels' => ['telegram'],
+            'mode' => 'now',
+            'audience' => 'selected',
+            'client_ids' => [$client->id],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $broadcast = Broadcast::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        $this->assertSame([$client->id], $broadcast->client_ids);
+    }
+
+    public function test_selected_audience_requires_client_ids(): void
+    {
+        [, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)->post('/cabinet/broadcasts', [
+            'title' => 'T',
+            'body' => 'B',
+            'channels' => ['telegram'],
+            'mode' => 'now',
+            'audience' => 'selected',
+            'client_ids' => [],
+        ])->assertSessionHasErrors('client_ids');
     }
 
     public function test_validation_requires_channels(): void

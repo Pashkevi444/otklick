@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 interface Broadcast {
@@ -23,10 +23,17 @@ interface Option {
     value: string;
     label: string;
 }
+interface ClientPick {
+    id: string;
+    name: string;
+    phone: string | null;
+    opted_out: boolean;
+}
 
 const props = defineProps<{
     broadcasts: Broadcast[];
     audienceCount: number;
+    clients: ClientPick[];
     channelOptions: Option[];
     recurrenceOptions: Option[];
 }>();
@@ -38,7 +45,22 @@ const form = useForm({
     mode: 'now',
     scheduled_at: '',
     recurrence: 'none',
+    audience: 'all',
+    client_ids: [] as string[],
 });
+
+const clientSearch = ref('');
+const filteredClients = computed(() => {
+    const q = clientSearch.value.trim().toLowerCase();
+    if (!q) return props.clients;
+    return props.clients.filter((c) => c.name.toLowerCase().includes(q) || (c.phone ?? '').toLowerCase().includes(q));
+});
+
+const toggleClient = (id: string): void => {
+    const i = form.client_ids.indexOf(id);
+    if (i === -1) form.client_ids.push(id);
+    else form.client_ids.splice(i, 1);
+};
 
 const toggleChannel = (value: string): void => {
     const i = form.channels.indexOf(value);
@@ -93,7 +115,13 @@ const statusClass = (status: string): string => {
     }
 };
 
-const canSubmit = computed(() => form.title.trim() !== '' && form.body.trim() !== '' && form.channels.length > 0);
+const canSubmit = computed(
+    () =>
+        form.title.trim() !== '' &&
+        form.body.trim() !== '' &&
+        form.channels.length > 0 &&
+        (form.audience === 'all' || form.client_ids.length > 0),
+);
 </script>
 
 <template>
@@ -149,6 +177,43 @@ const canSubmit = computed(() => form.title.trim() !== '' && form.body.trim() !=
                         </button>
                     </div>
                     <p v-if="form.errors.channels" class="mt-1 text-sm text-red-600">{{ form.errors.channels }}</p>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Кому</label>
+                    <div class="flex gap-4 text-sm">
+                        <label class="flex items-center gap-2">
+                            <input v-model="form.audience" type="radio" value="all" /> Вся база ({{ audienceCount }})
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input v-model="form.audience" type="radio" value="selected" /> Выбрать из базы
+                        </label>
+                    </div>
+
+                    <div v-if="form.audience === 'selected'" class="mt-2">
+                        <input
+                            v-model="clientSearch"
+                            type="text"
+                            placeholder="Поиск по имени или телефону"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                        <div class="mt-2 max-h-48 overflow-y-auto rounded-lg border border-slate-200">
+                            <label
+                                v-for="c in filteredClients"
+                                :key="c.id"
+                                class="flex items-center gap-2 border-b border-slate-100 px-3 py-1.5 text-sm last:border-0"
+                                :class="c.opted_out ? 'opacity-50' : ''"
+                            >
+                                <input type="checkbox" :checked="form.client_ids.includes(c.id)" @change="toggleClient(c.id)" />
+                                <span class="font-medium text-slate-700">{{ c.name }}</span>
+                                <span class="text-slate-400">{{ c.phone }}</span>
+                                <span v-if="c.opted_out" class="ml-auto text-xs text-red-500">отписан</span>
+                            </label>
+                            <div v-if="filteredClients.length === 0" class="px-3 py-2 text-xs text-slate-400">Никого не найдено</div>
+                        </div>
+                        <p class="mt-1 text-xs text-slate-400">Выбрано: {{ form.client_ids.length }}. Отписавшиеся не получат рассылку, даже если выбраны.</p>
+                        <p v-if="form.errors.client_ids" class="mt-1 text-sm text-red-600">{{ form.errors.client_ids }}</p>
+                    </div>
                 </div>
 
                 <div>

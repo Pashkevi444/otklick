@@ -96,6 +96,26 @@ final class BroadcastServiceTest extends TestCase
         $this->assertDatabaseHas('broadcast_deliveries', ['broadcast_id' => $broadcast->id, 'channel' => 'email', 'status' => 'sent']);
     }
 
+    public function test_delivers_only_to_selected_clients(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        $chosen = $this->clientWithTelegram($tenant, '101');
+        $this->clientWithTelegram($tenant, '202'); // не выбран
+
+        $broadcast = Broadcast::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channels' => ['telegram'],
+            'client_ids' => [$chosen->id],
+            'status' => BroadcastStatus::Sending,
+        ]);
+
+        $fresh = $this->deliver($broadcast);
+
+        $this->assertCount(1, $this->telegram->sent);
+        $this->assertSame('101', $this->telegram->sent[0]['chatId']);
+        $this->assertSame(1, $fresh->sent_count);
+    }
+
     public function test_failed_delivery_is_recorded_with_error(): void
     {
         $tenant = Tenant::factory()->max()->create();

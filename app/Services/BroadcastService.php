@@ -38,6 +38,7 @@ final readonly class BroadcastService
             'title' => $data->title,
             'body' => $data->body,
             'channels' => $data->channels,
+            'client_ids' => $data->clientIds,
             'status' => BroadcastStatus::Draft,
             'recurrence' => $data->recurrence,
             'created_by' => $createdBy,
@@ -112,7 +113,7 @@ final readonly class BroadcastService
         /** @var list<array<string, mixed>> $deliveries */
         $deliveries = [];
 
-        foreach ($this->clients->marketingAudienceForCurrentTenant() as $client) {
+        foreach ($this->clients->marketingAudienceForCurrentTenant($broadcast->client_ids) as $client) {
             $seen = [];
 
             foreach ($client->conversations as $conversation) {
