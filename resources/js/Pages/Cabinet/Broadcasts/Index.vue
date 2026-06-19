@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
@@ -222,6 +222,7 @@ const canSubmit = computed(() => form.title.trim() !== '' && form.body.trim() !=
                         <button v-if="b.is_scheduled" type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50" @click="cancel(b)">
                             Снять с расписания
                         </button>
+                        <Link :href="`/cabinet/broadcasts/${b.id}`" class="text-[#2E74B5] hover:underline dark:text-sky-300">Отчёт</Link>
                         <button type="button" class="text-red-600 hover:underline" @click="destroy(b)">Удалить</button>
                     </div>
                 </div>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use App\Models\Broadcast;
+use App\Models\BroadcastDelivery;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -39,4 +40,18 @@ interface BroadcastRepositoryInterface
      * @return Collection<int, Broadcast>
      */
     public function dueForCurrentTenant(Carbon $now): Collection;
+
+    /**
+     * Пакетная запись журнала доставки (по получателю).
+     *
+     * @param  list<array<string, mixed>>  $rows
+     */
+    public function recordDeliveries(array $rows): void;
+
+    /**
+     * Журнал доставки рассылки (с клиентом), для отчёта.
+     *
+     * @return Collection<int, BroadcastDelivery>
+     */
+    public function deliveriesForCurrentTenant(string $broadcastId): Collection;
 }

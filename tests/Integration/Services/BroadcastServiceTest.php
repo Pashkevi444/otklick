@@ -29,9 +29,9 @@ final class BroadcastServiceTest extends TestCase
 
     private RecordingChannelGateway $telegram;
 
-    private function service(): BroadcastService
+    private function service(bool $throws = false): BroadcastService
     {
-        $this->telegram = new RecordingChannelGateway(ChannelType::Telegram);
+        $this->telegram = new RecordingChannelGateway(ChannelType::Telegram, $throws);
 
         return new BroadcastService(
             app(BroadcastRepositoryInterface::class),
@@ -40,9 +40,9 @@ final class BroadcastServiceTest extends TestCase
         );
     }
 
-    private function deliver(Broadcast $broadcast): Broadcast
+    private function deliver(Broadcast $broadcast, bool $throws = false): Broadcast
     {
-        $service = $this->service();
+        $service = $this->service($throws);
 
         app(TenantInitializer::class)->run($broadcast->tenant_id, fn () => $service->deliver($broadcast));
 
@@ -89,6 +89,34 @@ final class BroadcastServiceTest extends TestCase
         $this->assertSame(2, $fresh->sent_count);
         $this->assertSame(BroadcastStatus::Sent, $fresh->status);
         $this->assertNull($fresh->next_run_at);
+
+        // Журнал доставки: по строке на получателя/канал.
+        $this->assertDatabaseCount('broadcast_deliveries', 2);
+        $this->assertDatabaseHas('broadcast_deliveries', ['broadcast_id' => $broadcast->id, 'channel' => 'telegram', 'status' => 'sent']);
+        $this->assertDatabaseHas('broadcast_deliveries', ['broadcast_id' => $broadcast->id, 'channel' => 'email', 'status' => 'sent']);
+    }
+
+    public function test_failed_delivery_is_recorded_with_error(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        $this->clientWithTelegram($tenant, '999');
+
+        $broadcast = Broadcast::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channels' => ['telegram'],
+            'status' => BroadcastStatus::Sending,
+        ]);
+
+        $fresh = $this->deliver($broadcast, throws: true);
+
+        $this->assertSame(0, $fresh->sent_count);
+        $this->assertSame(1, $fresh->failed_count);
+        $this->assertDatabaseHas('broadcast_deliveries', [
+            'broadcast_id' => $broadcast->id,
+            'channel' => 'telegram',
+            'status' => 'failed',
+            'error' => 'boom',
+        ]);
     }
 
     public function test_skips_opted_out_clients(): void

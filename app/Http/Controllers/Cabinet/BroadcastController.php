@@ -9,6 +9,7 @@ use App\Enums\BroadcastStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\StoreBroadcastRequest;
 use App\Models\Broadcast;
+use App\Models\BroadcastDelivery;
 use App\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Services\BroadcastService;
@@ -69,6 +70,26 @@ final class BroadcastController extends Controller
         return redirect()->route('cabinet.broadcasts.index')->with('success', $message);
     }
 
+    public function show(string $broadcast): Response
+    {
+        $model = $this->findOrFail($broadcast);
+
+        return Inertia::render('Cabinet/Broadcasts/Show', [
+            'broadcast' => $this->present($model),
+            'deliveries' => $this->broadcasts->deliveriesForCurrentTenant($model->id)
+                ->map(fn (BroadcastDelivery $d): array => [
+                    'id' => $d->id,
+                    'recipient' => $d->client?->name ?: ($d->client?->phone ?: ($d->target ?: '—')),
+                    'channel' => $d->channel,
+                    'channel_label' => $this->channelLabel($d->channel),
+                    'status' => $d->status,
+                    'error' => $d->error,
+                    'at' => $d->created_at->toIso8601String(),
+                ])
+                ->all(),
+        ]);
+    }
+
     public function run(string $broadcast): RedirectResponse
     {
         $this->service->launchNow($this->findOrFail($broadcast));
@@ -88,6 +109,17 @@ final class BroadcastController extends Controller
         $this->broadcasts->delete($this->findOrFail($broadcast));
 
         return redirect()->route('cabinet.broadcasts.index')->with('success', 'Рассылка удалена.');
+    }
+
+    private function channelLabel(string $value): string
+    {
+        return match ($value) {
+            'telegram' => 'Telegram',
+            'vk' => 'ВКонтакте',
+            'max' => 'MAX',
+            'email' => 'Email',
+            default => $value,
+        };
     }
 
     private function findOrFail(string $id): Broadcast

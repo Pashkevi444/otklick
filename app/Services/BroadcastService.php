@@ -10,6 +10,7 @@ use App\Enums\BroadcastStatus;
 use App\Jobs\SendBroadcast;
 use App\Mail\BroadcastMail;
 use App\Models\Broadcast;
+use App\Models\BroadcastDelivery;
 use App\Models\Tenant;
 use App\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Repositories\Contracts\ClientRepositoryInterface;
@@ -108,6 +109,8 @@ final readonly class BroadcastService
 
         $sent = 0;
         $failed = 0;
+        /** @var list<array<string, mixed>> $deliveries */
+        $deliveries = [];
 
         foreach ($this->clients->marketingAudienceForCurrentTenant() as $client) {
             $seen = [];
@@ -129,29 +132,39 @@ final readonly class BroadcastService
                 }
                 $seen[$key] = true;
 
+                $error = null;
                 try {
                     $this->channels->for($channel->type)->send($channel, $chatId, $broadcast->body);
                     $sent++;
                 } catch (Throwable $e) {
                     $failed++;
+                    $error = $e->getMessage();
                     Log::warning('broadcast.delivery_failed', [
                         'broadcast_id' => $broadcast->id,
                         'channel' => $channel->type->value,
-                        'error' => $e->getMessage(),
+                        'error' => $error,
                     ]);
                 }
+
+                $deliveries[] = $this->deliveryRow($broadcast, $client->id, $channel->type->value, $chatId, $error);
             }
 
             if ($withEmail && $client->email !== null && $client->email !== '') {
+                $error = null;
                 try {
                     Mail::to($client->email)->send(new BroadcastMail($broadcast->title, $broadcast->body));
                     $sent++;
                 } catch (Throwable $e) {
                     $failed++;
-                    Log::warning('broadcast.email_failed', ['broadcast_id' => $broadcast->id, 'error' => $e->getMessage()]);
+                    $error = $e->getMessage();
+                    Log::warning('broadcast.email_failed', ['broadcast_id' => $broadcast->id, 'error' => $error]);
                 }
+
+                $deliveries[] = $this->deliveryRow($broadcast, $client->id, 'email', $client->email, $error);
             }
         }
+
+        $this->broadcasts->recordDeliveries($deliveries);
 
         $next = $broadcast->recurrence->nextRunFrom(now());
 
@@ -170,5 +183,23 @@ final readonly class BroadcastService
             'failed' => $failed,
             'recurring' => $next !== null,
         ]);
+    }
+
+    /**
+     * Строка журнала доставки одному получателю. $error=null → успех.
+     *
+     * @return array<string, mixed>
+     */
+    private function deliveryRow(Broadcast $broadcast, string $clientId, string $channel, ?string $target, ?string $error): array
+    {
+        return [
+            'tenant_id' => $broadcast->tenant_id,
+            'broadcast_id' => $broadcast->id,
+            'client_id' => $clientId,
+            'channel' => $channel,
+            'target' => $target,
+            'status' => $error === null ? BroadcastDelivery::STATUS_SENT : BroadcastDelivery::STATUS_FAILED,
+            'error' => $error,
+        ];
     }
 }

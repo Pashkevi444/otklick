@@ -32,7 +32,11 @@ return [
     */
 
     'deprecations' => [
-        'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
+        // `?: 'null'` — на проде LOG_DEPRECATIONS_CHANNEL приходил пустой строкой,
+        // из-за чего канал «deprecations» не резолвился и любой PHP-deprecation в
+        // запросе превращался в фатальную 500. Пустое/несуществующее значение
+        // откатываем на канал `null` (молча отбрасывает), чтобы это не повторялось.
+        'channel' => env('LOG_DEPRECATIONS_CHANNEL') ?: 'null',
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
     ],
 

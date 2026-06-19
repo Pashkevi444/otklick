@@ -7,6 +7,7 @@ namespace Tests\Feature\Cabinet;
 use App\Enums\BroadcastStatus;
 use App\Jobs\SendBroadcast;
 use App\Models\Broadcast;
+use App\Models\BroadcastDelivery;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -117,6 +118,30 @@ final class BroadcastsTest extends TestCase
             ->assertRedirect(route('cabinet.broadcasts.index'));
 
         $this->assertDatabaseMissing('broadcasts', ['id' => $broadcast->id]);
+    }
+
+    public function test_show_renders_delivery_log(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+        $broadcast = Broadcast::factory()->create(['tenant_id' => $tenant->id, 'status' => BroadcastStatus::Sent]);
+        BroadcastDelivery::create([
+            'tenant_id' => $tenant->id,
+            'broadcast_id' => $broadcast->id,
+            'client_id' => null,
+            'channel' => 'telegram',
+            'target' => '777',
+            'status' => 'failed',
+            'error' => 'boom',
+        ]);
+
+        $this->actingAs($owner)
+            ->get("/cabinet/broadcasts/{$broadcast->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Cabinet/Broadcasts/Show')
+                ->has('deliveries', 1)
+                ->where('deliveries.0.status', 'failed')
+                ->where('deliveries.0.error', 'boom'));
     }
 
     public function test_plan_without_broadcasts_is_forbidden(): void

@@ -115,6 +115,7 @@ $onDomain(config('app.business_domain'), function (): void {
         // Рассылки по базе клиентов — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
         Route::middleware('plan:broadcasts')->group(function (): void {
             Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts.index');
+            Route::get('/broadcasts/{broadcast}', [BroadcastController::class, 'show'])->name('broadcasts.show');
             Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
             Route::post('/broadcasts/{broadcast}/run', [BroadcastController::class, 'run'])->name('broadcasts.run');
             Route::post('/broadcasts/{broadcast}/cancel', [BroadcastController::class, 'cancel'])->name('broadcasts.cancel');
