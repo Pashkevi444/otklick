@@ -1,0 +1,123 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Cabinet;
+
+use App\Http\Controllers\Controller;
+use App\Models\Flow;
+use App\Repositories\Contracts\FlowRepositoryInterface;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+/**
+ * Конструктор сценариев-воронок (no-code логика бота). Граф узлов/переходов
+ * приходит из редактора как `definition`. Гейт `plan:flows` + раздел `scenarios`.
+ */
+final class FlowController extends Controller
+{
+    public function __construct(
+        private readonly FlowRepositoryInterface $flows,
+    ) {}
+
+    public function index(): Response
+    {
+        return Inertia::render('Cabinet/Scenarios/Index', [
+            'flows' => $this->flows->forCurrentTenant()->map(fn (Flow $f): array => $this->present($f))->all(),
+            'actionOptions' => [
+                ['value' => 'none', 'label' => 'Нет (показать кнопки/сообщение)'],
+                ['value' => 'start_booking', 'label' => 'Начать запись в YClients'],
+                ['value' => 'escalate', 'label' => 'Позвать администратора'],
+                ['value' => 'end', 'label' => 'Завершить сценарий'],
+            ],
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $this->validated($request);
+
+        $this->flows->create([
+            'tenant_id' => (string) $request->user()->tenant_id,
+            ...$data,
+        ]);
+
+        return redirect()->route('cabinet.scenarios.index')->with('success', 'Сценарий создан.');
+    }
+
+    public function update(Request $request, string $flow): RedirectResponse
+    {
+        $model = $this->findOrFail($flow);
+
+        $this->flows->update($model, $this->validated($request));
+
+        return redirect()->route('cabinet.scenarios.index')->with('success', 'Сценарий сохранён.');
+    }
+
+    public function toggle(string $flow): RedirectResponse
+    {
+        $model = $this->findOrFail($flow);
+
+        $this->flows->update($model, ['is_active' => ! $model->is_active]);
+
+        return back();
+    }
+
+    public function destroy(string $flow): RedirectResponse
+    {
+        $this->flows->delete($this->findOrFail($flow));
+
+        return redirect()->route('cabinet.scenarios.index')->with('success', 'Сценарий удалён.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validated(Request $request): array
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'is_active' => ['boolean'],
+            'triggers' => ['array', 'max:20'],
+            'triggers.*' => ['string', 'max:80'],
+            'definition' => ['array'],
+            'definition.start' => ['nullable', 'string'],
+            'definition.nodes' => ['array'],
+        ]);
+
+        return [
+            'name' => (string) $validated['name'],
+            'is_active' => (bool) ($validated['is_active'] ?? false),
+            'triggers' => array_values(array_filter(array_map(
+                static fn ($t): string => trim((string) $t),
+                (array) ($validated['triggers'] ?? []),
+            ), static fn (string $t): bool => $t !== '')),
+            'definition' => (array) ($validated['definition'] ?? []),
+        ];
+    }
+
+    private function findOrFail(string $id): Flow
+    {
+        $flow = $this->flows->find($id);
+
+        abort_if($flow === null, 404);
+
+        return $flow;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function present(Flow $flow): array
+    {
+        return [
+            'id' => $flow->id,
+            'name' => $flow->name,
+            'is_active' => $flow->is_active,
+            'triggers' => $flow->triggers,
+            'definition' => $flow->definition,
+        ];
+    }
+}

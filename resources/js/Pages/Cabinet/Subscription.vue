@@ -8,6 +8,7 @@ interface PlanFeatures {
     crm: boolean;
     analytics: boolean;
     broadcasts: boolean;
+    flows: boolean;
     clientBase: boolean;
     allChannels: boolean;
     webWidget: boolean;
@@ -42,6 +43,7 @@ const rows = computed(() => [
     { label: 'Умный поиск по базе знаний (RAG)', on: f.value.rag },
     { label: 'Дополнительные каналы (Avito и др.)', on: f.value.allChannels },
     { label: 'Рассылки по базе клиентов (мессенджеры + почта, по расписанию)', on: f.value.broadcasts },
+    { label: 'Конструктор сценариев (no-code воронки: «если X → ответь Y»)', on: f.value.flows },
     { label: 'Расширенная аналитика и статистика', on: f.value.analytics },
     { label: 'ИИ-рекомендации в аналитике (чего не хватает)', on: f.value.aiInsights },
     { label: 'База клиентов и маркетинговые рекомендации', on: f.value.clientBase },

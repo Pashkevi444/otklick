@@ -17,6 +17,7 @@ enum CabinetSection: string implements HasLabel
     case Conversations = 'conversations';
     case Clients = 'clients';
     case Broadcasts = 'broadcasts';
+    case Scenarios = 'scenarios';
     case Knowledge = 'knowledge';
     case Analytics = 'analytics';
     case Channels = 'channels';
@@ -31,6 +32,7 @@ enum CabinetSection: string implements HasLabel
             self::Conversations => 'Лиды',
             self::Clients => 'База клиентов',
             self::Broadcasts => 'Рассылки',
+            self::Scenarios => 'Сценарии',
             self::Knowledge => 'База знаний',
             self::Analytics => 'Аналитика',
             self::Channels => 'Каналы',
@@ -52,6 +54,7 @@ enum CabinetSection: string implements HasLabel
             self::Analytics => 'analytics',
             self::Clients => 'clientBase',
             self::Broadcasts => 'broadcasts',
+            self::Scenarios => 'flows',
             self::Integrations => 'crm',
             default => null,
         };

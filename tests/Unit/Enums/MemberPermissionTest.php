@@ -32,6 +32,7 @@ final class MemberPermissionTest extends TestCase
         $this->assertNotContains('clients.delete', $grantable);
         $this->assertNotContains('analytics', $grantable);
         $this->assertNotContains('integrations', $grantable);
+        $this->assertNotContains('scenarios', $grantable);
         // Базовые — есть.
         $this->assertContains('conversations', $grantable);
         $this->assertContains('conversations.delete', $grantable);
@@ -39,5 +40,6 @@ final class MemberPermissionTest extends TestCase
         // На «Макс» доступно всё.
         $max = array_map(fn (MemberPermission $p): string => $p->value, MemberPermission::grantableWith(TenantPlan::Max->features()));
         $this->assertContains('clients.delete', $max);
+        $this->assertContains('scenarios', $max);
     }
 }

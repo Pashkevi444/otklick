@@ -174,6 +174,6 @@ final class MemberPermissionTest extends TestCase
         $maxOwner = User::factory()->owner(Tenant::factory()->max()->create())->create();
         $this->actingAs($maxOwner)
             ->get('/cabinet/team')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 10)); // все разделы
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 11)); // все разделы
     }
 }

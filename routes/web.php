@@ -19,6 +19,7 @@ use App\Http\Controllers\Cabinet\ClientController;
 use App\Http\Controllers\Cabinet\ConversationController;
 use App\Http\Controllers\Cabinet\CrmKnowledgeController;
 use App\Http\Controllers\Cabinet\DashboardController;
+use App\Http\Controllers\Cabinet\FlowController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
 use App\Http\Controllers\Cabinet\KnowledgeGapController;
@@ -120,6 +121,15 @@ $onDomain(config('app.business_domain'), function (): void {
             Route::post('/broadcasts/{broadcast}/run', [BroadcastController::class, 'run'])->name('broadcasts.run');
             Route::post('/broadcasts/{broadcast}/cancel', [BroadcastController::class, 'cancel'])->name('broadcasts.cancel');
             Route::delete('/broadcasts/{broadcast}', [BroadcastController::class, 'destroy'])->name('broadcasts.destroy');
+        });
+
+        // Конструктор сценариев-воронок — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
+        Route::middleware('plan:flows')->group(function (): void {
+            Route::get('/scenarios', [FlowController::class, 'index'])->name('scenarios.index');
+            Route::post('/scenarios', [FlowController::class, 'store'])->name('scenarios.store');
+            Route::put('/scenarios/{flow}', [FlowController::class, 'update'])->name('scenarios.update');
+            Route::post('/scenarios/{flow}/toggle', [FlowController::class, 'toggle'])->name('scenarios.toggle');
+            Route::delete('/scenarios/{flow}', [FlowController::class, 'destroy'])->name('scenarios.destroy');
         });
 
         Route::get('/knowledge', [KnowledgeEntryController::class, 'index'])->name('knowledge.index');

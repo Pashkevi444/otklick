@@ -259,6 +259,11 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill(['booking_state' => $state])->save();
     }
 
+    public function setFlowState(Conversation $conversation, ?array $state): void
+    {
+        $conversation->forceFill(['flow_state' => $state])->save();
+    }
+
     public function setCrmRecordId(Conversation $conversation, ?string $recordId): void
     {
         $conversation->forceFill(['crm_record_id' => $recordId])->save();

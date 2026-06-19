@@ -14,7 +14,7 @@ final class PlanFeaturesTest extends TestCase
     public function test_merge_overrides_only_present_keys(): void
     {
         $base = new PlanFeatures(
-            maxOperators: 2, crm: false, analytics: false, broadcasts: false,
+            maxOperators: 2, crm: false, analytics: false, broadcasts: false, flows: false,
             clientBase: false, allChannels: false, webWidget: true,
             maxNotifyEmail: 1, maxNotifyTelegram: 4,
         );

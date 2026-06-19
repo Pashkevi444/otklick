@@ -23,6 +23,7 @@ enum MemberPermission: string implements HasLabel
     case Conversations = 'conversations';
     case Clients = 'clients';
     case Broadcasts = 'broadcasts';
+    case Scenarios = 'scenarios';
     case Knowledge = 'knowledge';
     case Analytics = 'analytics';
     case Channels = 'channels';
@@ -62,6 +63,7 @@ enum MemberPermission: string implements HasLabel
             self::Conversations, self::ConversationsEdit, self::ConversationsDelete => CabinetSection::Conversations,
             self::Clients, self::ClientsEdit, self::ClientsDelete => CabinetSection::Clients,
             self::Broadcasts => CabinetSection::Broadcasts,
+            self::Scenarios => CabinetSection::Scenarios,
             self::Knowledge => CabinetSection::Knowledge,
             self::Analytics => CabinetSection::Analytics,
             self::Channels => CabinetSection::Channels,

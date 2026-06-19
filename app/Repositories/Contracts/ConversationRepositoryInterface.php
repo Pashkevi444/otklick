@@ -116,6 +116,14 @@ interface ConversationRepositoryInterface
     public function setBookingState(Conversation $conversation, ?array $state): void;
 
     /**
+     * Сохраняет состояние активной воронки (FlowEngine). null очищает —
+     * диалог выходит из воронки.
+     *
+     * @param  array<string, mixed>|null  $state
+     */
+    public function setFlowState(Conversation $conversation, ?array $state): void;
+
+    /**
      * Сохраняет идентификатор записи в CRM (для последующей отмены). null —
      * запись отменена/отсутствует.
      */

@@ -24,6 +24,7 @@ class BotResponder
         private readonly ReplyComposer $composer,
         private readonly BookingFlow $booking,
         private readonly ContactGate $contacts,
+        private readonly FlowEngine $flows,
     ) {}
 
     public function respond(Tenant $tenant, Conversation $conversation, string $text): BotReply
@@ -49,6 +50,15 @@ class BotResponder
 
         if (is_array($state) && $state !== []) {
             return $this->booking->advance($tenant, $conversation, $text);
+        }
+
+        // Сценарии-воронки (no-code логика владельца): продолжаем активную воронку
+        // или запускаем по триггеру — ДО LLM. Не сработали → отвечает ИИ по базе
+        // знаний (свободный текст не по кнопкам выводит из воронки).
+        $flow = $this->flows->handle($tenant, $conversation, $text);
+
+        if ($flow !== null) {
+            return $flow;
         }
 
         // Явный выбор «Новая запись» из меню записей — заводим свежую запись,

@@ -13,6 +13,7 @@ interface Features {
     crm: boolean;
     analytics: boolean;
     broadcasts: boolean;
+    flows: boolean;
     clientBase: boolean;
     allChannels: boolean;
     webWidget: boolean;
@@ -54,6 +55,7 @@ const toggles: { key: keyof Features; label: string }[] = [
     { key: 'crm', label: 'YClients (запись)' },
     { key: 'analytics', label: 'Аналитика' },
     { key: 'broadcasts', label: 'Рассылки' },
+    { key: 'flows', label: 'Конструктор сценариев' },
     { key: 'clientBase', label: 'База клиентов' },
     { key: 'allChannels', label: 'Все каналы' },
     { key: 'webWidget', label: 'Веб-виджет' },

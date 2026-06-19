@@ -20,6 +20,7 @@ export interface AuthUser {
             crm: boolean;
             analytics: boolean;
             broadcasts: boolean;
+            flows: boolean;
             clientBase: boolean;
             allChannels: boolean;
             webWidget: boolean;
