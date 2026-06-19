@@ -44,6 +44,7 @@ $onDomain = function (?string $domain, Closure $routes): void {
 $onDomain(config('app.marketing_domain'), function (): void {
     Route::get('/', [HomeController::class, 'home'])->name('home');
     Route::get('/contacts', [HomeController::class, 'contacts'])->name('site.contacts');
+    Route::get('/privacy', [HomeController::class, 'privacy'])->name('site.privacy');
 });
 
 // Приложение: бизнес-поддомен (business.<домен>).

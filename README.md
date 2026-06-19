@@ -262,7 +262,7 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 
 | Метод | URL | Контроллер | Назначение |
 |---|---|---|---|
-| GET | `/` · `/contacts` | `Site\HomeController` | Публичный лендинг + контакты (маркетинг-домен). |
+| GET | `/` · `/contacts` · `/privacy` | `Site\HomeController` | Публичный лендинг, контакты и политика конфиденциальности 152-ФЗ (маркетинг-домен). |
 | GET | `/up` | — | Health-check Laravel. |
 | GET/POST | `/login` · POST `/logout` | `Auth\AuthenticatedSessionController` | Вход/выход (session). |
 | GET/POST | `/forgot-password` · `/reset-password` | `Auth\PasswordResetController` | Восстановление пароля по коду из письма (код 6 мин, `throttle:6,1`). |

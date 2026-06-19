@@ -64,7 +64,10 @@ const tgUrl = computed(() => (props.site.telegram ? `https://t.me/${props.site.t
                 </a>
             </div>
 
-            <Link href="/" class="mt-8 inline-block text-sm text-[#2E74B5] hover:underline dark:text-sky-300">← На главную</Link>
+            <div class="mt-8 flex gap-6 text-sm">
+                <Link href="/" class="text-[#2E74B5] hover:underline dark:text-sky-300">← На главную</Link>
+                <Link href="/privacy" class="text-[#2E74B5] hover:underline dark:text-sky-300">Политика конфиденциальности</Link>
+            </div>
 
             <div v-if="site.legalName || site.inn || site.ogrnip" class="mt-10 border-t border-white/60 pt-6 text-xs leading-relaxed text-slate-400 dark:border-white/10 dark:text-slate-500">
                 <span v-if="site.legalName">{{ site.legalName }}</span>

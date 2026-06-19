@@ -37,6 +37,18 @@ final class HomeController extends Controller
     }
 
     /**
+     * Политика конфиденциальности (152-ФЗ). Публичная страница — ссылку на неё
+     * требуют площадки-партнёры (YClients Marketplace) и закон о ПДн.
+     */
+    public function privacy(): Response
+    {
+        return Inertia::render('Site/Privacy', [
+            'site' => $this->present($this->site->current()),
+            'loginUrl' => route('login'),
+        ]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function present(SiteSetting $site): array

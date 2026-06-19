@@ -35,4 +35,17 @@ final class SiteHomeTest extends TestCase
                 ->component('Site/Contacts')
                 ->where('site.email', 'support@otcl1ck.ru'));
     }
+
+    public function test_privacy_policy_page_renders(): void
+    {
+        // Публичная политика конфиденциальности (152-ФЗ) — ссылку на неё требует
+        // YClients Marketplace и закон о ПДн. Должна отдавать реквизиты оператора.
+        $this->get('/privacy')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Site/Privacy')
+                ->where('site.legalName', 'ИП Балаганский Павел Сергеевич')
+                ->where('site.inn', '543807917255')
+                ->has('loginUrl'));
+    }
 }

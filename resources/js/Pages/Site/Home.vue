@@ -473,6 +473,7 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="flex items-start gap-6 text-sm">
                         <Link href="/contacts" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Контакты</Link>
+                        <Link href="/privacy" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Конфиденциальность</Link>
                         <a :href="loginUrl" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Вход</a>
                     </div>
                 </div>
