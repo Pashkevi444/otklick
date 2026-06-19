@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\CrmProvider;
+use App\Models\Tenant;
 use App\Models\YclientsLink;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Support\Facades\Log;
@@ -129,6 +130,19 @@ final readonly class YclientsMarketplaceService
         $tenantId = $link->tenant_id;
 
         if ($tenantId === null) {
+            return;
+        }
+
+        // Жёсткий рубеж по праву на CRM: даже если филиал был привязан, а право
+        // позже сняли (даунгрейд тарифа) — рабочее подключение не создаём.
+        $tenant = Tenant::query()->find($tenantId);
+
+        if ($tenant === null || ! $tenant->features()->crm) {
+            Log::info('crm.yclients.marketplace.skipped_no_crm_right', [
+                'salon_id' => $link->salon_id,
+                'tenant_id' => $tenantId,
+            ]);
+
             return;
         }
 

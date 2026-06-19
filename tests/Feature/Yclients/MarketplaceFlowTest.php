@@ -20,7 +20,8 @@ final class MarketplaceFlowTest extends TestCase
      */
     private function tenantWithOwner(): array
     {
-        $tenant = Tenant::factory()->create();
+        // Тариф «Макс» — с правом на CRM (нужно для marketplace-подключения).
+        $tenant = Tenant::factory()->max()->create();
 
         return [$tenant, User::factory()->owner($tenant)->create()];
     }
@@ -52,6 +53,20 @@ final class MarketplaceFlowTest extends TestCase
             ->get('/yclients/connect')
             ->assertRedirect(route('cabinet.integrations.index'))
             ->assertSessionHas('error');
+    }
+
+    public function test_connect_without_crm_right_is_blocked(): void
+    {
+        // Тариф без права на CRM — привязка запрещена, редирект на подписку.
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)
+            ->get('/yclients/connect?salon_id=1989012')
+            ->assertRedirect(route('cabinet.subscription'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseMissing('yclients_links', ['salon_id' => '1989012']);
     }
 
     public function test_webhook_is_public_and_stages_token(): void

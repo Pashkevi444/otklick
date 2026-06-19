@@ -92,7 +92,8 @@ const disconnect = (id: string): void => {
 
     <AppLayout title="YClients">
         <p class="text-slate-500 text-sm mb-6 max-w-2xl">
-            Подключите YClients, чтобы бот мог записывать клиентов.
+            Подключите YClients, чтобы бот мог записывать, переносить и отменять клиентов.
+            Подключение — из вашего YClients (маркетплейс), без ручного ввода токенов.
         </p>
 
         <div class="space-y-4 max-w-2xl">
@@ -196,30 +197,48 @@ const disconnect = (id: string): void => {
                 </div>
 
                 <!-- Не подключено -->
-                <form v-else class="space-y-4" @submit.prevent="connect(integration.provider)">
-                    <div v-for="field in integration.fields" :key="field.key">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">{{ field.label }}</label>
-                        <input
-                            v-model="forms[integration.provider].credentials[field.key]"
-                            :type="field.secret ? 'password' : 'text'"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2"
-                        />
-                        <p v-if="field.hint" class="mt-1 text-xs text-slate-400">{{ field.hint }}</p>
-                        <p
-                            v-if="forms[integration.provider].errors[`credentials.${field.key}`]"
-                            class="mt-1 text-sm text-red-600"
-                        >
-                            {{ forms[integration.provider].errors[`credentials.${field.key}`] }}
-                        </p>
+                <div v-else class="space-y-4">
+                    <!-- Рекомендуемый путь: маркетплейс YClients (без токенов) -->
+                    <div class="rounded-xl border border-[#2E74B5]/30 bg-[#2E74B5]/5 p-4 text-sm">
+                        <div class="font-medium text-[#1F4E79]">Как подключить</div>
+                        <ol class="mt-2 list-decimal space-y-1 pl-5 text-slate-600">
+                            <li>Откройте свой YClients → «Интеграции» → найдите приложение «Отклик».</li>
+                            <li>Нажмите «Подключить» и подтвердите доступ.</li>
+                            <li>Вы вернётесь сюда — связь активируется автоматически, токены вводить не нужно.</li>
+                        </ol>
                     </div>
-                    <button
-                        type="submit"
-                        :disabled="forms[integration.provider].processing"
-                        class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
-                    >
-                        Подключить
-                    </button>
-                </form>
+
+                    <!-- Фолбэк: ручное подключение по токену -->
+                    <details class="rounded-xl border border-slate-200 p-4">
+                        <summary class="cursor-pointer text-sm font-medium text-slate-600">
+                            Подключить вручную (по API-токену)
+                        </summary>
+                        <form class="mt-4 space-y-4" @submit.prevent="connect(integration.provider)">
+                            <div v-for="field in integration.fields" :key="field.key">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">{{ field.label }}</label>
+                                <input
+                                    v-model="forms[integration.provider].credentials[field.key]"
+                                    :type="field.secret ? 'password' : 'text'"
+                                    class="w-full rounded-lg border border-slate-300 px-3 py-2"
+                                />
+                                <p v-if="field.hint" class="mt-1 text-xs text-slate-400">{{ field.hint }}</p>
+                                <p
+                                    v-if="forms[integration.provider].errors[`credentials.${field.key}`]"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ forms[integration.provider].errors[`credentials.${field.key}`] }}
+                                </p>
+                            </div>
+                            <button
+                                type="submit"
+                                :disabled="forms[integration.provider].processing"
+                                class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
+                            >
+                                Подключить
+                            </button>
+                        </form>
+                    </details>
+                </div>
             </div>
         </div>
     </AppLayout>

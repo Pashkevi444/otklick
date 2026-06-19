@@ -27,15 +27,23 @@ final class MarketplaceController extends Controller
 
     public function connect(Request $request): RedirectResponse
     {
+        $tenant = $request->user()?->tenant;
+
+        // Право на CRM — возможность тарифа. Без него бизнес не может привязать
+        // филиал даже из маркетплейса (тот же гейт, что у вкладки «Интеграции»).
+        if ($tenant === null || ! $tenant->features()->crm) {
+            return redirect()->route('cabinet.subscription')
+                ->with('error', 'Интеграция с YClients доступна на тарифе «Макс». Оформите подписку — и подключение активируется.');
+        }
+
         $salonId = trim((string) $request->query('salon_id', ''));
-        $tenantId = (string) $request->user()?->tenant_id;
 
         if ($salonId === '') {
             return redirect()->route('cabinet.integrations.index')
                 ->with('error', 'YClients не передал идентификатор филиала. Подключите интеграцию ещё раз из маркетплейса.');
         }
 
-        $this->marketplace->claimSalon($salonId, $tenantId);
+        $this->marketplace->claimSalon($salonId, (string) $tenant->id);
 
         return redirect()->route('cabinet.integrations.index')
             ->with('success', 'Филиал YClients привязан. Интеграция активируется автоматически.');

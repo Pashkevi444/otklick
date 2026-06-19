@@ -37,7 +37,7 @@ final class YclientsMarketplaceServiceTest extends TestCase
 
     public function test_claim_then_webhook_materializes_active_connection(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
 
         // Бизнес вернулся из маркетплейса (токена ещё нет) — подключения нет.
         $this->service->claimSalon('1989012', $tenant->id);
@@ -56,7 +56,7 @@ final class YclientsMarketplaceServiceTest extends TestCase
 
     public function test_webhook_then_claim_materializes_active_connection(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
 
         // Вебхук пришёл раньше привязки — токен застейджен, тенанта ещё нет.
         $this->service->ingestWebhook(['salon_id' => '777', 'user_token' => 'tok-777']);
@@ -84,7 +84,7 @@ final class YclientsMarketplaceServiceTest extends TestCase
 
     public function test_disconnect_removes_connection_and_clears_token(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $this->service->claimSalon('1989012', $tenant->id);
         $this->service->ingestWebhook(['salon_id' => '1989012', 'user_token' => 'user-tok']);
         $this->assertNotNull($this->connectionFor($tenant));
@@ -99,7 +99,7 @@ final class YclientsMarketplaceServiceTest extends TestCase
 
     public function test_uninstall_event_disconnects(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $this->service->claimSalon('1989012', $tenant->id);
         $this->service->ingestWebhook(['salon_id' => '1989012', 'user_token' => 'user-tok']);
         $this->assertNotNull($this->connectionFor($tenant));
@@ -110,9 +110,21 @@ final class YclientsMarketplaceServiceTest extends TestCase
         $this->assertNull($this->connectionFor($tenant));
     }
 
+    public function test_tenant_without_crm_right_is_not_materialized(): void
+    {
+        // Тариф без права на CRM (по умолчанию) — даже при привязке и токене
+        // рабочее подключение не создаётся (жёсткий рубеж в materialize).
+        $tenant = Tenant::factory()->create();
+
+        $this->service->claimSalon('1989012', $tenant->id);
+        $this->service->ingestWebhook(['salon_id' => '1989012', 'user_token' => 'user-tok']);
+
+        $this->assertNull($this->connectionFor($tenant));
+    }
+
     public function test_user_token_path_is_extracted_from_nested_payload(): void
     {
-        $tenant = Tenant::factory()->create();
+        $tenant = Tenant::factory()->max()->create();
         $this->service->claimSalon('42', $tenant->id);
 
         // Токен может прийти вложенным (data.user.user_token) — парсер это покрывает.
