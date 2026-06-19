@@ -30,7 +30,7 @@ final readonly class BroadcastService
         private ChannelGatewayResolver $channels,
     ) {}
 
-    public function create(string $tenantId, BroadcastData $data, ?string $createdBy): Broadcast
+    public function create(string $tenantId, BroadcastData $data, ?int $createdBy): Broadcast
     {
         return $this->broadcasts->create([
             'tenant_id' => $tenantId,

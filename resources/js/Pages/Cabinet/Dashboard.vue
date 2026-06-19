@@ -15,13 +15,14 @@ interface Card {
     text: string;
     href: string;
     section?: string; // ограничиваемый раздел; если задан — показываем только при доступе оператора
-    feature?: 'analytics' | 'crm' | 'clientBase'; // зависит от возможности тарифа
+    feature?: 'analytics' | 'crm' | 'clientBase' | 'broadcasts'; // зависит от возможности тарифа
 }
 
 const allCards: Card[] = [
     { icon: '📈', label: 'Аналитика', text: 'Лиды, конверсия и что улучшить', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
     { icon: '💬', label: 'Лиды', text: 'Обращения клиентов и переписка бота', href: '/cabinet/conversations', section: 'conversations' },
     { icon: '👤', label: 'База клиентов', text: 'Карточки клиентов, история и краткое резюме', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
+    { icon: '📨', label: 'Рассылки', text: 'Сообщения по базе клиентов: мессенджеры и почта, по расписанию', href: '/cabinet/broadcasts', section: 'broadcasts', feature: 'broadcasts' },
     { icon: '📡', label: 'Каналы', text: 'Telegram и другие каналы общения с клиентами', href: '/cabinet/channels', section: 'channels' },
     { icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget', section: 'widget' },
     { icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile', section: 'profile' },

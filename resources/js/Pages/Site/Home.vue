@@ -84,7 +84,7 @@ const pricing = [
     },
     {
         name: 'Стандарт',
-        price: '9 900 ₽',
+        price: '3 599 ₽',
         period: 'в месяц',
         highlight: false,
         note: 'Для большинства локальных бизнесов.',
@@ -93,7 +93,7 @@ const pricing = [
     },
     {
         name: 'Макс',
-        price: '14 900 ₽',
+        price: '5 599 ₽',
         period: 'в месяц',
         highlight: true,
         note: 'Всё включено и удвоенные лимиты.',

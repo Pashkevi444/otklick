@@ -55,7 +55,7 @@ final class BroadcastController extends Controller
         $broadcast = $this->service->create(
             (string) $request->user()->tenant_id,
             $data,
-            (string) $request->user()->id,
+            (int) $request->user()->id,
         );
 
         if ($request->isScheduled()) {

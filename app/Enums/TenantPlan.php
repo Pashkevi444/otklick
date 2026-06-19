@@ -40,8 +40,8 @@ enum TenantPlan: string implements HasLabel
     {
         return match ($this) {
             self::Trial => 0,
-            self::Standard => 9900,
-            self::Max => 14900,
+            self::Standard => 3599,
+            self::Max => 5599,
             self::Individual => 0,
         };
     }

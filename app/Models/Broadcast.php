@@ -26,7 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $last_run_at
  * @property int $sent_count
  * @property int $failed_count
- * @property string|null $created_by
+ * @property int|null $created_by
  */
 class Broadcast extends TenantOwnedModel
 {
