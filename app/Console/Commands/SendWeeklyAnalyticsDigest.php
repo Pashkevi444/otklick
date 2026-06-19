@@ -48,6 +48,11 @@ final class SendWeeklyAnalyticsDigest extends Command
                     return 0;
                 }
 
+                // Бизнес мог выключить дайджест тумблером в «Уведомлениях».
+                if (($tenant->settings['weekly_digest'] ?? true) !== true) {
+                    return 0;
+                }
+
                 $range = AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Week);
                 $data = $analytics->forPeriod($range);
 

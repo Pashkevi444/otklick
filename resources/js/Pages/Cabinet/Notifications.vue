@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 interface Recipient {
     id: string;
@@ -19,7 +20,18 @@ interface Limits {
     telegramUsed: number;
 }
 
-const props = defineProps<{ recipients: Recipient[]; limits: Limits; hasTelegramBot: boolean }>();
+interface WeeklyDigest {
+    available: boolean;
+    enabled: boolean;
+}
+
+const props = defineProps<{ recipients: Recipient[]; limits: Limits; hasTelegramBot: boolean; weeklyDigest: WeeklyDigest }>();
+
+const digestEnabled = ref(props.weeklyDigest.enabled);
+const setDigest = (value: boolean): void => {
+    digestEnabled.value = value;
+    router.put('/cabinet/notifications/weekly-digest', { enabled: value }, { preserveScroll: true });
+};
 
 const page = usePage();
 const telegramLink = computed<string | null>(() => (page.props.flash as { telegramLink?: string | null })?.telegramLink ?? null);
@@ -157,6 +169,22 @@ const icon = (type: string): string => (type === 'telegram' ? '✈️' : '📧')
                     </button>
                 </li>
             </ul>
+        </div>
+
+        <!-- Недельный AI-дайджест («директор») -->
+        <div v-if="weeklyDigest.available" class="mt-5 max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">📊 Недельный отчёт «директор»</div>
+                    <p class="mt-1 max-w-xl text-sm text-slate-500">
+                        Раз в неделю (по понедельникам утром) присылаем владельцу короткую сводку прямо в подключённые
+                        Telegram/почту: <b>сколько пришло лидов, конверсия в запись, что мешает записям и что улучшить</b> —
+                        с рекомендациями от ИИ. Как личный аналитик, без захода в кабинет. Отправляем, только когда за неделю
+                        были обращения.
+                    </p>
+                </div>
+                <Toggle :model-value="digestEnabled" @update:model-value="setDigest" />
+            </div>
         </div>
     </AppLayout>
 </template>

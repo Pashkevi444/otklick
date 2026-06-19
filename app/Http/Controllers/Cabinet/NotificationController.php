@@ -12,6 +12,7 @@ use App\Models\NotificationRecipient;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Services\NotificationRecipientService;
+use App\Services\TenantService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -26,6 +27,7 @@ final class NotificationController extends Controller
         private readonly NotificationRecipientRepositoryInterface $recipients,
         private readonly NotificationRecipientService $service,
         private readonly ChannelRepositoryInterface $channels,
+        private readonly TenantService $tenants,
     ) {}
 
     public function index(Request $request): Response
@@ -53,7 +55,22 @@ final class NotificationController extends Controller
                 'telegramUsed' => $this->recipients->countByType(NotificationChannelType::Telegram),
             ],
             'hasTelegramBot' => $hasTelegramBot,
+            // Недельный AI-дайджест («директор») — только при праве aiInsights.
+            // По умолчанию включён; бизнес может выключить тумблером.
+            'weeklyDigest' => [
+                'available' => $features->has('aiInsights'),
+                'enabled' => (bool) ($tenant->settings['weekly_digest'] ?? true),
+            ],
         ]);
+    }
+
+    public function weeklyDigest(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+
+        $this->tenants->setWeeklyDigest($request->user()->tenant, (bool) $data['enabled']);
+
+        return back()->with('success', $data['enabled'] ? 'Недельный дайджест включён.' : 'Недельный дайджест выключен.');
     }
 
     public function storeEmail(Request $request): RedirectResponse

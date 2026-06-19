@@ -99,6 +99,17 @@ final readonly class TenantService
         return $this->tenants->update($tenant, ['settings' => $settings]);
     }
 
+    /**
+     * Включает/выключает недельный AI-дайджест владельцу (хранится в settings).
+     */
+    public function setWeeklyDigest(Tenant $tenant, bool $enabled): Tenant
+    {
+        $settings = $tenant->settings;
+        $settings['weekly_digest'] = $enabled;
+
+        return $this->tenants->update($tenant, ['settings' => $settings]);
+    }
+
     private function uniqueSlug(string $name): string
     {
         $base = Str::slug($name);

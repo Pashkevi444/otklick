@@ -2,6 +2,7 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 const page = usePage();
 const hasReminders = computed(() => page.props.auth.user?.tenant?.features?.reminders ?? false);
@@ -135,7 +136,7 @@ const disconnect = (id: string): void => {
                     <!-- Напоминания клиенту о записи (в рамках этой интеграции) -->
                     <div v-if="hasReminders" class="mt-5 rounded-xl border border-slate-200 p-4 dark:border-white/10">
                         <label class="flex items-center gap-2 text-sm font-medium text-[#1F4E79] dark:text-sky-200">
-                            <input v-model="reminderForms[integration.connection.id].enabled" type="checkbox" class="rounded" />
+                            <Toggle v-model="reminderForms[integration.connection.id].enabled" />
                             Напоминать клиентам о записи
                         </label>
                         <p class="mt-1 text-xs text-slate-400">

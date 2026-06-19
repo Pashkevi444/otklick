@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 interface Broadcast {
     id: string;
@@ -204,7 +205,7 @@ const canSubmit = computed(
                                 class="flex items-center gap-2 border-b border-slate-100 px-3 py-1.5 text-sm last:border-0"
                                 :class="c.opted_out ? 'opacity-50' : ''"
                             >
-                                <input type="checkbox" :checked="form.client_ids.includes(c.id)" @change="toggleClient(c.id)" />
+                                <Toggle :model-value="form.client_ids.includes(c.id)" @update:model-value="toggleClient(c.id)" />
                                 <span class="font-medium text-slate-700">{{ c.name }}</span>
                                 <span class="text-slate-400">{{ c.phone }}</span>
                                 <span v-if="c.opted_out" class="ml-auto text-xs text-red-500">отписан</span>

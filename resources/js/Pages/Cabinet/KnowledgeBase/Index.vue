@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ImageUploader from '@/Components/ImageUploader.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 interface LinkItem {
     label: string;
@@ -166,7 +167,7 @@ const remove = (id: string): void => {
             </div>
 
             <label class="flex items-center gap-2 text-sm text-slate-600">
-                <input v-model="form.is_published" type="checkbox" class="rounded border-slate-300" />
+                <Toggle v-model="form.is_published" />
                 Опубликовать (бот будет использовать)
             </label>
 

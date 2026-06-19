@@ -137,6 +137,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::post('/notifications/email', [NotificationController::class, 'storeEmail'])->name('notifications.email');
         Route::post('/notifications/telegram', [NotificationController::class, 'connectTelegram'])->name('notifications.telegram');
+        Route::put('/notifications/weekly-digest', [NotificationController::class, 'weeklyDigest'])->name('notifications.weekly-digest');
         Route::put('/notifications/{recipient}/toggle', [NotificationController::class, 'toggle'])->name('notifications.toggle');
         Route::delete('/notifications/{recipient}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 

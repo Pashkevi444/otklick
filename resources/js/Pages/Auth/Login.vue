@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthLayout from '@/Layouts/AuthLayout.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 defineProps<{ requestAccessUrl: string }>();
 
@@ -51,7 +52,7 @@ const submit = (): void => {
 
             <div class="flex items-center justify-between">
                 <label class="flex items-center gap-2 text-sm text-slate-600">
-                    <input v-model="form.remember" type="checkbox" class="rounded border-slate-300" />
+                    <Toggle v-model="form.remember" />
                     Запомнить меня
                 </label>
                 <Link href="/forgot-password" class="text-sm text-[#2E74B5] hover:underline">Забыли пароль?</Link>

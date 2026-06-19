@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 interface Plan {
     value: string;
@@ -67,6 +68,10 @@ const numbers: { key: keyof Features; label: string }[] = [
 ];
 
 const ovForm = useForm<Features>({ ...props.tenant.features });
+// Запись булева оверрайда по динамическому ключу (тип Features смешанный — обходим).
+const setOverride = (key: keyof Features, value: boolean): void => {
+    (ovForm as unknown as Record<string, boolean | number>)[key as string] = value;
+};
 const saveOverrides = (): void => {
     ovForm.put(`/admin/tenants/${props.tenant.id}/overrides`, { preserveScroll: true });
 };
@@ -183,7 +188,7 @@ const savePassword = (): void => {
             <form class="space-y-4" @submit.prevent="saveOverrides">
                 <div class="grid gap-2 sm:grid-cols-2">
                     <label v-for="t in toggles" :key="t.key" class="flex items-center gap-2 text-sm text-slate-700">
-                        <input v-model="ovForm[t.key] as boolean" type="checkbox" class="rounded border-slate-300" />
+                        <Toggle :model-value="Boolean(ovForm[t.key])" @update:model-value="setOverride(t.key, $event)" />
                         {{ t.label }}
                     </label>
                 </div>

@@ -58,6 +58,18 @@ final class SendWeeklyAnalyticsDigestTest extends TestCase
         Mail::assertNotQueued(OwnerEventMail::class);
     }
 
+    public function test_skips_when_business_disabled_digest(): void
+    {
+        Mail::fake();
+        $tenant = Tenant::factory()->max()->create(['settings' => ['weekly_digest' => false]]);
+        $this->recipient($tenant);
+        $this->leadIn($tenant);
+
+        Artisan::call('analytics:weekly-digest');
+
+        Mail::assertNotQueued(OwnerEventMail::class);
+    }
+
     public function test_skips_max_tenant_without_leads(): void
     {
         Mail::fake();
