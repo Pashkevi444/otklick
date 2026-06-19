@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Channels\Telegram\TelegramGateway;
 use App\Enums\ChannelType;
 use App\Enums\NotificationChannelType;
+use App\Enums\RecipientRole;
 use App\Models\Channel;
 use App\Models\NotificationRecipient;
 use App\Models\Tenant;
@@ -27,7 +28,10 @@ final readonly class NotificationRecipientService
         private TelegramGateway $telegram,
     ) {}
 
-    public function addEmail(Tenant $tenant, string $email, ?string $label): NotificationRecipient
+    /**
+     * @param  list<string>  $events  типы событий; [] = все
+     */
+    public function addEmail(Tenant $tenant, string $email, ?string $label, RecipientRole $role = RecipientRole::Director, array $events = []): NotificationRecipient
     {
         $this->assertWithinLimit($tenant, NotificationChannelType::Email);
 
@@ -38,13 +42,27 @@ final readonly class NotificationRecipientService
             'label' => $label,
             'is_active' => true,
             'verified_at' => now(),
+            'role' => $role->value,
+            'events' => $events,
         ]);
     }
 
     /**
-     * Заводит ожидающего Telegram-получателя и возвращает диплинк для подключения.
+     * Обновляет роль и подписку на типы событий у получателя.
+     *
+     * @param  list<string>  $events
      */
-    public function startTelegramLink(Tenant $tenant, ?string $label): string
+    public function updatePreferences(NotificationRecipient $recipient, RecipientRole $role, array $events): void
+    {
+        $this->recipients->update($recipient, ['role' => $role->value, 'events' => $events]);
+    }
+
+    /**
+     * Заводит ожидающего Telegram-получателя и возвращает диплинк для подключения.
+     *
+     * @param  list<string>  $events  типы событий; [] = все
+     */
+    public function startTelegramLink(Tenant $tenant, ?string $label, RecipientRole $role = RecipientRole::Director, array $events = []): string
     {
         $this->assertWithinLimit($tenant, NotificationChannelType::Telegram);
 
@@ -74,6 +92,8 @@ final readonly class NotificationRecipientService
             'label' => $label,
             'is_active' => false,
             'link_token' => $token,
+            'role' => $role->value,
+            'events' => $events,
         ]);
 
         return "https://t.me/{$username}?start=notify_{$token}";

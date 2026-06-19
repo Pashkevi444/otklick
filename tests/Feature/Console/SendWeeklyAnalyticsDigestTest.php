@@ -58,6 +58,20 @@ final class SendWeeklyAnalyticsDigestTest extends TestCase
         Mail::assertNotQueued(OwnerEventMail::class);
     }
 
+    public function test_digest_goes_only_to_directors(): void
+    {
+        Mail::fake();
+        $tenant = Tenant::factory()->max()->create();
+        NotificationRecipient::factory()->create(['tenant_id' => $tenant->id, 'role' => 'director']);
+        NotificationRecipient::factory()->create(['tenant_id' => $tenant->id, 'role' => 'staff']);
+        $this->leadIn($tenant);
+
+        Artisan::call('analytics:weekly-digest');
+
+        // Только директор — 1 письмо (сотруднику дайджест не уходит).
+        Mail::assertQueued(OwnerEventMail::class, 1);
+    }
+
     public function test_skips_when_business_disabled_digest(): void
     {
         Mail::fake();

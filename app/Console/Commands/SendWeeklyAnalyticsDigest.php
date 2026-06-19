@@ -10,6 +10,7 @@ use App\DTO\Analytics\LeadAnalytics;
 use App\DTO\Analytics\MetricCard;
 use App\DTO\OwnerNotification;
 use App\Enums\LeadAnalyticsPeriod;
+use App\Models\NotificationRecipient;
 use App\Models\Tenant;
 use App\Services\LeadAnalyticsService;
 use App\Services\LeadInsightsService;
@@ -65,7 +66,12 @@ final class SendWeeklyAnalyticsDigest extends Command
                 /** @var list<array<string, mixed>> $items */
                 $items = is_array($payload) && is_array($payload['items'] ?? null) ? $payload['items'] : [];
 
-                $notifications->dispatchToOwners($tenant, $this->compose($tenant, $data, $items));
+                // Недельный дайджест — стратегический отчёт, шлём только директорам.
+                $notifications->dispatchToOwners(
+                    $tenant,
+                    $this->compose($tenant, $data, $items),
+                    static fn (NotificationRecipient $r): bool => $r->isDirector(),
+                );
 
                 return 1;
             });

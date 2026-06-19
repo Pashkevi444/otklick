@@ -29,6 +29,8 @@ class NotificationRecipientFactory extends Factory
             'is_active' => true,
             'link_token' => null,
             'verified_at' => now(),
+            'role' => 'director',
+            'events' => [],
         ];
     }
 

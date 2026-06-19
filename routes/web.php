@@ -139,6 +139,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::post('/notifications/telegram', [NotificationController::class, 'connectTelegram'])->name('notifications.telegram');
         Route::put('/notifications/weekly-digest', [NotificationController::class, 'weeklyDigest'])->name('notifications.weekly-digest');
         Route::put('/notifications/{recipient}/toggle', [NotificationController::class, 'toggle'])->name('notifications.toggle');
+        Route::put('/notifications/{recipient}/preferences', [NotificationController::class, 'updatePreferences'])->name('notifications.preferences');
         Route::delete('/notifications/{recipient}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 
         // Команда: владелец добавляет операторов и ограничивает им разделы.

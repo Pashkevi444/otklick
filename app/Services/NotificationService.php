@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\DTO\OwnerNotification;
 use App\Enums\OwnerEvent;
+use App\Models\NotificationRecipient;
 use App\Models\Tenant;
 use App\Notifications\NotifierResolver;
 use App\Repositories\Contracts\NotificationRecipientRepositoryInterface;
@@ -28,23 +29,31 @@ final readonly class NotificationService
      */
     public function send(Tenant $tenant, OwnerEvent $event, array $context = []): void
     {
-        $this->dispatchToOwners($tenant, $this->compose($tenant, $event, $context));
+        // Получатель получает событие, только если подписан на этот тип.
+        $this->dispatchToOwners(
+            $tenant,
+            $this->compose($tenant, $event, $context),
+            static fn (NotificationRecipient $r): bool => $r->receivesEvent($event),
+        );
     }
 
     /**
-     * Рассылает готовое уведомление всем доставляемым получателям бизнеса (через
-     * их нотификаторы). Падение одного получателя не срывает рассылку остальным.
-     * Используется для уже сформированных уведомлений (напр. недельного дайджеста).
+     * Рассылает готовое уведомление доставляемым получателям бизнеса (через их
+     * нотификаторы). Необязательный $filter ограничивает получателей (по подписке
+     * на тип / по роли — напр. недельный дайджест шлём только директорам). Падение
+     * одного получателя не срывает рассылку остальным.
+     *
+     * @param  null|callable(NotificationRecipient): bool  $filter
      */
-    public function dispatchToOwners(Tenant $tenant, OwnerNotification $notification): void
+    public function dispatchToOwners(Tenant $tenant, OwnerNotification $notification, ?callable $filter = null): void
     {
         $recipients = $this->recipients->deliverableForCurrentTenant();
 
-        if ($recipients->isEmpty()) {
-            return;
-        }
-
         foreach ($recipients as $recipient) {
+            if ($filter !== null && ! $filter($recipient)) {
+                continue;
+            }
+
             $notifier = $this->notifiers->for($recipient->type);
 
             if ($notifier === null) {
