@@ -28,13 +28,21 @@ final readonly class NotificationService
      */
     public function send(Tenant $tenant, OwnerEvent $event, array $context = []): void
     {
+        $this->dispatchToOwners($tenant, $this->compose($tenant, $event, $context));
+    }
+
+    /**
+     * Рассылает готовое уведомление всем доставляемым получателям бизнеса (через
+     * их нотификаторы). Падение одного получателя не срывает рассылку остальным.
+     * Используется для уже сформированных уведомлений (напр. недельного дайджеста).
+     */
+    public function dispatchToOwners(Tenant $tenant, OwnerNotification $notification): void
+    {
         $recipients = $this->recipients->deliverableForCurrentTenant();
 
         if ($recipients->isEmpty()) {
             return;
         }
-
-        $notification = $this->compose($tenant, $event, $context);
 
         foreach ($recipients as $recipient) {
             $notifier = $this->notifiers->for($recipient->type);

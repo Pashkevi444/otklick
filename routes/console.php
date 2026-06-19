@@ -20,3 +20,7 @@ Schedule::command('bookings:reconcile')->hourly()->withoutOverlapping();
 
 // Запуск запланированных рассылок (по расписанию/периодичных) — раз в 5 минут.
 Schedule::command('broadcasts:run-due')->everyFiveMinutes()->withoutOverlapping();
+
+// Недельный AI-дайджест владельцу («директор») — понедельник 9:00. Только тенанты
+// с правом aiInsights и с лидами за неделю.
+Schedule::command('analytics:weekly-digest')->weeklyOn(1, '9:00')->withoutOverlapping();
