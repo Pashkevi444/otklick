@@ -33,8 +33,9 @@ final readonly class CrmConnectionService
      * стратегия провайдера. Переподключение заменяет прежнее подключение.
      *
      * @param  array<string, string>  $credentials
+     * @param  array<string, mixed>  $settings
      */
-    public function connect(string $tenantId, CrmProvider $provider, array $credentials): CrmConnection
+    public function connect(string $tenantId, CrmProvider $provider, array $credentials, array $settings = []): CrmConnection
     {
         $existing = $this->connections->findByProviderForCurrentTenant($provider);
 
@@ -46,7 +47,21 @@ final readonly class CrmConnectionService
             tenantId: $tenantId,
             provider: $provider,
             credentials: $credentials,
+            settings: $settings,
         ));
+    }
+
+    /**
+     * Отключает тенанта от провайдера (удаляет подключение текущего тенанта).
+     * Идемпотентно: если подключения нет — ничего не делает.
+     */
+    public function disconnect(CrmProvider $provider): void
+    {
+        $existing = $this->connections->findByProviderForCurrentTenant($provider);
+
+        if ($existing !== null) {
+            $this->connections->delete($existing);
+        }
     }
 
     /**

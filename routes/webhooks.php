@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Webhooks\TelegramWebhookController;
 use App\Http\Controllers\Widget\WidgetChatController;
+use App\Http\Controllers\Yclients\MarketplaceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -24,3 +25,13 @@ Route::post('/widget/v1/{tenant}/{channel}/session', [WidgetChatController::clas
     ->middleware('throttle:20,1')->name('widget.session');
 Route::post('/widget/v1/{tenant}/{channel}/message', [WidgetChatController::class, 'message'])
     ->middleware('throttle:40,1')->name('widget.message');
+
+/*
+ * YClients Marketplace: server-to-server вебхуки. Stateless (без сессий/CSRF).
+ * Подлинность — по партнёрскому токену в теле. Registration Redirect (привязка
+ * филиала к тенанту) — авторизованный роут /yclients/connect в routes/web.php.
+ */
+Route::post('/yclients/webhook', [MarketplaceController::class, 'webhook'])
+    ->middleware('throttle:60,1')->name('yclients.webhook');
+Route::post('/yclients/disconnect', [MarketplaceController::class, 'disconnect'])
+    ->middleware('throttle:60,1')->name('yclients.disconnect');

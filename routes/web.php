@@ -28,6 +28,7 @@ use App\Http\Controllers\Cabinet\SuspendedController;
 use App\Http\Controllers\Cabinet\TeamController;
 use App\Http\Controllers\Cabinet\WidgetController;
 use App\Http\Controllers\Site\HomeController;
+use App\Http\Controllers\Yclients\MarketplaceController;
 use App\Http\Middleware\EnsureSectionAllowed;
 use Illuminate\Support\Facades\Route;
 
@@ -160,6 +161,12 @@ $onDomain(config('app.business_domain'), function (): void {
             Route::get('/knowledge-crm/status', [CrmKnowledgeController::class, 'status'])->name('knowledge.crm.status');
         });
     });
+
+    // YClients Marketplace — Registration Redirect: бизнес возвращается из
+    // маркетплейса (?salon_id=…) уже залогиненным, привязываем филиал к тенанту.
+    Route::middleware(['auth', 'tenant'])
+        ->get('/yclients/connect', [MarketplaceController::class, 'connect'])
+        ->name('yclients.connect');
 
     // Аккаунт + сервисные страницы (любой авторизованный, без проверки тарифа)
     Route::middleware('auth')->group(function (): void {
