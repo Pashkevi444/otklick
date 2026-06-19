@@ -424,8 +424,17 @@ class BookingFlow
         $choice = $this->matchSlotByTime($options, $text) ?? $this->resolveChoice($options, $text);
 
         if ($choice === null) {
+            // Время суток («после обеда», «утром», «вечером») — сужаем окна до
+            // этого периода и просим выбрать конкретное, а не «не нашёл».
+            $daypart = $this->filterSlotsByDaypart($options, $text);
+            if ($daypart !== []) {
+                $shown = array_slice($daypart, 0, 8);
+
+                return $this->ask($this->menu('Свободное время в этот период — выберите:', $shown), $this->optionsKeyboard($shown, 3));
+            }
+
             // Названное время не подошло — показываем компактный список ближайших окон.
-            $preview = array_slice($state['options'] ?? [], 0, self::SLOTS_TO_LIST);
+            $preview = array_slice($options, 0, self::SLOTS_TO_LIST);
 
             return $this->ask($this->menu('Не нашёл такого свободного времени. Вот ближайшие окна (нажмите время или напишите):', $preview), $this->optionsKeyboard($preview, 3));
         }
@@ -1050,6 +1059,36 @@ class BookingFlow
         }
 
         return count($hits) === 1 ? $hits[0] : null;
+    }
+
+    /**
+     * Окна в названном клиентом «времени суток» («после обеда», «утром», «вечером»,
+     * «днём»). Возвращает подходящие окна (для показа) или [] — фраза не про
+     * время суток.
+     *
+     * @param  list<array{id: string, title: string}>  $options
+     * @return list<array{id: string, title: string}>
+     */
+    private function filterSlotsByDaypart(array $options, string $text): array
+    {
+        $t = mb_strtolower($text);
+
+        [$lo, $hi] = match (true) {
+            str_contains($t, 'после обед') => [13, 18],
+            str_contains($t, 'до обед') || str_contains($t, 'утр') || str_contains($t, 'пораньше') => [0, 12],
+            str_contains($t, 'вечер') || str_contains($t, 'попозже') || str_contains($t, 'поздн') => [17, 24],
+            str_contains($t, 'днём') || str_contains($t, 'днем') || str_contains($t, 'обед') || str_contains($t, 'полдень') => [12, 17],
+            default => [-1, -1],
+        };
+
+        if ($lo < 0) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $options,
+            fn (array $o): bool => (int) mb_substr($o['title'], 0, 2) >= $lo && (int) mb_substr($o['title'], 0, 2) < $hi,
+        ));
     }
 
     /**

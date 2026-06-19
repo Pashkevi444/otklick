@@ -75,6 +75,9 @@ final class WidgetChatController extends Controller
             return $this->cors(response()->json([
                 'reply' => $reply->text,
                 'needsHuman' => $reply->escalate,
+                // Кликабельные подсказки (календарь/время/услуги мастера записи) —
+                // как кнопки в мессенджерах; нажатие отправит подпись.
+                'options' => $reply->keyboard?->labels() ?? [],
             ]), $origin);
         });
     }

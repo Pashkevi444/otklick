@@ -259,7 +259,32 @@
         reallySend(text);
     }
 
+    // Кликабельные подсказки под сообщением бота (даты/время/услуги мастера
+    // записи) — как кнопки в мессенджерах; нажатие отправляет подпись.
+    function clearChips() {
+        var old = body.querySelector('.otk-chips');
+        if (old) old.remove();
+    }
+    function renderChips(options) {
+        clearChips();
+        if (!options || !options.length) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'otk-chips';
+        wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px';
+        options.forEach(function (label) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.style.cssText = 'border:1px solid #2E74B5;background:#fff;color:#2E74B5;border-radius:14px;padding:5px 12px;font-size:13px;cursor:pointer;line-height:1.2';
+            b.addEventListener('click', function () { clearChips(); reallySend(label); });
+            wrap.appendChild(b);
+        });
+        body.appendChild(wrap);
+        body.scrollTop = body.scrollHeight;
+    }
+
     function reallySend(text) {
+        clearChips();
         addMsg(text, 'me');
         input.value = '';
         input.style.height = 'auto';
@@ -270,6 +295,7 @@
             .then(function (data) {
                 hideTyping();
                 addMsg(data.reply, 'bot');
+                renderChips(data.options);
             })
             .catch(function (err) {
                 hideTyping();

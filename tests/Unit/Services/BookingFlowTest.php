@@ -499,6 +499,32 @@ final class BookingFlowTest extends TestCase
         $this->assertSame('2026-06-17T14:00:00+07:00', $crm->createdBookings[0]->start);
     }
 
+    public function test_daypart_after_lunch_narrows_to_afternoon_slots(): void
+    {
+        // «после обеда» — показываем послеобеденные окна, а не «не нашёл».
+        $crm = $this->crm();
+        $crm->slots = array_map(
+            fn (int $h): TimeSlot => new TimeSlot(sprintf('2026-06-17T%02d:00:00+07:00', $h)),
+            range(9, 19),
+        );
+        $flow = $this->flow($crm);
+        $c = $this->conversation();
+
+        $flow->start($this->tenant(), $c);
+        $flow->advance($this->tenant(), $c, '1');
+        $flow->advance($this->tenant(), $c, '2');
+        $flow->advance($this->tenant(), $c, 'завтра');
+        $r = $flow->advance($this->tenant(), $c, 'после обеда');
+
+        $this->assertStringContainsString('в этот период', $r->text);
+        $this->assertNotNull($r->keyboard);
+        $labels = $r->keyboard->labels();
+        $this->assertContains('13:00', $labels);
+        $this->assertNotContains('09:00', $labels);
+        $this->assertSame('slot', $c->booking_state['step']);
+        $this->assertCount(0, $crm->createdBookings);
+    }
+
     public function test_reschedule_intent_is_ignored_during_active_wizard(): void
     {
         // «перенеси на 14» ВНУТРИ мастера — это ответ на шаг, а не перезапуск.
