@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\CrmProvider;
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Account\EmailController;
 use App\Http\Controllers\Account\PasswordController;
@@ -148,9 +147,6 @@ $onDomain(config('app.business_domain'), function (): void {
         // CRM-интеграции — возможность тарифа «Макс».
         Route::middleware('plan:crm')->group(function (): void {
             Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
-            Route::post('/integrations/connect/{provider}', [IntegrationController::class, 'store'])
-                ->whereIn('provider', array_map(fn (CrmProvider $p): string => $p->value, CrmProvider::cases()))
-                ->name('integrations.store');
             Route::post('/integrations/{connection}/verify', [IntegrationController::class, 'verify'])->name('integrations.verify');
             Route::put('/integrations/{connection}/reminders', [IntegrationController::class, 'reminders'])->name('integrations.reminders');
             Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');

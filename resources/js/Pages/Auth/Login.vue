@@ -2,6 +2,8 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthLayout from '@/Layouts/AuthLayout.vue';
 
+defineProps<{ requestAccessUrl: string }>();
+
 const form = useForm({
     email: '',
     password: '',
@@ -63,5 +65,10 @@ const submit = (): void => {
                 Войти
             </button>
         </form>
+
+        <p class="mt-6 text-center text-sm text-slate-500">
+            Нет аккаунта в «Отклике»?
+            <a :href="requestAccessUrl" class="font-medium text-[#2E74B5] hover:underline">Оставьте заявку</a>
+        </p>
     </AuthLayout>
 </template>

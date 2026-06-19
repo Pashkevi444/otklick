@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
@@ -60,20 +60,6 @@ const saveReminders = (id: string): void => {
         { enabled: form.enabled, offsets_hours: [...form.offsets_hours] },
         { preserveScroll: true },
     );
-};
-
-// Форма подключения на каждый ещё не подключённый провайдер.
-const forms: Record<string, ReturnType<typeof useForm>> = {};
-for (const integration of props.integrations) {
-    if (integration.connection === null) {
-        const credentials: Record<string, string> = {};
-        integration.fields.forEach((f) => (credentials[f.key] = ''));
-        forms[integration.provider] = useForm({ credentials });
-    }
-}
-
-const connect = (provider: string): void => {
-    forms[provider].post(`/cabinet/integrations/connect/${provider}`);
 };
 
 const verify = (id: string): void => {
@@ -208,36 +194,6 @@ const disconnect = (id: string): void => {
                         </ol>
                     </div>
 
-                    <!-- Фолбэк: ручное подключение по токену -->
-                    <details class="rounded-xl border border-slate-200 p-4">
-                        <summary class="cursor-pointer text-sm font-medium text-slate-600">
-                            Подключить вручную (по API-токену)
-                        </summary>
-                        <form class="mt-4 space-y-4" @submit.prevent="connect(integration.provider)">
-                            <div v-for="field in integration.fields" :key="field.key">
-                                <label class="block text-sm font-medium text-slate-700 mb-1">{{ field.label }}</label>
-                                <input
-                                    v-model="forms[integration.provider].credentials[field.key]"
-                                    :type="field.secret ? 'password' : 'text'"
-                                    class="w-full rounded-lg border border-slate-300 px-3 py-2"
-                                />
-                                <p v-if="field.hint" class="mt-1 text-xs text-slate-400">{{ field.hint }}</p>
-                                <p
-                                    v-if="forms[integration.provider].errors[`credentials.${field.key}`]"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ forms[integration.provider].errors[`credentials.${field.key}`] }}
-                                </p>
-                            </div>
-                            <button
-                                type="submit"
-                                :disabled="forms[integration.provider].processing"
-                                class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
-                            >
-                                Подключить
-                            </button>
-                        </form>
-                    </details>
                 </div>
             </div>
         </div>

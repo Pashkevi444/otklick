@@ -22,7 +22,11 @@ final class AuthenticatedSessionController extends Controller
 {
     public function create(): Response
     {
-        return Inertia::render('Auth/Login');
+        // Регистрация — только через супер-админа (invite-only). Кто пришёл без
+        // аккаунта (в т.ч. из маркетплейса YClients) — ведём на заявку, а не в тупик.
+        return Inertia::render('Auth/Login', [
+            'requestAccessUrl' => route('site.contacts'),
+        ]);
     }
 
     public function store(LoginRequest $request): RedirectResponse

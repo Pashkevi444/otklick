@@ -8,7 +8,6 @@ use App\Crm\Data\CredentialField;
 use App\DTO\ReminderSettings;
 use App\Enums\CrmProvider;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Cabinet\StoreCrmConnectionRequest;
 use App\Models\CrmConnection;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Services\CrmConnectionService;
@@ -51,22 +50,6 @@ final class IntegrationController extends Controller
         return Inertia::render('Cabinet/Integrations/Index', [
             'integrations' => $integrations,
         ]);
-    }
-
-    public function store(StoreCrmConnectionRequest $request, string $provider): RedirectResponse
-    {
-        $providerEnum = CrmProvider::from($provider);
-
-        $credentials = [];
-        foreach ($this->crm->credentialFields($providerEnum) as $field) {
-            $credentials[$field->key] = (string) $request->input("credentials.{$field->key}");
-        }
-
-        $this->crm->connect((string) $request->user()->tenant_id, $providerEnum, $credentials);
-
-        return redirect()
-            ->route('cabinet.integrations.index')
-            ->with('success', "{$providerEnum->label()} подключён.");
     }
 
     public function verify(string $connection): RedirectResponse
