@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Channels\Telegram;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\Channels\Contracts\ReceivesVoice;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 /**
  * Клиент Telegram Bot API. Отправляет ответы и забирает апдейты.
@@ -19,7 +21,7 @@ use Illuminate\Support\Facades\Http;
  * IPv6 для вебхука Telegram не принимает), поэтому апдейты тянем long polling'ом
  * (getUpdates) — это исходящий запрос, который ходит по IPv6.
  */
-final readonly class TelegramGateway implements ChannelGateway
+final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
@@ -145,6 +147,48 @@ final readonly class TelegramGateway implements ChannelGateway
         $result = $response->json('result', []);
 
         return $result;
+    }
+
+    /**
+     * Скачивает голосовое сообщение Telegram (getFile → download). Войс приходит
+     * как OGG/Opus — отдаём байты как есть (SpeechKit принимает нативно).
+     *
+     * @param  array<string, mixed>  $update
+     */
+    public function downloadVoice(Channel $channel, array $update): ?string
+    {
+        $message = $update['message'] ?? null;
+        $fileId = is_array($message) ? ($message['voice']['file_id'] ?? $message['audio']['file_id'] ?? null) : null;
+
+        if (! is_string($fileId) || $fileId === '') {
+            return null;
+        }
+
+        $token = $channel->botToken();
+
+        try {
+            $filePath = $this->request()
+                ->connectTimeout(5)->timeout(8)
+                ->get("{$this->apiUrl}/bot{$token}/getFile", ['file_id' => $fileId])
+                ->throw()
+                ->json('result.file_path');
+
+            if (! is_string($filePath) || $filePath === '') {
+                return null;
+            }
+
+            $body = $this->request()
+                ->connectTimeout(5)->timeout(20)
+                ->get("{$this->apiUrl}/file/bot{$token}/{$filePath}")
+                ->throw()
+                ->body();
+
+            return $body !== '' ? $body : null;
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     /**

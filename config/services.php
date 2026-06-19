@@ -73,6 +73,17 @@ return [
         ],
     ],
 
+    'speech' => [
+        // fake — без распознавания (по умолчанию, без ключей). yandex — SpeechKit.
+        'driver' => env('SPEECH_DRIVER', 'fake'),
+
+        'yandex' => [
+            'api_url' => env('YANDEX_STT_API_URL', 'https://stt.api.cloud.yandex.net/speech/v1/stt:recognize'),
+            'api_key' => env('YANDEX_API_KEY'),
+            'folder_id' => env('YANDEX_FOLDER_ID'),
+        ],
+    ],
+
     'vk' => [
         'api_url' => env('VK_API_URL', 'https://api.vk.com/method'),
         'version' => env('VK_API_VERSION', '5.199'),

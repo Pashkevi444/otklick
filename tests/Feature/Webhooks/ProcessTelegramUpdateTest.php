@@ -10,6 +10,8 @@ use App\Models\Conversation;
 use App\Models\KnowledgeEntry;
 use App\Models\Message;
 use App\Models\Tenant;
+use App\Speech\Contracts\SpeechToText;
+use App\Speech\FakeSpeechToText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -50,6 +52,61 @@ final class ProcessTelegramUpdateTest extends TestCase
             'contacts_gate_done' => true,
             'status' => 'open',
         ]);
+    }
+
+    public function test_voice_message_is_transcribed_and_processed_as_text(): void
+    {
+        Http::fake([
+            '*/getFile*' => Http::response(['result' => ['file_path' => 'voice/v1.oga']]),
+            '*/file/bot*' => Http::response('OGG-OPUS-BYTES'),
+            '*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]]),
+        ]);
+        // Распознавание возвращает текст вопроса (вместо реального SpeechKit).
+        $this->app->instance(SpeechToText::class, new FakeSpeechToText('есть ли доставка?'));
+
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $this->seedGateDone($tenant, $channel);
+
+        // Голосовое сообщение: текста нет, есть voice.file_id.
+        $this->process($tenant, $channel, [
+            'update_id' => 101,
+            'message' => [
+                'message_id' => 11,
+                'chat' => ['id' => 555],
+                'from' => ['username' => 'ivan'],
+                'voice' => ['file_id' => 'AABB', 'duration' => 3, 'mime_type' => 'audio/ogg'],
+            ],
+        ]);
+
+        // Входящее записано как распознанный текст — дальше обычный пайплайн бота.
+        $this->assertDatabaseHas('messages', [
+            'tenant_id' => $tenant->id,
+            'direction' => 'inbound',
+            'text' => 'есть ли доставка?',
+        ]);
+        Http::assertSent(fn ($r): bool => str_contains($r->url(), '/getFile'));
+    }
+
+    public function test_voice_message_ignored_when_transcription_fails(): void
+    {
+        Http::fake([
+            '*/getFile*' => Http::response(['result' => ['file_path' => 'voice/v1.oga']]),
+            '*' => Http::response('', 200),
+        ]);
+        // STT не распознал (null) — голос игнорируем, входящего нет.
+        $this->app->instance(SpeechToText::class, new FakeSpeechToText(null));
+
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $this->seedGateDone($tenant, $channel);
+
+        $this->process($tenant, $channel, [
+            'update_id' => 102,
+            'message' => ['message_id' => 12, 'chat' => ['id' => 555], 'voice' => ['file_id' => 'CCDD']],
+        ]);
+
+        $this->assertDatabaseMissing('messages', ['tenant_id' => $tenant->id, 'direction' => 'inbound']);
     }
 
     public function test_bot_answers_from_published_knowledge(): void

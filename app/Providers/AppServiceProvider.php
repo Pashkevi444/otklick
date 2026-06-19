@@ -19,6 +19,9 @@ use App\Notifications\EmailNotifier;
 use App\Notifications\NotifierResolver;
 use App\Notifications\TelegramNotifier;
 use App\Services\SiteSettingsService;
+use App\Speech\Contracts\SpeechToText;
+use App\Speech\FakeSpeechToText;
+use App\Speech\YandexSpeechToText;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -98,6 +101,32 @@ class AppServiceProvider extends ServiceProvider
                 default => throw new RuntimeException("Эмбеддер «{$driver}» не настроен. Доступны fake и yandex."),
             };
         });
+
+        $this->app->singleton(SpeechToText::class, function (): SpeechToText {
+            $driver = (string) config('services.speech.driver');
+
+            return match ($driver) {
+                'fake' => new FakeSpeechToText,
+                'yandex' => $this->makeYandexSpeechToText(),
+                default => throw new RuntimeException("Распознавание речи «{$driver}» не настроено. Доступны fake и yandex."),
+            };
+        });
+    }
+
+    private function makeYandexSpeechToText(): YandexSpeechToText
+    {
+        $apiKey = (string) config('services.speech.yandex.api_key');
+        $folderId = (string) config('services.speech.yandex.folder_id');
+
+        if ($apiKey === '' || $folderId === '') {
+            throw new RuntimeException('Yandex SpeechKit не настроен: задайте YANDEX_API_KEY и YANDEX_FOLDER_ID.');
+        }
+
+        return new YandexSpeechToText(
+            apiUrl: (string) config('services.speech.yandex.api_url'),
+            apiKey: $apiKey,
+            folderId: $folderId,
+        );
     }
 
     private function makeYandexEmbedder(int $dimension): YandexEmbedder

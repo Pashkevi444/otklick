@@ -9,6 +9,7 @@ use App\DTO\IncomingMessage;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\IncomingMessageService;
 use App\Services\TelegramRelayService;
+use App\Services\VoiceTranscriptionService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -41,8 +42,9 @@ final class ProcessMaxUpdate implements ShouldQueue
         ChannelRepositoryInterface $channels,
         IncomingMessageService $messages,
         MaxGateway $max,
+        VoiceTranscriptionService $voice,
     ): void {
-        $tenancy->run($this->tenantId, function () use ($channels, $messages, $max): void {
+        $tenancy->run($this->tenantId, function () use ($channels, $messages, $max, $voice): void {
             $channel = $channels->find($this->channelId);
 
             if ($channel === null || ! $channel->is_active) {
@@ -78,10 +80,21 @@ final class ProcessMaxUpdate implements ShouldQueue
                 return;
             }
 
+            $text = $parsed['text'];
+
+            // Пустой текст — возможно голосовое: распознаём (STT) и подставляем.
+            if ($text === '') {
+                $text = $voice->transcribe($channel, $this->update);
+
+                if ($text === null || $text === '') {
+                    return;
+                }
+            }
+
             $messages->handle($channel, new IncomingMessage(
                 externalChatId: $parsed['chatId'],
                 externalMessageId: $parsed['id'],
-                text: $parsed['text'],
+                text: $text,
                 // Имя НЕ берём из аккаунта MAX — его подставит ContactCapture из
                 // того, как клиент представится. Публичной ссылки на профиль нет.
                 contactName: null,

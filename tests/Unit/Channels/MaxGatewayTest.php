@@ -150,12 +150,20 @@ final class MaxGatewayTest extends TestCase
         $this->assertSame(['chatId' => '555', 'text' => 'есть запись?', 'id' => 'm7'], $parsed);
     }
 
-    public function test_parse_message_ignores_non_message_and_empty(): void
+    public function test_parse_message_ignores_non_message(): void
     {
         $this->assertNull($this->gateway()->parseMessage(['update_type' => 'bot_started', 'message' => []]));
-        $this->assertNull($this->gateway()->parseMessage([
+    }
+
+    public function test_parse_message_returns_envelope_with_empty_text_for_voice(): void
+    {
+        // Голосовое/вложение без текста — конверт с пустым текстом; решение по
+        // нему (распознать голос) принимает джоб.
+        $parsed = $this->gateway()->parseMessage([
             'update_type' => 'message_created',
-            'message' => ['recipient' => ['chat_id' => 555], 'body' => ['text' => '   ']],
-        ]));
+            'message' => ['recipient' => ['chat_id' => 555], 'body' => ['text' => '   ', 'mid' => 'm9']],
+        ]);
+
+        $this->assertSame(['chatId' => '555', 'text' => '', 'id' => 'm9'], $parsed);
     }
 }

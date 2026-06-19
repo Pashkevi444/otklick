@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\DTO\IncomingMessage;
+use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\IncomingMessageService;
 use App\Services\TelegramLinkService;
 use App\Services\TelegramRelayService;
+use App\Services\VoiceTranscriptionService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -41,8 +43,9 @@ final class ProcessTelegramUpdate implements ShouldQueue
         IncomingMessageService $messages,
         TelegramLinkService $linker,
         TelegramRelayService $relay,
+        VoiceTranscriptionService $voice,
     ): void {
-        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker, $relay): void {
+        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker, $relay, $voice): void {
             $channel = $channels->find($this->channelId);
 
             if ($channel === null || ! $channel->is_active) {
@@ -70,7 +73,7 @@ final class ProcessTelegramUpdate implements ShouldQueue
                 return;
             }
 
-            $incoming = $this->parse();
+            $incoming = $this->parse($voice, $channel);
 
             if ($incoming === null) {
                 return;
@@ -92,7 +95,7 @@ final class ProcessTelegramUpdate implements ShouldQueue
      * Извлекает текстовое сообщение из апдейта. Возвращает null для не-текстовых
      * и служебных апдейтов (Фаза 1 отвечает только на текст).
      */
-    private function parse(): ?IncomingMessage
+    private function parse(VoiceTranscriptionService $voice, Channel $channel): ?IncomingMessage
     {
         $message = $this->update['message'] ?? null;
 
@@ -100,12 +103,22 @@ final class ProcessTelegramUpdate implements ShouldQueue
             return null;
         }
 
-        $text = $message['text'] ?? null;
         $chatId = $message['chat']['id'] ?? null;
         $messageId = $message['message_id'] ?? null;
 
-        if (! is_string($text) || $text === '' || $chatId === null || $messageId === null) {
+        if ($chatId === null || $messageId === null) {
             return null;
+        }
+
+        $text = $message['text'] ?? null;
+
+        // Нет текста — возможно голосовое: скачиваем и распознаём (STT).
+        if (! is_string($text) || $text === '') {
+            $text = $voice->transcribe($channel, $this->update);
+
+            if ($text === null || $text === '') {
+                return null;
+            }
         }
 
         return new IncomingMessage(

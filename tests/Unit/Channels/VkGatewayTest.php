@@ -144,9 +144,17 @@ final class VkGatewayTest extends TestCase
     public function test_parse_message_ignores_non_message_events(): void
     {
         $this->assertNull($this->gateway()->parseMessage(['type' => 'group_join', 'object' => []]));
-        $this->assertNull($this->gateway()->parseMessage([
+    }
+
+    public function test_parse_message_returns_envelope_with_empty_text_for_voice(): void
+    {
+        // Голосовое/вложение без текста — конверт с пустым текстом; решение по
+        // нему (распознать голос) принимает джоб.
+        $parsed = $this->gateway()->parseMessage([
             'type' => 'message_new',
-            'object' => ['message' => ['peer_id' => 555, 'text' => '   ']],
-        ]));
+            'object' => ['message' => ['peer_id' => 555, 'text' => '   ', 'conversation_message_id' => 9]],
+        ]);
+
+        $this->assertSame(['peerId' => '555', 'text' => '', 'id' => '9'], $parsed);
     }
 }

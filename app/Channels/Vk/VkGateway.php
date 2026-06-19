@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Channels\Vk;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\Channels\Contracts\ReceivesVoice;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
@@ -12,6 +13,7 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 /**
  * Клиент VK (сообщения сообщества). Отправляет ответы (messages.send) и забирает
@@ -20,7 +22,7 @@ use RuntimeException;
  *
  * Креды канала: access_token (токен сообщества) и group_id.
  */
-final readonly class VkGateway implements ChannelGateway
+final readonly class VkGateway implements ChannelGateway, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
@@ -134,9 +136,10 @@ final readonly class VkGateway implements ChannelGateway
     }
 
     /**
-     * Извлекает из апдейта VK входящее текстовое сообщение: peer_id (куда слать
-     * ответ — messages.send требует peer_id), текст и id сообщения. null — если
-     * это не новое текстовое сообщение клиента.
+     * Извлекает из апдейта VK конверт входящего сообщения: peer_id (адресат
+     * ответа — messages.send требует peer_id), текст и id. Текст может быть пустым
+     * (голосовое/вложение без текста) — решение по нему принимает джоб (расшифровка
+     * голоса). null — если это не новое сообщение клиента.
      *
      * @param  array<string, mixed>  $update
      * @return array{peerId: string, text: string, id: string}|null
@@ -155,17 +158,56 @@ final readonly class VkGateway implements ChannelGateway
         // peer_id — адресат ответа; в личном диалоге с сообществом он равен
         // from_id (id пользователя). from_id берём как запасной вариант.
         $peerId = $message['peer_id'] ?? $message['from_id'] ?? null;
-        $text = $message['text'] ?? null;
-
-        if ($peerId === null || ! is_string($text) || trim($text) === '') {
+        if ($peerId === null) {
             return null;
         }
+
+        $text = is_string($message['text'] ?? null) ? trim($message['text']) : '';
 
         return [
             'peerId' => (string) $peerId,
             'text' => $text,
             'id' => (string) ($message['conversation_message_id'] ?? $message['id'] ?? ''),
         ];
+    }
+
+    /**
+     * Скачивает голосовое (audio_message) из апдейта VK — у VK прямая ссылка
+     * link_ogg (без токена). Возвращает байты OGG/Opus или null.
+     *
+     * @param  array<string, mixed>  $update
+     */
+    public function downloadVoice(Channel $channel, array $update): ?string
+    {
+        $message = $update['object']['message'] ?? $update['object'] ?? null;
+        $attachments = is_array($message) ? ($message['attachments'] ?? []) : [];
+
+        if (! is_array($attachments)) {
+            return null;
+        }
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment) || ($attachment['type'] ?? null) !== 'audio_message') {
+                continue;
+            }
+
+            $link = $attachment['audio_message']['link_ogg'] ?? null;
+            if (! is_string($link) || $link === '') {
+                continue;
+            }
+
+            try {
+                $body = Http::connectTimeout(5)->timeout(20)->get($link)->throw()->body();
+
+                return $body !== '' ? $body : null;
+            } catch (Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        }
+
+        return null;
     }
 
     /**

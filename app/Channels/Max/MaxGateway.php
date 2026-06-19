@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Channels\Max;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\Channels\Contracts\ReceivesVoice;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 /**
  * Клиент Bot API мессенджера MAX (botapi.max.ru). Отправляет ответы
@@ -19,7 +21,7 @@ use Illuminate\Support\Facades\Http;
  * Токен бота передаётся в заголовке `Authorization` (query-параметр в MAX
  * больше не поддерживается). Кред канала — access_token.
  */
-final readonly class MaxGateway implements ChannelGateway
+final readonly class MaxGateway implements ChannelGateway, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
@@ -135,9 +137,10 @@ final readonly class MaxGateway implements ChannelGateway
     }
 
     /**
-     * Извлекает из апдейта MAX входящее текстовое сообщение: chat_id (адресат
-     * ответа), текст и id сообщения (mid). null — если это не новое текстовое
-     * сообщение клиента.
+     * Извлекает из апдейта MAX конверт входящего сообщения: chat_id (адресат
+     * ответа), текст и id (mid). Текст может быть пустым (голосовое/вложение без
+     * текста) — решение по нему принимает джоб (расшифровка голоса). null — если
+     * это не новое сообщение клиента.
      *
      * @param  array<string, mixed>  $update
      * @return array{chatId: string, text: string, id: string}|null
@@ -155,17 +158,56 @@ final readonly class MaxGateway implements ChannelGateway
 
         // recipient.chat_id — диалог, куда слать ответ; запасной — id отправителя.
         $chatId = $message['recipient']['chat_id'] ?? $message['sender']['user_id'] ?? null;
-        $text = $message['body']['text'] ?? null;
-
-        if ($chatId === null || ! is_string($text) || trim($text) === '') {
+        if ($chatId === null) {
             return null;
         }
+
+        $text = is_string($message['body']['text'] ?? null) ? trim($message['body']['text']) : '';
 
         return [
             'chatId' => (string) $chatId,
             'text' => $text,
             'id' => (string) ($message['body']['mid'] ?? ''),
         ];
+    }
+
+    /**
+     * Скачивает голосовое из апдейта MAX (вложение audio/voice с url). Формат
+     * вложения MAX подтверждаем по первому реальному войсу (лог speech.voice);
+     * парсинг гибкий. Возвращает байты аудио или null.
+     *
+     * @param  array<string, mixed>  $update
+     */
+    public function downloadVoice(Channel $channel, array $update): ?string
+    {
+        $attachments = $update['message']['body']['attachments'] ?? null;
+
+        if (! is_array($attachments)) {
+            return null;
+        }
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment) || ! in_array($attachment['type'] ?? null, ['audio', 'voice'], true)) {
+                continue;
+            }
+
+            $url = $attachment['payload']['url'] ?? $attachment['url'] ?? null;
+            if (! is_string($url) || $url === '') {
+                continue;
+            }
+
+            try {
+                $body = Http::connectTimeout(5)->timeout(20)->get($url)->throw()->body();
+
+                return $body !== '' ? $body : null;
+            } catch (Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        }
+
+        return null;
     }
 
     /**
