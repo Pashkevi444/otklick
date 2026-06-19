@@ -53,16 +53,15 @@ const features = [
 ];
 
 const steps = [
-    { n: '01', title: 'Подключите канал', text: 'Telegram, ВКонтакте или MAX за пару минут — по токену. Виджет на сайт — одной строкой.' },
+    { n: '01', title: 'Подключите канал', text: 'Telegram, ВКонтакте, MAX или WhatsApp за пару минут. Виджет на сайт — одной строкой.' },
     { n: '02', title: 'Заполните базу знаний', text: 'Услуги, цены, частые вопросы, примеры работ — в удобном кабинете.' },
     { n: '03', title: 'Помощник работает за вас', text: 'Отвечает клиентам, записывает на услуги, а сложное передаёт администратору.' },
 ];
 
-const integrationsNow = ['Telegram', 'ВКонтакте', 'MAX', 'Виджет на сайте', 'YClients'];
+const integrationsNow = ['Telegram', 'ВКонтакте', 'MAX', 'WhatsApp', 'Виджет на сайте', 'YClients'];
 
 // Планы по внедрению инструментов бизнеса (ещё не в продакшене — честно отдельным блоком).
 const roadmap = [
-    { icon: '💚', title: 'WhatsApp', text: 'Ответы и запись в самом массовом мессенджере.' },
     { icon: '🟢', title: 'Avito', text: 'Обработка обращений с объявлений Авито.' },
     { icon: '📞', title: 'Телефония', text: 'Голосовой ассистент и пропущенные звонки.' },
     { icon: '🔗', title: 'Другие CRM', text: 'Altegio, amoCRM, Bitrix24 — подключаем под бизнес.' },
@@ -179,12 +178,12 @@ onBeforeUnmount(() => {
 
 <template>
     <Head>
-        <title>Отклик — цифровой администратор для бизнеса: ответы в Telegram, ВКонтакте, MAX и на сайте, запись клиентов</title>
+        <title>Отклик — цифровой администратор для бизнеса: ответы в Telegram, ВКонтакте, MAX, WhatsApp и на сайте, запись клиентов</title>
         <meta
             name="description"
-            content="Отклик — AI-администратор для салонов, барбершопов, клиник и сервиса. Мгновенно отвечает клиентам в Telegram, ВКонтакте, MAX и на сайте по вашей базе знаний и записывает в CRM. Не теряйте заявки 24/7."
+            content="Отклик — AI-администратор для салонов, барбершопов, клиник и сервиса. Мгновенно отвечает клиентам в Telegram, ВКонтакте, MAX, WhatsApp и на сайте по вашей базе знаний и записывает в CRM. Не теряйте заявки 24/7."
         />
-        <meta name="keywords" content="AI-администратор, чат-бот для бизнеса, автоответы Telegram, бот ВКонтакте, бот MAX, мессенджер MAX, виджет на сайт, запись клиентов, виртуальный помощник, бот для записи, распознавание голосовых сообщений, бот понимает голос, YClients, 152-ФЗ" />
+        <meta name="keywords" content="AI-администратор, чат-бот для бизнеса, бот WhatsApp, чат-бот WhatsApp, автоответы Telegram, бот ВКонтакте, бот MAX, мессенджер MAX, виджет на сайт, запись клиентов, виртуальный помощник, бот для записи, распознавание голосовых сообщений, бот понимает голос, YClients, 152-ФЗ" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Отклик — цифровой администратор для локального бизнеса" />
         <meta
@@ -474,7 +473,7 @@ onBeforeUnmount(() => {
                         <div class="font-bold text-[#1F4E79] dark:text-white">Отклик</div>
                         <p class="mt-1 max-w-sm text-sm text-slate-400 dark:text-slate-500">AI-администратор для локального бизнеса: ответы клиентам и запись в CRM круглосуточно.</p>
                     </div>
-                    <div class="flex items-start gap-6 text-sm">
+                    <div class="flex flex-wrap items-start gap-x-6 gap-y-2 text-sm">
                         <Link href="/contacts" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Контакты</Link>
                         <Link href="/privacy" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Конфиденциальность</Link>
                         <a :href="loginUrl" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Вход</a>

@@ -31,10 +31,12 @@ final class StoreChannelRequest extends AbstractFormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::enum(ChannelType::class)->only([ChannelType::Telegram, ChannelType::Vk, ChannelType::Max])],
+            'type' => ['required', Rule::enum(ChannelType::class)->only([ChannelType::Telegram, ChannelType::Vk, ChannelType::Max, ChannelType::WhatsApp])],
             'bot_token' => ['required_if:type,telegram', 'nullable', 'string', 'regex:/^\d+:[A-Za-z0-9_-]+$/'],
             'access_token' => ['required_if:type,vk,max', 'nullable', 'string'],
             'group_id' => ['required_if:type,vk', 'nullable', 'string', 'regex:/^\d+$/'],
+            'id_instance' => ['required_if:type,whatsapp', 'nullable', 'string', 'regex:/^\d+$/'],
+            'api_token' => ['required_if:type,whatsapp', 'nullable', 'string'],
         ];
     }
 
@@ -49,6 +51,9 @@ final class StoreChannelRequest extends AbstractFormRequest
             'access_token.required_if' => 'Укажите токен — сообщества ВКонтакте или бота MAX.',
             'group_id.required_if' => 'Укажите id сообщества ВКонтакте.',
             'group_id.regex' => 'id сообщества — это число (без «club»/«public»).',
+            'id_instance.required_if' => 'Укажите idInstance из Green API.',
+            'id_instance.regex' => 'idInstance — это число.',
+            'api_token.required_if' => 'Укажите apiTokenInstance из Green API.',
         ];
     }
 }

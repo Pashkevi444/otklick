@@ -36,6 +36,6 @@ enum ChannelType: string implements HasLabel
      */
     public static function pollable(): array
     {
-        return [self::Telegram, self::Vk, self::Max];
+        return [self::Telegram, self::Vk, self::Max, self::WhatsApp];
     }
 }

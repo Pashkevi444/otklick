@@ -25,7 +25,7 @@ use Throwable;
 final class ChannelController extends Controller
 {
     /** Каналы-мессенджеры, которыми управляют на вкладке «Каналы». */
-    private const array MANAGED = [ChannelType::Telegram, ChannelType::Vk, ChannelType::Max];
+    private const array MANAGED = [ChannelType::Telegram, ChannelType::Vk, ChannelType::Max, ChannelType::WhatsApp];
 
     public function __construct(
         private readonly ChannelRepositoryInterface $channels,
@@ -48,7 +48,11 @@ final class ChannelController extends Controller
     {
         $type = ChannelType::from((string) $request->string('type'));
         $tenantId = (string) $request->user()->tenant_id;
-        $field = $type === ChannelType::Telegram ? 'bot_token' : 'access_token';
+        $field = match ($type) {
+            ChannelType::Telegram => 'bot_token',
+            ChannelType::WhatsApp => 'api_token',
+            default => 'access_token',
+        };
 
         try {
             $this->connect($type, $tenantId, $request);
@@ -109,6 +113,11 @@ final class ChannelController extends Controller
                 $tenantId,
                 (string) $request->string('access_token'),
             ),
+            ChannelType::WhatsApp => $this->channelService->connectWhatsApp(
+                $tenantId,
+                (string) $request->string('id_instance'),
+                (string) $request->string('api_token'),
+            ),
             default => $this->channelService->connectTelegram(
                 $tenantId,
                 (string) $request->string('bot_token'),
@@ -122,6 +131,7 @@ final class ChannelController extends Controller
         return match ($type) {
             ChannelType::Vk => 'ВКонтакте не подтвердил сообщество. Проверьте токен сообщества (с правами на сообщения) и его id.',
             ChannelType::Max => 'MAX отклонил токен. Проверьте токен бота, выданный @MasterBot.',
+            ChannelType::WhatsApp => 'Green API отклонил подключение или аккаунт не привязан. Проверьте idInstance/apiTokenInstance и что вы отсканировали QR (статус «authorized»).',
             default => 'Telegram отклонил запрос. Проверьте токен бота и публичный HTTPS-адрес '.
                 '(TELEGRAM_WEBHOOK_BASE_URL); localhost Telegram не принимает.',
         };
@@ -132,6 +142,7 @@ final class ChannelController extends Controller
         $service = match ($type) {
             ChannelType::Vk => 'ВКонтакте (api.vk.com)',
             ChannelType::Max => 'MAX (botapi.max.ru)',
+            ChannelType::WhatsApp => 'Green API (api.green-api.com)',
             default => 'Telegram (api.telegram.org)',
         };
 
@@ -163,6 +174,10 @@ final class ChannelController extends Controller
 
         if ($channel->type === ChannelType::Max) {
             return 'Бот MAX (long polling)';
+        }
+
+        if ($channel->type === ChannelType::WhatsApp) {
+            return 'WhatsApp · Green API #'.$channel->external_id;
         }
 
         $baseUrl = rtrim((string) config('services.telegram.webhook_base_url'), '/');

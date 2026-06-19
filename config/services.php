@@ -89,6 +89,11 @@ return [
         'version' => env('VK_API_VERSION', '5.199'),
     ],
 
+    'whatsapp' => [
+        // WhatsApp через провайдера Green API (привязка реального аккаунта по QR).
+        'api_url' => env('GREENAPI_API_URL', 'https://api.green-api.com'),
+    ],
+
     'max' => [
         // Базовый URL Bot API мессенджера MAX (botapi.max.ru). Токен — в заголовке
         // Authorization. Сервер сам тянет апдейты через long polling (GET /updates).

@@ -14,11 +14,11 @@ interface ChannelRow {
 
 defineProps<{ channels: ChannelRow[] }>();
 
-const form = useForm({ type: 'telegram', bot_token: '', access_token: '', group_id: '' });
+const form = useForm({ type: 'telegram', bot_token: '', access_token: '', group_id: '', id_instance: '', api_token: '' });
 
 const connect = (): void => {
     form.post('/cabinet/channels', {
-        onSuccess: () => form.reset('bot_token', 'access_token', 'group_id'),
+        onSuccess: () => form.reset('bot_token', 'access_token', 'group_id', 'id_instance', 'api_token'),
     });
 };
 
@@ -40,6 +40,7 @@ const disconnect = (id: string): void => {
                         { value: 'telegram', label: 'Telegram' },
                         { value: 'vk', label: 'ВКонтакте' },
                         { value: 'max', label: 'MAX' },
+                        { value: 'whatsapp', label: 'WhatsApp' },
                     ]"
                     :key="tab.value"
                     type="button"
@@ -205,10 +206,76 @@ const disconnect = (id: string): void => {
                     </button>
                 </div>
             </template>
+
+            <!-- WhatsApp (через Green API) -->
+            <template v-else-if="form.type === 'whatsapp'">
+                <div class="font-semibold text-[#1F4E79] mb-1">Подключить WhatsApp</div>
+                <ol class="text-sm text-slate-500 mb-3 list-decimal list-inside space-y-0.5">
+                    <li>Зарегистрируйтесь в <a href="https://green-api.com" target="_blank" class="text-[#2E74B5] hover:underline">Green API</a> и создайте инстанс.</li>
+                    <li>В инстансе отсканируйте <b>QR-код</b> телефоном с WhatsApp (как WhatsApp Web) — статус станет «authorized».</li>
+                    <li>Скопируйте <b>idInstance</b> и <b>apiTokenInstance</b> и вставьте ниже.</li>
+                </ol>
+
+                <details class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                    <summary class="cursor-pointer font-medium text-[#1F4E79] select-none">Подробная инструкция: как сделать бота в WhatsApp</summary>
+                    <div class="mt-3 space-y-3">
+                        <div>
+                            <div class="font-medium text-slate-700">Почему через Green API</div>
+                            <p>У WhatsApp нет «токена бота», как у Telegram. Чтобы бот отвечал с вашего номера, его подключают через провайдера-шлюз. Мы используем <b>Green API</b> — он привязывает реальный аккаунт WhatsApp по QR-коду (как WhatsApp Web) и даёт API для приёма/отправки сообщений.</p>
+                        </div>
+                        <div>
+                            <div class="font-medium text-slate-700">1. Аккаунт и инстанс</div>
+                            <p>Зарегистрируйтесь на <a href="https://green-api.com" target="_blank" class="text-[#2E74B5] hover:underline">green-api.com</a>, в личном кабинете создайте <b>инстанс</b> (есть бесплатный тариф для теста). У инстанса будут <b>idInstance</b> (число) и <b>apiTokenInstance</b> (длинная строка).</p>
+                        </div>
+                        <div>
+                            <div class="font-medium text-slate-700">2. Привяжите номер по QR</div>
+                            <p>Лучше отдельный номер/телефон для бота. В инстансе откройте QR-код и отсканируйте его в приложении WhatsApp: <b>Настройки → Связанные устройства → Привязать устройство</b>. Статус инстанса должен стать <b>authorized</b>.</p>
+                        </div>
+                        <div>
+                            <div class="font-medium text-slate-700">3. Подключите ниже</div>
+                            <p>Вставьте idInstance и apiTokenInstance и нажмите «Подключить». Мы проверим, что аккаунт привязан, и начнём принимать сообщения (long polling — публичный адрес/вебхук не нужен).</p>
+                        </div>
+                        <div class="rounded-md bg-white border border-slate-200 p-3">
+                            <div class="font-medium text-slate-700">Как это работает дальше</div>
+                            <p>Бот отвечает клиентам в WhatsApp по вашей <b>базе знаний</b>, понимает <b>голосовые</b>, записывает на услуги (если подключён YClients) и передаёт сложное администратору. Проверка: напишите на номер бота с другого телефона — он ответит, а обращение появится в «Лидах». Телефон с привязанным WhatsApp должен оставаться онлайн.</p>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="space-y-3">
+                    <div>
+                        <input
+                            v-model="form.id_instance"
+                            type="text"
+                            placeholder="idInstance (число)"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5] outline-none"
+                        />
+                        <p v-if="form.errors.id_instance" class="mt-1 text-sm text-red-600">{{ form.errors.id_instance }}</p>
+                    </div>
+                    <div class="flex gap-3 items-start">
+                        <div class="flex-1">
+                            <input
+                                v-model="form.api_token"
+                                type="text"
+                                placeholder="apiTokenInstance"
+                                class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5] outline-none"
+                            />
+                            <p v-if="form.errors.api_token" class="mt-1 text-sm text-red-600">{{ form.errors.api_token }}</p>
+                        </div>
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
+                        >
+                            Подключить
+                        </button>
+                    </div>
+                </div>
+            </template>
         </form>
 
         <div v-if="channels.length === 0" class="text-slate-400 text-center py-8">
-            Каналов пока нет. Подключите Telegram, ВКонтакте или MAX выше.
+            Каналов пока нет. Подключите Telegram, ВКонтакте, MAX или WhatsApp выше.
         </div>
 
         <div v-else class="space-y-3">

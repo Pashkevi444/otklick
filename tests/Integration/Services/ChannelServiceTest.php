@@ -104,4 +104,38 @@ final class ChannelServiceTest extends TestCase
 
         $this->assertDatabaseCount('channels', 0);
     }
+
+    public function test_connect_whatsapp_creates_channel_when_authorized(): void
+    {
+        Http::fake(['*/getStateInstance/*' => Http::response(['stateInstance' => 'authorized'])]);
+
+        $tenant = Tenant::factory()->create();
+        $this->app->make(TenantContext::class)->set($tenant->id);
+
+        $channel = $this->app->make(ChannelService::class)->connectWhatsApp($tenant->id, '1101', 'tok-abc');
+
+        $this->assertSame(ChannelType::WhatsApp, $channel->type);
+        $this->assertSame('1101', $channel->external_id);
+        $this->assertSame('1101', $channel->credential('id_instance'));
+        $this->assertSame('tok-abc', $channel->credential('api_token'));
+        $this->assertDatabaseHas('channels', ['id' => $channel->id, 'type' => 'whatsapp']);
+    }
+
+    public function test_connect_whatsapp_rolls_back_when_not_authorized(): void
+    {
+        // QR не отсканирован — состояние не «authorized», подключение отклоняется.
+        Http::fake(['*/getStateInstance/*' => Http::response(['stateInstance' => 'notAuthorized'])]);
+
+        $tenant = Tenant::factory()->create();
+        $this->app->make(TenantContext::class)->set($tenant->id);
+
+        try {
+            $this->app->make(ChannelService::class)->connectWhatsApp($tenant->id, '1101', 'bad');
+            $this->fail('Ожидали исключение при непривязанном WhatsApp.');
+        } catch (\RuntimeException) {
+            // ожидаемо
+        }
+
+        $this->assertDatabaseCount('channels', 0);
+    }
 }

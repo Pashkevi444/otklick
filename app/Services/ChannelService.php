@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Channels\Max\MaxGateway;
 use App\Channels\Telegram\TelegramGateway;
 use App\Channels\Vk\VkGateway;
+use App\Channels\WhatsApp\WhatsAppGateway;
 use App\DTO\NewChannelData;
 use App\Enums\ChannelType;
 use App\Models\Channel;
@@ -26,6 +27,7 @@ final readonly class ChannelService
         private TelegramGateway $telegram,
         private VkGateway $vk,
         private MaxGateway $max,
+        private WhatsAppGateway $whatsapp,
     ) {}
 
     /**
@@ -102,6 +104,33 @@ final readonly class ChannelService
             ));
 
             $this->max->getMe($channel);
+
+            return $channel;
+        });
+    }
+
+    /**
+     * Подключает WhatsApp к тенанту через провайдера Green API: создаёт канал с
+     * зашифрованными кредами инстанса (idInstance + apiTokenInstance). Бот
+     * работает через long polling (`whatsapp:poll`), публичный вебхук не нужен.
+     *
+     * Валидация — getStateInstance внутри транзакции: аккаунт должен быть привязан
+     * (QR отсканирован, состояние «authorized»), иначе канал не остаётся
+     * полу-подключённым.
+     */
+    public function connectWhatsApp(string $tenantId, string $idInstance, string $apiToken): Channel
+    {
+        return DB::transaction(function () use ($tenantId, $idInstance, $apiToken): Channel {
+            $channel = $this->channels->create(new NewChannelData(
+                tenantId: $tenantId,
+                type: ChannelType::WhatsApp,
+                externalId: $idInstance,
+                credentials: ['id_instance' => $idInstance, 'api_token' => $apiToken],
+            ));
+
+            if ($this->whatsapp->stateInstance($channel) !== 'authorized') {
+                throw new RuntimeException('WhatsApp не привязан: отсканируйте QR в Green API (статус инстанса должен быть «authorized»).');
+            }
 
             return $channel;
         });
