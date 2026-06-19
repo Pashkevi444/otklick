@@ -116,6 +116,33 @@ final class BroadcastServiceTest extends TestCase
         $this->assertSame(1, $fresh->sent_count);
     }
 
+    public function test_unreachable_client_is_recorded_as_skipped(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        // Клиент с ником в карточке, но без диалога/чата — недостижим (как «Павел»).
+        Client::factory()->create([
+            'tenant_id' => $tenant->id,
+            'email' => null,
+            'telegram_username' => 'pashkevi4',
+            'marketing_opt_out' => false,
+        ]);
+
+        $broadcast = Broadcast::factory()->create([
+            'tenant_id' => $tenant->id,
+            'channels' => ['telegram'],
+            'status' => BroadcastStatus::Sending,
+        ]);
+
+        $fresh = $this->deliver($broadcast);
+
+        $this->assertSame(0, $fresh->sent_count);
+        $this->assertSame(0, $fresh->failed_count);
+        $this->assertDatabaseHas('broadcast_deliveries', [
+            'broadcast_id' => $broadcast->id,
+            'status' => 'skipped',
+        ]);
+    }
+
     public function test_failed_delivery_is_recorded_with_error(): void
     {
         $tenant = Tenant::factory()->max()->create();

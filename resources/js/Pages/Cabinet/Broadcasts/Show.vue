@@ -19,6 +19,7 @@ interface Broadcast {
 interface Delivery {
     id: string;
     recipient: string;
+    contact: string | null;
     channel: string;
     channel_label: string;
     status: string;
@@ -32,6 +33,13 @@ const fmt = (iso: string | null): string => (iso ? new Date(iso).toLocaleString(
 
 const sentRows = computed(() => props.deliveries.filter((d) => d.status === 'sent').length);
 const failedRows = computed(() => props.deliveries.filter((d) => d.status === 'failed').length);
+const skippedRows = computed(() => props.deliveries.filter((d) => d.status === 'skipped').length);
+
+const statusBadge = (status: string): { cls: string; label: string } => {
+    if (status === 'sent') return { cls: 'bg-green-100 text-green-700', label: 'Доставлено' };
+    if (status === 'failed') return { cls: 'bg-red-100 text-red-700', label: 'Ошибка' };
+    return { cls: 'bg-slate-200 text-slate-500', label: 'Пропущен' };
+};
 </script>
 
 <template>
@@ -66,7 +74,7 @@ const failedRows = computed(() => props.deliveries.filter((d) => d.status === 'f
         <div class="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-white/10">
                 <div class="font-semibold text-[#1F4E79] dark:text-sky-200">Журнал доставки</div>
-                <div class="text-xs text-slate-400">✓ {{ sentRows }} · ✕ {{ failedRows }}</div>
+                <div class="text-xs text-slate-400">✓ {{ sentRows }} · ✕ {{ failedRows }} · ⊘ {{ skippedRows }}</div>
             </div>
 
             <div v-if="deliveries.length === 0" class="p-8 text-center text-sm text-slate-400">
@@ -85,17 +93,15 @@ const failedRows = computed(() => props.deliveries.filter((d) => d.status === 'f
                 </thead>
                 <tbody>
                     <tr v-for="d in deliveries" :key="d.id" class="border-t border-slate-100 dark:border-white/5">
-                        <td class="px-5 py-2 font-medium text-slate-700 dark:text-slate-200">{{ d.recipient }}</td>
+                        <td class="px-5 py-2">
+                            <div class="font-medium text-slate-700 dark:text-slate-200">{{ d.recipient }}</div>
+                            <div v-if="d.contact" class="text-xs text-slate-400">{{ d.contact }}</div>
+                        </td>
                         <td class="px-5 py-2 text-slate-500">{{ d.channel_label }}</td>
                         <td class="px-5 py-2">
-                            <span
-                                class="rounded-full px-2 py-0.5 text-xs"
-                                :class="d.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                            >
-                                {{ d.status === 'sent' ? 'Доставлено' : 'Ошибка' }}
-                            </span>
+                            <span class="rounded-full px-2 py-0.5 text-xs" :class="statusBadge(d.status).cls">{{ statusBadge(d.status).label }}</span>
                         </td>
-                        <td class="px-5 py-2 max-w-md whitespace-pre-wrap break-words text-xs text-red-600">{{ d.error ?? '—' }}</td>
+                        <td class="px-5 py-2 max-w-md whitespace-pre-wrap break-words text-xs" :class="d.status === 'failed' ? 'text-red-600' : 'text-slate-400'">{{ d.error ?? '—' }}</td>
                         <td class="px-5 py-2 text-slate-400">{{ fmt(d.at) }}</td>
                     </tr>
                 </tbody>

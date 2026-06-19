@@ -11,6 +11,7 @@ use App\Jobs\SendBroadcast;
 use App\Mail\BroadcastMail;
 use App\Models\Broadcast;
 use App\Models\BroadcastDelivery;
+use App\Models\Client;
 use App\Models\Tenant;
 use App\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Repositories\Contracts\ClientRepositoryInterface;
@@ -115,6 +116,7 @@ final readonly class BroadcastService
 
         foreach ($this->clients->marketingAudienceForCurrentTenant($broadcast->client_ids) as $client) {
             $seen = [];
+            $before = count($deliveries);
 
             foreach ($client->conversations as $conversation) {
                 $channel = $conversation->channel;
@@ -163,6 +165,12 @@ final readonly class BroadcastService
 
                 $deliveries[] = $this->deliveryRow($broadcast, $client->id, 'email', $client->email, $error);
             }
+
+            // Клиент в аудитории, но ни одного доступного канала — фиксируем «Пропущен»
+            // с причиной, чтобы в отчёте было видно, кому и почему не ушло.
+            if (count($deliveries) === $before) {
+                $deliveries[] = $this->skipRow($broadcast, $client, $messengerTypes, $withEmail);
+            }
         }
 
         $this->broadcasts->recordDeliveries($deliveries);
@@ -184,6 +192,39 @@ final readonly class BroadcastService
             'failed' => $failed,
             'recurring' => $next !== null,
         ]);
+    }
+
+    /**
+     * Строка «Пропущен»: клиент в аудитории, но ни один выбранный канал не доступен.
+     *
+     * @param  list<string>  $messengerTypes
+     * @return array<string, mixed>
+     */
+    private function skipRow(Broadcast $broadcast, Client $client, array $messengerTypes, bool $withEmail): array
+    {
+        $reasons = [];
+        foreach ($messengerTypes as $ch) {
+            $label = match ($ch) {
+                'telegram' => 'Telegram',
+                'vk' => 'ВКонтакте',
+                'max' => 'MAX',
+                default => $ch,
+            };
+            $reasons[] = $label.': нет чата (клиент не писал боту)';
+        }
+        if ($withEmail && ($client->email === null || $client->email === '')) {
+            $reasons[] = 'Email: не указан';
+        }
+
+        return [
+            'tenant_id' => $broadcast->tenant_id,
+            'broadcast_id' => $broadcast->id,
+            'client_id' => $client->id,
+            'channel' => 'skipped',
+            'target' => $client->phone ?? $client->telegram_username,
+            'status' => BroadcastDelivery::STATUS_SKIPPED,
+            'error' => 'Не доставлено — '.($reasons === [] ? 'нет доступного канала' : implode('; ', $reasons)),
+        ];
     }
 
     /**

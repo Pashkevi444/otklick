@@ -27,6 +27,8 @@ class BroadcastDelivery extends TenantOwnedModel
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_SKIPPED = 'skipped';
+
     protected $fillable = [
         'tenant_id',
         'broadcast_id',

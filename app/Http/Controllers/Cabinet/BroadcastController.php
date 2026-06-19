@@ -81,6 +81,7 @@ final class BroadcastController extends Controller
                 ->map(fn (BroadcastDelivery $d): array => [
                     'id' => $d->id,
                     'recipient' => $d->client?->name ?: ($d->client?->phone ?: ($d->target ?: '—')),
+                    'contact' => $d->channel === 'email' ? $d->target : ($d->client?->phone ?: $d->target),
                     'channel' => $d->channel,
                     'channel_label' => $this->channelLabel($d->channel),
                     'status' => $d->status,
@@ -119,6 +120,7 @@ final class BroadcastController extends Controller
             'vk' => 'ВКонтакте',
             'max' => 'MAX',
             'email' => 'Email',
+            'skipped' => '—',
             default => $value,
         };
     }
