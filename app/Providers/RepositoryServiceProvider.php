@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
@@ -20,6 +21,7 @@ use App\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
 use App\Repositories\Contracts\SiteSettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\Eloquent\EloquentBroadcastRepository;
 use App\Repositories\Eloquent\EloquentChannelRepository;
 use App\Repositories\Eloquent\EloquentClientRepository;
 use App\Repositories\Eloquent\EloquentConversationRepository;
@@ -54,6 +56,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         KnowledgeEntryRepositoryInterface::class => EloquentKnowledgeEntryRepository::class,
         KnowledgeGapRepositoryInterface::class => EloquentKnowledgeGapRepository::class,
         ClientRepositoryInterface::class => EloquentClientRepository::class,
+        BroadcastRepositoryInterface::class => EloquentBroadcastRepository::class,
         LeadAnalyticsRepositoryInterface::class => EloquentLeadAnalyticsRepository::class,
         NotificationRecipientRepositoryInterface::class => EloquentNotificationRecipientRepository::class,
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,

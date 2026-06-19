@@ -6,6 +6,7 @@ namespace App\Repositories\Contracts;
 
 use App\Models\Client;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * Доступ к базе клиентов тенанта. Скоупится текущим тенантом (RLS + scope).
@@ -50,4 +51,18 @@ interface ClientRepositoryInterface
      * @return list<string>
      */
     public function channelsForCurrentTenant(): array;
+
+    /**
+     * Аудитория рассылки: клиенты тенанта без отписки (marketing_opt_out=false),
+     * с подгруженными диалогами и каналами — чтобы по ним вычислить достижимые
+     * цели (мессенджеры + email).
+     *
+     * @return Collection<int, Client>
+     */
+    public function marketingAudienceForCurrentTenant(): Collection;
+
+    /**
+     * Число клиентов в аудитории рассылки (без отписки) — для предпросмотра.
+     */
+    public function marketingAudienceCountForCurrentTenant(): int;
 }

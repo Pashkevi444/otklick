@@ -17,3 +17,6 @@ Schedule::command('appointments:send-reminders')->everyFiveMinutes()->withoutOve
 // Сверка записей с CRM: закрываем заказы, время визита которых прошло (→ «Успешный
 // лид»). Только у тенантов с CRM — раз в час.
 Schedule::command('bookings:reconcile')->hourly()->withoutOverlapping();
+
+// Запуск запланированных рассылок (по расписанию/периодичных) — раз в 5 минут.
+Schedule::command('broadcasts:run-due')->everyFiveMinutes()->withoutOverlapping();

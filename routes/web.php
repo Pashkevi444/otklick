@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\AnalyticsController;
 use App\Http\Controllers\Cabinet\BillingController;
+use App\Http\Controllers\Cabinet\BroadcastController;
 use App\Http\Controllers\Cabinet\BusinessOverviewController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
 use App\Http\Controllers\Cabinet\ChannelController;
@@ -109,6 +110,15 @@ $onDomain(config('app.business_domain'), function (): void {
             Route::put('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::post('/clients/{client}/summary', [ClientController::class, 'refreshSummary'])->name('clients.summary');
             Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
+        });
+
+        // Рассылки по базе клиентов — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
+        Route::middleware('plan:broadcasts')->group(function (): void {
+            Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts.index');
+            Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
+            Route::post('/broadcasts/{broadcast}/run', [BroadcastController::class, 'run'])->name('broadcasts.run');
+            Route::post('/broadcasts/{broadcast}/cancel', [BroadcastController::class, 'cancel'])->name('broadcasts.cancel');
+            Route::delete('/broadcasts/{broadcast}', [BroadcastController::class, 'destroy'])->name('broadcasts.destroy');
         });
 
         Route::get('/knowledge', [KnowledgeEntryController::class, 'index'])->name('knowledge.index');

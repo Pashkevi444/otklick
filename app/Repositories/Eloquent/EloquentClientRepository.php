@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Repositories\Contracts\ClientRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 final class EloquentClientRepository implements ClientRepositoryInterface
 {
@@ -78,5 +79,18 @@ final class EloquentClientRepository implements ClientRepositoryInterface
             ->pluck('first_channel_type')
             ->map(fn ($v): string => (string) $v)
             ->all();
+    }
+
+    public function marketingAudienceForCurrentTenant(): Collection
+    {
+        return Client::query()
+            ->where('marketing_opt_out', false)
+            ->with(['conversations' => fn ($q) => $q->whereNotNull('external_chat_id')->with('channel')])
+            ->get();
+    }
+
+    public function marketingAudienceCountForCurrentTenant(): int
+    {
+        return Client::query()->where('marketing_opt_out', false)->count();
     }
 }

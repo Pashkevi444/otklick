@@ -33,6 +33,13 @@ const navItems = computed<NavItem[]>(() => {
         items.push({ label: 'Аналитика', href: '/cabinet/analytics' });
     }
 
+    // Рассылки — если входят в тариф и разрешены оператору.
+    const hasBroadcasts = (user.value?.tenant?.features?.broadcasts ?? false)
+        && (user.value?.allowedSections?.includes('broadcasts') ?? false);
+    if (hasBroadcasts) {
+        items.push({ label: 'Рассылки', href: '/cabinet/broadcasts' });
+    }
+
     items.push({ label: 'Подписка', href: '/cabinet/subscription' }, { label: 'Оплата', href: '/cabinet/billing' });
 
     return items;

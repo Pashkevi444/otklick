@@ -41,7 +41,7 @@ const rows = computed(() => [
     { label: 'Напоминания клиентам о записи', on: f.value.reminders },
     { label: 'Умный поиск по базе знаний (RAG)', on: f.value.rag },
     { label: 'Дополнительные каналы (Avito и др.)', on: f.value.allChannels },
-    { label: 'Рассылки и уведомления', on: f.value.broadcasts },
+    { label: 'Рассылки по базе клиентов (мессенджеры + почта, по расписанию)', on: f.value.broadcasts },
     { label: 'Расширенная аналитика и статистика', on: f.value.analytics },
     { label: 'ИИ-рекомендации в аналитике (чего не хватает)', on: f.value.aiInsights },
     { label: 'База клиентов и маркетинговые рекомендации', on: f.value.clientBase },

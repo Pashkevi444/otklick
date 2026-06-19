@@ -22,6 +22,7 @@ enum MemberPermission: string implements HasLabel
     // Доступ к разделам (значение совпадает с CabinetSection).
     case Conversations = 'conversations';
     case Clients = 'clients';
+    case Broadcasts = 'broadcasts';
     case Knowledge = 'knowledge';
     case Analytics = 'analytics';
     case Channels = 'channels';
@@ -60,6 +61,7 @@ enum MemberPermission: string implements HasLabel
         return match ($this) {
             self::Conversations, self::ConversationsEdit, self::ConversationsDelete => CabinetSection::Conversations,
             self::Clients, self::ClientsEdit, self::ClientsDelete => CabinetSection::Clients,
+            self::Broadcasts => CabinetSection::Broadcasts,
             self::Knowledge => CabinetSection::Knowledge,
             self::Analytics => CabinetSection::Analytics,
             self::Channels => CabinetSection::Channels,

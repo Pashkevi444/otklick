@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $summary
  * @property Carbon|null $summary_generated_at
  * @property string|null $notes
+ * @property bool $marketing_opt_out
  */
 class Client extends TenantOwnedModel
 {
@@ -43,6 +44,7 @@ class Client extends TenantOwnedModel
         'summary',
         'summary_generated_at',
         'notes',
+        'marketing_opt_out',
     ];
 
     protected function casts(): array
@@ -51,6 +53,7 @@ class Client extends TenantOwnedModel
             'first_seen_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'summary_generated_at' => 'datetime',
+            'marketing_opt_out' => 'boolean',
         ];
     }
 
