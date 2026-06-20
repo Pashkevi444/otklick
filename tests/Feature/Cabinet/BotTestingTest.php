@@ -9,7 +9,9 @@ use App\Models\Client;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\BotResponder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -60,6 +62,23 @@ final class BotTestingTest extends TestCase
 
         // Тестовый диалог существует — но только как «песочница».
         $this->assertSame(1, Conversation::query()->withTest()->count());
+    }
+
+    public function test_pipeline_failure_does_not_500_the_chat(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        // Реальный пайплайн (LLM/эмбеддер/CRM) может бросить — тестовый чат должен
+        // вернуть понятный ответ, а не 500.
+        $this->mock(BotResponder::class, function ($mock): void {
+            $mock->shouldReceive('respond')->andThrow(new RuntimeException('boom'));
+        });
+
+        $this->actingAs($owner)
+            ->postJson('/cabinet/testing/message', ['text' => 'привет'])
+            ->assertOk()
+            ->assertJsonPath('text', 'Бот не смог обработать сообщение — что-то пошло не так на стороне сервиса. Мы записали детали для разбора.');
     }
 
     public function test_purge_command_clears_sandbox(): void

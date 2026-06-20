@@ -43,8 +43,6 @@ const allCards: Card[] = [
     { key: 'knowledge', icon: '📚', label: 'База знаний', text: 'Тексты, по которым отвечает бот', href: '/cabinet/knowledge', section: 'knowledge' },
     { key: 'notifications', icon: '🔔', label: 'Уведомления и эскалация', text: 'Лиды и записи на почту/в Telegram + ответ клиенту через бота', href: '/cabinet/notifications', section: 'notifications' },
     { key: 'integrations', icon: '🔗', label: 'YClients', text: 'Запись клиентов в YClients', href: '/cabinet/integrations', section: 'integrations', feature: 'crm' },
-    { key: 'news', icon: '📰', label: 'Новости', text: 'Новости и анонсы платформы «Отклик»', href: '/cabinet/news' },
-    { key: 'updates', icon: '✨', label: 'Обновления', text: 'Что нового: патчи и улучшения сервиса', href: '/cabinet/updates' },
 ];
 
 const decorate = (c: Card): DecoratedCard => {

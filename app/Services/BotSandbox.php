@@ -13,7 +13,9 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\SandboxRepositoryInterface;
 use App\Tenancy\TestContext;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Тестовый прогон бота («песочница»): прогоняет настоящий пайплайн ответа
@@ -51,10 +53,31 @@ final readonly class BotSandbox
             );
             $this->messages->recordInbound($conversation, $incoming);
 
-            // Контакты клиента (как в проде, до ответа) — пишутся в тестовую карточку.
-            $this->contacts->fromInbound($conversation, $text);
+            // Пайплайн ответа может бросить (LLM/эмбеддер/CRM/сеть). В тестовом чате
+            // это не должно ронять запрос 500-й — ловим, логируем для разбора и
+            // показываем понятный ответ (реальных клиентов/CRM это не затрагивает).
+            try {
+                // Контакты клиента (как в проде, до ответа) — в тестовую карточку.
+                $this->contacts->fromInbound($conversation, $text);
 
-            $reply = $this->responder->respond($tenant, $conversation, $text);
+                $reply = $this->responder->respond($tenant, $conversation, $text);
+            } catch (Throwable $e) {
+                Log::error('sandbox.respond_failed', [
+                    'tenant_id' => (string) $tenant->id,
+                    'conversation_id' => (string) $conversation->id,
+                    'text' => $text,
+                    'error' => $e->getMessage(),
+                    'exception' => $e::class,
+                ]);
+
+                $fallback = 'Бот не смог обработать сообщение — что-то пошло не так на стороне сервиса. Мы записали детали для разбора.';
+                $this->messages->recordOutbound($conversation, $fallback, MessageStatus::Failed);
+
+                return new SandboxReply(
+                    $fallback,
+                    note: 'Ошибка обработки (детали в логах). Это тестовый режим — реальных клиентов и записей в CRM не затронуло.',
+                );
+            }
 
             $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
             $this->conversations->touchLastMessage($conversation);
