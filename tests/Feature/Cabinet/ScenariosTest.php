@@ -55,6 +55,30 @@ final class ScenariosTest extends TestCase
         $this->assertSame(['акция', 'скидка'], $flow->triggers);
     }
 
+    public function test_store_preserves_input_and_condition_nodes(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)->post('/cabinet/scenarios', [
+            'name' => 'Анкета',
+            'is_active' => true,
+            'triggers' => ['анкета'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'input', 'text' => 'Как вас зовут?', 'variable' => 'name', 'next' => 'n2'],
+                'n2' => ['type' => 'condition', 'variable' => 'name', 'operator' => 'contains', 'value' => 'иван', 'next' => 'n3', 'else' => 'n3'],
+                'n3' => ['type' => 'message', 'text' => 'Привет, {{name}}', 'action' => 'end', 'options' => []],
+            ]],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $flow = Flow::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        $nodes = $flow->definition['nodes'];
+        $this->assertSame('input', $nodes['n1']['type']);
+        $this->assertSame('name', $nodes['n1']['variable']);
+        $this->assertSame('condition', $nodes['n2']['type']);
+        $this->assertSame('contains', $nodes['n2']['operator']);
+        $this->assertSame('n3', $nodes['n2']['else']);
+    }
+
     public function test_toggle_flips_active(): void
     {
         [$tenant, $owner] = $this->tenantWithOwner();
