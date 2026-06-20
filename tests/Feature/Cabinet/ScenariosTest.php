@@ -79,6 +79,24 @@ final class ScenariosTest extends TestCase
         $this->assertSame('n3', $nodes['n2']['else']);
     }
 
+    public function test_store_preserves_canvas_positions(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)->post('/cabinet/scenarios', [
+            'name' => 'Схема',
+            'is_active' => true,
+            'triggers' => ['привет'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'text' => 'Привет', 'action' => 'end', 'options' => [], 'position' => ['x' => 120, 'y' => 40]],
+            ]],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $flow = Flow::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        $this->assertSame(120, $flow->definition['nodes']['n1']['position']['x']);
+        $this->assertSame(40, $flow->definition['nodes']['n1']['position']['y']);
+    }
+
     public function test_toggle_flips_active(): void
     {
         [$tenant, $owner] = $this->tenantWithOwner();

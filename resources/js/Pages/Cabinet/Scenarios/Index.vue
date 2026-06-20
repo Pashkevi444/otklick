@@ -4,6 +4,7 @@ import type { RequestPayload } from '@inertiajs/core';
 import { computed, reactive, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Toggle from '@/Components/Toggle.vue';
+import FlowCanvas from '@/Components/FlowCanvas.vue';
 
 interface OptionEdge {
     label: string;
@@ -24,6 +25,7 @@ interface FlowNodeDef {
     value?: string;
     else?: string;
     variants?: Variant[];
+    position?: { x: number; y: number };
 }
 interface AbStat {
     variant: string;
@@ -52,6 +54,8 @@ interface NodeEdit {
     value: string;
     else: string;
     variants: Variant[];
+    x: number;
+    y: number;
 }
 interface Option {
     value: string;
@@ -72,9 +76,9 @@ const form = useForm<{ id: string | null; name: string; is_active: boolean; trig
 
 const nodeIds = computed(() => form.nodes.map((n) => n.id));
 
-const blankNode = (id: string): NodeEdit => ({
+const blankNode = (id: string, x = 0, y = 0): NodeEdit => ({
     id, type: 'message', text: '', action: 'none', options: [],
-    variable: '', next: '', operator: 'eq', value: '', else: '', variants: [],
+    variable: '', next: '', operator: 'eq', value: '', else: '', variants: [], x, y,
 });
 
 const newFlow = (): void => {
@@ -100,6 +104,8 @@ const editFlow = (f: FlowRow): void => {
         value: n.value ?? '',
         else: n.else ?? '',
         variants: (n.variants ?? []).map((v) => ({ label: v.label, next: v.next })),
+        x: n.position?.x ?? 0,
+        y: n.position?.y ?? 0,
     }));
     form.id = f.id;
     form.name = f.name;
@@ -116,7 +122,19 @@ const cancel = (): void => {
 
 const addNode = (): void => {
     const nums = form.nodes.map((n) => parseInt(n.id.replace(/\D/g, ''), 10) || 0);
-    form.nodes.push(blankNode('n' + (Math.max(0, ...nums) + 1)));
+    const i = form.nodes.length;
+    form.nodes.push(blankNode('n' + (Math.max(0, ...nums) + 1), (i % 4) * 230, Math.floor(i / 4) * 150));
+};
+
+const onNodeMoved = (id: string, x: number, y: number): void => {
+    const n = form.nodes.find((nn) => nn.id === id);
+    if (n) {
+        n.x = x;
+        n.y = y;
+    }
+};
+const focusNode = (id: string): void => {
+    document.getElementById(`node-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 const removeNode = (id: string): void => {
     form.nodes = form.nodes.filter((n) => n.id !== id);
@@ -158,6 +176,7 @@ const save = (): void => {
                 options: n.action === 'none' ? n.options.filter((o) => o.label.trim() !== '' && o.next) : [],
             };
         }
+        nodes[n.id].position = { x: n.x, y: n.y }; // позиция на холсте (бэкенд игнорирует)
     }
     const payload = {
         name: form.name,
@@ -256,8 +275,15 @@ const inputHint = 'Ответ клиента сохранится и его мо
                 </div>
             </div>
 
+            <!-- Визуальная схема воронки: тяни узлы мышкой, клик — к редактору узла -->
+            <div>
+                <div class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Схема воронки</div>
+                <FlowCanvas :nodes="form.nodes" :start="form.start" @moved="onNodeMoved" @select="focusNode" />
+                <p class="mt-1 text-xs text-slate-400">Перетаскивай узлы — расположение сохранится. Клик по узлу откроет его настройки ниже.</p>
+            </div>
+
             <!-- Узлы -->
-            <div v-for="node in form.nodes" :key="node.id" class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <div v-for="node in form.nodes" :id="`node-card-${node.id}`" :key="node.id" class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
                 <div class="mb-2 flex items-center justify-between">
                     <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Узел {{ node.id }}<span v-if="form.start === node.id" class="ml-2 rounded bg-[#EAF2FB] px-1.5 py-0.5 text-xs text-[#2E74B5]">старт</span></div>
                     <button v-if="form.nodes.length > 1" type="button" class="text-xs text-red-600 hover:underline" @click="removeNode(node.id)">Удалить узел</button>
