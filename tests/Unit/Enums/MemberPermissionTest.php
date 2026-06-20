@@ -36,6 +36,8 @@ final class MemberPermissionTest extends TestCase
         // Базовые — есть.
         $this->assertContains('conversations', $grantable);
         $this->assertContains('conversations.delete', $grantable);
+        // Тестирование бота доступно на всех тарифах (без требования к возможности).
+        $this->assertContains('testing', $grantable);
 
         // На «Макс» доступно всё.
         $max = array_map(fn (MemberPermission $p): string => $p->value, MemberPermission::grantableWith(TenantPlan::Max->features()));

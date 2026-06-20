@@ -24,6 +24,7 @@ const allCards: Card[] = [
     { icon: '👤', label: 'База клиентов', text: 'Карточки клиентов, история и краткое резюме', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
     { icon: '📨', label: 'Рассылки', text: 'Сообщения по базе клиентов: мессенджеры и почта, по расписанию', href: '/cabinet/broadcasts', section: 'broadcasts', feature: 'broadcasts' },
     { icon: '🪄', label: 'Сценарии', text: 'No-code воронки: «если клиент написал X → ответь Y, предложи Z»', href: '/cabinet/scenarios', section: 'scenarios', feature: 'flows' },
+    { icon: '🧪', label: 'Тестирование бота', text: 'Поговорите с ботом как клиент — проверьте ответы, не создавая лидов', href: '/cabinet/testing', section: 'testing' },
     { icon: '📡', label: 'Каналы', text: 'Telegram и другие каналы общения с клиентами', href: '/cabinet/channels', section: 'channels' },
     { icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget', section: 'widget' },
     { icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile', section: 'profile' },

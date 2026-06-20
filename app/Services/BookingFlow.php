@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Crm\Contracts\CrmGateway;
 use App\Crm\CrmGatewayResolver;
 use App\Crm\Data\BookingRequest;
+use App\Crm\Data\BookingResult;
 use App\Crm\Data\CrmService;
 use App\Crm\Data\CrmStaff;
 use App\Crm\Data\SlotQuery;
@@ -23,6 +24,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Support\PhoneExtractor;
 use App\Support\RussianDateParser;
+use App\Tenancy\TestContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -67,6 +69,16 @@ class BookingFlow
         private readonly LlmClient $llm,
         private readonly ClientService $clients,
     ) {}
+
+    /**
+     * Тестовый прогон бота (песочница): реальные обращения в CRM (создание/отмена
+     * записи) не делаем — имитируем успех, чтобы бизнес прошёл сценарий целиком,
+     * не плодя настоящих записей в YClients.
+     */
+    private function inSandbox(): bool
+    {
+        return app(TestContext::class)->active();
+    }
 
     /** Доступна ли автозапись тенанту (есть активное CRM-подключение). */
     public function isAvailable(): bool
@@ -625,13 +637,15 @@ class BookingFlow
             'slot' => $state['slot'] ?? null,
         ]);
 
-        $result = $gateway->createBooking($connection, new BookingRequest(
-            serviceId: (string) $state['service_id'],
-            staffId: (string) $state['staff_id'],
-            start: (string) $state['slot'],
-            clientName: $conversation->displayName() ?? 'Клиент',
-            clientPhone: (string) $conversation->displayPhone(),
-        ));
+        $result = $this->inSandbox()
+            ? BookingResult::ok('sandbox')
+            : $gateway->createBooking($connection, new BookingRequest(
+                serviceId: (string) $state['service_id'],
+                staffId: (string) $state['staff_id'],
+                start: (string) $state['slot'],
+                clientName: $conversation->displayName() ?? 'Клиент',
+                clientPhone: (string) $conversation->displayPhone(),
+            ));
 
         $this->conversations->setBookingState($conversation, null);
         $this->log('create_result', $conversation, [
@@ -709,7 +723,9 @@ class BookingFlow
         }
 
         $recordId = $booked->crm_record_id;
-        $result = $this->gateways->for($connection->provider)->cancelBooking($connection, $recordId);
+        $result = $this->inSandbox()
+            ? BookingResult::ok($recordId)
+            : $this->gateways->for($connection->provider)->cancelBooking($connection, $recordId);
 
         Log::info('booking.cancel_result', [
             'conversation_id' => $booked->id ?? null,
@@ -736,7 +752,9 @@ class BookingFlow
     private function cancelSuperseded(Conversation $conversation, CrmConnection $connection, CrmGateway $gateway, string $recordId): void
     {
         try {
-            $result = $gateway->cancelBooking($connection, $recordId);
+            $result = $this->inSandbox()
+                ? BookingResult::ok($recordId)
+                : $gateway->cancelBooking($connection, $recordId);
             $this->log('supersede_cancel', $conversation, ['record_id' => $recordId, 'success' => $result->success]);
         } catch (Throwable $e) {
             report($e);
@@ -777,7 +795,9 @@ class BookingFlow
             return;
         }
 
-        $result = $this->gateways->for($connection->provider)->cancelBooking($connection, $conversation->crm_record_id);
+        $result = $this->inSandbox()
+            ? BookingResult::ok($conversation->crm_record_id)
+            : $this->gateways->for($connection->provider)->cancelBooking($connection, $conversation->crm_record_id);
 
         Log::info('booking.cancel_for_conversation', [
             'conversation_id' => $conversation->id ?? null,

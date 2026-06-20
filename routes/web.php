@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\AnalyticsController;
 use App\Http\Controllers\Cabinet\BillingController;
+use App\Http\Controllers\Cabinet\BotTestController;
 use App\Http\Controllers\Cabinet\BroadcastController;
 use App\Http\Controllers\Cabinet\BusinessOverviewController;
 use App\Http\Controllers\Cabinet\BusinessProfileController;
@@ -84,6 +85,13 @@ $onDomain(config('app.business_domain'), function (): void {
     Route::middleware(['auth', 'tenant', EnsureSectionAllowed::class])->prefix('cabinet')->name('cabinet.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('/overview', BusinessOverviewController::class)->name('overview');
+
+        // Тестирование бота (песочница): живой чат с ботом по своим настройкам без
+        // записи лидов/клиентов и без реальной записи в CRM. Доступно на всех
+        // тарифах; владелец может выдать право `testing` сотрудникам («Команда»).
+        Route::get('/testing', [BotTestController::class, 'index'])->name('testing.index');
+        Route::post('/testing/message', [BotTestController::class, 'message'])->name('testing.message');
+        Route::post('/testing/reset', [BotTestController::class, 'reset'])->name('testing.reset');
 
         // Аналитика — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
         Route::middleware('plan:analytics')->group(function (): void {

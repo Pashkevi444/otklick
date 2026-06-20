@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Tenancy\TenantContext;
+use App\Tenancy\TestContext;
 use Illuminate\Support\ServiceProvider;
 
 final class TenancyServiceProvider extends ServiceProvider
@@ -14,5 +15,8 @@ final class TenancyServiceProvider extends ServiceProvider
         // scoped → Octane сбрасывает инстанс между запросами,
         // тенант не «протекает» между запросами в резидентном рантайме.
         $this->app->scoped(TenantContext::class);
+
+        // Признак «тестовый прогон бота» — тоже scoped (не течёт между запросами).
+        $this->app->scoped(TestContext::class);
     }
 }

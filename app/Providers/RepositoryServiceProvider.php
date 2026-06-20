@@ -21,6 +21,7 @@ use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
+use App\Repositories\Contracts\SandboxRepositoryInterface;
 use App\Repositories\Contracts\SiteSettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
@@ -41,6 +42,7 @@ use App\Repositories\Eloquent\EloquentLeadAnalyticsRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
 use App\Repositories\Eloquent\EloquentNotificationRecipientRepository;
 use App\Repositories\Eloquent\EloquentPasswordResetCodeRepository;
+use App\Repositories\Eloquent\EloquentSandboxRepository;
 use App\Repositories\Eloquent\EloquentSiteSettingsRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
 use App\Repositories\Eloquent\EloquentUserRepository;
@@ -73,6 +75,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         KnowledgeChunkRepositoryInterface::class => EloquentKnowledgeChunkRepository::class,
         EmailChangeCodeRepositoryInterface::class => EloquentEmailChangeCodeRepository::class,
         SiteSettingsRepositoryInterface::class => EloquentSiteSettingsRepository::class,
+        SandboxRepositoryInterface::class => EloquentSandboxRepository::class,
         PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,
     ];
 }

@@ -24,3 +24,7 @@ Schedule::command('broadcasts:run-due')->everyFiveMinutes()->withoutOverlapping(
 // Недельный AI-дайджест владельцу («директор») — понедельник 9:00. Только тенанты
 // с правом aiInsights и с лидами за неделю.
 Schedule::command('analytics:weekly-digest')->weeklyOn(1, '9:00')->withoutOverlapping();
+
+// Чистим данные «песочницы» тестирования бота (тестовые диалоги/клиенты) — раз в
+// сутки, чтобы тестовые прогоны не накапливались в БД.
+Schedule::command('sandbox:purge')->daily()->withoutOverlapping();

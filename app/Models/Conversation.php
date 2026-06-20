@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
+use App\Models\Concerns\MarksSandbox;
 use Database\Factories\ConversationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,6 +44,8 @@ class Conversation extends TenantOwnedModel
 {
     /** @use HasFactory<ConversationFactory> */
     use HasFactory;
+
+    use MarksSandbox;
 
     protected $fillable = [
         'tenant_id',
