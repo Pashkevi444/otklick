@@ -191,6 +191,23 @@ const onNodeMoved = (id: string, x: number, y: number): void => {
 const focusNode = (id: string): void => {
     document.getElementById(`node-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
+
+// Рисование/удаление стрелок на схеме → проставляем переход в нужное поле узла.
+const setHandleTarget = (source: string, handle: string, target: string): void => {
+    const n = form.nodes.find((nn) => nn.id === source);
+    if (!n) return;
+    if (handle === 'no') n.else = target;
+    else if (handle === 'next' || handle === 'yes') n.next = target;
+    else if (handle.startsWith('v')) {
+        const v = n.variants[Number(handle.slice(1))];
+        if (v) v.next = target;
+    } else if (handle.startsWith('o')) {
+        const o = n.options[Number(handle.slice(1))];
+        if (o) o.next = target;
+    }
+};
+const onNodeConnect = (source: string, handle: string, target: string): void => setHandleTarget(source, handle, target);
+const onNodeDisconnect = (source: string, handle: string): void => setHandleTarget(source, handle, '');
 const removeNode = (id: string): void => {
     form.nodes = form.nodes.filter((n) => n.id !== id);
     form.nodes.forEach((n) => {
@@ -427,8 +444,8 @@ const testSend = (text?: string): void => {
             <!-- Визуальная схема воронки: тяни узлы мышкой, клик — к редактору узла -->
             <div>
                 <div class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Схема воронки</div>
-                <FlowCanvas :nodes="form.nodes" :start="form.start" @moved="onNodeMoved" @select="focusNode" />
-                <p class="mt-1 text-xs text-slate-400">Перетаскивай узлы — расположение сохранится. Клик по узлу откроет его настройки ниже.</p>
+                <FlowCanvas :nodes="form.nodes" :start="form.start" @moved="onNodeMoved" @select="focusNode" @connect="onNodeConnect" @disconnect="onNodeDisconnect" />
+                <p class="mt-1 text-xs text-slate-400">Тяни узлы мышкой; от нижних точек тяни стрелку к другому узлу — задашь переход. Клик по узлу откроет его настройки. Стрелку можно выделить и удалить (Delete).</p>
             </div>
 
             <!-- Тест-прогон: проверить воронку, не написав живому боту -->
