@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
+use App\Llm\Contracts\Embedder;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Flow;
@@ -69,32 +70,65 @@ final class FlowEngineTest extends TestCase
         $this->assertSame('Чем помочь?', $reply->text);
     }
 
-    public function test_semantic_match_on_synonym_phrasing(): void
+    public function test_multiword_trigger_matches_any_keyword_in_long_message(): void
     {
-        // Стеммер не ловит синонимы/перефразирование — ловит семантика (эмбеддинги).
-        // FakeEmbedder = мешок слов, поэтому порог в тесте занижаем.
-        config(['services.flows.semantic_threshold' => 0.3]);
+        // Прод-баг: триггер-фраза «акции скидка» не ловила «…какие нибудь акции
+        // есть типо отец и сын?» (фраза не встречается дословно). Многословный
+        // триггер = набор ключевых слов: совпало любое слово по основе → срабатываем.
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Акции',
+            'is_active' => true,
+            'triggers' => ['акции скидка'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'text' => 'Вот наши акции', 'action' => 'end', 'options' => []],
+            ]],
+        ]));
+
+        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Хорошо классно а у вас какие нибудь акции есть типо отец и сын?'));
+
+        $this->assertNotNull($reply);
+        $this->assertSame('Вот наши акции', $reply->text);
+    }
+
+    public function test_semantic_match_when_no_keyword_overlap(): void
+    {
+        // Семантика ловит перефразирование без общих слов. Эмбеддер-заглушка
+        // даёт одинаковый вектор → косинус 1.0 (изолируем именно семантику).
+        $this->app->bind(Embedder::class, fn (): Embedder => new class implements Embedder
+        {
+            public function embed(string $text): array
+            {
+                return array_fill(0, 8, 1.0);
+            }
+
+            public function dimension(): int
+            {
+                return 8;
+            }
+        });
 
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
         $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
 
         app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
-            'name' => 'Сертификаты',
+            'name' => 'Распродажа',
             'is_active' => true,
-            'triggers' => ['подарочный сертификат'],
+            'triggers' => ['распродажа'],
             'definition' => ['start' => 'n1', 'nodes' => [
-                'n1' => ['type' => 'message', 'text' => 'Оформим сертификат?', 'action' => 'none', 'options' => [
-                    ['label' => 'Да', 'next' => 'n1'],
-                ]],
+                'n1' => ['type' => 'message', 'text' => 'Есть выгодные предложения', 'action' => 'end', 'options' => []],
             ]],
         ]));
 
-        // Фраза-триггер не встречается дословно → лексический проход мимо, работает семантика.
-        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'хочу сертификат в подарок'));
+        // Ни одного общего слова с триггером → лексика мимо, срабатывает семантика.
+        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'хочу что-нибудь подешевле'));
 
         $this->assertNotNull($reply);
-        $this->assertSame('Оформим сертификат?', $reply->text);
+        $this->assertSame('Есть выгодные предложения', $reply->text);
     }
 
     public function test_button_choice_advances_and_escalates(): void

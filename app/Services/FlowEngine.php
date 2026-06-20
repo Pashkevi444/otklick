@@ -75,9 +75,10 @@ final readonly class FlowEngine
     }
 
     /**
-     * Триггер совпадает, если он — подстрока сообщения (фраза из нескольких слов
-     * или короткое слово) ИЛИ основа триггера-слова сходится с основой какого-то
-     * слова сообщения по префиксу (морфология: «акция» ≈ «акции»).
+     * Триггер совпадает, если он целиком — подстрока сообщения, ИЛИ совпала основа
+     * ХОТЯ БЫ ОДНОГО слова триггера с основой слова сообщения (морфология: «акция»
+     * ≈ «акции»). Многословный триггер — это набор ключевых слов, а не дословная
+     * фраза: «акции скидка» ловит «…какие нибудь акции есть…».
      *
      * @param  list<string>  $stems
      */
@@ -89,21 +90,34 @@ final readonly class FlowEngine
             return false;
         }
 
-        // Фраза (есть пробел) или очень короткое слово — буквальное вхождение.
-        if (str_contains($t, ' ') || mb_strlen($t) < 4) {
-            return mb_strpos($needle, $t) !== false;
+        // Точный матч: триггер целиком встречается в сообщении.
+        if (mb_strpos($needle, $t) !== false) {
+            return true;
         }
 
-        $tStem = RussianStem::stem($t);
+        // По каждому слову триггера (через запятую/пробел = ключевые слова).
+        foreach (preg_split('/\s+/u', $t) ?: [] as $word) {
+            if ($word === '') {
+                continue;
+            }
+            if (mb_strlen($word) < 4) {
+                if (mb_strpos($needle, $word) !== false) {
+                    return true;
+                }
 
-        foreach ($stems as $stem) {
-            $min = min(mb_strlen($tStem), mb_strlen($stem));
-            if ($min >= 3 && (str_starts_with($stem, $tStem) || str_starts_with($tStem, $stem))) {
-                return true;
+                continue;
+            }
+
+            $wStem = RussianStem::stem($word);
+            foreach ($stems as $stem) {
+                $min = min(mb_strlen($wStem), mb_strlen($stem));
+                if ($min >= 3 && (str_starts_with($stem, $wStem) || str_starts_with($wStem, $stem))) {
+                    return true;
+                }
             }
         }
 
-        return mb_strpos($needle, $t) !== false;
+        return false;
     }
 
     /**
