@@ -96,6 +96,9 @@ interface ConversationRepositoryInterface
     /** Привязывает диалог к карточке клиента (база клиентов). */
     public function setClientId(Conversation $conversation, string $clientId): void;
 
+    /** Отвязывает все лиды от клиента (client_id → null) при удалении клиента. */
+    public function clearClientLinks(string $clientId): void;
+
     /** Удаляет диалог (с каскадом сообщений). */
     public function delete(Conversation $conversation): void;
 

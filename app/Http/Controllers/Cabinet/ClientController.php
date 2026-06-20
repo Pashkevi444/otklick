@@ -10,6 +10,7 @@ use App\Http\Requests\Cabinet\UpdateClientRequest;
 use App\Models\Client;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ClientRepositoryInterface;
+use App\Services\ClientService;
 use App\Services\ClientSummaryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ final class ClientController extends Controller
     public function __construct(
         private readonly ClientRepositoryInterface $clients,
         private readonly ClientSummaryService $summaries,
+        private readonly ClientService $service,
     ) {}
 
     public function index(Request $request): Response
@@ -108,7 +110,7 @@ final class ClientController extends Controller
         abort_unless($request->user()->allows('clients.delete'), 403);
 
         $model = $this->findOrFail($client);
-        $this->clients->delete($model);
+        $this->service->delete($model);
 
         // Из карточки клиента back() вёл бы на удалённую страницу — уходим в грид;
         // из грида back() сохраняет фильтры/страницу.

@@ -32,6 +32,10 @@ class ContactCapture
 
     public function fromInbound(Conversation $conversation, string $text): void
     {
+        // Сначала узнаём вернувшегося по нативной идентичности канала (заполнит
+        // имя/телефон из карточки) — до разбора этого сообщения.
+        $this->clients->recognizeReturning($conversation);
+
         if ($conversation->contact_phone === null) {
             $phone = PhoneExtractor::fromText($text);
             if ($phone !== null) {

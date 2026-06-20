@@ -64,4 +64,14 @@ class Client extends TenantOwnedModel
     {
         return $this->hasMany(Conversation::class);
     }
+
+    /**
+     * Нативные идентичности клиента по каналам (для узнавания вернувшегося).
+     *
+     * @return HasMany<ClientIdentity, $this>
+     */
+    public function identities(): HasMany
+    {
+        return $this->hasMany(ClientIdentity::class);
+    }
 }

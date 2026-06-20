@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
+use App\Repositories\Contracts\ClientIdentityRepositoryInterface;
 use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
@@ -24,6 +25,7 @@ use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentBroadcastRepository;
 use App\Repositories\Eloquent\EloquentChannelRepository;
+use App\Repositories\Eloquent\EloquentClientIdentityRepository;
 use App\Repositories\Eloquent\EloquentClientRepository;
 use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
@@ -58,6 +60,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         KnowledgeEntryRepositoryInterface::class => EloquentKnowledgeEntryRepository::class,
         KnowledgeGapRepositoryInterface::class => EloquentKnowledgeGapRepository::class,
         ClientRepositoryInterface::class => EloquentClientRepository::class,
+        ClientIdentityRepositoryInterface::class => EloquentClientIdentityRepository::class,
         BroadcastRepositoryInterface::class => EloquentBroadcastRepository::class,
         FlowRepositoryInterface::class => EloquentFlowRepository::class,
         LeadAnalyticsRepositoryInterface::class => EloquentLeadAnalyticsRepository::class,

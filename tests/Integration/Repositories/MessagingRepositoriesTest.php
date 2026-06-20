@@ -95,7 +95,7 @@ final class MessagingRepositoriesTest extends TestCase
         $this->assertSame(2, $channel->conversations()->count());
     }
 
-    public function test_returning_chat_inherits_contact_from_previous_conversation(): void
+    public function test_returning_chat_starts_a_fresh_conversation(): void
     {
         $channel = $this->channels->create(new NewChannelData(
             $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
@@ -108,13 +108,29 @@ final class MessagingRepositoriesTest extends TestCase
         $this->conversations->setClientId($first, $client->id);
         $this->conversations->updateStatus($first, ConversationStatus::Closed);
 
-        // Тот же чат пишет снова — узнаём клиента: имя/телефон/карточка переносятся.
+        // Новый диалог чата — чистый: личность НЕ переносится из прошлого лида
+        // (узнавание теперь через карточку клиента по идентичности канала —
+        // см. ClientService::recognizeReturning).
         $second = $this->conversations->firstOrCreateForChat($channel->id, '777', null);
 
         $this->assertFalse($first->is($second));
-        $this->assertSame('Алексей', $second->contact_name);
-        $this->assertSame('+79991112233', $second->contact_phone);
-        $this->assertSame($client->id, $second->client_id);
+        $this->assertNull($second->contact_phone);
+        $this->assertNull($second->client_id);
+    }
+
+    public function test_clear_client_links_nulls_conversations_of_client(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+        ));
+        $client = Client::factory()->create(['tenant_id' => $this->tenant->id]);
+
+        $conv = $this->conversations->firstOrCreateForChat($channel->id, 'c-1', null);
+        $this->conversations->setClientId($conv, $client->id);
+
+        $this->conversations->clearClientLinks($client->id);
+
+        $this->assertNull(Conversation::query()->find($conv->id)?->client_id);
     }
 
     public function test_close_stale_open_closes_only_inactive_unbooked(): void
