@@ -32,6 +32,7 @@ class ContactGate
     public function __construct(
         private readonly ConversationRepositoryInterface $conversations,
         private readonly MessageRepositoryInterface $messages,
+        private readonly ClientService $clients,
     ) {}
 
     /**
@@ -53,7 +54,7 @@ class ContactGate
         if ($firstContact && $this->isComplete($conversation) && $phone['status'] !== 'valid') {
             $this->conversations->markContactsGateDone($conversation);
 
-            return $this->welcome($tenant, "С возвращением, {$conversation->contact_name}! 👋 Рады снова вас видеть. Чем могу помочь?");
+            return $this->welcome($tenant, "С возвращением, {$conversation->displayName()}! 👋 Рады снова вас видеть. Чем могу помочь?");
         }
 
         // Собираем имя/телефон/email из сообщения. Безопасно даже на первом
@@ -63,7 +64,7 @@ class ContactGate
         if ($this->isComplete($conversation)) {
             $this->conversations->markContactsGateDone($conversation);
 
-            return $this->welcome($tenant, "Спасибо, {$conversation->contact_name}! 🙌 Чем могу помочь?");
+            return $this->welcome($tenant, "Спасибо, {$conversation->displayName()}! 🙌 Чем могу помочь?");
         }
 
         // Первый контакт нового клиента → тёплое приветствие + запрос недостающего.
@@ -92,20 +93,20 @@ class ContactGate
     private function capture(Conversation $conversation, string $text, array $phone): void
     {
         if (! $this->hasPhone($conversation) && $phone['status'] === 'valid') {
-            $this->conversations->setContactPhone($conversation, (string) $phone['phone']);
+            $this->clients->recordPhone($conversation, (string) $phone['phone']);
         }
 
         if (! $this->hasName($conversation)) {
             $name = $this->extractName($text);
             if ($name !== null) {
-                $this->conversations->setContactName($conversation, $name);
+                $this->clients->recordName($conversation, $name);
             }
         }
 
-        if ($conversation->contact_email === null) {
+        if ($conversation->displayEmail() === null) {
             $email = EmailExtractor::fromText($text);
             if ($email !== null) {
-                $this->conversations->setContactEmail($conversation, $email);
+                $this->clients->recordEmail($conversation, $email);
             }
         }
     }
@@ -149,14 +150,16 @@ class ContactGate
 
     private function hasName(Conversation $conversation): bool
     {
-        $name = $conversation->contact_name;
+        $name = $conversation->displayName();
 
         return $name !== null && $name !== '' && ! in_array($name, self::PLACEHOLDER_NAMES, true);
     }
 
     private function hasPhone(Conversation $conversation): bool
     {
-        return $conversation->contact_phone !== null && $conversation->contact_phone !== '';
+        $phone = $conversation->displayPhone();
+
+        return $phone !== null && $phone !== '';
     }
 
     /**

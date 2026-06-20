@@ -118,8 +118,8 @@ final readonly class WebWidgetService
         }
 
         SendOwnerNotification::dispatch($tenantId, $event->value, [
-            'contact' => $conversation->contact_name ?? 'Гость сайта',
-            'phone' => (string) $conversation->contact_phone,
+            'contact' => $conversation->displayName() ?? 'Гость сайта',
+            'phone' => (string) $conversation->displayPhone(),
             'channel' => $channel->type->label(),
             'snippet' => $snippet,
             'conversationId' => $conversation->id,

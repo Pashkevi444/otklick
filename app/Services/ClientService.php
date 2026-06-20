@@ -25,8 +25,6 @@ use Illuminate\Support\Facades\DB;
  */
 class ClientService
 {
-    private const array PLACEHOLDER_NAMES = [null, '', 'Гость', 'Гость сайта'];
-
     public function __construct(
         private ClientRepositoryInterface $clients,
         private ConversationRepositoryInterface $conversations,
@@ -36,8 +34,8 @@ class ClientService
     /**
      * Гарантирует, что у лида есть карточка клиента: переиспользует привязанную или
      * найденную по нативной идентичности канала, иначе СОЗДАЁТ новую. Привязывает
-     * лид, фиксирует идентичность и заполняет буфер лида из карточки (узнавание —
-     * бот здоровается по имени и не переспрашивает). Вызывается ПЕРВЫМ на входящем.
+     * лид и фиксирует идентичность. Контакты в карточку пишут record*-методы;
+     * читаются через `Conversation::display*`. Вызывается ПЕРВЫМ на входящем.
      */
     public function attachClient(Conversation $conversation): void
     {
@@ -55,7 +53,6 @@ class ClientService
         if ($client === null) {
             $client = $this->clients->create([
                 'first_channel_type' => $type?->value,
-                'telegram_username' => $this->telegramUsername($conversation->contact_ref),
                 'first_seen_at' => now(),
                 'last_seen_at' => now(),
             ]);
@@ -64,52 +61,82 @@ class ClientService
         if ($conversation->client_id !== $client->id) {
             $this->conversations->setClientId($conversation, $client->id);
         }
+        // Держим связь загруженной: display*/record* читают свежую карточку, не stale.
+        $conversation->setRelation('client', $client);
+
         if ($type !== null && $identity !== '') {
             $this->identities->link($client->id, $type, $identity);
         }
 
-        // Карточка — источник правды: подставляем известные контакты в буфер лида.
-        if ($client->name !== null && $client->name !== '') {
-            $this->conversations->setContactName($conversation, $client->name);
+        // Ник Telegram из ссылки на аккаунт (приходит из канала без спроса).
+        $telegram = $this->telegramUsername($conversation->contact_ref);
+        if ($telegram !== null && ($client->telegram_username === null || $client->telegram_username === '')) {
+            $this->clients->update($client, ['telegram_username' => $telegram, 'last_seen_at' => now()]);
         }
-        if ($client->phone !== null && $client->phone !== '') {
-            $this->conversations->setContactPhone($conversation, $client->phone);
-        }
-        if ($client->email !== null && $client->email !== '') {
-            $this->conversations->setContactEmail($conversation, $client->email);
+    }
+
+    /** Записывает имя в карточку клиента (если ещё пустое). */
+    public function recordName(Conversation $conversation, string $name): void
+    {
+        $client = $this->clientOf($conversation);
+        if ($client !== null && $name !== '' && ($client->name === null || $client->name === '')) {
+            $this->clients->update($client, ['name' => $name, 'last_seen_at' => now()]);
         }
     }
 
     /**
-     * Переносит захваченные в буфере лида контакты в карточку клиента (источник
-     * правды для грида/уведомлений). Телефон: совпал с ДРУГОЙ карточкой → склейка
-     * (один человек на двух каналах). Вызывается ПОСЛЕ разбора сообщения.
+     * Записывает телефон в карточку клиента. Телефон совпал с ДРУГОЙ карточкой →
+     * склейка (один человек на двух каналах): текущая карточка вливается в неё.
      */
-    public function pushToClient(Conversation $conversation): void
+    public function recordPhone(Conversation $conversation, string $phone): void
     {
-        $client = $conversation->client_id !== null ? $this->clients->find($conversation->client_id) : null;
-        if ($client === null) {
-            return; // attachClient гарантирует клиента; защита
+        $client = $this->clientOf($conversation);
+        if ($client === null || $phone === '') {
+            return;
         }
 
-        $phone = $conversation->contact_phone;
-        if ($phone !== null && $phone !== '') {
-            $byPhone = $this->clients->findByPhone($phone);
-            if ($byPhone !== null && $byPhone->id !== $client->id) {
-                $this->mergeInto($client, $byPhone); // телефон уже у другого → склейка
-                $client = $byPhone;
-                $this->conversations->setClientId($conversation, $client->id);
-            } elseif ($client->phone === null || $client->phone === '') {
-                $this->clients->update($client, ['phone' => $phone]);
+        $byPhone = $this->clients->findByPhone($phone);
+        if ($byPhone !== null && $byPhone->id !== $client->id) {
+            $this->mergeInto($client, $byPhone); // телефон у другой карточки → склейка
+            $this->conversations->setClientId($conversation, $byPhone->id);
+            $conversation->setRelation('client', $byPhone);
+        } else {
+            // Ставим/обновляем телефон (капча зовёт только при пустом; подтверждение
+            // записи — при смене номера вернувшимся клиентом, тут нужна перезапись).
+            $this->clients->update($client, ['phone' => $phone, 'last_seen_at' => now()]);
+        }
+    }
+
+    /** Записывает email в карточку клиента (если ещё пустой). */
+    public function recordEmail(Conversation $conversation, string $email): void
+    {
+        $client = $this->clientOf($conversation);
+        if ($client !== null && $email !== '' && ($client->email === null || $client->email === '')) {
+            $this->clients->update($client, ['email' => $email]);
+        }
+    }
+
+    private function clientOf(Conversation $conversation): ?Client
+    {
+        if ($conversation->client_id === null) {
+            return null;
+        }
+
+        // Переиспользуем уже загруженную карточку (тот же инстанс, что и display*),
+        // чтобы запись record* была видна сразу, без stale-relation.
+        if ($conversation->relationLoaded('client')) {
+            $loaded = $conversation->getRelation('client');
+            if ($loaded instanceof Client && $loaded->getKey() === $conversation->client_id) {
+                return $loaded;
             }
         }
 
-        $name = in_array($conversation->contact_name, self::PLACEHOLDER_NAMES, true) ? null : $conversation->contact_name;
-        $this->backfill($client, $name, $this->telegramUsername($conversation->contact_ref), $conversation->contact_email);
-
-        if ($conversation->channel?->type !== null && $conversation->external_chat_id !== '') {
-            $this->identities->link($client->id, $conversation->channel->type, $conversation->external_chat_id);
+        $client = $this->clients->find($conversation->client_id);
+        if ($client !== null) {
+            $conversation->setRelation('client', $client);
         }
+
+        return $client;
     }
 
     /**

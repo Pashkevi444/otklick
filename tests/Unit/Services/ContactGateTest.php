@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\Models\Client;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Services\ClientService;
 use App\Services\ContactGate;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -17,18 +19,37 @@ final class ContactGateTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
 
+    /** Карточка клиента, которую record*-методы мутируют (источник правды гейта). */
+    private Client $client;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->client = new Client(['name' => null, 'phone' => null, 'email' => null]);
+    }
+
     private function gate(?string $lastOutbound = null): ContactGate
     {
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
-        $conversations->shouldReceive('setContactPhone')->andReturnUsing(fn (Conversation $c, string $v) => $c->contact_phone = $v)->byDefault();
-        $conversations->shouldReceive('setContactName')->andReturnUsing(fn (Conversation $c, string $v) => $c->contact_name = $v)->byDefault();
-        $conversations->shouldReceive('setContactEmail')->andReturnUsing(fn (Conversation $c, string $v) => $c->contact_email = $v)->byDefault();
         $conversations->shouldReceive('markContactsGateDone')->andReturnUsing(fn (Conversation $c) => $c->contacts_gate_done = true)->byDefault();
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('latestOutboundText')->andReturn($lastOutbound)->byDefault();
 
-        return new ContactGate($conversations, $messages);
+        $clients = Mockery::mock(ClientService::class);
+        $clients->shouldReceive('recordName')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->name = $v)->byDefault();
+        $clients->shouldReceive('recordPhone')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->phone = $v)->byDefault();
+        $clients->shouldReceive('recordEmail')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->email = $v)->byDefault();
+
+        return new ContactGate($conversations, $messages, $clients);
+    }
+
+    private function conversation(array $attrs = []): Conversation
+    {
+        $c = new Conversation($attrs);
+        $c->setRelation('client', $this->client); // лид всегда привязан к карточке
+
+        return $c;
     }
 
     private function tenant(): Tenant
@@ -38,74 +59,69 @@ final class ContactGateTest extends TestCase
 
     public function test_first_message_shows_greeting_form_without_mining_name(): void
     {
-        $c = new Conversation; // нет контактов, форма ещё не показана
+        $c = $this->conversation();
 
         $r = $this->gate()->handle($this->tenant(), $c, 'есть ли у вас фейд?');
 
         $this->assertNotNull($r);
         $this->assertStringContainsString('имя и телефон', $r->text);
-        $this->assertNull($c->contact_name); // вопрос НЕ принят за имя
+        $this->assertNull($this->client->name); // вопрос НЕ принят за имя
         $this->assertFalse((bool) $c->contacts_gate_done);
     }
 
     public function test_question_message_is_not_taken_as_name(): void
     {
-        // Прод-баг: «а меня нет в базе?» → имя «Нет». Вопрос именем НЕ считаем.
-        $c = new Conversation;
+        $c = $this->conversation();
         $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, 'а меня нет в базе?');
 
-        $this->assertNull($c->contact_name);
+        $this->assertNull($this->client->name);
         $this->assertFalse((bool) $c->contacts_gate_done);
         $this->assertStringNotContainsString('Спасибо', $r->text);
     }
 
     public function test_slash_command_is_not_taken_as_name(): void
     {
-        // Прод-баг: первое сообщение «/start» → бот поздоровался «Спасибо, Start!».
-        // Команды мессенджера (/start, /help) именем НЕ считаем.
-        $c = new Conversation;
+        $c = $this->conversation();
         $r = $this->gate()->handle($this->tenant(), $c, '/start');
 
-        $this->assertNull($c->contact_name);
+        $this->assertNull($this->client->name);
         $this->assertFalse((bool) $c->contacts_gate_done);
         $this->assertStringNotContainsString('Спасибо', $r->text);
-        $this->assertStringContainsString('имя и телефон', $r->text); // показали форму
+        $this->assertStringContainsString('имя и телефон', $r->text);
     }
 
     public function test_stopword_is_not_taken_as_name(): void
     {
-        // Телефон уже есть, не хватает имени; «да»/«нет»/«привет» — не имя.
-        $c = new Conversation;
-        $c->contact_phone = '+79991234567';
+        $this->client->phone = '+79991234567'; // телефон есть, не хватает имени
+        $c = $this->conversation();
         $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, 'да');
 
-        $this->assertNull($c->contact_name);
-        $this->assertStringContainsString('зовут', $r->text); // переспрашиваем имя
+        $this->assertNull($this->client->name);
+        $this->assertStringContainsString('зовут', $r->text);
     }
 
     public function test_invalid_phone_is_rejected_with_fix_request(): void
     {
-        $c = new Conversation;
+        $c = $this->conversation();
 
-        // Форма уже показана → это ответ на неё; номер из 14 цифр — невалиден.
         $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, '+72223322123123');
 
         $this->assertNotNull($r);
         $this->assertStringContainsString('некорректно', $r->text);
-        $this->assertNull($c->contact_phone); // мусор не сохранён
+        $this->assertNull($this->client->phone); // мусор не сохранён
         $this->assertFalse((bool) $c->contacts_gate_done);
     }
 
     public function test_valid_name_and_phone_completes_with_action_buttons(): void
     {
-        $c = new Conversation;
+        $c = $this->conversation();
 
         $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, 'Алексей, +7 999 123-45-67, a@b.ru');
 
         $this->assertNotNull($r);
-        $this->assertSame('Алексей', $c->contact_name);
-        $this->assertSame('+79991234567', $c->contact_phone);
-        $this->assertSame('a@b.ru', $c->contact_email);
+        $this->assertSame('Алексей', $this->client->name);
+        $this->assertSame('+79991234567', $this->client->phone);
+        $this->assertSame('a@b.ru', $this->client->email);
         $this->assertTrue((bool) $c->contacts_gate_done);
         $this->assertStringContainsString('Спасибо', $r->text);
         $this->assertNotNull($r->keyboard);
@@ -114,11 +130,10 @@ final class ContactGateTest extends TestCase
 
     public function test_new_client_finishing_form_is_not_greeted_as_returning(): void
     {
-        // Прод-баг: ContactCapture проставил телефон ДО гейта, имя собрано на
-        // прошлом шаге, форма уже показывалась — это НОВИЧОК, а не «вернувшийся».
-        $c = new Conversation;
-        $c->contact_name = 'Павел';
-        $c->contact_phone = '+79992223323';
+        // Имя/телефон собраны на прошлом шаге, форма уже показывалась — НОВИЧОК.
+        $this->client->name = 'Павел';
+        $this->client->phone = '+79992223323';
+        $c = $this->conversation();
 
         $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, '+79992223323');
 
@@ -130,9 +145,9 @@ final class ContactGateTest extends TestCase
 
     public function test_returning_known_client_is_welcomed_by_name_without_form(): void
     {
-        $c = new Conversation; // контакты перенеслись из прошлого диалога
-        $c->contact_name = 'Пётр';
-        $c->contact_phone = '+79991112233';
+        $this->client->name = 'Пётр';
+        $this->client->phone = '+79991112233';
+        $c = $this->conversation();
 
         $r = $this->gate()->handle($this->tenant(), $c, 'привет');
 
@@ -144,8 +159,7 @@ final class ContactGateTest extends TestCase
 
     public function test_passes_through_once_gate_is_done(): void
     {
-        $c = new Conversation;
-        $c->contacts_gate_done = true;
+        $c = $this->conversation(['contacts_gate_done' => true]);
 
         $this->assertNull($this->gate()->handle($this->tenant(), $c, 'сколько стоит стрижка?'));
     }

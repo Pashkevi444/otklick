@@ -132,7 +132,8 @@ final class WidgetChatTest extends TestCase
         ])->assertOk();
 
         $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
-        $this->assertSame('+79991234567', $conv->contact_phone);
+        // Телефон — в карточке клиента (нормализация), не в буфере лида.
+        $this->assertSame('+79991234567', $conv->client()->withoutGlobalScopes()->first()?->phone);
     }
 
     public function test_widget_stores_visitor_ip_as_contact_ref(): void

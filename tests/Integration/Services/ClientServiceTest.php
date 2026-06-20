@@ -35,12 +35,19 @@ final class ClientServiceTest extends TestCase
         ], $overrides));
     }
 
-    /** Эмуляция конвейера ContactCapture: до разбора — attach, после — push. */
+    /** Эмуляция конвейера ContactCapture: attach + запись захваченных контактов. */
     private function ingest(Conversation $conversation): void
     {
         $service = $this->service();
         $service->attachClient($conversation);
-        $service->pushToClient($conversation);
+
+        if ($conversation->contact_phone !== null && $conversation->contact_phone !== '') {
+            $service->recordPhone($conversation, $conversation->contact_phone);
+        }
+        $name = $conversation->contact_name;
+        if ($name !== null && $name !== '' && ! in_array($name, ['Гость', 'Гость сайта'], true)) {
+            $service->recordName($conversation, $name);
+        }
     }
 
     private function tenant(): Tenant
@@ -128,8 +135,9 @@ final class ClientServiceTest extends TestCase
 
         $second->refresh();
         $this->assertSame($clientId, $second->client_id);
-        $this->assertSame('Иван', $second->contact_name);
-        $this->assertSame('+79991112233', $second->contact_phone);
+        // Контакты читаются из карточки (буфер лида не заполняется).
+        $this->assertSame('Иван', $second->displayName());
+        $this->assertSame('+79991112233', $second->displayPhone());
     }
 
     public function test_delete_forgets_client_then_new_contact_is_a_new_client(): void

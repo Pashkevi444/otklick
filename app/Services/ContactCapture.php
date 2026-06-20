@@ -5,26 +5,24 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Conversation;
-use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Support\NameValidator;
 use App\Support\PhoneExtractor;
 
 /**
- * Достаёт из входящего сообщения контактные данные клиента и сохраняет их по
- * диалогу: телефон — регуляркой (он однозначен), имя — нейросетью и только если
- * бот в прошлой реплике спрашивал имя (люди отвечают просто «Павел»).
+ * Достаёт из входящего сообщения контактные данные клиента и пишет их в КАРТОЧКУ
+ * клиента (источник правды): телефон — регуляркой (он однозначен), имя — нейросетью
+ * и только если бот в прошлой реплике спрашивал имя (люди отвечают просто «Павел»).
  *
  * Не readonly/final намеренно — это оркестратор, который мокается в юнит-тестах
  * сервисов-вызывателей.
  */
 class ContactCapture
 {
-    /** Значения contact_name, которые считаем «именем ещё нет». */
-    private const array PLACEHOLDER_NAMES = [null, '', 'Гость сайта', 'Гость'];
+    /** Значения имени, которые считаем «именем ещё нет». */
+    private const array PLACEHOLDER_NAMES = ['Гость сайта', 'Гость'];
 
     public function __construct(
-        private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
         private NameDetector $names,
         private ClientService $clients,
@@ -32,18 +30,17 @@ class ContactCapture
 
     public function fromInbound(Conversation $conversation, string $text): void
     {
-        // Гарантируем карточку клиента и узнаём вернувшегося (заполнит имя/телефон
-        // из карточки) — до разбора этого сообщения.
+        // Гарантируем карточку клиента (и узнаём вернувшегося) — до разбора сообщения.
         $this->clients->attachClient($conversation);
 
-        if ($conversation->contact_phone === null) {
+        if (! $this->hasPhone($conversation)) {
             $phone = PhoneExtractor::fromText($text);
             if ($phone !== null) {
-                $this->conversations->setContactPhone($conversation, $phone);
+                $this->clients->recordPhone($conversation, $phone);
             }
         }
 
-        if (in_array($conversation->contact_name, self::PLACEHOLDER_NAMES, true)) {
+        if (! $this->hasName($conversation)) {
             // Сначала явное представление в самом сообщении («меня зовут …»),
             // затем — короткий ответ на вопрос бота «Как вас зовут?» (через LLM).
             $name = $this->names->fromText($text)
@@ -52,11 +49,22 @@ class ContactCapture
             // ВАЖНО: LLM-имя проверяем тем же `NameValidator`, что и гейт, иначе
             // вопрос/стоп-слово («а меня нет в базе?» → «Нет») обходит защиту гейта.
             if ($name !== null && NameValidator::isPlausible($name, $text)) {
-                $this->conversations->setContactName($conversation, $name);
+                $this->clients->recordName($conversation, $name);
             }
         }
+    }
 
-        // Захваченные контакты → в карточку клиента (источник правды; склейка по телефону).
-        $this->clients->pushToClient($conversation);
+    private function hasPhone(Conversation $conversation): bool
+    {
+        $phone = $conversation->displayPhone();
+
+        return $phone !== null && $phone !== '';
+    }
+
+    private function hasName(Conversation $conversation): bool
+    {
+        $name = $conversation->displayName();
+
+        return $name !== null && $name !== '' && ! in_array($name, self::PLACEHOLDER_NAMES, true);
     }
 }

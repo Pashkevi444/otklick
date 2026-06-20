@@ -65,6 +65,7 @@ class BookingFlow
         private readonly CrmGatewayResolver $gateways,
         private readonly ConversationRepositoryInterface $conversations,
         private readonly LlmClient $llm,
+        private readonly ClientService $clients,
     ) {}
 
     /** Доступна ли автозапись тенанту (есть активное CRM-подключение). */
@@ -458,7 +459,7 @@ class BookingFlow
             $this->conversations->setBookingState($conversation, $state);
 
             return $this->ask(
-                "Записываю вас, {$conversation->contact_name}. 📞 Ваш телефон всё ещё {$conversation->contact_phone}? Если поменялся — пришлите новый номер, иначе нажмите «Да».",
+                "Записываю вас, {$conversation->displayName()}. 📞 Ваш телефон всё ещё {$conversation->displayPhone()}? Если поменялся — пришлите новый номер, иначе нажмите «Да».",
                 new ReplyKeyboard([['Да, всё верно']]),
             );
         }
@@ -478,8 +479,8 @@ class BookingFlow
         $phone = PhoneExtractor::fromText($text);
 
         if ($phone !== null) {
-            if ($phone !== $conversation->contact_phone) {
-                $this->conversations->setContactPhone($conversation, $phone);
+            if ($phone !== $conversation->displayPhone()) {
+                $this->clients->recordPhone($conversation, $phone);
                 $this->log('phone_updated', $conversation);
             }
 
@@ -510,14 +511,14 @@ class BookingFlow
         if (! $this->hasPhone($conversation)) {
             $phone = PhoneExtractor::fromText($text);
             if ($phone !== null) {
-                $this->conversations->setContactPhone($conversation, $phone);
+                $this->clients->recordPhone($conversation, $phone);
             }
         }
 
         if (! $this->hasName($conversation)) {
             $name = $this->extractName($text);
             if ($name !== null) {
-                $this->conversations->setContactName($conversation, $name);
+                $this->clients->recordName($conversation, $name);
             }
         }
 
@@ -628,8 +629,8 @@ class BookingFlow
             serviceId: (string) $state['service_id'],
             staffId: (string) $state['staff_id'],
             start: (string) $state['slot'],
-            clientName: $conversation->contact_name ?? 'Клиент',
-            clientPhone: (string) $conversation->contact_phone,
+            clientName: $conversation->displayName() ?? 'Клиент',
+            clientPhone: (string) $conversation->displayPhone(),
         ));
 
         $this->conversations->setBookingState($conversation, null);
@@ -835,14 +836,16 @@ class BookingFlow
     /** Есть ли у клиента указанное имя (а не плейсхолдер «Гость»). */
     private function hasName(Conversation $conversation): bool
     {
-        $name = $conversation->contact_name;
+        $name = $conversation->displayName();
 
         return $name !== null && $name !== '' && ! in_array($name, ['Гость', 'Гость сайта'], true);
     }
 
     private function hasPhone(Conversation $conversation): bool
     {
-        return $conversation->contact_phone !== null && $conversation->contact_phone !== '';
+        $phone = $conversation->displayPhone();
+
+        return $phone !== null && $phone !== '';
     }
 
     /**

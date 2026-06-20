@@ -11,12 +11,14 @@ use App\Crm\Data\TimeSlot;
 use App\Enums\CrmProvider;
 use App\Llm\Contracts\LlmClient;
 use App\Llm\FakeLlmClient;
+use App\Models\Client;
 use App\Models\Conversation;
 use App\Models\CrmConnection;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Services\BookingFlow;
+use App\Services\ClientService;
 use App\Support\RussianDateParser;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -57,16 +59,7 @@ final class BookingFlowTest extends TestCase
                 $c->booking_state = $s;
             },
         );
-        $conversations->shouldReceive('setContactPhone')->andReturnUsing(
-            function (Conversation $c, string $phone): void {
-                $c->contact_phone = $phone;
-            },
-        );
-        $conversations->shouldReceive('setContactName')->andReturnUsing(
-            function (Conversation $c, string $name): void {
-                $c->contact_name = $name;
-            },
-        );
+        $conversations->shouldReceive('setClientId')->byDefault();
         $conversations->shouldReceive('setCrmRecordId')->andReturnUsing(
             function (Conversation $c, ?string $id): void {
                 $c->crm_record_id = $id;
@@ -84,7 +77,15 @@ final class BookingFlowTest extends TestCase
             },
         );
 
-        return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient);
+        // Контакты пишутся в карточку клиента (record*) — в юните мутируем
+        // привязанную in-memory карточку, чтобы display* отдавали свежие значения.
+        $clients = Mockery::mock(ClientService::class);
+        $clients->shouldReceive('recordPhone')->andReturnUsing(fn (Conversation $c, string $p) => $c->client->phone = $p)->byDefault();
+        $clients->shouldReceive('recordName')->andReturnUsing(fn (Conversation $c, string $n) => $c->client->name = $n)->byDefault();
+        $clients->shouldReceive('recordEmail')->byDefault();
+        $clients->shouldReceive('attachClient')->byDefault();
+
+        return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient, $clients);
     }
 
     private function conversation(?string $phone = '+79990000000'): Conversation
@@ -92,6 +93,8 @@ final class BookingFlowTest extends TestCase
         $c = new Conversation;
         $c->contact_name = 'Иван';
         $c->contact_phone = $phone;
+        // Лид всегда привязан к карточке; пустая карточка → display* падают на буфер.
+        $c->setRelation('client', new Client(['name' => null, 'phone' => null, 'email' => null]));
 
         return $c;
     }
@@ -424,7 +427,7 @@ final class BookingFlowTest extends TestCase
         $conversations->shouldReceive('lastWithCrmRecordForChat')->once()->with('ch-1', '9001')->andReturn($booked);
         $conversations->shouldReceive('setCrmRecordId')->once()->with($booked, null); // снят после отмены
 
-        $flow = new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, new FakeLlmClient);
+        $flow = new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, new FakeLlmClient, Mockery::mock(ClientService::class));
 
         $current = new Conversation;
         $current->channel_id = 'ch-1';
