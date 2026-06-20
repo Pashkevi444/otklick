@@ -38,6 +38,11 @@ final class NameValidator
             return false;
         }
 
+        // Команда мессенджера (/start, /help) — не имя (прод-баг «/start» → «Start»).
+        if (str_starts_with(ltrim($sourceText), '/')) {
+            return false;
+        }
+
         $words = preg_split('/\s+/u', trim(mb_strtolower($name))) ?: [];
 
         // Имя — это 1–3 слова (имя/фамилия/отчество), не предложение.

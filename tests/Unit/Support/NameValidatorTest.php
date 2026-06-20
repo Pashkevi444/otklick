@@ -24,6 +24,9 @@ final class NameValidatorTest extends TestCase
         $this->assertFalse(NameValidator::isPlausible('Привет', 'привет'));
         $this->assertFalse(NameValidator::isPlausible('Любой Мастер', 'любой мастер'));
         $this->assertFalse(NameValidator::isPlausible(null, 'x'));
+        // Прод-баг: «/start» → имя «Start». Команды мессенджера — не имя.
+        $this->assertFalse(NameValidator::isPlausible('Start', '/start'));
+        $this->assertFalse(NameValidator::isPlausible('Help', '/help'));
         $this->assertFalse(NameValidator::isPlausible('Иван Иванович Петров Сергеевич', 'длинная строка не имя'));
     }
 }

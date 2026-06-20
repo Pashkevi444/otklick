@@ -166,7 +166,9 @@ class ContactGate
      */
     private function extractName(string $text): ?string
     {
-        $t = (string) preg_replace('/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/u', ' ', $text);
+        // Слэш-команды мессенджера (/start, /help) — не имя.
+        $t = (string) preg_replace('#(?<!\S)/[A-Za-z][\w]*#u', ' ', $text);
+        $t = (string) preg_replace('/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/u', ' ', $t);
         $t = (string) preg_replace('/[\d\-+()]{5,}/u', ' ', $t);
         // Убираем вводные и приветствия, чтобы «Привет, я Павел» дало «Павел».
         $t = (string) preg_replace('/\b(меня\s+зовут|зовут|это|имя|меня|я|привет|здравствуйте|здравствуй|добрый\s+день|добрый\s+вечер|доброе\s+утро)\b/iu', ' ', $t);

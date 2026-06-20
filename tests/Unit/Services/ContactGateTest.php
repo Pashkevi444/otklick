@@ -59,6 +59,19 @@ final class ContactGateTest extends TestCase
         $this->assertStringNotContainsString('Спасибо', $r->text);
     }
 
+    public function test_slash_command_is_not_taken_as_name(): void
+    {
+        // Прод-баг: первое сообщение «/start» → бот поздоровался «Спасибо, Start!».
+        // Команды мессенджера (/start, /help) именем НЕ считаем.
+        $c = new Conversation;
+        $r = $this->gate()->handle($this->tenant(), $c, '/start');
+
+        $this->assertNull($c->contact_name);
+        $this->assertFalse((bool) $c->contacts_gate_done);
+        $this->assertStringNotContainsString('Спасибо', $r->text);
+        $this->assertStringContainsString('имя и телефон', $r->text); // показали форму
+    }
+
     public function test_stopword_is_not_taken_as_name(): void
     {
         // Телефон уже есть, не хватает имени; «да»/«нет»/«привет» — не имя.
