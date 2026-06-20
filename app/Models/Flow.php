@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property bool $is_active
  * @property list<string> $triggers
  * @property array<string, mixed> $definition
+ * @property list<list<float>>|null $trigger_embeddings
  */
 class Flow extends TenantOwnedModel
 {
@@ -30,6 +31,7 @@ class Flow extends TenantOwnedModel
         'is_active',
         'triggers',
         'definition',
+        'trigger_embeddings',
     ];
 
     protected function casts(): array
@@ -38,6 +40,7 @@ class Flow extends TenantOwnedModel
             'is_active' => 'boolean',
             'triggers' => 'array',
             'definition' => 'array',
+            'trigger_embeddings' => 'array',
         ];
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\DTO\BotReply;
+use App\Llm\FakeEmbedder;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
@@ -43,7 +44,7 @@ final class BotResponderTest extends TestCase
         $repo = Mockery::mock(FlowRepositoryInterface::class);
         $repo->shouldReceive('activeForCurrentTenant')->andReturn(new Collection);
 
-        return new FlowEngine($repo, Mockery::mock(ConversationRepositoryInterface::class), Mockery::mock(BookingFlow::class));
+        return new FlowEngine($repo, Mockery::mock(ConversationRepositoryInterface::class), Mockery::mock(BookingFlow::class), new FakeEmbedder);
     }
 
     public function test_active_booking_state_routes_to_flow(): void

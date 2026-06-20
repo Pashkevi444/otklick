@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\Http\Controllers\Controller;
 use App\Models\Flow;
-use App\Repositories\Contracts\FlowRepositoryInterface;
+use App\Services\FlowService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,13 +19,13 @@ use Inertia\Response;
 final class FlowController extends Controller
 {
     public function __construct(
-        private readonly FlowRepositoryInterface $flows,
+        private readonly FlowService $service,
     ) {}
 
     public function index(): Response
     {
         return Inertia::render('Cabinet/Scenarios/Index', [
-            'flows' => $this->flows->forCurrentTenant()->map(fn (Flow $f): array => $this->present($f))->all(),
+            'flows' => $this->service->forCurrentTenant()->map(fn (Flow $f): array => $this->present($f))->all(),
             'actionOptions' => [
                 ['value' => 'none', 'label' => 'Нет (показать кнопки/сообщение)'],
                 ['value' => 'start_booking', 'label' => 'Начать запись в YClients'],
@@ -37,12 +37,7 @@ final class FlowController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validated($request);
-
-        $this->flows->create([
-            'tenant_id' => (string) $request->user()->tenant_id,
-            ...$data,
-        ]);
+        $this->service->create((string) $request->user()->tenant_id, $this->validated($request));
 
         return redirect()->route('cabinet.scenarios.index')->with('success', 'Сценарий создан.');
     }
@@ -51,23 +46,21 @@ final class FlowController extends Controller
     {
         $model = $this->findOrFail($flow);
 
-        $this->flows->update($model, $this->validated($request));
+        $this->service->update($model, $this->validated($request));
 
         return redirect()->route('cabinet.scenarios.index')->with('success', 'Сценарий сохранён.');
     }
 
     public function toggle(string $flow): RedirectResponse
     {
-        $model = $this->findOrFail($flow);
-
-        $this->flows->update($model, ['is_active' => ! $model->is_active]);
+        $this->service->toggle($this->findOrFail($flow));
 
         return back();
     }
 
     public function destroy(string $flow): RedirectResponse
     {
-        $this->flows->delete($this->findOrFail($flow));
+        $this->service->delete($this->findOrFail($flow));
 
         return redirect()->route('cabinet.scenarios.index')->with('success', 'Сценарий удалён.');
     }
@@ -100,7 +93,7 @@ final class FlowController extends Controller
 
     private function findOrFail(string $id): Flow
     {
-        $flow = $this->flows->find($id);
+        $flow = $this->service->find($id);
 
         abort_if($flow === null, 404);
 

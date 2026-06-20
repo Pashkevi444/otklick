@@ -6,11 +6,15 @@ namespace App\Services;
 
 use App\DTO\BotReply;
 use App\DTO\ReplyKeyboard;
+use App\Llm\Contracts\Embedder;
 use App\Models\Conversation;
 use App\Models\Flow;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
+use App\Support\RussianStem;
+use App\Support\Vectors;
+use Throwable;
 
 /**
  * Движок сценариев-воронок (no-code логика бота). Воронка — граф узлов
@@ -29,6 +33,7 @@ final readonly class FlowEngine
         private FlowRepositoryInterface $flows,
         private ConversationRepositoryInterface $conversations,
         private BookingFlow $booking,
+        private Embedder $embedder,
     ) {}
 
     public function handle(Tenant $tenant, Conversation $conversation, string $text): ?BotReply
@@ -37,29 +42,112 @@ final readonly class FlowEngine
             return $this->advance($tenant, $conversation, $text);
         }
 
-        $flow = $this->matchTrigger($text);
+        // Сначала быстрый матчинг по основе слова, затем (если не совпало) —
+        // семантический по эмбеддингам (ловит синонимы: «скидка» ≈ «акция»).
+        $flow = $this->matchLexical($text) ?? $this->matchSemantic($text);
 
         return $flow !== null ? $this->start($tenant, $conversation, $flow) : null;
     }
 
-    private function matchTrigger(string $text): ?Flow
+    private function matchLexical(string $text): ?Flow
     {
-        $needle = mb_strtolower(trim($text));
+        $needle = str_replace('ё', 'е', mb_strtolower(trim($text)));
 
         if ($needle === '') {
             return null;
         }
 
+        // Основы слов сообщения — чтобы триггер «акция» поймал «акции/акцию/акций».
+        $stems = array_values(array_filter(array_map(
+            RussianStem::stem(...),
+            preg_split('/[^\p{L}\p{N}]+/u', $needle) ?: [],
+        ), static fn (string $s): bool => $s !== ''));
+
         foreach ($this->flows->activeForCurrentTenant() as $flow) {
             foreach ($flow->triggers as $trigger) {
-                $t = mb_strtolower(trim((string) $trigger));
-                if ($t !== '' && mb_strpos($needle, $t) !== false) {
+                if ($this->triggerMatches((string) $trigger, $needle, $stems)) {
                     return $flow;
                 }
             }
         }
 
         return null;
+    }
+
+    /**
+     * Триггер совпадает, если он — подстрока сообщения (фраза из нескольких слов
+     * или короткое слово) ИЛИ основа триггера-слова сходится с основой какого-то
+     * слова сообщения по префиксу (морфология: «акция» ≈ «акции»).
+     *
+     * @param  list<string>  $stems
+     */
+    private function triggerMatches(string $trigger, string $needle, array $stems): bool
+    {
+        $t = str_replace('ё', 'е', mb_strtolower(trim($trigger)));
+
+        if ($t === '') {
+            return false;
+        }
+
+        // Фраза (есть пробел) или очень короткое слово — буквальное вхождение.
+        if (str_contains($t, ' ') || mb_strlen($t) < 4) {
+            return mb_strpos($needle, $t) !== false;
+        }
+
+        $tStem = RussianStem::stem($t);
+
+        foreach ($stems as $stem) {
+            $min = min(mb_strlen($tStem), mb_strlen($stem));
+            if ($min >= 3 && (str_starts_with($stem, $tStem) || str_starts_with($tStem, $stem))) {
+                return true;
+            }
+        }
+
+        return mb_strpos($needle, $t) !== false;
+    }
+
+    /**
+     * Семантический матчинг: эмбеддим сообщение ОДИН раз и сравниваем с заранее
+     * посчитанными векторами фраз-триггеров (косинус). Запускаем сценарий с
+     * максимальной близостью выше порога. Эмбеддим только если есть активные
+     * сценарии с векторами — иначе ни одного вызова эмбеддера (экономим).
+     */
+    private function matchSemantic(string $text): ?Flow
+    {
+        if (trim($text) === '') {
+            return null;
+        }
+
+        $candidates = $this->flows->activeForCurrentTenant()
+            ->filter(static fn (Flow $f): bool => is_array($f->trigger_embeddings) && $f->trigger_embeddings !== []);
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        try {
+            $vector = $this->embedder->embed($text);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        $threshold = (float) config('services.flows.semantic_threshold', 0.6);
+        $best = null;
+        $bestScore = -1.0;
+
+        foreach ($candidates as $flow) {
+            foreach ($flow->trigger_embeddings ?? [] as $triggerVector) {
+                $score = Vectors::cosine($vector, $triggerVector);
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $best = $flow;
+                }
+            }
+        }
+
+        return $bestScore >= $threshold ? $best : null;
     }
 
     private function start(Tenant $tenant, Conversation $conversation, Flow $flow): ?BotReply

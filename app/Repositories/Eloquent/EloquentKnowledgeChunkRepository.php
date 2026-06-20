@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Eloquent;
 
 use App\Repositories\Contracts\KnowledgeChunkRepositoryInterface;
+use App\Support\Vectors;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -66,7 +67,7 @@ final readonly class EloquentKnowledgeChunkRepository implements KnowledgeChunkR
             ->map(fn (object $r): array => [
                 'source' => (string) $r->source,
                 'entry_id' => $r->entry_id !== null ? (string) $r->entry_id : null,
-                'score' => $this->cosine($queryEmbedding, (array) json_decode((string) $r->embedding, true)),
+                'score' => Vectors::cosine($queryEmbedding, (array) json_decode((string) $r->embedding, true)),
             ])
             ->sortByDesc('score')
             ->take($k)
@@ -90,27 +91,5 @@ final readonly class EloquentKnowledgeChunkRepository implements KnowledgeChunkR
 
             return $s === '' || $s === '-' ? '0' : $s;
         }, $vector)).']';
-    }
-
-    /**
-     * @param  list<float>  $a
-     * @param  array<int, float>  $b
-     */
-    private function cosine(array $a, array $b): float
-    {
-        $dot = 0.0;
-        $na = 0.0;
-        $nb = 0.0;
-
-        foreach ($a as $i => $va) {
-            $vb = (float) ($b[$i] ?? 0.0);
-            $dot += $va * $vb;
-            $na += $va * $va;
-            $nb += $vb * $vb;
-        }
-
-        $denom = sqrt($na) * sqrt($nb);
-
-        return $denom > 0.0 ? $dot / $denom : 0.0;
     }
 }
