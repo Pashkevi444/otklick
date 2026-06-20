@@ -467,7 +467,7 @@ const testSend = (text?: string): void => {
                         <div v-if="testDone" class="text-center text-xs text-slate-400">— конец сценария —</div>
                     </div>
                     <div v-if="!testDone" class="mt-2 flex gap-2">
-                        <input v-model="testInput" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Ответ клиента…" :disabled="testBusy" @keyup.enter="testSend()" />
+                        <input v-model="testInput" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Ответ клиента…" :disabled="testBusy" @keydown.enter.prevent="testSend()" />
                         <button type="button" class="rounded-lg bg-[#2E74B5] px-3 py-1.5 text-sm text-white hover:bg-[#255f96] disabled:opacity-50" :disabled="testBusy" @click="testSend()">→</button>
                     </div>
                 </div>
