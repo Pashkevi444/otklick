@@ -173,7 +173,7 @@ final readonly class FlowEngine
             return null;
         }
 
-        return $this->enter($tenant, $conversation, $flow, $startId, $node);
+        return $this->enter($tenant, $conversation, $flow, $startId, $node, []);
     }
 
     private function advance(Tenant $tenant, Conversation $conversation, string $text): ?BotReply
@@ -187,17 +187,28 @@ final readonly class FlowEngine
             return null;
         }
 
+        $vars = (array) ($state['vars'] ?? []);
         $node = $this->node($flow, (string) ($state['node_id'] ?? ''));
-        $next = $node !== null ? $this->matchOption($node, $text) : null;
 
-        // Клиент написал не по кнопкам (или узел пропал) — выходим из воронки к ИИ.
-        if ($next === null) {
+        if ($node === null) {
             $this->conversations->setFlowState($conversation, null);
 
             return null;
         }
 
-        $nextNode = $this->node($flow, $next);
+        // Узел-вопрос: ответ клиента (свободный текст) сохраняем в переменную и идём дальше.
+        if (($node['type'] ?? 'message') === 'input') {
+            $variable = trim((string) ($node['variable'] ?? ''));
+            if ($variable !== '') {
+                $vars[$variable] = trim($text);
+            }
+            $next = (string) ($node['next'] ?? '');
+        } else {
+            // Сообщение с кнопками: выбор клиента; не по кнопкам → выходим к ИИ.
+            $next = $this->matchOption($node, $text);
+        }
+
+        $nextNode = $next !== null ? $this->node($flow, $next) : null;
 
         if ($nextNode === null) {
             $this->conversations->setFlowState($conversation, null);
@@ -205,20 +216,40 @@ final readonly class FlowEngine
             return null;
         }
 
-        return $this->enter($tenant, $conversation, $flow, $next, $nextNode);
+        return $this->enter($tenant, $conversation, $flow, $next, $nextNode, $vars);
     }
 
     /**
-     * Входит в узел: выполняет действие (запись/эскалация/финал) или показывает
-     * сообщение с кнопками и остаётся ждать выбор.
+     * Входит в узел: узел-условие авто-ветвится по переменной (без участия
+     * клиента), узел-вопрос ждёт свободный ответ, действие выполняет запись/
+     * эскалацию/финал, обычное сообщение показывает кнопки. `{{переменные}}`
+     * подставляются в текст.
      *
      * @param  array<string, mixed>  $node
+     * @param  array<string, mixed>  $vars
      */
-    private function enter(Tenant $tenant, Conversation $conversation, Flow $flow, string $nodeId, array $node): BotReply
+    private function enter(Tenant $tenant, Conversation $conversation, Flow $flow, string $nodeId, array $node, array $vars, int $depth = 0): ?BotReply
     {
+        // Узел-условие проходим сразу к ветке; глубина — защита от циклов условий.
+        if (($node['type'] ?? 'message') === 'condition') {
+            if ($depth > 20) {
+                $this->conversations->setFlowState($conversation, null);
+
+                return null;
+            }
+            $branch = (string) ($node[$this->evalCondition($node, $vars) ? 'next' : 'else'] ?? '');
+            $target = $this->node($flow, $branch);
+            if ($target === null) {
+                $this->conversations->setFlowState($conversation, null);
+
+                return null;
+            }
+
+            return $this->enter($tenant, $conversation, $flow, $branch, $target, $vars, $depth + 1);
+        }
+
         $action = (string) ($node['action'] ?? 'none');
-        $text = trim((string) ($node['text'] ?? ''));
-        $options = $this->options($node);
+        $text = $this->interpolate(trim((string) ($node['text'] ?? '')), $vars);
 
         if ($action === 'start_booking') {
             $this->conversations->setFlowState($conversation, null);
@@ -233,6 +264,15 @@ final readonly class FlowEngine
             return new BotReply($text !== '' ? $text : 'Передаю вопрос администратору.', escalate: true);
         }
 
+        // Узел-вопрос: показываем приглашение и ждём свободный ответ клиента.
+        if (($node['type'] ?? 'message') === 'input') {
+            $this->conversations->setFlowState($conversation, ['flow_id' => $flow->id, 'node_id' => $nodeId, 'vars' => $vars]);
+
+            return new BotReply($text, escalate: false);
+        }
+
+        $options = $this->options($node);
+
         // Узел без кнопок (или явный финал) — завершаем воронку этим сообщением.
         if ($options === [] || $action === 'end') {
             $this->conversations->setFlowState($conversation, null);
@@ -241,12 +281,45 @@ final readonly class FlowEngine
         }
 
         // Сообщение с кнопками — остаёмся в узле, ждём выбор клиента.
-        $this->conversations->setFlowState($conversation, ['flow_id' => $flow->id, 'node_id' => $nodeId]);
+        $this->conversations->setFlowState($conversation, ['flow_id' => $flow->id, 'node_id' => $nodeId, 'vars' => $vars]);
 
         return new BotReply($text, escalate: false, keyboard: ReplyKeyboard::grid(
             array_map(static fn (array $o): string => (string) $o['label'], $options),
             2,
         ));
+    }
+
+    /**
+     * Вычисляет узел-условие: сравнивает переменную с значением (регистронезависимо).
+     *
+     * @param  array<string, mixed>  $node
+     * @param  array<string, mixed>  $vars
+     */
+    private function evalCondition(array $node, array $vars): bool
+    {
+        $actual = mb_strtolower(trim((string) ($vars[(string) ($node['variable'] ?? '')] ?? '')));
+        $expected = mb_strtolower(trim((string) ($node['value'] ?? '')));
+
+        return match ((string) ($node['operator'] ?? 'eq')) {
+            'neq' => $actual !== $expected,
+            'contains' => $expected !== '' && mb_strpos($actual, $expected) !== false,
+            'filled' => $actual !== '',
+            default => $actual === $expected, // eq
+        };
+    }
+
+    /**
+     * Подставляет `{{переменная}}` в текст (неизвестные — пустой строкой).
+     *
+     * @param  array<string, mixed>  $vars
+     */
+    private function interpolate(string $text, array $vars): string
+    {
+        return (string) preg_replace_callback(
+            '/\{\{\s*(\w+)\s*\}\}/u',
+            static fn (array $m): string => (string) ($vars[$m[1]] ?? ''),
+            $text,
+        );
     }
 
     /**

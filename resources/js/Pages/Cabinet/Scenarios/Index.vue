@@ -14,6 +14,11 @@ interface FlowNodeDef {
     text?: string;
     action?: string;
     options?: OptionEdge[];
+    variable?: string;
+    next?: string;
+    operator?: string;
+    value?: string;
+    else?: string;
 }
 interface FlowRow {
     id: string;
@@ -22,18 +27,25 @@ interface FlowRow {
     triggers: string[];
     definition: { start?: string; nodes?: Record<string, FlowNodeDef> };
 }
+type NodeKind = 'message' | 'input' | 'condition';
 interface NodeEdit {
     id: string;
+    type: NodeKind;
     text: string;
     action: string;
     options: OptionEdge[];
+    variable: string;
+    next: string;
+    operator: string;
+    value: string;
+    else: string;
 }
 interface Option {
     value: string;
     label: string;
 }
 
-const props = defineProps<{ flows: FlowRow[]; actionOptions: Option[] }>();
+const props = defineProps<{ flows: FlowRow[]; actionOptions: Option[]; nodeTypeOptions: Option[]; operatorOptions: Option[] }>();
 
 const editing = ref<string | null | 'new'>(null);
 const form = useForm<{ id: string | null; name: string; is_active: boolean; triggers: string; start: string; nodes: NodeEdit[] }>({
@@ -47,7 +59,10 @@ const form = useForm<{ id: string | null; name: string; is_active: boolean; trig
 
 const nodeIds = computed(() => form.nodes.map((n) => n.id));
 
-const blankNode = (id: string): NodeEdit => ({ id, text: '', action: 'none', options: [] });
+const blankNode = (id: string): NodeEdit => ({
+    id, type: 'message', text: '', action: 'none', options: [],
+    variable: '', next: '', operator: 'eq', value: '', else: '',
+});
 
 const newFlow = (): void => {
     editing.value = 'new';
@@ -62,9 +77,15 @@ const editFlow = (f: FlowRow): void => {
     const nodesObj = f.definition.nodes ?? {};
     const nodes: NodeEdit[] = Object.entries(nodesObj).map(([id, n]) => ({
         id,
+        type: (n.type === 'input' || n.type === 'condition' ? n.type : 'message') as NodeKind,
         text: n.text ?? '',
         action: n.action ?? 'none',
         options: (n.options ?? []).map((o) => ({ label: o.label, next: o.next })),
+        variable: n.variable ?? '',
+        next: n.next ?? '',
+        operator: n.operator ?? 'eq',
+        value: n.value ?? '',
+        else: n.else ?? '',
     }));
     form.id = f.id;
     form.name = f.name;
@@ -85,7 +106,11 @@ const addNode = (): void => {
 };
 const removeNode = (id: string): void => {
     form.nodes = form.nodes.filter((n) => n.id !== id);
-    form.nodes.forEach((n) => (n.options = n.options.filter((o) => o.next !== id)));
+    form.nodes.forEach((n) => {
+        n.options = n.options.filter((o) => o.next !== id);
+        if (n.next === id) n.next = '';
+        if (n.else === id) n.else = '';
+    });
     if (form.start === id) form.start = form.nodes[0]?.id ?? '';
 };
 const addOption = (node: NodeEdit): void => {
@@ -98,12 +123,18 @@ const removeOption = (node: NodeEdit, i: number): void => {
 const save = (): void => {
     const nodes: Record<string, FlowNodeDef> = {};
     for (const n of form.nodes) {
-        nodes[n.id] = {
-            type: 'message',
-            text: n.text,
-            action: n.action,
-            options: n.action === 'none' ? n.options.filter((o) => o.label.trim() !== '' && o.next) : [],
-        };
+        if (n.type === 'input') {
+            nodes[n.id] = { type: 'input', text: n.text, variable: n.variable.trim(), next: n.next };
+        } else if (n.type === 'condition') {
+            nodes[n.id] = { type: 'condition', variable: n.variable.trim(), operator: n.operator, value: n.value, next: n.next, else: n.else };
+        } else {
+            nodes[n.id] = {
+                type: 'message',
+                text: n.text,
+                action: n.action,
+                options: n.action === 'none' ? n.options.filter((o) => o.label.trim() !== '' && o.next) : [],
+            };
+        }
     }
     const payload = {
         name: form.name,
@@ -125,6 +156,10 @@ const destroy = (f: FlowRow): void => {
 };
 
 const actionLabel = (value: string): string => props.actionOptions.find((a) => a.value === value)?.label ?? value;
+
+// Литералы с {{ }} нельзя писать прямо в шаблоне (Vue примет за интерполяцию) — выносим в строки.
+const msgPlaceholder = 'Сообщение бота. Можно подставлять {{переменную}}';
+const inputHint = 'Ответ клиента сохранится и его можно вставить в любой текст как {{name}}.';
 </script>
 
 <template>
@@ -194,31 +229,85 @@ const actionLabel = (value: string): string => props.actionOptions.find((a) => a
                     <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Узел {{ node.id }}<span v-if="form.start === node.id" class="ml-2 rounded bg-[#EAF2FB] px-1.5 py-0.5 text-xs text-[#2E74B5]">старт</span></div>
                     <button v-if="form.nodes.length > 1" type="button" class="text-xs text-red-600 hover:underline" @click="removeNode(node.id)">Удалить узел</button>
                 </div>
-                <textarea v-model="node.text" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Сообщение бота на этом шаге"></textarea>
-
-                <div class="mt-3">
-                    <label class="mb-1 block text-xs font-medium text-slate-500">Действие</label>
-                    <select v-model="node.action" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
-                        <option v-for="a in actionOptions" :key="a.value" :value="a.value">{{ a.label }}</option>
+                <div class="mb-3">
+                    <label class="mb-1 block text-xs font-medium text-slate-500">Тип узла</label>
+                    <select v-model="node.type" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
+                        <option v-for="o in nodeTypeOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
                 </div>
 
-                <!-- Кнопки-переходы (только если действие «Нет») -->
-                <div v-if="node.action === 'none'" class="mt-3">
-                    <div class="mb-1 text-xs font-medium text-slate-500">Кнопки (вариант → переход к узлу)</div>
-                    <div class="space-y-2">
-                        <div v-for="(opt, i) in node.options" :key="i" class="flex items-center gap-2">
-                            <input v-model="opt.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Текст кнопки" />
-                            <span class="text-slate-400">→</span>
-                            <select v-model="opt.next" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                <!-- СООБЩЕНИЕ: текст + действие + кнопки -->
+                <template v-if="node.type === 'message'">
+                    <textarea v-model="node.text" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" :placeholder="msgPlaceholder"></textarea>
+                    <div class="mt-3">
+                        <label class="mb-1 block text-xs font-medium text-slate-500">Действие</label>
+                        <select v-model="node.action" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
+                            <option v-for="a in actionOptions" :key="a.value" :value="a.value">{{ a.label }}</option>
+                        </select>
+                    </div>
+                    <div v-if="node.action === 'none'" class="mt-3">
+                        <div class="mb-1 text-xs font-medium text-slate-500">Кнопки (вариант → переход к узлу)</div>
+                        <div class="space-y-2">
+                            <div v-for="(opt, i) in node.options" :key="i" class="flex items-center gap-2">
+                                <input v-model="opt.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Текст кнопки" />
+                                <span class="text-slate-400">→</span>
+                                <select v-model="opt.next" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                                    <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                                </select>
+                                <button type="button" class="text-xs text-red-600 hover:underline" @click="removeOption(node, i)">убрать</button>
+                            </div>
+                        </div>
+                        <button type="button" class="mt-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="addOption(node)">+ кнопка</button>
+                    </div>
+                    <p v-else class="mt-2 text-xs text-slate-400">{{ actionLabel(node.action) }} — это конечный шаг сценария.</p>
+                </template>
+
+                <!-- ВОПРОС: приглашение + сохранить ответ в переменную + переход -->
+                <template v-else-if="node.type === 'input'">
+                    <textarea v-model="node.text" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Вопрос клиенту (например: Как вас зовут?)"></textarea>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-500">Сохранить ответ в переменную</label>
+                            <input v-model="node.variable" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="name" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-500">Дальше → узел</label>
+                            <select v-model="node.next" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                                <option value="">—</option>
                                 <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
                             </select>
-                            <button type="button" class="text-xs text-red-600 hover:underline" @click="removeOption(node, i)">убрать</button>
                         </div>
                     </div>
-                    <button type="button" class="mt-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="addOption(node)">+ кнопка</button>
-                </div>
-                <p v-else class="mt-2 text-xs text-slate-400">{{ actionLabel(node.action) }} — это конечный шаг сценария.</p>
+                    <p class="mt-2 text-xs text-slate-400">{{ inputHint }}</p>
+                </template>
+
+                <!-- УСЛОВИЕ: если переменная … → да/нет -->
+                <template v-else>
+                    <div class="grid gap-2 sm:grid-cols-3">
+                        <input v-model="node.variable" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="переменная (name)" />
+                        <select v-model="node.operator" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                            <option v-for="o in operatorOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                        </select>
+                        <input v-model="node.value" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="значение" :disabled="node.operator === 'filled'" />
+                    </div>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-emerald-600">Если ДА → узел</label>
+                            <select v-model="node.next" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                                <option value="">—</option>
+                                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-red-600">Если НЕТ → узел</label>
+                            <select v-model="node.else" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                                <option value="">—</option>
+                                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-400">Условие проходит без участия клиента — сразу уводит в нужную ветку.</p>
+                </template>
             </div>
 
             <button type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200" @click="addNode">

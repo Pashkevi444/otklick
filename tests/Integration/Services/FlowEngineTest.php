@@ -131,6 +131,58 @@ final class FlowEngineTest extends TestCase
         $this->assertSame('Есть выгодные предложения', $reply->text);
     }
 
+    public function test_input_stores_variable_condition_branches_and_interpolates(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Анкета',
+            'is_active' => true,
+            'triggers' => ['анкета'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'input', 'text' => 'Как вас зовут?', 'variable' => 'name', 'next' => 'n2'],
+                'n2' => ['type' => 'condition', 'variable' => 'name', 'operator' => 'contains', 'value' => 'иван', 'next' => 'n3', 'else' => 'n4'],
+                'n3' => ['type' => 'message', 'text' => 'Привет, {{name}}! Вы Иван.', 'action' => 'end', 'options' => []],
+                'n4' => ['type' => 'message', 'text' => 'Здравствуйте, {{name}}.', 'action' => 'end', 'options' => []],
+            ]],
+        ]));
+
+        // Запуск → узел-вопрос.
+        $start = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'хочу анкету'));
+        $this->assertSame('Как вас зовут?', $start->text);
+
+        // Ответ → переменная сохранена, условие contains «иван» → ветка «да» + подстановка.
+        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Иван Петров'));
+        $this->assertSame('Привет, Иван Петров! Вы Иван.', $reply->text);
+        $this->assertNull(Conversation::withoutGlobalScopes()->findOrFail($conversation->id)->flow_state);
+    }
+
+    public function test_condition_else_branch(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Анкета',
+            'is_active' => true,
+            'triggers' => ['анкета'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'input', 'text' => 'Как вас зовут?', 'variable' => 'name', 'next' => 'n2'],
+                'n2' => ['type' => 'condition', 'variable' => 'name', 'operator' => 'contains', 'value' => 'иван', 'next' => 'n3', 'else' => 'n4'],
+                'n3' => ['type' => 'message', 'text' => 'Вы Иван.', 'action' => 'end', 'options' => []],
+                'n4' => ['type' => 'message', 'text' => 'Здравствуйте, {{name}}.', 'action' => 'end', 'options' => []],
+            ]],
+        ]));
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'анкета'));
+        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Пётр'));
+
+        $this->assertSame('Здравствуйте, Пётр.', $reply->text);
+    }
+
     public function test_button_choice_advances_and_escalates(): void
     {
         [$tenant, $conversation] = $this->setupFlow();

@@ -32,6 +32,17 @@ final class FlowController extends Controller
                 ['value' => 'escalate', 'label' => 'Позвать администратора'],
                 ['value' => 'end', 'label' => 'Завершить сценарий'],
             ],
+            'nodeTypeOptions' => [
+                ['value' => 'message', 'label' => 'Сообщение (текст + кнопки)'],
+                ['value' => 'input', 'label' => 'Вопрос (сохранить ответ в переменную)'],
+                ['value' => 'condition', 'label' => 'Условие (ветвление по переменной)'],
+            ],
+            'operatorOptions' => [
+                ['value' => 'eq', 'label' => 'равно'],
+                ['value' => 'neq', 'label' => 'не равно'],
+                ['value' => 'contains', 'label' => 'содержит'],
+                ['value' => 'filled', 'label' => 'заполнена'],
+            ],
         ]);
     }
 
