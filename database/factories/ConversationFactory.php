@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Enums\ConversationStatus;
 use App\Models\Channel;
+use App\Models\Client;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -28,9 +29,26 @@ class ConversationFactory extends Factory
             'channel_id' => fn (array $attributes): string => Channel::factory()
                 ->create(['tenant_id' => $attributes['tenant_id']])->id,
             'external_chat_id' => (string) fake()->unique()->numberBetween(1, 999999999),
-            'contact_name' => fake()->name(),
             'status' => ConversationStatus::Open,
             'last_message_at' => null,
         ];
+    }
+
+    /**
+     * Привязывает лид к карточке клиента с заданными именем/телефоном/email
+     * (имя/телефон — атрибуты клиента, не лида). Карточка того же тенанта.
+     */
+    public function withClient(?string $name = null, ?string $phone = null, ?string $email = null): static
+    {
+        return $this->afterCreating(function (Conversation $conversation) use ($name, $phone, $email): void {
+            $client = Client::factory()->create([
+                'tenant_id' => $conversation->tenant_id,
+                'name' => $name,
+                'phone' => $phone,
+                'email' => $email,
+            ]);
+            $conversation->forceFill(['client_id' => $client->id])->save();
+            $conversation->setRelation('client', $client);
+        });
     }
 }

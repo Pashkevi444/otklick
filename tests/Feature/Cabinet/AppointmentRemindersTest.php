@@ -38,13 +38,12 @@ final class AppointmentRemindersTest extends TestCase
     {
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id, 'type' => ChannelType::Telegram->value]);
 
-        return Conversation::factory()->create([
+        return Conversation::factory()->withClient('Иван')->create([
             'tenant_id' => $tenant->id,
             'channel_id' => $channel->id,
             'external_chat_id' => '555',
             'crm_record_id' => 'rec-1',
             'booked_for' => $bookedFor,
-            'contact_name' => 'Иван',
         ]);
     }
 

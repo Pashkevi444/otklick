@@ -77,19 +77,6 @@ interface ConversationRepositoryInterface
      */
     public function resetClarificationAttempts(Conversation $conversation): void;
 
-    /**
-     * Сохраняет телефон клиента (для обратной связи), если он ещё не задан.
-     */
-    public function setContactPhone(Conversation $conversation, string $phone): void;
-
-    /**
-     * Сохраняет имя клиента (как он представился боту).
-     */
-    public function setContactName(Conversation $conversation, string $name): void;
-
-    /** Сохраняет email клиента (необязательное поле контактной формы). */
-    public function setContactEmail(Conversation $conversation, string $email): void;
-
     /** Отмечает, что контактная форма отработала (имя+телефон собраны/узнаны). */
     public function markContactsGateDone(Conversation $conversation): void;
 

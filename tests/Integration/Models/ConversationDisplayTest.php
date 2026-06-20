@@ -15,7 +15,7 @@ final class ConversationDisplayTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_display_prefers_client_card_over_buffer(): void
+    public function test_display_reads_from_client_card(): void
     {
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
@@ -23,26 +23,23 @@ final class ConversationDisplayTest extends TestCase
 
         $conversation = Conversation::factory()->create([
             'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'client_id' => $client->id,
-            'contact_name' => 'Старое имя', 'contact_phone' => '+70000000000', 'contact_email' => 'old@b.ru',
         ]);
 
-        // Карточка — источник правды, буфер игнорируется.
         $this->assertSame('Иван', $conversation->displayName());
         $this->assertSame('+79990001122', $conversation->displayPhone());
         $this->assertSame('i@b.ru', $conversation->displayEmail());
     }
 
-    public function test_display_falls_back_to_buffer_without_client(): void
+    public function test_display_is_null_without_client(): void
     {
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
         $conversation = Conversation::factory()->create([
             'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'client_id' => null,
-            'contact_name' => 'Гость Пётр', 'contact_phone' => '+79991112233',
         ]);
 
-        $this->assertSame('Гость Пётр', $conversation->displayName());
-        $this->assertSame('+79991112233', $conversation->displayPhone());
+        $this->assertNull($conversation->displayName());
+        $this->assertNull($conversation->displayPhone());
     }
 }

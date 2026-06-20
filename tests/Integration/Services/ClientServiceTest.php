@@ -24,27 +24,25 @@ final class ClientServiceTest extends TestCase
         return $this->app->make(ClientService::class);
     }
 
-    private function conversation(Tenant $tenant, Channel $channel, array $overrides = []): Conversation
+    private function conversation(Tenant $tenant, Channel $channel, string $chatId, ?string $ref = 'https://t.me/ivan'): Conversation
     {
-        return Conversation::factory()->create(array_merge([
+        return Conversation::factory()->create([
             'tenant_id' => $tenant->id,
             'channel_id' => $channel->id,
-            'contact_phone' => '+79991112233',
-            'contact_name' => 'Иван',
-            'contact_ref' => 'https://t.me/ivan',
-        ], $overrides));
+            'external_chat_id' => $chatId,
+            'contact_ref' => $ref,
+        ]);
     }
 
     /** Эмуляция конвейера ContactCapture: attach + запись захваченных контактов. */
-    private function ingest(Conversation $conversation): void
+    private function ingest(Conversation $conversation, ?string $phone, ?string $name): void
     {
         $service = $this->service();
         $service->attachClient($conversation);
 
-        if ($conversation->contact_phone !== null && $conversation->contact_phone !== '') {
-            $service->recordPhone($conversation, $conversation->contact_phone);
+        if ($phone !== null && $phone !== '') {
+            $service->recordPhone($conversation, $phone);
         }
-        $name = $conversation->contact_name;
         if ($name !== null && $name !== '' && ! in_array($name, ['Гость', 'Гость сайта'], true)) {
             $service->recordName($conversation, $name);
         }
@@ -58,13 +56,13 @@ final class ClientServiceTest extends TestCase
         return $tenant;
     }
 
-    public function test_creates_client_and_pushes_contacts(): void
+    public function test_creates_client_and_records_contacts(): void
     {
         $tenant = $this->tenant();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        $conversation = $this->conversation($tenant, $channel, ['external_chat_id' => 'tg-1']);
-        $this->ingest($conversation);
+        $conversation = $this->conversation($tenant, $channel, 'tg-1');
+        $this->ingest($conversation, '+79991112233', 'Иван');
 
         $conversation->refresh();
         $this->assertNotNull($conversation->client_id);
@@ -86,8 +84,8 @@ final class ClientServiceTest extends TestCase
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
         // Нормализация: каждый лид имеет карточку клиента, даже без телефона.
-        $conversation = $this->conversation($tenant, $channel, ['contact_phone' => null, 'contact_name' => null]);
-        $this->ingest($conversation);
+        $conversation = $this->conversation($tenant, $channel, 'tg-2', ref: null);
+        $this->ingest($conversation, null, null);
 
         $this->assertSame(1, Client::query()->count());
         $conversation->refresh();
@@ -101,14 +99,14 @@ final class ClientServiceTest extends TestCase
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
         // Чат A: дал телефон → клиент X.
-        $first = $this->conversation($tenant, $channel, ['external_chat_id' => 'chat-A']);
-        $this->ingest($first);
+        $first = $this->conversation($tenant, $channel, 'chat-A');
+        $this->ingest($first, '+79991112233', 'Иван');
         $clientX = $first->fresh()->client_id;
         $first->forceFill(['status' => ConversationStatus::Closed])->save();
 
         // Чат B того же телефона → создаётся пустой клиент Y, затем склейка в X.
-        $second = $this->conversation($tenant, $channel, ['external_chat_id' => 'chat-B', 'contact_name' => 'Гость']);
-        $this->ingest($second);
+        $second = $this->conversation($tenant, $channel, 'chat-B');
+        $this->ingest($second, '+79991112233', 'Гость');
 
         $this->assertSame(1, Client::query()->count()); // склеились в одного
         $this->assertSame($clientX, $second->fresh()->client_id);
@@ -121,21 +119,20 @@ final class ClientServiceTest extends TestCase
         $tenant = $this->tenant();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        $first = $this->conversation($tenant, $channel, ['external_chat_id' => 'tg-777']);
-        $this->ingest($first);
+        $first = $this->conversation($tenant, $channel, 'tg-777');
+        $this->ingest($first, '+79991112233', 'Иван');
         $clientId = $first->fresh()->client_id;
         $first->forceFill(['status' => ConversationStatus::Closed])->save();
 
         // Новый чистый диалог того же чата — узнаём по идентичности (без телефона).
         $second = Conversation::factory()->create([
-            'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-777',
-            'contact_phone' => null, 'contact_name' => null, 'client_id' => null,
+            'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-777', 'client_id' => null,
         ]);
         $this->service()->attachClient($second);
 
         $second->refresh();
         $this->assertSame($clientId, $second->client_id);
-        // Контакты читаются из карточки (буфер лида не заполняется).
+        // Контакты читаются из карточки (буфер лида не существует).
         $this->assertSame('Иван', $second->displayName());
         $this->assertSame('+79991112233', $second->displayPhone());
     }
@@ -145,8 +142,8 @@ final class ClientServiceTest extends TestCase
         $tenant = $this->tenant();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        $conv = $this->conversation($tenant, $channel, ['external_chat_id' => 'tg-9', 'contact_name' => 'Пётр']);
-        $this->ingest($conv);
+        $conv = $this->conversation($tenant, $channel, 'tg-9');
+        $this->ingest($conv, '+79991112233', 'Пётр');
         $client = Client::query()->firstOrFail();
         $conv->forceFill(['status' => ConversationStatus::Closed])->save();
 
@@ -158,8 +155,7 @@ final class ClientServiceTest extends TestCase
 
         // Тот же чат пишет снова — НЕ узнан, заводится НОВАЯ карточка (бот забыл).
         $fresh = Conversation::factory()->create([
-            'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-9',
-            'contact_phone' => null, 'contact_name' => null, 'client_id' => null,
+            'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-9', 'client_id' => null,
         ]);
         $this->service()->attachClient($fresh);
 

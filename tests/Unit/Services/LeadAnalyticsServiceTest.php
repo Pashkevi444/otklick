@@ -13,6 +13,7 @@ use App\Enums\ChannelType;
 use App\Enums\ConversationStatus;
 use App\Enums\LeadAnalyticsPeriod;
 use App\Models\Channel;
+use App\Models\Client;
 use App\Models\Conversation;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Services\LeadAnalyticsService;
@@ -35,14 +36,14 @@ final class LeadAnalyticsServiceTest extends TestCase
         int $clarifications = 0,
     ): Conversation {
         $c = new Conversation([
-            'contact_phone' => $phone,
-            'contact_name' => $name,
             'status' => $status,
             'clarification_attempts' => $clarifications,
         ]);
         $c->created_at = now()->subDays(1);
         $c->booked_at = $booked ? now() : null;
         $c->setAttribute('inbound_count', $inbound);
+        // Имя/телефон — атрибуты карточки клиента (лид к ней привязан).
+        $c->setRelation('client', new Client(['name' => $name, 'phone' => $phone]));
 
         $ch = new Channel;
         $ch->setAttribute('type', $channel);

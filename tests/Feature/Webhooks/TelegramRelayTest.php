@@ -31,12 +31,11 @@ final class TelegramRelayTest extends TestCase
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
         NotificationRecipient::factory()->telegram(self::OPERATOR_CHAT)->create(['tenant_id' => $tenant->id]);
 
-        $conversation = Conversation::factory()->create([
+        $conversation = Conversation::factory()->withClient('Иван')->create([
             'tenant_id' => $tenant->id,
             'channel_id' => $channel->id,
             'external_chat_id' => self::CLIENT_CHAT,
             'status' => ConversationStatus::NeedsHuman,
-            'contact_name' => 'Иван',
         ]);
 
         return [$tenant, $channel, $conversation];

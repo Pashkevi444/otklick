@@ -91,10 +91,8 @@ final class BookingFlowTest extends TestCase
     private function conversation(?string $phone = '+79990000000'): Conversation
     {
         $c = new Conversation;
-        $c->contact_name = 'Иван';
-        $c->contact_phone = $phone;
-        // Лид всегда привязан к карточке; пустая карточка → display* падают на буфер.
-        $c->setRelation('client', new Client(['name' => null, 'phone' => null, 'email' => null]));
+        // Имя/телефон — атрибуты карточки клиента (лид всегда к ней привязан).
+        $c->setRelation('client', new Client(['name' => 'Иван', 'phone' => $phone, 'email' => null]));
 
         return $c;
     }
@@ -327,7 +325,7 @@ final class BookingFlowTest extends TestCase
         $crm = $this->crm();
         $flow = $this->flow($crm);
         $c = $this->conversation();
-        $c->contact_name = null; // имени нет, телефон есть
+        $c->client->name = null; // имени нет, телефон есть
 
         $flow->start($this->tenant(), $c);
         $flow->advance($this->tenant(), $c, '1');
@@ -349,7 +347,8 @@ final class BookingFlowTest extends TestCase
         $crm = $this->crm();
         $flow = $this->flow($crm);
         $c = $this->conversation(phone: null);
-        $c->contact_name = null; // нет ни имени, ни телефона
+        $c->client->name = null;
+        $c->client->phone = null; // нет ни имени, ни телефона
 
         $flow->start($this->tenant(), $c);
         $flow->advance($this->tenant(), $c, '1');
@@ -776,7 +775,7 @@ final class BookingFlowTest extends TestCase
         $flow = $this->flow($crm);
 
         $c = $this->conversation(phone: null); // нового клиента ещё не знаем
-        $c->contact_name = null;
+        $c->client->name = null;
 
         $flow->start($this->tenant(), $c);
         $flow->advance($this->tenant(), $c, 'завтра');

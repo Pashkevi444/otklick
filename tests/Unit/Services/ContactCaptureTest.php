@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Llm\Contracts\LlmClient;
+use App\Models\Client;
 use App\Models\Conversation;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\ClientService;
@@ -20,7 +21,7 @@ final class ContactCaptureTest extends TestCase
 
     public function test_captures_phone_from_text_into_client(): void
     {
-        $conversation = new Conversation(['contact_name' => 'Иван', 'contact_phone' => null]);
+        $conversation = $this->conv('Иван', null);
 
         $clients = $this->clients();
         $clients->shouldReceive('recordPhone')->once()->with($conversation, '+79991234567');
@@ -31,7 +32,7 @@ final class ContactCaptureTest extends TestCase
 
     public function test_captures_name_via_model_when_bot_asked(): void
     {
-        $conversation = new Conversation(['contact_name' => 'Гость сайта', 'contact_phone' => '+70000000000']);
+        $conversation = $this->conv(null, '+70000000000');
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('latestOutboundText')->once()->with($conversation)->andReturn('Как вас зовут?');
@@ -48,7 +49,7 @@ final class ContactCaptureTest extends TestCase
 
     public function test_captures_name_and_phone_from_one_message_without_bot_asking(): void
     {
-        $conversation = new Conversation(['contact_name' => null, 'contact_phone' => null]);
+        $conversation = $this->conv(null, null);
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldNotReceive('latestOutboundText'); // явное представление — без истории
@@ -62,13 +63,22 @@ final class ContactCaptureTest extends TestCase
 
     public function test_does_not_touch_contacts_when_already_known(): void
     {
-        $conversation = new Conversation(['contact_name' => 'Анна', 'contact_phone' => '+70000000000']);
+        $conversation = $this->conv('Анна', '+70000000000');
 
         $clients = $this->clients();
         $clients->shouldNotReceive('recordName');
         $clients->shouldNotReceive('recordPhone');
 
         $this->capture($clients)->fromInbound($conversation, 'Павел');
+    }
+
+    /** Лид всегда привязан к карточке; имя/телефон — её атрибуты. */
+    private function conv(?string $name, ?string $phone): Conversation
+    {
+        $c = new Conversation;
+        $c->setRelation('client', new Client(['name' => $name, 'phone' => $phone]));
+
+        return $c;
     }
 
     private function clients(): Mockery\MockInterface

@@ -103,18 +103,15 @@ final class MessagingRepositoriesTest extends TestCase
         $client = Client::factory()->create(['tenant_id' => $this->tenant->id]);
 
         $first = $this->conversations->firstOrCreateForChat($channel->id, '777', null);
-        $this->conversations->setContactName($first, 'Алексей');
-        $this->conversations->setContactPhone($first, '+79991112233');
         $this->conversations->setClientId($first, $client->id);
         $this->conversations->updateStatus($first, ConversationStatus::Closed);
 
-        // Новый диалог чата — чистый: личность НЕ переносится из прошлого лида
+        // Новый диалог чата — чистый: client_id НЕ переносится из прошлого лида
         // (узнавание теперь через карточку клиента по идентичности канала —
-        // см. ClientService::recognizeReturning).
+        // см. ClientService::attachClient).
         $second = $this->conversations->firstOrCreateForChat($channel->id, '777', null);
 
         $this->assertFalse($first->is($second));
-        $this->assertNull($second->contact_phone);
         $this->assertNull($second->client_id);
     }
 

@@ -8,6 +8,7 @@ use App\Enums\ChannelType;
 use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Channel;
+use App\Models\Client;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -93,11 +94,8 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         if ($search !== null && $search !== '') {
             $needle = '%'.mb_strtolower($search).'%';
             $query->where(function (Builder $w) use ($needle): void {
-                $w->whereRaw('lower(contact_name) like ?', [$needle])
-                    ->orWhereRaw('lower(contact_phone) like ?', [$needle])
-                    ->orWhereRaw('lower(external_chat_id) like ?', [$needle])
-                    // Ищем и по карточке клиента (источник правды имени/телефона) —
-                    // чтобы переименованного в карточке клиента всё равно находить.
+                $w->whereRaw('lower(external_chat_id) like ?', [$needle])
+                    // Имя/телефон — в карточке клиента (источник правды).
                     ->orWhereHas('client', fn (Builder $c) => $c->whereRaw('lower(name) like ?', [$needle])->orWhereRaw('lower(phone) like ?', [$needle]))
                     ->orWhereHas('messages', fn (Builder $m) => $m->whereRaw('lower(text) like ?', [$needle]));
             });
@@ -111,17 +109,15 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             $query->whereHas('channel', fn (Builder $c) => $c->where('type', $channel->value));
         }
 
-        $column = match ($sort) {
-            'contact' => 'contact_name',
-            'messages' => 'messages_count',
-            default => 'last_message_at',
-        };
         $dir = $direction === 'asc' ? 'asc' : 'desc';
 
-        if ($column === 'messages_count') {
+        if ($sort === 'contact') {
+            // Имя — в карточке клиента; сортируем коррелированным подзапросом.
+            $query->orderBy(Client::select('name')->whereColumn('clients.id', 'conversations.client_id'), $dir);
+        } elseif ($sort === 'messages') {
             $query->orderBy('messages_count', $dir);
         } else {
-            $query->orderBy($column, $dir);
+            $query->orderBy('last_message_at', $dir);
         }
 
         return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
@@ -141,14 +137,13 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             return $active;
         }
 
-        // Новый диалог чата — чистый. Вернувшегося клиента узнаём НЕ переносом
-        // полей из прошлого лида, а по карточке клиента через нативную идентичность
-        // канала (ClientService::recognizeReturning) — память якорится на клиенте,
-        // удалили клиента → бот забыл.
+        // Новый диалог чата — чистый. Контакты живут в карточке клиента; узнавание
+        // вернувшегося — по нативной идентичности канала (ClientService::attachClient),
+        // память якорится на клиенте (удалили клиента → бот забыл). $contactName от
+        // мессенджеров всегда null (имя собирает контактная форма).
         return Conversation::create([
             'channel_id' => $channelId,
             'external_chat_id' => $externalChatId,
-            'contact_name' => $contactName,
             'contact_ref' => $contactRef,
             'status' => ConversationStatus::Open,
         ]);
@@ -211,21 +206,6 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function resetClarificationAttempts(Conversation $conversation): void
     {
         $conversation->forceFill(['clarification_attempts' => 0])->save();
-    }
-
-    public function setContactPhone(Conversation $conversation, string $phone): void
-    {
-        $conversation->forceFill(['contact_phone' => $phone])->save();
-    }
-
-    public function setContactName(Conversation $conversation, string $name): void
-    {
-        $conversation->forceFill(['contact_name' => $name])->save();
-    }
-
-    public function setContactEmail(Conversation $conversation, string $email): void
-    {
-        $conversation->forceFill(['contact_email' => $email])->save();
     }
 
     public function markContactsGateDone(Conversation $conversation): void

@@ -20,9 +20,6 @@ use Illuminate\Support\Carbon;
  * @property string $tenant_id
  * @property string $channel_id
  * @property string $external_chat_id
- * @property string|null $contact_name
- * @property string|null $contact_phone
- * @property string|null $contact_email
  * @property bool $contacts_gate_done
  * @property string|null $contact_ref
  * @property ConversationStatus $status
@@ -51,9 +48,6 @@ class Conversation extends TenantOwnedModel
         'tenant_id',
         'channel_id',
         'external_chat_id',
-        'contact_name',
-        'contact_phone',
-        'contact_email',
         'contacts_gate_done',
         'contact_ref',
         'status',
@@ -154,29 +148,23 @@ class Conversation extends TenantOwnedModel
     }
 
     /**
-     * Имя/телефон/email для отображения и исходящих: КАРТОЧКА клиента — источник
-     * правды (нормализация), буфер `contact_*` — фолбэк, пока контакт собирается.
-     * Подгрузи `client`, чтобы не ловить N+1 на гридах/рассылках.
+     * Имя/телефон/email лида берём ТОЛЬКО из карточки клиента (нормализация: это
+     * атрибуты человека, а не треда). Лид всегда привязан к карточке
+     * (ClientService::attachClient). Подгрузи `client`, чтобы не ловить N+1.
      */
     public function displayName(): ?string
     {
-        $name = $this->client?->name;
-
-        return $name !== null && $name !== '' ? $name : $this->contact_name;
+        return $this->client?->name;
     }
 
     public function displayPhone(): ?string
     {
-        $phone = $this->client?->phone;
-
-        return $phone !== null && $phone !== '' ? $phone : $this->contact_phone;
+        return $this->client?->phone;
     }
 
     public function displayEmail(): ?string
     {
-        $email = $this->client?->email;
-
-        return $email !== null && $email !== '' ? $email : $this->contact_email;
+        return $this->client?->email;
     }
 
     /**

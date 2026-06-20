@@ -136,7 +136,7 @@ final class AnalyticsPageTest extends TestCase
     {
         $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_phone' => '+79991112233', 'created_at' => now()->subDay()]);
+        Conversation::factory()->withClient(null, '+79991112233')->create(['tenant_id' => $tenant->id, 'created_at' => now()->subDay()]);
 
         $response = $this->actingAs($owner)->get('/cabinet/analytics/export/leads');
 

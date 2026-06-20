@@ -26,9 +26,8 @@ final class ConversationJournalTest extends TestCase
         $tenant = Tenant::factory()->create();
         $owner = User::factory()->owner($tenant)->create();
 
-        $conv = Conversation::factory()->create([
+        $conv = Conversation::factory()->withClient('Иван Петров')->create([
             'tenant_id' => $tenant->id,
-            'contact_name' => 'Иван Петров',
             'last_message_at' => now(),
         ]);
         Message::factory()->create(['tenant_id' => $tenant->id, 'conversation_id' => $conv->id, 'direction' => MessageDirection::Inbound, 'text' => 'Здравствуйте, есть фейд?']);
@@ -56,12 +55,10 @@ final class ConversationJournalTest extends TestCase
         $conv = Conversation::factory()->create([
             'tenant_id' => $tenant->id,
             'client_id' => $client->id,
-            'contact_name' => 'Алексей',          // устаревшая копия на диалоге
-            'contact_phone' => '+70000000000',
             'last_message_at' => now(),
         ]);
 
-        // Грид «Лиды» берёт имя/телефон ИЗ карточки клиента, а не копию диалога.
+        // Грид «Лиды» берёт имя/телефон ИЗ карточки клиента.
         $this->actingAs($owner)->get('/cabinet/conversations')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('conversations.0.contact', 'Алексей Петров')
@@ -78,7 +75,7 @@ final class ConversationJournalTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $owner = User::factory()->owner($tenant)->create();
-        $conv = Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Мария']);
+        $conv = Conversation::factory()->withClient('Мария')->create(['tenant_id' => $tenant->id]);
         Message::factory()->create(['tenant_id' => $tenant->id, 'conversation_id' => $conv->id, 'direction' => MessageDirection::Inbound, 'text' => 'Привет']);
 
         $this->actingAs($owner)
@@ -111,8 +108,8 @@ final class ConversationJournalTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $owner = User::factory()->owner($tenant)->create();
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Ivan Petrov']);
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Maria Sidorova']);
+        Conversation::factory()->withClient('Ivan Petrov')->create(['tenant_id' => $tenant->id]);
+        Conversation::factory()->withClient('Maria Sidorova')->create(['tenant_id' => $tenant->id]);
 
         // Поиск регистронезависимый (на проде Postgres lower() работает и с кириллицей).
         $this->actingAs($owner)
@@ -126,9 +123,9 @@ final class ConversationJournalTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $owner = User::factory()->owner($tenant)->create();
-        $conv = Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Guest One']);
+        $conv = Conversation::factory()->withClient('Guest One')->create(['tenant_id' => $tenant->id]);
         Message::factory()->create(['tenant_id' => $tenant->id, 'conversation_id' => $conv->id, 'text' => 'How much is the fade haircut?']);
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Guest Two']);
+        Conversation::factory()->withClient('Guest Two')->create(['tenant_id' => $tenant->id]);
 
         $this->actingAs($owner)
             ->get('/cabinet/conversations?search=fade')
@@ -151,8 +148,8 @@ final class ConversationJournalTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $owner = User::factory()->owner($tenant)->create();
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Без телефона', 'contact_phone' => null, 'last_message_at' => now()->subHour()]);
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'contact_name' => 'Сергей', 'contact_phone' => '+79991234567', 'last_message_at' => now()]);
+        Conversation::factory()->withClient('Без телефона')->create(['tenant_id' => $tenant->id, 'last_message_at' => now()->subHour()]);
+        Conversation::factory()->withClient('Сергей', '+79991234567')->create(['tenant_id' => $tenant->id, 'last_message_at' => now()]);
 
         $this->actingAs($owner)
             ->get('/cabinet/conversations')
@@ -241,7 +238,6 @@ final class ConversationJournalTest extends TestCase
         Conversation::factory()->create([
             'tenant_id' => $tenant->id,
             'channel_id' => $channel->id,
-            'contact_name' => null,
             'last_message_at' => now(),
         ]);
 
