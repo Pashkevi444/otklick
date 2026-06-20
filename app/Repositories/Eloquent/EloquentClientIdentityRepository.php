@@ -28,4 +28,21 @@ final class EloquentClientIdentityRepository implements ClientIdentityRepository
             ['client_id' => $clientId],
         );
     }
+
+    public function reassignClient(string $fromClientId, string $toClientId): void
+    {
+        ClientIdentity::query()->where('client_id', $fromClientId)->each(function (ClientIdentity $identity) use ($toClientId): void {
+            $collision = ClientIdentity::query()
+                ->where('client_id', $toClientId)
+                ->where('channel_type', $identity->channel_type->value)
+                ->where('identity', $identity->identity)
+                ->exists();
+
+            if ($collision) {
+                $identity->delete(); // у $to уже есть эта идентичность — дубль отбрасываем
+            } else {
+                $identity->forceFill(['client_id' => $toClientId])->save();
+            }
+        });
+    }
 }

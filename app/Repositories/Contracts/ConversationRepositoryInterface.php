@@ -99,6 +99,9 @@ interface ConversationRepositoryInterface
     /** Отвязывает все лиды от клиента (client_id → null) при удалении клиента. */
     public function clearClientLinks(string $clientId): void;
 
+    /** Переносит лиды с карточки $fromClientId на $toClientId (склейка клиентов). */
+    public function reassignClient(string $fromClientId, string $toClientId): void;
+
     /** Удаляет диалог (с каскадом сообщений). */
     public function delete(Conversation $conversation): void;
 

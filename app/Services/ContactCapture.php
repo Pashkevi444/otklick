@@ -32,9 +32,9 @@ class ContactCapture
 
     public function fromInbound(Conversation $conversation, string $text): void
     {
-        // Сначала узнаём вернувшегося по нативной идентичности канала (заполнит
-        // имя/телефон из карточки) — до разбора этого сообщения.
-        $this->clients->recognizeReturning($conversation);
+        // Гарантируем карточку клиента и узнаём вернувшегося (заполнит имя/телефон
+        // из карточки) — до разбора этого сообщения.
+        $this->clients->attachClient($conversation);
 
         if ($conversation->contact_phone === null) {
             $phone = PhoneExtractor::fromText($text);
@@ -56,9 +56,7 @@ class ContactCapture
             }
         }
 
-        // Появился телефон — заводим/обновляем карточку клиента и привязываем лид.
-        if ($conversation->contact_phone !== null) {
-            $this->clients->linkConversation($conversation);
-        }
+        // Захваченные контакты → в карточку клиента (источник правды; склейка по телефону).
+        $this->clients->pushToClient($conversation);
     }
 }

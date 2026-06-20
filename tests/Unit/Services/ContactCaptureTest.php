@@ -94,8 +94,8 @@ final class ContactCaptureTest extends TestCase
         LlmClient $llm,
     ): ContactCapture {
         $clients = Mockery::mock(ClientService::class);
-        $clients->shouldReceive('recognizeReturning')->byDefault();
-        $clients->shouldReceive('linkConversation')->byDefault();
+        $clients->shouldReceive('attachClient')->byDefault();
+        $clients->shouldReceive('pushToClient')->byDefault();
 
         return new ContactCapture($conversations, $messages, new NameDetector($llm), $clients);
     }

@@ -159,6 +159,11 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         Conversation::query()->where('client_id', $clientId)->update(['client_id' => null]);
     }
 
+    public function reassignClient(string $fromClientId, string $toClientId): void
+    {
+        Conversation::query()->where('client_id', $fromClientId)->update(['client_id' => $toClientId]);
+    }
+
     public function findActiveForChat(string $channelId, string $externalChatId): ?Conversation
     {
         return Conversation::query()

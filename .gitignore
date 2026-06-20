@@ -32,3 +32,6 @@ rr
 /CLAUDE.md
 /storage/framework/phpstan
 /scripts/deploy.env
+
+# Дампы БД с прода (делаются на сервере при деплое)
+backups/

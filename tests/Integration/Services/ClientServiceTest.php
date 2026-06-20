@@ -19,10 +19,13 @@ final class ClientServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function conversation(Tenant $tenant, array $overrides = []): Conversation
+    private function service(): ClientService
     {
-        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        return $this->app->make(ClientService::class);
+    }
 
+    private function conversation(Tenant $tenant, Channel $channel, array $overrides = []): Conversation
+    {
         return Conversation::factory()->create(array_merge([
             'tenant_id' => $tenant->id,
             'channel_id' => $channel->id,
@@ -32,13 +35,29 @@ final class ClientServiceTest extends TestCase
         ], $overrides));
     }
 
-    public function test_links_conversation_to_new_client_and_backfills_fields(): void
+    /** Эмуляция конвейера ContactCapture: до разбора — attach, после — push. */
+    private function ingest(Conversation $conversation): void
+    {
+        $service = $this->service();
+        $service->attachClient($conversation);
+        $service->pushToClient($conversation);
+    }
+
+    private function tenant(): Tenant
     {
         $tenant = Tenant::factory()->create();
         $this->app->make(TenantContext::class)->set($tenant->id);
 
-        $conversation = $this->conversation($tenant);
-        $this->app->make(ClientService::class)->linkConversation($conversation);
+        return $tenant;
+    }
+
+    public function test_creates_client_and_pushes_contacts(): void
+    {
+        $tenant = $this->tenant();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        $conversation = $this->conversation($tenant, $channel, ['external_chat_id' => 'tg-1']);
+        $this->ingest($conversation);
 
         $conversation->refresh();
         $this->assertNotNull($conversation->client_id);
@@ -48,78 +67,64 @@ final class ClientServiceTest extends TestCase
         $this->assertSame('Иван', $client->name);
         $this->assertSame('ivan', $client->telegram_username);
         $this->assertSame('telegram', $client->first_channel_type);
-    }
-
-    public function test_dedupes_clients_by_phone_within_tenant(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $this->app->make(TenantContext::class)->set($tenant->id);
-        $service = $this->app->make(ClientService::class);
-
-        $first = $this->conversation($tenant, ['contact_name' => 'Гость']); // имя-плейсхолдер
-        $service->linkConversation($first);
-
-        $second = $this->conversation($tenant, ['contact_name' => 'Иван', 'external_chat_id' => '777']);
-        $service->linkConversation($second);
-
-        // Один клиент на телефон; имя дозаполнилось из второго диалога.
-        $this->assertSame(1, Client::query()->count());
-        $client = Client::query()->firstOrFail();
-        $this->assertSame('Иван', $client->name);
-
-        $second->refresh();
-        $this->assertSame($client->id, $second->client_id);
-    }
-
-    public function test_without_phone_no_client_is_created(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $this->app->make(TenantContext::class)->set($tenant->id);
-
-        $conversation = $this->conversation($tenant, ['contact_phone' => null]);
-        $this->app->make(ClientService::class)->linkConversation($conversation);
-
-        $this->assertSame(0, Client::query()->count());
-        $conversation->refresh();
-        $this->assertNull($conversation->client_id);
-    }
-
-    public function test_link_records_channel_identity(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $this->app->make(TenantContext::class)->set($tenant->id);
-
-        $conversation = $this->conversation($tenant, ['external_chat_id' => 'tg-123']);
-        $this->app->make(ClientService::class)->linkConversation($conversation);
 
         $identity = ClientIdentity::query()->firstOrFail();
-        $this->assertSame('telegram', $identity->channel_type->value);
-        $this->assertSame('tg-123', $identity->identity);
-        $this->assertSame($conversation->fresh()->client_id, $identity->client_id);
+        $this->assertSame('tg-1', $identity->identity);
+        $this->assertSame($client->id, $identity->client_id);
     }
 
-    public function test_recognizes_returning_client_by_channel_identity(): void
+    public function test_creates_client_even_without_phone(): void
     {
-        $tenant = Tenant::factory()->create();
-        $this->app->make(TenantContext::class)->set($tenant->id);
-        $service = $this->app->make(ClientService::class);
-
-        // Первый контакт: дал телефон → создан клиент + записана идентичность tg-777.
+        $tenant = $this->tenant();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
-        $first = Conversation::factory()->create([
-            'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-777',
-            'contact_phone' => '+79991112233', 'contact_name' => 'Иван', 'contact_ref' => 'https://t.me/ivan',
-        ]);
-        $service->linkConversation($first);
-        $clientId = $first->fresh()->client_id;
-        $first->forceFill(['status' => ConversationStatus::Closed])->save(); // закрыт → можно новый диалог чата
 
-        // Новый чистый диалог того же чата — узнаём по идентичности, без телефона.
+        // Нормализация: каждый лид имеет карточку клиента, даже без телефона.
+        $conversation = $this->conversation($tenant, $channel, ['contact_phone' => null, 'contact_name' => null]);
+        $this->ingest($conversation);
+
+        $this->assertSame(1, Client::query()->count());
+        $conversation->refresh();
+        $this->assertNotNull($conversation->client_id);
+        $this->assertNull(Client::query()->findOrFail($conversation->client_id)->phone);
+    }
+
+    public function test_merges_clients_when_phone_matches_another(): void
+    {
+        $tenant = $this->tenant();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        // Чат A: дал телефон → клиент X.
+        $first = $this->conversation($tenant, $channel, ['external_chat_id' => 'chat-A']);
+        $this->ingest($first);
+        $clientX = $first->fresh()->client_id;
+        $first->forceFill(['status' => ConversationStatus::Closed])->save();
+
+        // Чат B того же телефона → создаётся пустой клиент Y, затем склейка в X.
+        $second = $this->conversation($tenant, $channel, ['external_chat_id' => 'chat-B', 'contact_name' => 'Гость']);
+        $this->ingest($second);
+
+        $this->assertSame(1, Client::query()->count()); // склеились в одного
+        $this->assertSame($clientX, $second->fresh()->client_id);
+        // Обе нативные идентичности теперь у X.
+        $this->assertSame(2, ClientIdentity::query()->where('client_id', $clientX)->count());
+    }
+
+    public function test_recognizes_returning_by_channel_identity(): void
+    {
+        $tenant = $this->tenant();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        $first = $this->conversation($tenant, $channel, ['external_chat_id' => 'tg-777']);
+        $this->ingest($first);
+        $clientId = $first->fresh()->client_id;
+        $first->forceFill(['status' => ConversationStatus::Closed])->save();
+
+        // Новый чистый диалог того же чата — узнаём по идентичности (без телефона).
         $second = Conversation::factory()->create([
             'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-777',
             'contact_phone' => null, 'contact_name' => null, 'client_id' => null,
         ]);
-        $service->recognizeReturning($second);
+        $this->service()->attachClient($second);
 
         $second->refresh();
         $this->assertSame($clientId, $second->client_id);
@@ -127,34 +132,32 @@ final class ClientServiceTest extends TestCase
         $this->assertSame('+79991112233', $second->contact_phone);
     }
 
-    public function test_delete_forgets_client_and_clears_links(): void
+    public function test_delete_forgets_client_then_new_contact_is_a_new_client(): void
     {
-        $tenant = Tenant::factory()->create();
-        $this->app->make(TenantContext::class)->set($tenant->id);
-        $service = $this->app->make(ClientService::class);
-
+        $tenant = $this->tenant();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
-        $conv = Conversation::factory()->create([
-            'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-9',
-            'contact_phone' => '+79990001122', 'contact_name' => 'Пётр',
-        ]);
-        $service->linkConversation($conv);
+
+        $conv = $this->conversation($tenant, $channel, ['external_chat_id' => 'tg-9', 'contact_name' => 'Пётр']);
+        $this->ingest($conv);
         $client = Client::query()->firstOrFail();
-        $conv->forceFill(['status' => ConversationStatus::Closed])->save(); // закрыт → можно новый диалог чата
+        $conv->forceFill(['status' => ConversationStatus::Closed])->save();
 
-        $service->delete($client);
+        $this->service()->delete($client);
 
-        // Клиент и его идентичности удалены, лид отвязан (история лида осталась).
         $this->assertSame(0, Client::query()->count());
         $this->assertSame(0, ClientIdentity::query()->count());
         $this->assertNull($conv->fresh()->client_id);
 
-        // Новый диалог того же чата — НЕ узнаётся (бот забыл).
+        // Тот же чат пишет снова — НЕ узнан, заводится НОВАЯ карточка (бот забыл).
         $fresh = Conversation::factory()->create([
             'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-9',
-            'contact_phone' => null, 'client_id' => null,
+            'contact_phone' => null, 'contact_name' => null, 'client_id' => null,
         ]);
-        $service->recognizeReturning($fresh);
-        $this->assertNull($fresh->fresh()->client_id);
+        $this->service()->attachClient($fresh);
+
+        $newClientId = $fresh->fresh()->client_id;
+        $this->assertNotNull($newClientId);
+        $this->assertNotSame($client->id, $newClientId);
+        $this->assertNull(Client::query()->findOrFail($newClientId)->name);
     }
 }
