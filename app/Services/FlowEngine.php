@@ -13,6 +13,7 @@ use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
+use App\Support\FlowExpr;
 use App\Support\RussianStem;
 use App\Support\Vectors;
 use Throwable;
@@ -232,6 +233,10 @@ final readonly class FlowEngine
      */
     private function enter(Tenant $tenant, Conversation $conversation, Flow $flow, string $nodeId, array $node, array $vars, int $depth = 0): ?BotReply
     {
+        // Контекст подстановки: встроенные переменные клиента + захваченные в воронке.
+        // Хранится в flow_state только захваченное; встроенные берём свежими каждый шаг.
+        $ctx = array_merge($this->builtinVars($conversation), $vars);
+
         // Узел-условие проходим сразу к ветке; глубина — защита от циклов условий.
         if (($node['type'] ?? 'message') === 'condition') {
             if ($depth > 20) {
@@ -239,7 +244,7 @@ final readonly class FlowEngine
 
                 return null;
             }
-            $branch = (string) ($node[$this->evalCondition($node, $vars) ? 'next' : 'else'] ?? '');
+            $branch = (string) ($node[FlowExpr::evalCondition($node, $ctx) ? 'next' : 'else'] ?? '');
             $target = $this->node($flow, $branch);
             if ($target === null) {
                 $this->conversations->setFlowState($conversation, null);
@@ -270,7 +275,7 @@ final readonly class FlowEngine
         }
 
         $action = (string) ($node['action'] ?? 'none');
-        $text = $this->interpolate(trim((string) ($node['text'] ?? '')), $vars);
+        $text = FlowExpr::interpolate(trim((string) ($node['text'] ?? '')), $ctx);
 
         if ($action === 'start_booking') {
             $this->conversations->setFlowState($conversation, null);
@@ -308,39 +313,6 @@ final readonly class FlowEngine
             array_map(static fn (array $o): string => (string) $o['label'], $options),
             2,
         ));
-    }
-
-    /**
-     * Вычисляет узел-условие: сравнивает переменную с значением (регистронезависимо).
-     *
-     * @param  array<string, mixed>  $node
-     * @param  array<string, mixed>  $vars
-     */
-    private function evalCondition(array $node, array $vars): bool
-    {
-        $actual = mb_strtolower(trim((string) ($vars[(string) ($node['variable'] ?? '')] ?? '')));
-        $expected = mb_strtolower(trim((string) ($node['value'] ?? '')));
-
-        return match ((string) ($node['operator'] ?? 'eq')) {
-            'neq' => $actual !== $expected,
-            'contains' => $expected !== '' && mb_strpos($actual, $expected) !== false,
-            'filled' => $actual !== '',
-            default => $actual === $expected, // eq
-        };
-    }
-
-    /**
-     * Подставляет `{{переменная}}` в текст (неизвестные — пустой строкой).
-     *
-     * @param  array<string, mixed>  $vars
-     */
-    private function interpolate(string $text, array $vars): string
-    {
-        return (string) preg_replace_callback(
-            '/\{\{\s*(\w+)\s*\}\}/u',
-            static fn (array $m): string => (string) ($vars[$m[1]] ?? ''),
-            $text,
-        );
     }
 
     /**
@@ -427,5 +399,20 @@ final readonly class FlowEngine
         $node = $flow->definition['nodes'][$id] ?? null;
 
         return is_array($node) ? $node : null;
+    }
+
+    /**
+     * Встроенные переменные из карточки клиента — доступны в текстах сценария как
+     * `{{client_name}}` / `{{client_phone}}` / `{{client_email}}` без переспроса.
+     *
+     * @return array<string, string>
+     */
+    private function builtinVars(Conversation $conversation): array
+    {
+        return [
+            'client_name' => (string) $conversation->displayName(),
+            'client_phone' => (string) $conversation->displayPhone(),
+            'client_email' => (string) $conversation->displayEmail(),
+        ];
     }
 }

@@ -211,6 +211,27 @@ final class FlowEngineTest extends TestCase
         $this->assertSame(1, FlowAbAssignment::withoutGlobalScopes()->where('conversation_id', $conversation->id)->count());
     }
 
+    public function test_builtin_client_var_interpolates_from_card(): void
+    {
+        // {{client_name}} берётся из карточки клиента без переспроса.
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->withClient('Зоя')->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Привет',
+            'is_active' => true,
+            'triggers' => ['привет'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'text' => 'Здравствуйте, {{client_name}}!', 'action' => 'end', 'options' => []],
+            ]],
+        ]));
+
+        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'привет'));
+
+        $this->assertSame('Здравствуйте, Зоя!', $reply->text);
+    }
+
     public function test_button_choice_advances_and_escalates(): void
     {
         [$tenant, $conversation] = $this->setupFlow();

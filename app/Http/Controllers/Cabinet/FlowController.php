@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Cabinet;
 use App\Http\Controllers\Controller;
 use App\Models\Flow;
 use App\Services\FlowService;
+use App\Services\FlowSimulator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,7 +22,23 @@ final class FlowController extends Controller
 {
     public function __construct(
         private readonly FlowService $service,
+        private readonly FlowSimulator $simulator,
     ) {}
+
+    /** Сухой прогон воронки для теста в кабинете (без побочных эффектов). */
+    public function test(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'definition' => ['required', 'array'],
+            'state' => ['nullable', 'array'],
+            'text' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        /** @var array{node: ?string, vars?: array<string, mixed>}|null $state */
+        $state = $data['state'] ?? null;
+
+        return response()->json($this->simulator->step((array) $data['definition'], $state, $data['text'] ?? null));
+    }
 
     public function index(): Response
     {

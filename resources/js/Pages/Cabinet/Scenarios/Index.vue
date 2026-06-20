@@ -5,6 +5,7 @@ import { computed, reactive, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Toggle from '@/Components/Toggle.vue';
 import FlowCanvas from '@/Components/FlowCanvas.vue';
+import Hint from '@/Components/Hint.vue';
 
 interface OptionEdge {
     label: string;
@@ -75,6 +76,60 @@ const form = useForm<{ id: string | null; name: string; is_active: boolean; trig
 });
 
 const nodeIds = computed(() => form.nodes.map((n) => n.id));
+
+// Переменные, доступные для подстановки: встроенные из карточки + захваченные в вопросах.
+const availableVars = computed<string[]>(() => {
+    const captured = form.nodes.filter((n) => n.type === 'input' && n.variable.trim() !== '').map((n) => n.variable.trim());
+    return ['client_name', 'client_phone', 'client_email', ...new Set(captured)];
+});
+
+// Переходы узла (куда он может вести) — для проверки целостности и достижимости.
+const nodeTargets = (n: NodeEdit): string[] => {
+    if (n.type === 'input') return [n.next];
+    if (n.type === 'condition') return [n.next, n.else];
+    if (n.type === 'split') return n.variants.map((v) => v.next);
+    if (n.type === 'message' && n.action === 'none') return n.options.map((o) => o.next);
+    return [];
+};
+
+// Живая валидация воронки: битые ссылки, незаданные ветки, недостижимые узлы.
+const issues = computed<string[]>(() => {
+    const out: string[] = [];
+    const ids = new Set(form.nodes.map((n) => n.id));
+
+    if (!ids.has(form.start)) out.push('Не задан стартовый узел.');
+
+    for (const n of form.nodes) {
+        for (const t of nodeTargets(n)) {
+            if (t && !ids.has(t)) out.push(`Узел ${n.id}: переход на несуществующий узел «${t}».`);
+        }
+        if (n.type === 'input' && !n.variable.trim()) out.push(`Узел ${n.id} (вопрос): не задана переменная.`);
+        if (n.type === 'input' && !n.next) out.push(`Узел ${n.id} (вопрос): не задан переход «дальше».`);
+        if (n.type === 'condition' && (!n.next || !n.else)) out.push(`Узел ${n.id} (условие): задай обе ветки — ДА и НЕТ.`);
+        if (n.type === 'split' && n.variants.filter((v) => v.next).length < 2) out.push(`Узел ${n.id} (A/B): нужно минимум 2 варианта.`);
+    }
+
+    if (ids.has(form.start)) {
+        const seen = new Set<string>([form.start]);
+        const queue: string[] = [form.start];
+        while (queue.length) {
+            const id = queue.shift();
+            const node = form.nodes.find((n) => n.id === id);
+            if (!node) continue;
+            for (const t of nodeTargets(node)) {
+                if (t && ids.has(t) && !seen.has(t)) {
+                    seen.add(t);
+                    queue.push(t);
+                }
+            }
+        }
+        for (const n of form.nodes) {
+            if (!seen.has(n.id)) out.push(`Узел ${n.id} недостижим из старта.`);
+        }
+    }
+
+    return out;
+});
 
 const blankNode = (id: string, x = 0, y = 0): NodeEdit => ({
     id, type: 'message', text: '', action: 'none', options: [],
@@ -159,7 +214,7 @@ const removeVariant = (node: NodeEdit, i: number): void => {
     node.variants.splice(i, 1);
 };
 
-const save = (): void => {
+const buildDefinition = (): { start: string; nodes: Record<string, FlowNodeDef> } => {
     const nodes: Record<string, FlowNodeDef> = {};
     for (const n of form.nodes) {
         if (n.type === 'input') {
@@ -178,11 +233,15 @@ const save = (): void => {
         }
         nodes[n.id].position = { x: n.x, y: n.y }; // позиция на холсте (бэкенд игнорирует)
     }
+    return { start: form.start, nodes };
+};
+
+const save = (): void => {
     const payload = {
         name: form.name,
         is_active: form.is_active,
         triggers: form.triggers.split(',').map((t) => t.trim()).filter((t) => t !== ''),
-        definition: { start: form.start, nodes },
+        definition: buildDefinition(),
     } as unknown as RequestPayload;
     const opts = { preserveScroll: true, onSuccess: () => (editing.value = null) };
     if (form.id) {
@@ -202,6 +261,69 @@ const actionLabel = (value: string): string => props.actionOptions.find((a) => a
 // Литералы с {{ }} нельзя писать прямо в шаблоне (Vue примет за интерполяцию) — выносим в строки.
 const msgPlaceholder = 'Сообщение бота. Можно подставлять {{переменную}}';
 const inputHint = 'Ответ клиента сохранится и его можно вставить в любой текст как {{name}}.';
+const varTag = (v: string): string => '{{' + v + '}}';
+
+// --- Тест-прогон воронки (сухой, без реальных эффектов) ---
+interface TestMsg {
+    from: 'bot' | 'you';
+    text: string;
+    note?: string;
+    buttons?: string[];
+}
+interface TestState {
+    node: string | null;
+    vars: Record<string, unknown>;
+}
+interface TestResult {
+    reply: string | null;
+    buttons: string[];
+    vars: Record<string, unknown>;
+    node: string | null;
+    done: boolean;
+    note: string | null;
+}
+const testOpen = ref(false);
+const testLog = ref<TestMsg[]>([]);
+const testState = ref<TestState | null>(null);
+const testDone = ref(false);
+const testInput = ref('');
+const testBusy = ref(false);
+
+const xsrf = (): string =>
+    decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '');
+
+const testStep = async (text: string | null): Promise<void> => {
+    testBusy.value = true;
+    try {
+        const res = await fetch('/cabinet/scenarios/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-XSRF-TOKEN': xsrf() },
+            credentials: 'same-origin',
+            body: JSON.stringify({ definition: buildDefinition(), state: testState.value, text }),
+        });
+        const d: TestResult = await res.json();
+        if (d.reply) testLog.value.push({ from: 'bot', text: d.reply, note: d.note ?? undefined, buttons: d.buttons });
+        else if (d.note) testLog.value.push({ from: 'bot', text: '—', note: d.note });
+        testDone.value = d.done;
+        testState.value = d.done ? null : { node: d.node, vars: d.vars };
+    } finally {
+        testBusy.value = false;
+    }
+};
+const testStart = (): void => {
+    testOpen.value = true;
+    testLog.value = [];
+    testState.value = null;
+    testDone.value = false;
+    void testStep(null);
+};
+const testSend = (text?: string): void => {
+    const t = (text ?? testInput.value).trim();
+    if (t === '' || testDone.value || testBusy.value) return;
+    testLog.value.push({ from: 'you', text: t });
+    testInput.value = '';
+    void testStep(t);
+};
 </script>
 
 <template>
@@ -252,26 +374,53 @@ const inputHint = 'Ответ клиента сохранится и его мо
 
         <!-- Редактор -->
         <form v-else class="max-w-3xl space-y-5" @submit.prevent="save">
+            <!-- Простое объяснение для новичка -->
+            <div class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-100">
+                <div class="font-medium">Как это работает 👇</div>
+                <p class="mt-1 text-xs leading-relaxed text-sky-800/90 dark:text-sky-100/80">
+                    Сценарий — это «если клиент написал нужное слово, бот ведёт его по шагам». Шаги называются <b>узлами</b>: бот пишет сообщение,
+                    задаёт вопрос, делает развилку или A/B-тест. Соберите шаги ниже, перетащите их на схеме как удобно, и нажмите
+                    <b>«🧪 Тест-прогон»</b>, чтобы проверить, как пойдёт диалог — без реальной переписки.
+                </p>
+            </div>
+
             <div class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Название</label>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Название
+                            <Hint text="Внутреннее имя сценария — только для вас, клиент его не видит." />
+                        </label>
                         <input v-model="form.name" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Напр. Акция месяца" />
                         <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Запуск по фразам (через запятую)</label>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Запуск по фразам (через запятую)
+                            <Hint text="Слова, при которых сработает сценарий. Перечислите через запятую: акция, скидка, промо. Ловятся любые формы слова (акции, акцию) и опечатки по смыслу." />
+                        </label>
                         <input v-model="form.triggers" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="акция, скидка, промо" />
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <Toggle v-model="form.is_active" /> Сценарий включён
+                    <Hint text="Выключенный сценарий не срабатывает у клиентов, но остаётся в списке." />
                 </div>
                 <div class="mt-3">
-                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Стартовый узел</label>
+                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Стартовый узел
+                        <Hint text="С какого шага начинается воронка, когда сработал запуск по фразам." />
+                    </label>
                     <select v-model="form.start" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
                         <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
                     </select>
+                </div>
+
+                <!-- Доступные переменные для подстановки -->
+                <div class="mt-4 border-t border-slate-100 pt-3 dark:border-white/10">
+                    <div class="mb-1 text-xs font-medium text-slate-500">Переменные для вставки в тексты
+                        <Hint text="Вставьте такую переменную в любой текст — бот подставит значение. client_* берутся из карточки клиента сами; остальные — это ответы из узлов-вопросов." />
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <code v-for="v in availableVars" :key="v" class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300">{{ varTag(v) }}</code>
+                    </div>
                 </div>
             </div>
 
@@ -282,6 +431,32 @@ const inputHint = 'Ответ клиента сохранится и его мо
                 <p class="mt-1 text-xs text-slate-400">Перетаскивай узлы — расположение сохранится. Клик по узлу откроет его настройки ниже.</p>
             </div>
 
+            <!-- Тест-прогон: проверить воронку, не написав живому боту -->
+            <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm font-medium text-slate-700 dark:text-slate-200">🧪 Тест-прогон</div>
+                    <button type="button" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="testStart">{{ testLog.length ? 'Перезапустить' : 'Запустить' }}</button>
+                </div>
+
+                <div v-if="testOpen" class="mt-3">
+                    <div class="max-h-72 space-y-2 overflow-y-auto rounded-lg bg-slate-50 p-3 dark:bg-white/5">
+                        <div v-for="(m, i) in testLog" :key="i" :class="m.from === 'you' ? 'text-right' : 'text-left'">
+                            <span class="inline-block max-w-[85%] rounded-2xl px-3 py-1.5 text-sm" :class="m.from === 'you' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 dark:bg-white/10 dark:text-slate-200 dark:ring-white/10'">{{ m.text }}</span>
+                            <div v-if="m.note" class="mt-0.5 text-xs italic text-slate-400">{{ m.note }}</div>
+                            <div v-if="m.buttons && m.buttons.length" class="mt-1 flex flex-wrap gap-1" :class="m.from === 'you' ? 'justify-end' : ''">
+                                <button v-for="b in m.buttons" :key="b" type="button" class="rounded-full border border-[#2E74B5] px-2.5 py-0.5 text-xs text-[#2E74B5] hover:bg-[#EAF2FB] dark:border-sky-400 dark:text-sky-300" @click="testSend(b)">{{ b }}</button>
+                            </div>
+                        </div>
+                        <div v-if="testDone" class="text-center text-xs text-slate-400">— конец сценария —</div>
+                    </div>
+                    <div v-if="!testDone" class="mt-2 flex gap-2">
+                        <input v-model="testInput" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Ответ клиента…" :disabled="testBusy" @keyup.enter="testSend()" />
+                        <button type="button" class="rounded-lg bg-[#2E74B5] px-3 py-1.5 text-sm text-white hover:bg-[#255f96] disabled:opacity-50" :disabled="testBusy" @click="testSend()">→</button>
+                    </div>
+                </div>
+                <p v-else class="mt-1 text-xs text-slate-400">Прогон по текущей (несохранённой) схеме — без реальной записи/эскалации.</p>
+            </div>
+
             <!-- Узлы -->
             <div v-for="node in form.nodes" :id="`node-card-${node.id}`" :key="node.id" class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
                 <div class="mb-2 flex items-center justify-between">
@@ -289,7 +464,9 @@ const inputHint = 'Ответ клиента сохранится и его мо
                     <button v-if="form.nodes.length > 1" type="button" class="text-xs text-red-600 hover:underline" @click="removeNode(node.id)">Удалить узел</button>
                 </div>
                 <div class="mb-3">
-                    <label class="mb-1 block text-xs font-medium text-slate-500">Тип узла</label>
+                    <label class="mb-1 block text-xs font-medium text-slate-500">Тип узла
+                        <Hint text="Сообщение — бот пишет текст и кнопки. Вопрос — спрашивает и запоминает ответ. Условие — развилка по переменной (если…то). A/B-сплит — делит людей на варианты, чтобы сравнить, что лучше записывает." />
+                    </label>
                     <select v-model="node.type" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
                         <option v-for="o in nodeTypeOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
@@ -299,13 +476,17 @@ const inputHint = 'Ответ клиента сохранится и его мо
                 <template v-if="node.type === 'message'">
                     <textarea v-model="node.text" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" :placeholder="msgPlaceholder"></textarea>
                     <div class="mt-3">
-                        <label class="mb-1 block text-xs font-medium text-slate-500">Действие</label>
+                        <label class="mb-1 block text-xs font-medium text-slate-500">Действие
+                            <Hint text="Что бот сделает на этом шаге. «Нет» — просто покажет сообщение и кнопки. Или сразу начнёт запись в YClients / позовёт администратора / завершит сценарий." />
+                        </label>
                         <select v-model="node.action" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
                             <option v-for="a in actionOptions" :key="a.value" :value="a.value">{{ a.label }}</option>
                         </select>
                     </div>
                     <div v-if="node.action === 'none'" class="mt-3">
-                        <div class="mb-1 text-xs font-medium text-slate-500">Кнопки (вариант → переход к узлу)</div>
+                        <div class="mb-1 text-xs font-medium text-slate-500">Кнопки (вариант → переход к узлу)
+                            <Hint text="Клиент нажимает кнопку — бот переходит к указанному узлу. Без кнопок шаг просто покажет сообщение и завершится." />
+                        </div>
                         <div class="space-y-2">
                             <div v-for="(opt, i) in node.options" :key="i" class="flex items-center gap-2">
                                 <input v-model="opt.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Текст кнопки" />
@@ -326,7 +507,9 @@ const inputHint = 'Ответ клиента сохранится и его мо
                     <textarea v-model="node.text" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Вопрос клиенту (например: Как вас зовут?)"></textarea>
                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label class="mb-1 block text-xs font-medium text-slate-500">Сохранить ответ в переменную</label>
+                            <label class="mb-1 block text-xs font-medium text-slate-500">Сохранить ответ в переменную
+                                <Hint text="Имя латиницей без пробелов: name, phone. Ответ клиента запомнится, и его можно вставить дальше как {{name}}." />
+                            </label>
                             <input v-model="node.variable" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="name" />
                         </div>
                         <div>
@@ -342,6 +525,9 @@ const inputHint = 'Ответ клиента сохранится и его мо
 
                 <!-- УСЛОВИЕ: если переменная … → да/нет -->
                 <template v-else-if="node.type === 'condition'">
+                    <div class="mb-1 text-xs font-medium text-slate-500">Если переменная…
+                        <Hint text="Сравните переменную со значением. Подходит → пойдём в ветку ДА, нет → в ветку НЕТ. Например: услуга содержит «маникюр». «Заполнена» — просто проверка, что значение есть." />
+                    </div>
                     <div class="grid gap-2 sm:grid-cols-3">
                         <input v-model="node.variable" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="переменная (name)" />
                         <select v-model="node.operator" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
@@ -370,7 +556,9 @@ const inputHint = 'Ответ клиента сохранится и его мо
 
                 <!-- A/B-СПЛИТ: варианты, между которыми делится трафик -->
                 <template v-else>
-                    <div class="mb-1 text-xs font-medium text-slate-500">Варианты (трафик делится поровну, липко на клиента)</div>
+                    <div class="mb-1 text-xs font-medium text-slate-500">Варианты (трафик делится поровну, липко на клиента)
+                        <Hint text="Каждый клиент случайно попадает в один вариант и всегда видит его же. Потом в списке сценариев увидите, какой вариант чаще доводит до записи." />
+                    </div>
                     <div class="space-y-2">
                         <div v-for="(v, i) in node.variants" :key="i" class="flex items-center gap-2">
                             <input v-model="v.label" type="text" class="w-20 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="A" />
@@ -390,6 +578,14 @@ const inputHint = 'Ответ клиента сохранится и его мо
             <button type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200" @click="addNode">
                 + Добавить узел
             </button>
+
+            <!-- Проверка воронки: предупреждения о битых/недостижимых узлах -->
+            <div v-if="issues.length" class="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                <div class="mb-1 text-sm font-medium text-amber-800 dark:text-amber-300">⚠️ Проверьте воронку ({{ issues.length }})</div>
+                <ul class="list-disc space-y-0.5 pl-5 text-xs text-amber-700 dark:text-amber-200/90">
+                    <li v-for="(msg, i) in issues" :key="i">{{ msg }}</li>
+                </ul>
+            </div>
 
             <div class="flex gap-3">
                 <button type="submit" :disabled="form.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">Сохранить</button>

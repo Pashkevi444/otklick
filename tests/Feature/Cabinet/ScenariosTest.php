@@ -97,6 +97,26 @@ final class ScenariosTest extends TestCase
         $this->assertSame(40, $flow->definition['nodes']['n1']['position']['y']);
     }
 
+    public function test_test_endpoint_runs_dry_simulation(): void
+    {
+        [, $owner] = $this->tenantWithOwner();
+        $definition = ['start' => 'n1', 'nodes' => [
+            'n1' => ['type' => 'input', 'text' => 'Как вас зовут?', 'variable' => 'name', 'next' => 'n2'],
+            'n2' => ['type' => 'message', 'text' => 'Привет, {{name}}', 'action' => 'end', 'options' => []],
+        ]];
+
+        // Старт → узел-вопрос.
+        $start = $this->actingAs($owner)->postJson('/cabinet/scenarios/test', ['definition' => $definition, 'state' => null, 'text' => null]);
+        $start->assertOk()->assertJsonPath('reply', 'Как вас зовут?')->assertJsonPath('done', false);
+
+        // Ответ → переменная + подстановка, конец.
+        $this->actingAs($owner)->postJson('/cabinet/scenarios/test', [
+            'definition' => $definition,
+            'state' => $start->json(),
+            'text' => 'Семён',
+        ])->assertOk()->assertJsonPath('reply', 'Привет, Семён')->assertJsonPath('done', true);
+    }
+
     public function test_toggle_flips_active(): void
     {
         [$tenant, $owner] = $this->tenantWithOwner();
