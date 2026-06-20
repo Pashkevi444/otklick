@@ -6,10 +6,13 @@ use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Account\EmailController;
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Account\TwoFactorController;
+use App\Http\Controllers\Admin\AnnouncementController as AdminAnnouncementController;
+use App\Http\Controllers\Admin\DashboardCardController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\AnalyticsController;
+use App\Http\Controllers\Cabinet\AnnouncementController;
 use App\Http\Controllers\Cabinet\BillingController;
 use App\Http\Controllers\Cabinet\BotTestController;
 use App\Http\Controllers\Cabinet\BroadcastController;
@@ -31,6 +34,7 @@ use App\Http\Controllers\Cabinet\TeamController;
 use App\Http\Controllers\Cabinet\WidgetController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Yclients\MarketplaceController;
+use App\Http\Middleware\EnsureCardAvailable;
 use App\Http\Middleware\EnsureSectionAllowed;
 use Illuminate\Support\Facades\Route;
 
@@ -67,6 +71,17 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/site', [SiteController::class, 'edit'])->name('site.edit');
         Route::put('/site', [SiteController::class, 'update'])->name('site.update');
 
+        // Анонсы площадки: новости и обновления (патчи) — публикация для всех бизнесов.
+        Route::get('/news', [AdminAnnouncementController::class, 'news'])->name('news.index');
+        Route::get('/updates', [AdminAnnouncementController::class, 'updates'])->name('updates.index');
+        Route::post('/announcements', [AdminAnnouncementController::class, 'store'])->name('announcements.store');
+        Route::put('/announcements/{announcement}', [AdminAnnouncementController::class, 'update'])->name('announcements.update');
+        Route::delete('/announcements/{announcement}', [AdminAnnouncementController::class, 'destroy'])->name('announcements.destroy');
+
+        // Состояния плашек дашборда (новое/обновлено/тех. работы) — глобально.
+        Route::get('/dashboard-cards', [DashboardCardController::class, 'index'])->name('cards.index');
+        Route::put('/dashboard-cards', [DashboardCardController::class, 'update'])->name('cards.update');
+
         // Войти в кабинет бизнеса (impersonation).
         Route::post('/tenants/{tenant}/impersonate', [ImpersonationController::class, 'start'])->name('tenants.impersonate');
     });
@@ -82,7 +97,7 @@ $onDomain(config('app.business_domain'), function (): void {
     }
 
     // Кабинет тенанта
-    Route::middleware(['auth', 'tenant', EnsureSectionAllowed::class])->prefix('cabinet')->name('cabinet.')->group(function (): void {
+    Route::middleware(['auth', 'tenant', EnsureSectionAllowed::class, EnsureCardAvailable::class])->prefix('cabinet')->name('cabinet.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('/overview', BusinessOverviewController::class)->name('overview');
 
@@ -169,6 +184,11 @@ $onDomain(config('app.business_domain'), function (): void {
 
         Route::get('/subscription', SubscriptionController::class)->name('subscription');
         Route::get('/billing', BillingController::class)->name('billing');
+
+        // Анонсы площадки для бизнеса (доступны на всех тарифах; «тех. работы» от СУ
+        // блокирует через EnsureCardAvailable). Открытие помечает их прочитанными.
+        Route::get('/news', [AnnouncementController::class, 'news'])->name('news.index');
+        Route::get('/updates', [AnnouncementController::class, 'updates'])->name('updates.index');
 
         // Веб-виджет (чат на сайт) — доступен на всех тарифах.
         Route::get('/widget', [WidgetController::class, 'index'])->name('widget.index');

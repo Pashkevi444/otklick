@@ -13,12 +13,21 @@ const user = computed(() => page.props.auth.user);
 interface NavItem {
     label: string;
     href: string;
+    badge?: number; // непрочитанные анонсы — подсветка пункта меню
 }
+
+// Непрочитанные новости/обновления тенанта (для бейджа в меню).
+const unread = computed<{ news: number; update: number }>(
+    () => (page.props.announcementsUnread as { news: number; update: number } | null) ?? { news: 0, update: 0 },
+);
 
 const navItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'super_admin') {
         return [
             { label: 'Бизнесы', href: '/admin/tenants' },
+            { label: 'Новости', href: '/admin/news' },
+            { label: 'Обновления', href: '/admin/updates' },
+            { label: 'Плашки', href: '/admin/dashboard-cards' },
             { label: 'Сайт', href: '/admin/site' },
         ];
     }
@@ -33,7 +42,12 @@ const navItems = computed<NavItem[]>(() => {
         items.push({ label: 'Аналитика', href: '/cabinet/analytics' });
     }
 
-    items.push({ label: 'Подписка', href: '/cabinet/subscription' }, { label: 'Оплата', href: '/cabinet/billing' });
+    items.push(
+        { label: 'Новости', href: '/cabinet/news', badge: unread.value.news },
+        { label: 'Обновления', href: '/cabinet/updates', badge: unread.value.update },
+        { label: 'Подписка', href: '/cabinet/subscription' },
+        { label: 'Оплата', href: '/cabinet/billing' },
+    );
 
     return items;
 });
@@ -86,12 +100,13 @@ const logout = (): void => {
                                     v-for="item in navItems"
                                     :key="item.href"
                                     :href="item.href"
-                                    class="rounded-xl px-3 py-1.5 text-sm font-medium transition"
+                                    class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium transition"
                                     :class="isActive(item.href)
                                         ? 'bg-white/70 text-[#1F4E79] shadow-sm dark:bg-white/15 dark:text-white'
                                         : 'text-slate-600 hover:bg-white/50 dark:text-slate-300 dark:hover:bg-white/10'"
                                 >
                                     {{ item.label }}
+                                    <span v-if="item.badge" class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{{ item.badge }}</span>
                                 </Link>
                             </nav>
                         </div>
@@ -129,13 +144,14 @@ const logout = (): void => {
                             v-for="item in navItems"
                             :key="item.href"
                             :href="item.href"
-                            class="rounded-lg px-3 py-2 font-medium transition"
+                            class="flex items-center gap-1.5 rounded-lg px-3 py-2 font-medium transition"
                             :class="isActive(item.href)
                                 ? 'bg-white/70 text-[#1F4E79] dark:bg-white/15 dark:text-white'
                                 : 'text-slate-700 hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10'"
                             @click="mobileOpen = false"
                         >
                             {{ item.label }}
+                            <span v-if="item.badge" class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{{ item.badge }}</span>
                         </Link>
                         <Link href="/account" class="rounded-lg px-3 py-2 text-slate-700 hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10" @click="mobileOpen = false">
                             ⚙️ Настройки аккаунта

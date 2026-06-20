@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\AnnouncementRepositoryInterface;
 use App\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\ClientIdentityRepositoryInterface;
@@ -11,6 +12,7 @@ use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
+use App\Repositories\Contracts\DashboardCardStateRepositoryInterface;
 use App\Repositories\Contracts\EmailChangeCodeRepositoryInterface;
 use App\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
@@ -25,6 +27,7 @@ use App\Repositories\Contracts\SandboxRepositoryInterface;
 use App\Repositories\Contracts\SiteSettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\Eloquent\EloquentAnnouncementRepository;
 use App\Repositories\Eloquent\EloquentBroadcastRepository;
 use App\Repositories\Eloquent\EloquentChannelRepository;
 use App\Repositories\Eloquent\EloquentClientIdentityRepository;
@@ -32,6 +35,7 @@ use App\Repositories\Eloquent\EloquentClientRepository;
 use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
 use App\Repositories\Eloquent\EloquentCrmKnowledgeRepository;
+use App\Repositories\Eloquent\EloquentDashboardCardStateRepository;
 use App\Repositories\Eloquent\EloquentEmailChangeCodeRepository;
 use App\Repositories\Eloquent\EloquentFlowAbRepository;
 use App\Repositories\Eloquent\EloquentFlowRepository;
@@ -76,6 +80,8 @@ final class RepositoryServiceProvider extends ServiceProvider
         EmailChangeCodeRepositoryInterface::class => EloquentEmailChangeCodeRepository::class,
         SiteSettingsRepositoryInterface::class => EloquentSiteSettingsRepository::class,
         SandboxRepositoryInterface::class => EloquentSandboxRepository::class,
+        AnnouncementRepositoryInterface::class => EloquentAnnouncementRepository::class,
+        DashboardCardStateRepositoryInterface::class => EloquentDashboardCardStateRepository::class,
         PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,
     ];
 }

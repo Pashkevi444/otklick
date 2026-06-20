@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AnnouncementService;
+use App\Services\DashboardCardService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -69,6 +71,12 @@ class HandleInertiaRequests extends Middleware
             ],
             // Супер-админ вошёл в кабинет бизнеса (impersonation) — для баннера выхода.
             'impersonating' => $request->session()->has('impersonator_id'),
+            // Состояния плашек дашборда (глобально от СУ): новое/обновлено/тех. работы.
+            'cardStates' => fn (): array => app(DashboardCardService::class)->statesForFrontend(),
+            // Непрочитанные анонсы тенанта (для подсветки пунктов меню «Новости»/«Обновления»).
+            'announcementsUnread' => $user?->tenant_id === null
+                ? null
+                : fn (): array => app(AnnouncementService::class)->unreadCounts(),
         ];
     }
 }
