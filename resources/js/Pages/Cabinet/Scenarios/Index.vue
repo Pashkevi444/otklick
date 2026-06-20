@@ -9,6 +9,10 @@ interface OptionEdge {
     label: string;
     next: string;
 }
+interface Variant {
+    label: string;
+    next: string;
+}
 interface FlowNodeDef {
     type?: string;
     text?: string;
@@ -19,6 +23,13 @@ interface FlowNodeDef {
     operator?: string;
     value?: string;
     else?: string;
+    variants?: Variant[];
+}
+interface AbStat {
+    variant: string;
+    total: number;
+    booked: number;
+    conversion: number;
 }
 interface FlowRow {
     id: string;
@@ -26,8 +37,9 @@ interface FlowRow {
     is_active: boolean;
     triggers: string[];
     definition: { start?: string; nodes?: Record<string, FlowNodeDef> };
+    ab?: AbStat[];
 }
-type NodeKind = 'message' | 'input' | 'condition';
+type NodeKind = 'message' | 'input' | 'condition' | 'split';
 interface NodeEdit {
     id: string;
     type: NodeKind;
@@ -39,6 +51,7 @@ interface NodeEdit {
     operator: string;
     value: string;
     else: string;
+    variants: Variant[];
 }
 interface Option {
     value: string;
@@ -61,7 +74,7 @@ const nodeIds = computed(() => form.nodes.map((n) => n.id));
 
 const blankNode = (id: string): NodeEdit => ({
     id, type: 'message', text: '', action: 'none', options: [],
-    variable: '', next: '', operator: 'eq', value: '', else: '',
+    variable: '', next: '', operator: 'eq', value: '', else: '', variants: [],
 });
 
 const newFlow = (): void => {
@@ -77,7 +90,7 @@ const editFlow = (f: FlowRow): void => {
     const nodesObj = f.definition.nodes ?? {};
     const nodes: NodeEdit[] = Object.entries(nodesObj).map(([id, n]) => ({
         id,
-        type: (n.type === 'input' || n.type === 'condition' ? n.type : 'message') as NodeKind,
+        type: (['input', 'condition', 'split'].includes(n.type ?? '') ? n.type : 'message') as NodeKind,
         text: n.text ?? '',
         action: n.action ?? 'none',
         options: (n.options ?? []).map((o) => ({ label: o.label, next: o.next })),
@@ -86,6 +99,7 @@ const editFlow = (f: FlowRow): void => {
         operator: n.operator ?? 'eq',
         value: n.value ?? '',
         else: n.else ?? '',
+        variants: (n.variants ?? []).map((v) => ({ label: v.label, next: v.next })),
     }));
     form.id = f.id;
     form.name = f.name;
@@ -108,6 +122,7 @@ const removeNode = (id: string): void => {
     form.nodes = form.nodes.filter((n) => n.id !== id);
     form.nodes.forEach((n) => {
         n.options = n.options.filter((o) => o.next !== id);
+        n.variants = n.variants.filter((v) => v.next !== id);
         if (n.next === id) n.next = '';
         if (n.else === id) n.else = '';
     });
@@ -119,6 +134,12 @@ const addOption = (node: NodeEdit): void => {
 const removeOption = (node: NodeEdit, i: number): void => {
     node.options.splice(i, 1);
 };
+const addVariant = (node: NodeEdit): void => {
+    node.variants.push({ label: String.fromCharCode(65 + node.variants.length), next: form.nodes[0]?.id ?? '' });
+};
+const removeVariant = (node: NodeEdit, i: number): void => {
+    node.variants.splice(i, 1);
+};
 
 const save = (): void => {
     const nodes: Record<string, FlowNodeDef> = {};
@@ -127,6 +148,8 @@ const save = (): void => {
             nodes[n.id] = { type: 'input', text: n.text, variable: n.variable.trim(), next: n.next };
         } else if (n.type === 'condition') {
             nodes[n.id] = { type: 'condition', variable: n.variable.trim(), operator: n.operator, value: n.value, next: n.next, else: n.else };
+        } else if (n.type === 'split') {
+            nodes[n.id] = { type: 'split', variants: n.variants.filter((v) => v.next) };
         } else {
             nodes[n.id] = {
                 type: 'message',
@@ -192,6 +215,16 @@ const inputHint = 'Ответ клиента сохранится и его мо
                             <Toggle :model-value="f.is_active" @update:model-value="toggle(f)" />
                             <button type="button" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="editFlow(f)">Редактировать</button>
                             <button type="button" class="text-sm text-red-600 hover:underline" @click="destroy(f)">Удалить</button>
+                        </div>
+                    </div>
+
+                    <!-- A/B-конверсия по вариантам -->
+                    <div v-if="f.ab && f.ab.length" class="mt-3 border-t border-slate-100 pt-3 dark:border-white/10">
+                        <div class="mb-1 text-xs font-medium text-slate-500">A/B-конверсия (запись)</div>
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="s in f.ab" :key="s.variant" class="rounded-lg bg-[#EAF2FB] px-2.5 py-1 text-xs text-[#1F4E79] dark:bg-white/10 dark:text-sky-200">
+                                {{ s.variant }}: <b>{{ s.conversion }}%</b> ({{ s.booked }}/{{ s.total }})
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -282,7 +315,7 @@ const inputHint = 'Ответ клиента сохранится и его мо
                 </template>
 
                 <!-- УСЛОВИЕ: если переменная … → да/нет -->
-                <template v-else>
+                <template v-else-if="node.type === 'condition'">
                     <div class="grid gap-2 sm:grid-cols-3">
                         <input v-model="node.variable" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="переменная (name)" />
                         <select v-model="node.operator" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
@@ -307,6 +340,24 @@ const inputHint = 'Ответ клиента сохранится и его мо
                         </div>
                     </div>
                     <p class="mt-2 text-xs text-slate-400">Условие проходит без участия клиента — сразу уводит в нужную ветку.</p>
+                </template>
+
+                <!-- A/B-СПЛИТ: варианты, между которыми делится трафик -->
+                <template v-else>
+                    <div class="mb-1 text-xs font-medium text-slate-500">Варианты (трафик делится поровну, липко на клиента)</div>
+                    <div class="space-y-2">
+                        <div v-for="(v, i) in node.variants" :key="i" class="flex items-center gap-2">
+                            <input v-model="v.label" type="text" class="w-20 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="A" />
+                            <span class="text-slate-400">→</span>
+                            <select v-model="v.next" class="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                                <option value="">—</option>
+                                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                            </select>
+                            <button type="button" class="text-xs text-red-600 hover:underline" @click="removeVariant(node, i)">убрать</button>
+                        </div>
+                    </div>
+                    <button type="button" class="mt-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="addVariant(node)">+ вариант</button>
+                    <p class="mt-2 text-xs text-slate-400">Конверсия по вариантам (% записей) появится в карточке сценария в списке.</p>
                 </template>
             </div>
 

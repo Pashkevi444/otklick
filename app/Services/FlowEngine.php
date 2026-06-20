@@ -11,6 +11,7 @@ use App\Models\Conversation;
 use App\Models\Flow;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
 use App\Support\RussianStem;
 use App\Support\Vectors;
@@ -34,6 +35,7 @@ final readonly class FlowEngine
         private ConversationRepositoryInterface $conversations,
         private BookingFlow $booking,
         private Embedder $embedder,
+        private FlowAbRepositoryInterface $ab,
     ) {}
 
     public function handle(Tenant $tenant, Conversation $conversation, string $text): ?BotReply
@@ -248,6 +250,25 @@ final readonly class FlowEngine
             return $this->enter($tenant, $conversation, $flow, $branch, $target, $vars, $depth + 1);
         }
 
+        // A/B-сплит: делим трафик между вариантами (липко на диалог), идём в выбранный.
+        if (($node['type'] ?? 'message') === 'split') {
+            $variants = $this->variants($node);
+            if ($depth > 20 || $variants === []) {
+                $this->conversations->setFlowState($conversation, null);
+
+                return null;
+            }
+            $chosen = $this->pickVariant($flow, $conversation, $variants);
+            $target = $this->node($flow, $chosen['next']);
+            if ($target === null) {
+                $this->conversations->setFlowState($conversation, null);
+
+                return null;
+            }
+
+            return $this->enter($tenant, $conversation, $flow, $chosen['next'], $target, $vars, $depth + 1);
+        }
+
         $action = (string) ($node['action'] ?? 'none');
         $text = $this->interpolate(trim((string) ($node['text'] ?? '')), $vars);
 
@@ -336,6 +357,49 @@ final readonly class FlowEngine
         }
 
         return null;
+    }
+
+    /**
+     * Варианты A/B-сплита (метка → переход). Пустая метка → авто «Вариант N».
+     *
+     * @param  array<string, mixed>  $node
+     * @return list<array{label: string, next: string}>
+     */
+    private function variants(array $node): array
+    {
+        $out = [];
+        foreach (array_values((array) ($node['variants'] ?? [])) as $i => $v) {
+            if (is_array($v) && ($v['next'] ?? null) !== null && (string) $v['next'] !== '') {
+                $label = trim((string) ($v['label'] ?? ''));
+                $out[] = ['label' => $label !== '' ? $label : 'Вариант '.($i + 1), 'next' => (string) $v['next']];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Возвращает вариант для диалога: уже назначенный (липко) или случайный новый
+     * (и записывает назначение для статистики конверсии).
+     *
+     * @param  list<array{label: string, next: string}>  $variants
+     * @return array{label: string, next: string}
+     */
+    private function pickVariant(Flow $flow, Conversation $conversation, array $variants): array
+    {
+        $existing = $this->ab->variantFor($flow->id, (string) $conversation->id);
+        if ($existing !== null) {
+            foreach ($variants as $variant) {
+                if ($variant['label'] === $existing) {
+                    return $variant;
+                }
+            }
+        }
+
+        $chosen = $variants[random_int(0, count($variants) - 1)];
+        $this->ab->assign($flow->id, (string) $conversation->id, $chosen['label']);
+
+        return $chosen;
     }
 
     /**

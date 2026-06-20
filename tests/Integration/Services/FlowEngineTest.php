@@ -8,6 +8,7 @@ use App\Llm\Contracts\Embedder;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Flow;
+use App\Models\FlowAbAssignment;
 use App\Models\Tenant;
 use App\Services\FlowEngine;
 use App\Services\FlowService;
@@ -181,6 +182,33 @@ final class FlowEngineTest extends TestCase
         $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Пётр'));
 
         $this->assertSame('Здравствуйте, Пётр.', $reply->text);
+    }
+
+    public function test_ab_split_assigns_variant_and_is_sticky(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Промо',
+            'is_active' => true,
+            'triggers' => ['промо'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'split', 'variants' => [['label' => 'A', 'next' => 'n2'], ['label' => 'B', 'next' => 'n3']]],
+                'n2' => ['type' => 'message', 'text' => 'Вариант А', 'action' => 'end', 'options' => []],
+                'n3' => ['type' => 'message', 'text' => 'Вариант Б', 'action' => 'end', 'options' => []],
+            ]],
+        ]));
+
+        $first = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'промо'));
+        $this->assertContains($first->text, ['Вариант А', 'Вариант Б']);
+        $this->assertSame(1, FlowAbAssignment::withoutGlobalScopes()->where('conversation_id', $conversation->id)->count());
+
+        // Липко: повторный заход того же диалога → тот же вариант, без нового назначения.
+        $second = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'промо'));
+        $this->assertSame($first->text, $second->text);
+        $this->assertSame(1, FlowAbAssignment::withoutGlobalScopes()->where('conversation_id', $conversation->id)->count());
     }
 
     public function test_button_choice_advances_and_escalates(): void

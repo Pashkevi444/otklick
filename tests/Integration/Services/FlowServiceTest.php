@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
+use App\Models\Channel;
+use App\Models\Conversation;
+use App\Models\Flow;
+use App\Models\FlowAbAssignment;
 use App\Models\Tenant;
 use App\Services\FlowService;
 use App\Tenancy\TenantInitializer;
@@ -13,6 +17,35 @@ use Tests\TestCase;
 final class FlowServiceTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_ab_stats_compute_conversion_from_bookings(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $flow = Flow::factory()->for($tenant)->create();
+
+        // Вариант A: 3 диалога, 2 с записью; вариант B: 2 диалога, 1 с записью.
+        $make = function (string $variant, bool $booked) use ($tenant, $channel, $flow): void {
+            $conv = Conversation::factory()->create([
+                'tenant_id' => $tenant->id, 'channel_id' => $channel->id,
+                'booked_at' => $booked ? now() : null,
+            ]);
+            FlowAbAssignment::query()->create([
+                'tenant_id' => $tenant->id, 'flow_id' => $flow->id, 'conversation_id' => $conv->id, 'variant' => $variant,
+            ]);
+        };
+        foreach ([['A', true], ['A', true], ['A', false], ['B', true], ['B', false]] as [$v, $b]) {
+            $make($v, $b);
+        }
+
+        $stats = app(TenantInitializer::class)->run($tenant->id, fn (): array => app(FlowService::class)->abStats());
+
+        $byVariant = collect($stats[$flow->id])->keyBy('variant');
+        $this->assertSame(3, $byVariant['A']['total']);
+        $this->assertSame(2, $byVariant['A']['booked']);
+        $this->assertSame(66.7, $byVariant['A']['conversion']);
+        $this->assertSame(50.0, $byVariant['B']['conversion']);
+    }
 
     public function test_create_computes_one_embedding_per_trigger(): void
     {

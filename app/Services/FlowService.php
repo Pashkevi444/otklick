@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Llm\Contracts\Embedder;
 use App\Models\Flow;
+use App\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
 use Illuminate\Support\Collection;
 use Throwable;
@@ -22,6 +23,7 @@ final readonly class FlowService
     public function __construct(
         private FlowRepositoryInterface $flows,
         private Embedder $embedder,
+        private FlowAbRepositoryInterface $ab,
     ) {}
 
     /**
@@ -30,6 +32,26 @@ final readonly class FlowService
     public function forCurrentTenant(): Collection
     {
         return $this->flows->forCurrentTenant();
+    }
+
+    /**
+     * A/B-статистика по сценариям: flow_id → варианты с конверсией (% записей).
+     *
+     * @return array<string, list<array{variant: string, total: int, booked: int, conversion: float}>>
+     */
+    public function abStats(): array
+    {
+        $byFlow = [];
+        foreach ($this->ab->statsForCurrentTenant() as $row) {
+            $byFlow[$row['flow_id']][] = [
+                'variant' => $row['variant'],
+                'total' => $row['total'],
+                'booked' => $row['booked'],
+                'conversion' => $row['total'] > 0 ? round($row['booked'] / $row['total'] * 100, 1) : 0.0,
+            ];
+        }
+
+        return $byFlow;
     }
 
     public function find(string $id): ?Flow

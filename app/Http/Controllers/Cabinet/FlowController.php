@@ -24,8 +24,10 @@ final class FlowController extends Controller
 
     public function index(): Response
     {
+        $stats = $this->service->abStats();
+
         return Inertia::render('Cabinet/Scenarios/Index', [
-            'flows' => $this->service->forCurrentTenant()->map(fn (Flow $f): array => $this->present($f))->all(),
+            'flows' => $this->service->forCurrentTenant()->map(fn (Flow $f): array => $this->present($f, $stats[$f->id] ?? []))->all(),
             'actionOptions' => [
                 ['value' => 'none', 'label' => 'Нет (показать кнопки/сообщение)'],
                 ['value' => 'start_booking', 'label' => 'Начать запись в YClients'],
@@ -36,6 +38,7 @@ final class FlowController extends Controller
                 ['value' => 'message', 'label' => 'Сообщение (текст + кнопки)'],
                 ['value' => 'input', 'label' => 'Вопрос (сохранить ответ в переменную)'],
                 ['value' => 'condition', 'label' => 'Условие (ветвление по переменной)'],
+                ['value' => 'split', 'label' => 'A/B-сплит (поделить трафик)'],
             ],
             'operatorOptions' => [
                 ['value' => 'eq', 'label' => 'равно'],
@@ -112,9 +115,10 @@ final class FlowController extends Controller
     }
 
     /**
+     * @param  list<array{variant: string, total: int, booked: int, conversion: float}>  $ab
      * @return array<string, mixed>
      */
-    private function present(Flow $flow): array
+    private function present(Flow $flow, array $ab): array
     {
         return [
             'id' => $flow->id,
@@ -122,6 +126,7 @@ final class FlowController extends Controller
             'is_active' => $flow->is_active,
             'triggers' => $flow->triggers,
             'definition' => $flow->definition,
+            'ab' => $ab,
         ];
     }
 }

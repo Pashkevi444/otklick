@@ -12,6 +12,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\EmailChangeCodeRepositoryInterface;
+use App\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeChunkRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
@@ -31,6 +32,7 @@ use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
 use App\Repositories\Eloquent\EloquentCrmKnowledgeRepository;
 use App\Repositories\Eloquent\EloquentEmailChangeCodeRepository;
+use App\Repositories\Eloquent\EloquentFlowAbRepository;
 use App\Repositories\Eloquent\EloquentFlowRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeChunkRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
@@ -63,6 +65,7 @@ final class RepositoryServiceProvider extends ServiceProvider
         ClientIdentityRepositoryInterface::class => EloquentClientIdentityRepository::class,
         BroadcastRepositoryInterface::class => EloquentBroadcastRepository::class,
         FlowRepositoryInterface::class => EloquentFlowRepository::class,
+        FlowAbRepositoryInterface::class => EloquentFlowAbRepository::class,
         LeadAnalyticsRepositoryInterface::class => EloquentLeadAnalyticsRepository::class,
         NotificationRecipientRepositoryInterface::class => EloquentNotificationRecipientRepository::class,
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
