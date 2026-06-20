@@ -17,6 +17,11 @@ final class EloquentClientRepository implements ClientRepositoryInterface
         return Client::query()->where('phone', $phone)->first();
     }
 
+    public function findByTelegramUsername(string $username): ?Client
+    {
+        return Client::query()->where('telegram_username', $username)->first();
+    }
+
     public function find(string $id): ?Client
     {
         return Client::query()->whereKey($id)->first();

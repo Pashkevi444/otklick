@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\ChannelType;
 use App\Models\Client;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ClientIdentityRepositoryInterface;
@@ -41,6 +42,7 @@ class ClientService
     {
         $type = $conversation->channel?->type;
         $identity = $conversation->external_chat_id;
+        $telegram = $this->telegramUsername($conversation->contact_ref);
 
         $client = null;
         if ($conversation->client_id !== null) {
@@ -49,6 +51,11 @@ class ClientService
         if ($client === null && $type !== null && $identity !== '') {
             $clientId = $this->identities->findClientId($type, $identity);
             $client = $clientId !== null ? $this->clients->find($clientId) : null;
+        }
+        // Легаси-мост: chat_id ещё не записан, но есть карточка с этим ником Telegram
+        // (создана раньше отдельно) — узнаём её, а не плодим дубль.
+        if ($client === null && $type === ChannelType::Telegram && $telegram !== null) {
+            $client = $this->clients->findByTelegramUsername($telegram);
         }
         if ($client === null) {
             $client = $this->clients->create([
@@ -69,7 +76,6 @@ class ClientService
         }
 
         // Ник Telegram из ссылки на аккаунт (приходит из канала без спроса).
-        $telegram = $this->telegramUsername($conversation->contact_ref);
         if ($telegram !== null && ($client->telegram_username === null || $client->telegram_username === '')) {
             $this->clients->update($client, ['telegram_username' => $telegram, 'last_seen_at' => now()]);
         }

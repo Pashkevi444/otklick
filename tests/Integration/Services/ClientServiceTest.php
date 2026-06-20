@@ -93,6 +93,26 @@ final class ClientServiceTest extends TestCase
         $this->assertNull(Client::query()->findOrFail($conversation->client_id)->phone);
     }
 
+    public function test_attach_matches_existing_client_by_telegram_username(): void
+    {
+        $tenant = $this->tenant();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]); // telegram
+
+        // Карточка с ником, но без записанного chat_id (легаси/создана отдельно).
+        $existing = Client::factory()->create([
+            'tenant_id' => $tenant->id, 'name' => 'Павел', 'phone' => '+79237032792', 'telegram_username' => 'ivan',
+        ]);
+
+        $conv = $this->conversation($tenant, $channel, 'tg-new'); // contact_ref = t.me/ivan
+        $this->service()->attachClient($conv);
+
+        // Узнали существующую карточку по нику, дубль не создан.
+        $this->assertSame(1, Client::query()->count());
+        $this->assertSame($existing->id, $conv->fresh()->client_id);
+        // Теперь у неё записан chat_id — дальше матчинг прямой по identity.
+        $this->assertNotNull(ClientIdentity::query()->where('client_id', $existing->id)->where('identity', 'tg-new')->first());
+    }
+
     public function test_merges_clients_when_phone_matches_another(): void
     {
         $tenant = $this->tenant();

@@ -15,6 +15,9 @@ interface ClientRepositoryInterface
 {
     public function findByPhone(string $phone): ?Client;
 
+    /** Карточка по нику Telegram (легаси-дедуп: клиент без записанного chat_id). */
+    public function findByTelegramUsername(string $username): ?Client;
+
     public function find(string $id): ?Client;
 
     /**
