@@ -18,7 +18,7 @@ final class EloquentLeadAnalyticsRepository implements LeadAnalyticsRepositoryIn
     {
         return Conversation::query()
             ->whereBetween('created_at', [$from, $to])
-            ->with('channel:id,type')
+            ->with(['channel:id,type', 'client:id,name,phone,email'])
             ->withCount(['messages as inbound_count' => fn (BuilderContract $q): BuilderContract => $q
                 ->where('direction', MessageDirection::Inbound->value)])
             ->get();
@@ -37,7 +37,7 @@ final class EloquentLeadAnalyticsRepository implements LeadAnalyticsRepositoryIn
     public function recentLeads(int $limit): Collection
     {
         return Conversation::query()
-            ->with(['channel:id,type', 'latestMessage'])
+            ->with(['channel:id,type', 'latestMessage', 'client:id,name,phone,email'])
             ->withCount('messages')
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
@@ -51,6 +51,7 @@ final class EloquentLeadAnalyticsRepository implements LeadAnalyticsRepositoryIn
             ->where('crm_connection_id', $crmConnectionId)
             ->whereNotNull('booked_at')
             ->whereBetween('booked_at', [$from, $to])
+            ->with(['channel:id,type', 'client:id,name,phone,email'])
             ->get();
     }
 

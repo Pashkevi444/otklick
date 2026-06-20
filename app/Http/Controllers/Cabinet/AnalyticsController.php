@@ -129,8 +129,8 @@ final class AnalyticsController extends Controller
             $c->booked_at?->format('Y-m-d H:i') ?? '',
             (string) $c->booked_service_title,
             $c->booked_service_price !== null ? (string) $c->booked_service_price : '',
-            (string) $c->contact_name,
-            (string) $c->contact_phone,
+            (string) $c->displayName(),
+            (string) $c->displayPhone(),
             $c->channel?->type?->label() ?? '—',
             (string) count($c->reminders_sent ?? []),
         ])->all());
@@ -145,8 +145,8 @@ final class AnalyticsController extends Controller
         ], $leads->map(fn (Conversation $c): array => [
             $c->created_at?->format('Y-m-d H:i') ?? '',
             $c->channel?->type?->label() ?? '—',
-            (string) $c->contact_name,
-            (string) $c->contact_phone,
+            (string) $c->displayName(),
+            (string) $c->displayPhone(),
             (string) $c->contact_ref,
             $c->status->label(),
             $c->booked_at !== null ? 'да' : 'нет',

@@ -108,7 +108,7 @@ final readonly class LeadAnalyticsService
         $count = $leads->count();
         $booked = $leads->filter(fn (Conversation $c): bool => $c->booked_at !== null)->count();
         $needsHuman = $leads->filter(fn (Conversation $c): bool => $c->status === ConversationStatus::NeedsHuman)->count();
-        $withPhone = $leads->filter(fn (Conversation $c): bool => $this->filled($c->contact_phone))->count();
+        $withPhone = $leads->filter(fn (Conversation $c): bool => $this->filled($c->displayPhone()))->count();
         $withName = $leads->filter(fn (Conversation $c): bool => $this->hasRealName($c))->count();
         $engaged = $leads->filter(fn (Conversation $c): bool => (int) $c->getAttribute('inbound_count') >= 2)->count();
         $afterHours = $leads->filter(fn (Conversation $c): bool => $this->isAfterHours($c))->count();
@@ -450,8 +450,8 @@ final readonly class LeadAnalyticsService
         return $this->repository->recentLeads(self::RECENT_LIMIT)
             ->map(fn (Conversation $c): array => [
                 'id' => $c->id,
-                'contact' => $this->hasRealName($c) ? $c->contact_name : 'Гость',
-                'phone' => $c->contact_phone,
+                'contact' => $this->hasRealName($c) ? $c->displayName() : 'Гость',
+                'phone' => $c->displayPhone(),
                 'channel' => $c->channel?->type?->label() ?? '—',
                 'status' => $c->status->value,
                 'statusLabel' => $c->status->label(),
@@ -488,6 +488,8 @@ final readonly class LeadAnalyticsService
 
     private function hasRealName(Conversation $c): bool
     {
-        return $this->filled($c->contact_name) && ! in_array($c->contact_name, self::PLACEHOLDER_NAMES, true);
+        $name = $c->displayName();
+
+        return $this->filled($name) && ! in_array($name, self::PLACEHOLDER_NAMES, true);
     }
 }

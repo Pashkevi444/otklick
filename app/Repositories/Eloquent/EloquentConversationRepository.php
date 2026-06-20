@@ -324,7 +324,7 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function upcomingBookedForCurrentTenant(Carbon $from, Carbon $to): Collection
     {
         return Conversation::query()
-            ->with('channel')
+            ->with(['channel', 'client'])
             ->whereNotNull('crm_record_id')
             ->whereNotNull('booked_for')
             ->whereBetween('booked_for', [$from, $to])

@@ -72,7 +72,8 @@ class ReplyComposer
         // Если клиент уже известен (узнали по чату/телефону/нику и перенесли
         // контакты) — промпт скажет боту звать по имени и не переспрашивать.
         $knownName = $this->knownName($conversation);
-        $phoneKnown = $conversation->contact_phone !== null && $conversation->contact_phone !== '';
+        $phone = $conversation->displayPhone();
+        $phoneKnown = $phone !== null && $phone !== '';
 
         $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm, $knownName, $phoneKnown);
 
@@ -161,7 +162,7 @@ class ReplyComposer
     /** Имя клиента, если он его называл (а не плейсхолдер «Гость»); иначе null. */
     private function knownName(Conversation $conversation): ?string
     {
-        $name = $conversation->contact_name;
+        $name = $conversation->displayName();
 
         return $name !== null && $name !== '' && ! in_array($name, ['Гость', 'Гость сайта'], true)
             ? $name

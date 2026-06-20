@@ -165,8 +165,10 @@ final readonly class TelegramRelayService
 
     private function label(Conversation $conversation): string
     {
-        $name = $conversation->contact_name !== null && $conversation->contact_name !== '' ? $conversation->contact_name : 'Гость';
-        $phone = $conversation->contact_phone !== null && $conversation->contact_phone !== '' ? " ({$conversation->contact_phone})" : '';
+        $display = $conversation->displayName();
+        $phoneValue = $conversation->displayPhone();
+        $name = $display !== null && $display !== '' ? $display : 'Гость';
+        $phone = $phoneValue !== null && $phoneValue !== '' ? " ({$phoneValue})" : '';
 
         return $name.$phone;
     }

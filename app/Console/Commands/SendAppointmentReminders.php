@@ -91,8 +91,9 @@ final class SendAppointmentReminders extends Command
     private function text(Conversation $conversation): string
     {
         $when = $conversation->booked_for?->format('d.m').' в '.$conversation->booked_for?->format('H:i');
-        $name = $conversation->contact_name !== null && ! in_array($conversation->contact_name, ['Гость', 'Гость сайта'], true)
-            ? ', '.$conversation->contact_name
+        $display = $conversation->displayName();
+        $name = $display !== null && ! in_array($display, ['Гость', 'Гость сайта'], true)
+            ? ', '.$display
             : '';
 
         return "Напоминаем{$name} о вашей записи {$when}. Будем ждать вас! Если планы изменились — напишите нам.";

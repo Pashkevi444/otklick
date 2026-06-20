@@ -142,8 +142,8 @@ final readonly class IncomingMessageService
         $profile = str_starts_with($profile, 'http') ? $profile : '';
 
         SendOwnerNotification::dispatch($tenantId, $event->value, [
-            'contact' => $conversation->contact_name ?? 'Гость',
-            'phone' => (string) $conversation->contact_phone,
+            'contact' => $conversation->displayName() ?? 'Гость',
+            'phone' => (string) $conversation->displayPhone(),
             'channel' => $channel->type->label(),
             'profile' => $profile,
             'snippet' => $snippet,

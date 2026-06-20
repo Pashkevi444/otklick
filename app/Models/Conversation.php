@@ -154,6 +154,32 @@ class Conversation extends TenantOwnedModel
     }
 
     /**
+     * Имя/телефон/email для отображения и исходящих: КАРТОЧКА клиента — источник
+     * правды (нормализация), буфер `contact_*` — фолбэк, пока контакт собирается.
+     * Подгрузи `client`, чтобы не ловить N+1 на гридах/рассылках.
+     */
+    public function displayName(): ?string
+    {
+        $name = $this->client?->name;
+
+        return $name !== null && $name !== '' ? $name : $this->contact_name;
+    }
+
+    public function displayPhone(): ?string
+    {
+        $phone = $this->client?->phone;
+
+        return $phone !== null && $phone !== '' ? $phone : $this->contact_phone;
+    }
+
+    public function displayEmail(): ?string
+    {
+        $email = $this->client?->email;
+
+        return $email !== null && $email !== '' ? $email : $this->contact_email;
+    }
+
+    /**
      * @return HasMany<Message, $this>
      */
     public function messages(): HasMany

@@ -182,8 +182,7 @@ final class ConversationController extends Controller
      */
     private function contact(Conversation $c): string
     {
-        $client = $c->client; // может быть null: лид без карточки или карточка удалена
-        $name = $client !== null ? $client->name : $c->contact_name;
+        $name = $c->displayName();
 
         return $name !== null && $name !== '' ? $name : 'Гость';
     }
@@ -191,9 +190,7 @@ final class ConversationController extends Controller
     /** Телефон для отображения: из карточки клиента, иначе захваченный по диалогу. */
     private function displayPhone(Conversation $c): ?string
     {
-        $client = $c->client;
-
-        return $client !== null ? $client->phone : $c->contact_phone;
+        return $c->displayPhone();
     }
 
     /**
