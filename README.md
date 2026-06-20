@@ -311,7 +311,7 @@ php artisan admin:create-super-admin "Имя" admin@example.com <пароль>
 | `YANDEX_GPT_MODEL` | Модель YandexGPT | `yandexgpt-lite` |
 | `EMBEDDER_DRIVER` | Провайдер эмбеддингов (RAG): `fake` / `yandex` | `fake` |
 | `EMBEDDING_DIM` | Размерность вектора (совпадает со схемой `knowledge_chunks`) | `256` |
-| `FLOW_SEMANTIC_THRESHOLD` | Порог косинус-близости для семантического запуска сценария (синонимы триггеров) | `0.6` |
+| `FLOW_SEMANTIC_THRESHOLD` | Порог косинус-близости для семантического запуска сценария (синонимы триггеров; у Yandex базовый косинус высокий) | `0.74` |
 | `SPEECH_DRIVER` | Распознавание голосовых: `fake` / `yandex` (Yandex SpeechKit, переиспользует `YANDEX_API_KEY`/`YANDEX_FOLDER_ID`) | `fake` |
 | `YANDEX_EMBED_MODEL` | Модель эмбеддингов Yandex | `text-search-query` |
 | `YCLIENTS_API_URL` | Базовый URL YClients API | `https://api.yclients.com/api/v1` |
