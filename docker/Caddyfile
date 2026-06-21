@@ -1,11 +1,23 @@
+# Красивая страница на случай, когда app недоступен (деплой/перезапуск) — Caddy
+# отдаёт статику сам, т.к. Laravel в этот момент не отвечает (502/503/504).
+(offline) {
+	handle_errors {
+		root * /srv/caddy-errors
+		rewrite * /offline.html
+		file_server
+	}
+}
+
 # Публичный сайт (маркетинг)
 otcl1ck.ru, www.otcl1ck.ru {
 	encode zstd gzip
 	reverse_proxy app:8000
+	import offline
 }
 
 # Приложение: бизнес-кабинет, супер-админка, вход, вебхуки Telegram
 business.otcl1ck.ru {
 	encode zstd gzip
 	reverse_proxy app:8000
+	import offline
 }

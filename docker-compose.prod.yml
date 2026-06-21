@@ -178,6 +178,7 @@ services:
       - "443:443"
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/caddy-errors:/srv/caddy-errors:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

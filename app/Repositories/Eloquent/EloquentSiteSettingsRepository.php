@@ -17,8 +17,8 @@ final class EloquentSiteSettingsRepository implements SiteSettingsRepositoryInte
      */
     private const array DEFAULTS = [
         'hero_title' => 'Цифровой администратор, который отвечает клиентам вместо вас',
-        'hero_subtitle' => 'Отклик мгновенно отвечает в Telegram, ВКонтакте, MAX и на сайте по базе знаний '.
-            'вашего бизнеса, записывает клиентов и передаёт горячих менеджеру — круглосуточно, без выходных.',
+        'hero_subtitle' => 'Отклик мгновенно отвечает в Telegram, WhatsApp, ВКонтакте, MAX и на сайте по базе '.
+            'знаний вашего бизнеса, записывает клиентов в CRM и передаёт горячих менеджеру — круглосуточно, без выходных.',
         'phone' => '89237032792',
         'email' => 'support@otcl1ck.ru',
         'telegram' => 'Pashkevi4',

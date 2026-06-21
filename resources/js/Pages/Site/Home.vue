@@ -595,12 +595,15 @@ html.dark .bg-base {
 
 .orbs {
     position: fixed;
-    inset: 0;
+    /* Контейнер шире вьюпорта сверху и снизу: при параллакс-сдвиге низ страницы
+       не оголяется («плешь»), а overflow обрезает орбы далеко за экраном — без
+       видимого жёсткого края. */
+    inset: -220px 0;
     z-index: -1;
     overflow: hidden;
     pointer-events: none;
     /* Параллакс: при прокрутке слой орбов плавно уплывает вверх (--sp задаёт JS). */
-    transform: translate3d(0, calc(var(--sp, 0) * -90px), 0);
+    transform: translate3d(0, calc(var(--sp, 0) * -70px), 0);
     transition: transform 0.2s linear;
     will-change: transform;
 }
