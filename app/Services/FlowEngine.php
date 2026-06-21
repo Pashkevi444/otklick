@@ -31,6 +31,18 @@ use Throwable;
  */
 final readonly class FlowEngine
 {
+    /**
+     * Служебные слова (предлоги/союзы/местоимения/частицы/вопросительные). Ключами
+     * триггера они бесполезны и ловят пол-словаря: предлог «к» как подстрока сидит
+     * в «стри[ж]ки», и триггер «как к вам попасть» матчил «удлиненные стрижки».
+     * Совпадение ведём только по СОДЕРЖАТЕЛЬНЫМ словам фразы-триггера.
+     */
+    private const array STOPWORDS = [
+        'в', 'во', 'на', 'к', 'ко', 'с', 'со', 'по', 'о', 'об', 'обо', 'от', 'до', 'за', 'из', 'у', 'под', 'над', 'при', 'про', 'без', 'для', 'через',
+        'и', 'а', 'но', 'или', 'да', 'что', 'чтобы', 'как', 'если', 'когда', 'где', 'куда', 'откуда', 'чем', 'то', 'же', 'ли', 'бы', 'не', 'ни', 'вот', 'уже', 'еще', 'там', 'тут',
+        'я', 'ты', 'он', 'она', 'оно', 'мы', 'вы', 'они', 'вас', 'вам', 'нас', 'нам', 'мне', 'меня', 'тебя', 'тебе', 'его', 'ее', 'их', 'им', 'мой', 'ваш', 'наш', 'это', 'эта', 'этот', 'тот', 'свой', 'весь',
+    ];
+
     public function __construct(
         private FlowRepositoryInterface $flows,
         private ConversationRepositoryInterface $conversations,
@@ -60,15 +72,17 @@ final readonly class FlowEngine
             return null;
         }
 
-        // Основы слов сообщения — чтобы триггер «акция» поймал «акции/акцию/акций».
-        $stems = array_values(array_filter(array_map(
-            RussianStem::stem(...),
+        // Слова сообщения (для матча коротких слов триггера целым словом) и их
+        // основы (морфология: триггер «акция» ловит «акции/акцию/акций»).
+        $words = array_values(array_filter(
             preg_split('/[^\p{L}\p{N}]+/u', $needle) ?: [],
-        ), static fn (string $s): bool => $s !== ''));
+            static fn (string $w): bool => $w !== '',
+        ));
+        $stems = array_values(array_filter(array_map(RussianStem::stem(...), $words), static fn (string $s): bool => $s !== ''));
 
         foreach ($this->flows->activeForCurrentTenant() as $flow) {
             foreach ($flow->triggers as $trigger) {
-                if ($this->triggerMatches((string) $trigger, $needle, $stems)) {
+                if ($this->triggerMatches((string) $trigger, $needle, $words, $stems)) {
                     return $flow;
                 }
             }
@@ -79,13 +93,16 @@ final readonly class FlowEngine
 
     /**
      * Триггер совпадает, если он целиком — подстрока сообщения, ИЛИ совпала основа
-     * ХОТЯ БЫ ОДНОГО слова триггера с основой слова сообщения (морфология: «акция»
-     * ≈ «акции»). Многословный триггер — это набор ключевых слов, а не дословная
-     * фраза: «акции скидка» ловит «…какие нибудь акции есть…».
+     * ХОТЯ БЫ ОДНОГО СОДЕРЖАТЕЛЬНОГО слова триггера с основой слова сообщения
+     * (морфология: «акция» ≈ «акции»). Многословный триггер — это набор ключевых
+     * слов, а не дословная фраза: «акции скидка» ловит «…какие нибудь акции есть…».
+     * Служебные слова ({@see self::STOPWORDS}) и совсем короткие слова из ключей
+     * исключаем — иначе предлог «к» матчит «стри[ж]ки».
      *
-     * @param  list<string>  $stems
+     * @param  list<string>  $words  слова сообщения (для матча коротких слов целиком)
+     * @param  list<string>  $stems  основы слов сообщения
      */
-    private function triggerMatches(string $trigger, string $needle, array $stems): bool
+    private function triggerMatches(string $trigger, string $needle, array $words, array $stems): bool
     {
         $t = str_replace('ё', 'е', mb_strtolower(trim($trigger)));
 
@@ -93,18 +110,22 @@ final readonly class FlowEngine
             return false;
         }
 
-        // Точный матч: триггер целиком встречается в сообщении.
-        if (mb_strpos($needle, $t) !== false) {
+        // Точный матч: фраза-триггер целиком встречается в сообщении (для коротких
+        // фраз — только как отдельное слово, иначе «к» снова поймал бы «стрижки»).
+        if (mb_strlen($t) >= 4 ? mb_strpos($needle, $t) !== false : in_array($t, $words, true)) {
             return true;
         }
 
-        // По каждому слову триггера (через запятую/пробел = ключевые слова).
+        // По каждому СОДЕРЖАТЕЛЬНОМУ слову триггера (запятая/пробел = ключевые слова).
         foreach (preg_split('/\s+/u', $t) ?: [] as $word) {
-            if ($word === '') {
+            if ($word === '' || in_array($word, self::STOPWORDS, true)) {
                 continue;
             }
+
+            // Короткое слово (нет надёжной основы) — матчим ТОЛЬКО как целое слово
+            // сообщения, не подстрокой («лак» не должен ловить «потолок»).
             if (mb_strlen($word) < 4) {
-                if (mb_strpos($needle, $word) !== false) {
+                if (in_array($word, $words, true)) {
                     return true;
                 }
 

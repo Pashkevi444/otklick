@@ -95,6 +95,57 @@ final class FlowEngineTest extends TestCase
         $this->assertSame('Вот наши акции', $reply->text);
     }
 
+    public function test_short_function_word_in_trigger_does_not_match_unrelated_message(): void
+    {
+        // Прод-баг (Метропольский и Друзья): кнопка «Удлиненные стрижки» запускала
+        // воронку «расположение» — служебное слово «к» из триггера «как к вам
+        // попасть» находилось ПОДСТРОКОЙ в «стри[ж]ки». Любое сообщение с буквой
+        // «к» матчило адресную воронку. Служебные слова ключами быть не должны.
+        $this->bindOrthogonalEmbedder(); // изолируем лексику (семантика не вмешивается)
+
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Расположение',
+            'is_active' => true,
+            'triggers' => ['как к вам попасть', 'где вы находитесь'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'text' => 'Мы на Красном проспекте', 'action' => 'end', 'options' => []],
+            ]],
+        ]));
+
+        // «удлиненные стрижки» не про адрес → воронка НЕ должна стартовать.
+        $miss = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Удлиненные стрижки'));
+        $this->assertNull($miss);
+
+        // А реальный вопрос про дорогу ловится по содержательному слову «попасть».
+        $hit = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'как к вам попасть?'));
+        $this->assertNotNull($hit);
+        $this->assertSame('Мы на Красном проспекте', $hit->text);
+    }
+
+    /** Эмбеддер-заглушка: ортогональные векторы по тексту (косинус ≈ 0 для разных строк). */
+    private function bindOrthogonalEmbedder(): void
+    {
+        $this->app->bind(Embedder::class, fn (): Embedder => new class implements Embedder
+        {
+            public function embed(string $text): array
+            {
+                $v = array_fill(0, 4096, 0.0);
+                $v[abs(crc32($text)) % 4096] = 1.0;
+
+                return $v;
+            }
+
+            public function dimension(): int
+            {
+                return 4096;
+            }
+        });
+    }
+
     public function test_semantic_match_when_no_keyword_overlap(): void
     {
         // Семантика ловит перефразирование без общих слов. Эмбеддер-заглушка
