@@ -22,6 +22,8 @@ final class WidgetChatTest extends TestCase
     private function webChannel(array $origins = []): Channel
     {
         $tenant = Tenant::factory()->create();
+        // Главное меню бота — кнопки-подсказки, которые бот показывает после приветствия.
+        $tenant->update(['settings' => [...$tenant->settings, 'bot_menu' => ['Записаться', 'Цены и услуги', 'Адрес и часы']]]);
 
         return app(TenantInitializer::class)->run($tenant->id, function () use ($tenant, $origins): Channel {
             $channel = app(ChannelService::class)->connectWeb($tenant->id);
