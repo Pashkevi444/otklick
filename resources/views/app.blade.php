@@ -60,9 +60,10 @@
     <body class="font-sans antialiased">
         @inertia
 
-        {{-- TODO(временно): тестовый виджет «Отклик» на нашем публичном сайте. УДАЛИТЬ после теста. --}}
+        {{-- Чат-виджет «Отклик» на нашем публичном сайте (бот отвечает по нашей же
+             базе знаний). Грузим только на маркетинг-домене, не в кабинете. --}}
         @if (request()->getHost() === config('app.marketing_domain'))
-            <script src="https://business.otcl1ck.ru/widget/v1/widget.js" data-otklik-tenant="019ecbf6-1101-7114-98ba-16c5fbbbc189" data-otklik-channel="019ed026-baa4-73d4-a930-c045cc75c28f" defer></script>
+            <script src="https://business.otcl1ck.ru/widget/v1/widget.js" data-otklik-tenant="019eeb78-b906-7061-a9ef-11925dcf3215" data-otklik-channel="019eeb78-bb19-7008-a80b-bf676ba05630" defer></script>
         @endif
     </body>
 </html>
