@@ -8,11 +8,11 @@ use App\Enums\BusinessType;
 use App\Http\Controllers\Controller;
 use App\Models\Flow;
 use App\Models\KnowledgeEntry;
+use App\Models\ScenarioTemplate;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Services\FlowService;
 use App\Services\FlowSimulator;
-use App\Support\FlowTemplates;
 use App\Support\KnowledgeImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -65,14 +65,30 @@ final class FlowController extends Controller
         return response()->json($stored[0]);
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $stats = $this->service->abStats();
 
         $yclientsActive = $this->crm->activeForCurrentTenant() !== null;
 
+        // Пагинация списка воронок (списки на тенанта небольшие — режем коллекцию
+        // в памяти, отдельный SQL-paginate не нужен).
+        $perPage = 9;
+        $allFlows = $this->service->forCurrentTenant();
+        $page = max(1, (int) $request->query('page', '1'));
+        $lastPage = max(1, (int) ceil($allFlows->count() / $perPage));
+        $page = min($page, $lastPage);
+
         return Inertia::render('Cabinet/Scenarios/Index', [
-            'flows' => $this->service->forCurrentTenant()->map(fn (Flow $f): array => $this->present($f, $stats[$f->id] ?? []))->all(),
+            'flows' => $allFlows->forPage($page, $perPage)
+                ->map(fn (Flow $f): array => $this->present($f, $stats[$f->id] ?? []))
+                ->values()
+                ->all(),
+            'pagination' => [
+                'current' => $page,
+                'last' => $lastPage,
+                'total' => $allFlows->count(),
+            ],
             // Действие «Начать запись в YClients» показываем только если CRM
             // подключена (иначе кнопка запустила бы мастер, которого нет).
             'yclientsActive' => $yclientsActive,
@@ -101,8 +117,16 @@ final class FlowController extends Controller
                 ['value' => 'filled', 'label' => 'заполнена'],
             ],
             // Готовые шаблоны сценариев (с тегом типа бизнеса) — бизнес берёт готовый
-            // и правит под себя. Группируются на фронте по `businessTypes`.
-            'templates' => FlowTemplates::all(),
+            // и правит под себя. Источник — таблица `scenario_templates` (СУ её
+            // редактирует в админке). Группируются на фронте по `businessTypes`.
+            'templates' => ScenarioTemplate::query()->orderBy('sort_order')->get()->map(fn (ScenarioTemplate $t): array => [
+                'key' => $t->key,
+                'name' => $t->name,
+                'description' => $t->description,
+                'businessType' => $t->business_type,
+                'triggers' => $t->triggers,
+                'definition' => $t->definition,
+            ])->all(),
             'businessTypes' => array_map(
                 fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
                 BusinessType::cases(),

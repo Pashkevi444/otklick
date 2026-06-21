@@ -24,9 +24,12 @@ const unread = computed<{ news: number }>(
 const navItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'super_admin') {
         return [
+            { label: 'Дашборд', href: '/admin' },
             { label: 'Бизнесы', href: '/admin/tenants' },
             { label: 'Новости', href: '/admin/news' },
             { label: 'Плашки', href: '/admin/dashboard-cards' },
+            { label: 'Шаблоны сценариев', href: '/admin/scenario-templates' },
+            { label: 'Шаблоны БЗ', href: '/admin/knowledge-templates' },
             { label: 'Сайт', href: '/admin/site' },
         ];
     }
@@ -50,7 +53,7 @@ const errorTrackingUrl = computed<string | null>(() => (page.props.errorTracking
 // Куда ведёт логотип «Отклик»: супер-админа — в список бизнесов, владельца — на
 // карточку бизнеса (домашняя страница кабинета).
 const homeHref = computed<string>(() =>
-    user.value?.role === 'super_admin' ? '/admin/tenants' : '/cabinet/overview',
+    user.value?.role === 'super_admin' ? '/admin' : '/cabinet/overview',
 );
 
 const isActive = (href: string): boolean =>

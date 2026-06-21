@@ -87,6 +87,7 @@ interface FlowTemplate {
 }
 const props = defineProps<{
     flows: FlowRow[];
+    pagination: { current: number; last: number; total: number };
     actionOptions: Option[];
     nodeTypeOptions: Option[];
     operatorOptions: Option[];
@@ -95,6 +96,14 @@ const props = defineProps<{
     templates: FlowTemplate[];
     businessTypes: Option[];
 }>();
+
+// Готовые шаблоны прячем за кнопкой, чтобы не занимали весь экран (их много).
+const showTemplates = ref(false);
+
+// Пагинация списка сценариев (серверная, по ?page).
+const goToPage = (page: number): void => {
+    router.get(route('cabinet.scenarios.index'), { page }, { preserveScroll: true, preserveState: false });
+};
 
 // Шаблоны, сгруппированные по типу бизнеса: сперва «Общие» (businessType=null,
 // дефолт для всех), затем по нишам в порядке реестра businessTypes.
@@ -503,13 +512,23 @@ const testSend = (text?: string): void => {
 
         <!-- Список сценариев -->
         <div v-if="editing === null">
-            <button type="button" class="mb-4 rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]" @click="newFlow">
-                + Новый сценарий с нуля
-            </button>
+            <div class="mb-4 flex flex-wrap gap-2">
+                <button type="button" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]" @click="newFlow">
+                    + Новый сценарий с нуля
+                </button>
+                <button
+                    v-if="templates.length"
+                    type="button"
+                    class="rounded-lg border border-[#2E74B5] px-4 py-2 text-sm font-medium text-[#2E74B5] hover:bg-[#EAF2FB] dark:border-sky-400 dark:text-sky-300 dark:hover:bg-white/5"
+                    @click="showTemplates = !showTemplates"
+                >
+                    {{ showTemplates ? 'Скрыть шаблоны' : '📋 Готовые шаблоны' }}
+                </button>
+            </div>
 
             <!-- Готовые шаблоны, сгруппированные по типу бизнеса (сперва «Общие») -->
-            <div v-if="templates.length" class="mb-5">
-                <div class="mb-3 text-sm font-medium text-slate-600 dark:text-slate-300">…или начните с готового шаблона:</div>
+            <div v-if="showTemplates && templates.length" class="mb-5">
+                <div class="mb-3 text-sm font-medium text-slate-600 dark:text-slate-300">Выберите готовый шаблон — он откроется в редакторе, останется поправить под себя:</div>
                 <div v-for="g in templateGroups" :key="g.key" class="mb-4">
                     <div class="mb-2 flex items-center gap-2">
                         <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ g.label }}</span>
@@ -559,6 +578,27 @@ const testSend = (text?: string): void => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Пагинация списка сценариев -->
+            <div v-if="pagination.last > 1" class="mt-5 flex items-center justify-center gap-3 text-sm">
+                <button
+                    type="button"
+                    class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40 dark:border-white/10 dark:text-slate-300"
+                    :disabled="pagination.current <= 1"
+                    @click="goToPage(pagination.current - 1)"
+                >
+                    ← Назад
+                </button>
+                <span class="text-slate-500 dark:text-slate-400">Стр. {{ pagination.current }} из {{ pagination.last }}</span>
+                <button
+                    type="button"
+                    class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40 dark:border-white/10 dark:text-slate-300"
+                    :disabled="pagination.current >= pagination.last"
+                    @click="goToPage(pagination.current + 1)"
+                >
+                    Вперёд →
+                </button>
             </div>
         </div>
 

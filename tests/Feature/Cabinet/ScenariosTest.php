@@ -7,9 +7,9 @@ namespace Tests\Feature\Cabinet;
 use App\Enums\BusinessType;
 use App\Models\Flow;
 use App\Models\KnowledgeEntry;
+use App\Models\ScenarioTemplate;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Support\FlowTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -52,7 +52,7 @@ final class ScenariosTest extends TestCase
             ->get('/cabinet/scenarios')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('templates', count(FlowTemplates::all()))
+                ->has('templates', ScenarioTemplate::count())
                 ->has('businessTypes', count(BusinessType::cases()))
                 // У каждого шаблона есть тег типа бизнеса (или null — «Общие»).
                 ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
@@ -63,13 +63,13 @@ final class ScenariosTest extends TestCase
     public function test_template_definition_saves_as_valid_flow(): void
     {
         [$tenant, $owner] = $this->tenantWithOwner();
-        $template = collect(FlowTemplates::all())->firstWhere('key', 'lead_capture');
+        $template = ScenarioTemplate::query()->where('key', 'lead_capture')->firstOrFail();
 
         $this->actingAs($owner)->post('/cabinet/scenarios', [
-            'name' => $template['name'],
+            'name' => $template->name,
             'is_active' => true,
-            'triggers' => $template['triggers'],
-            'definition' => $template['definition'],
+            'triggers' => $template->triggers,
+            'definition' => $template->definition,
         ])->assertRedirect()->assertSessionHas('success');
 
         $flow = Flow::query()->where('tenant_id', $tenant->id)->firstOrFail();

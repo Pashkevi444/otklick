@@ -37,14 +37,14 @@ final class AuthenticationTest extends TestCase
         $admin = User::factory()->superAdmin()->create();
 
         $this->post('/login', ['email' => $admin->email, 'password' => 'password'])
-            ->assertRedirect(route('admin.tenants.index'));
+            ->assertRedirect(route('admin.dashboard'));
     }
 
     public function test_authenticated_super_admin_visiting_login_is_redirected_to_admin(): void
     {
         $admin = User::factory()->superAdmin()->create();
 
-        $this->actingAs($admin)->get('/login')->assertRedirect(route('admin.tenants.index'));
+        $this->actingAs($admin)->get('/login')->assertRedirect(route('admin.dashboard'));
     }
 
     public function test_authenticated_owner_visiting_login_is_redirected_to_cabinet(): void

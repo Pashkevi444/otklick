@@ -12,11 +12,11 @@ use App\Http\Requests\Cabinet\KnowledgeEntryRequest;
 use App\Jobs\IndexKnowledge;
 use App\Models\KnowledgeEntry;
 use App\Models\KnowledgeGap;
+use App\Models\KnowledgeTemplate;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Services\KnowledgeBaseService;
 use App\Support\KnowledgeImageStorage;
-use App\Support\KnowledgeTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,16 +35,35 @@ final class KnowledgeEntryController extends Controller
         private readonly KnowledgeGapRepositoryInterface $gaps,
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        // Пагинация списка записей (на тенанта их немного — режем коллекцию
+        // в памяти).
+        $perPage = 9;
+        $allEntries = $this->knowledge->list();
+        $page = max(1, (int) $request->query('page', '1'));
+        $lastPage = max(1, (int) ceil($allEntries->count() / $perPage));
+        $page = min($page, $lastPage);
+
         // «Развитие бота» — вопросы клиентов, на которые бот не нашёл ответ
         // (отдельный таб). Бизнес видит их и дополняет базу знаний.
         return Inertia::render('Cabinet/KnowledgeBase/Index', [
-            'entries' => $this->knowledge->list()->map($this->present(...))->all(),
+            'entries' => $allEntries->forPage($page, $perPage)->map($this->present(...))->values()->all(),
+            'pagination' => [
+                'current' => $page,
+                'last' => $lastPage,
+                'total' => $allEntries->count(),
+            ],
             'gaps' => $this->gaps->openForCurrentTenant()->map($this->presentGap(...))->all(),
             // Готовые элементы базы знаний по типам бизнеса — добавляются в один клик,
-            // бизнес дозаполняет конкретику. Группируются на фронте по businessTypes.
-            'templates' => KnowledgeTemplates::all(),
+            // бизнес дозаполняет конкретику. Источник — таблица `knowledge_templates`
+            // (СУ редактирует в админке). Группируются на фронте по businessTypes.
+            'templates' => KnowledgeTemplate::query()->orderBy('sort_order')->get()->map(fn (KnowledgeTemplate $t): array => [
+                'key' => $t->key,
+                'title' => $t->title,
+                'content' => $t->content,
+                'businessType' => $t->business_type,
+            ])->all(),
             'businessTypes' => array_map(
                 fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
                 BusinessType::cases(),

@@ -41,7 +41,18 @@ interface BizType {
     value: string;
     label: string;
 }
-const props = defineProps<{ entries: Entry[]; gaps: Gap[]; templates: KbTemplate[]; businessTypes: BizType[] }>();
+const props = defineProps<{
+    entries: Entry[];
+    pagination: { current: number; last: number; total: number };
+    gaps: Gap[];
+    templates: KbTemplate[];
+    businessTypes: BizType[];
+}>();
+
+// Пагинация списка записей (серверная, по ?page).
+const goToPage = (page: number): void => {
+    router.get(route('cabinet.knowledge.index'), { page }, { preserveScroll: true, preserveState: false });
+};
 
 const tab = ref<'entries' | 'gaps'>('entries');
 const showForm = ref(false);
@@ -278,6 +289,27 @@ const remove = (id: string): void => {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Пагинация списка записей -->
+        <div v-if="pagination.last > 1" class="mt-5 flex items-center justify-center gap-3 text-sm">
+            <button
+                type="button"
+                class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40"
+                :disabled="pagination.current <= 1"
+                @click="goToPage(pagination.current - 1)"
+            >
+                ← Назад
+            </button>
+            <span class="text-slate-500">Стр. {{ pagination.current }} из {{ pagination.last }}</span>
+            <button
+                type="button"
+                class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40"
+                :disabled="pagination.current >= pagination.last"
+                @click="goToPage(pagination.current + 1)"
+            >
+                Вперёд →
+            </button>
         </div>
         </div>
 

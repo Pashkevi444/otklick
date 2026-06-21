@@ -8,7 +8,10 @@ use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\Admin\AnnouncementController as AdminAnnouncementController;
 use App\Http\Controllers\Admin\DashboardCardController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\KnowledgeTemplateController as AdminKnowledgeTemplateController;
+use App\Http\Controllers\Admin\ScenarioTemplateController as AdminScenarioTemplateController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\AnalyticsController;
@@ -61,6 +64,8 @@ $onDomain(config('app.marketing_domain'), function (): void {
 $onDomain(config('app.business_domain'), function (): void {
     // Супер-админка
     Route::middleware(['auth', 'super-admin'])->prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('/', AdminDashboardController::class)->name('dashboard');
+
         Route::get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
         Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
         Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
@@ -84,6 +89,17 @@ $onDomain(config('app.business_domain'), function (): void {
         // Состояния плашек дашборда (новое/обновлено/тех. работы) — глобально.
         Route::get('/dashboard-cards', [DashboardCardController::class, 'index'])->name('cards.index');
         Route::put('/dashboard-cards', [DashboardCardController::class, 'update'])->name('cards.update');
+
+        // Готовые шаблоны (глобальные, для всех бизнесов): сценарии и база знаний.
+        Route::get('/scenario-templates', [AdminScenarioTemplateController::class, 'index'])->name('scenario-templates.index');
+        Route::post('/scenario-templates', [AdminScenarioTemplateController::class, 'store'])->name('scenario-templates.store');
+        Route::put('/scenario-templates/{template}', [AdminScenarioTemplateController::class, 'update'])->name('scenario-templates.update');
+        Route::delete('/scenario-templates/{template}', [AdminScenarioTemplateController::class, 'destroy'])->name('scenario-templates.destroy');
+
+        Route::get('/knowledge-templates', [AdminKnowledgeTemplateController::class, 'index'])->name('knowledge-templates.index');
+        Route::post('/knowledge-templates', [AdminKnowledgeTemplateController::class, 'store'])->name('knowledge-templates.store');
+        Route::put('/knowledge-templates/{template}', [AdminKnowledgeTemplateController::class, 'update'])->name('knowledge-templates.update');
+        Route::delete('/knowledge-templates/{template}', [AdminKnowledgeTemplateController::class, 'destroy'])->name('knowledge-templates.destroy');
 
         // Войти в кабинет бизнеса (impersonation).
         Route::post('/tenants/{tenant}/impersonate', [ImpersonationController::class, 'start'])->name('tenants.impersonate');

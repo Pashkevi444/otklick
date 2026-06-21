@@ -6,9 +6,9 @@ namespace Tests\Feature\Cabinet;
 
 use App\Enums\BusinessType;
 use App\Models\KnowledgeEntry;
+use App\Models\KnowledgeTemplate;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Support\KnowledgeTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -54,7 +54,7 @@ final class KnowledgeBaseTest extends TestCase
             ->get('/cabinet/knowledge')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('templates', count(KnowledgeTemplates::all()))
+                ->has('templates', KnowledgeTemplate::count())
                 ->has('businessTypes', count(BusinessType::cases()))
                 ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
                     && $t->contains(fn (array $x): bool => $x['businessType'] === null) // «Общие»

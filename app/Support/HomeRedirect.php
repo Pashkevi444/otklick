@@ -14,7 +14,7 @@ final class HomeRedirect
     public static function for(User $user): string
     {
         return $user->isSuperAdmin()
-            ? route('admin.tenants.index')
+            ? route('admin.dashboard')
             : route('cabinet.dashboard');
     }
 }
