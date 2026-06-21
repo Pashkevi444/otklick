@@ -71,6 +71,10 @@ class HandleInertiaRequests extends Middleware
             ],
             // Супер-админ вошёл в кабинет бизнеса (impersonation) — для баннера выхода.
             'impersonating' => $request->session()->has('impersonator_id'),
+            // Ссылка на трекер ошибок (self-hosted GlitchTip/Sentry) — только супер-админу.
+            'errorTrackingUrl' => $user !== null && $user->isSuperAdmin()
+                ? config('services.error_tracking_url')
+                : null,
             // Состояния плашек дашборда (глобально от СУ): новое/обновлено/тех. работы.
             'cardStates' => fn (): array => app(DashboardCardService::class)->statesForFrontend(),
             // Непрочитанные анонсы тенанта (для подсветки пунктов меню «Новости»/«Обновления»).

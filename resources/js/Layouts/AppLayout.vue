@@ -43,6 +43,10 @@ const navItems = computed<NavItem[]>(() => {
     return items;
 });
 
+// Внешняя ссылка на трекер ошибок (GlitchTip/Sentry) — только супер-админу,
+// если задан ERROR_TRACKING_URL. Открывается в новой вкладке.
+const errorTrackingUrl = computed<string | null>(() => (page.props.errorTrackingUrl as string | null) ?? null);
+
 // Куда ведёт логотип «Отклик»: супер-админа — в список бизнесов, владельца — на
 // карточку бизнеса (домашняя страница кабинета).
 const homeHref = computed<string>(() =>
@@ -99,6 +103,16 @@ const logout = (): void => {
                                     {{ item.label }}
                                     <span v-if="item.badge" class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{{ item.badge }}</span>
                                 </Link>
+                                <a
+                                    v-if="errorTrackingUrl"
+                                    :href="errorTrackingUrl"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-white/50 dark:text-slate-300 dark:hover:bg-white/10"
+                                    title="Трекер ошибок (GlitchTip/Sentry)"
+                                >
+                                    Ошибки ↗
+                                </a>
                             </nav>
                         </div>
                         <div class="flex flex-none items-center gap-2 text-sm sm:gap-3">

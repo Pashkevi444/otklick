@@ -122,4 +122,8 @@ return [
         'semantic_threshold' => (float) env('FLOW_SEMANTIC_THRESHOLD', 0.74),
     ],
 
+    // Ссылка на дашборд трекера ошибок (self-hosted GlitchTip/Sentry) — показывается
+    // супер-админу в меню. Сами ошибки шлёт SDK по SENTRY_LARAVEL_DSN.
+    'error_tracking_url' => env('ERROR_TRACKING_URL'),
+
 ];

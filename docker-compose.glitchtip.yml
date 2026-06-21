@@ -1,0 +1,60 @@
+# Self-hosted трекер ошибок GlitchTip (Sentry-совместимый, опенсорс, бесплатно).
+# Поднимается ОТДЕЛЬНО от основного стека приложения, на том же РФ-сервере (152-ФЗ):
+#   docker compose -f docker-compose.glitchtip.yml up -d
+# Затем за Caddy на поддомене errors.otcl1ck.ru (см. docs/DEPLOY.md, раздел про error-tracking).
+#
+# Нужные переменные (в scripts/deploy.env или .env рядом):
+#   GLITCHTIP_SECRET_KEY    — случайная длинная строка (openssl rand -hex 32)
+#   GLITCHTIP_DB_PASSWORD   — пароль БД GlitchTip
+# Память: ~512–768 МБ суммарно (намного легче полноценного self-hosted Sentry).
+
+x-gt-env: &gt-env
+  DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD}@glitchtip-postgres:5432/glitchtip
+  SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
+  REDIS_URL: redis://glitchtip-redis:6379/0
+  PORT: "8080"
+  GLITCHTIP_DOMAIN: https://errors.otcl1ck.ru
+  DEFAULT_FROM_EMAIL: support@otcl1ck.ru
+  EMAIL_URL: consolemail://
+  # Регистрацию закрываем после создания первого аккаунта (ENABLE_USER_REGISTRATION=false).
+  ENABLE_OPEN_USER_REGISTRATION: "true"
+
+services:
+  glitchtip-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD}
+    volumes:
+      - glitchtip_pg:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  glitchtip-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  glitchtip-web:
+    image: glitchtip/glitchtip
+    depends_on: [glitchtip-postgres, glitchtip-redis]
+    environment: *gt-env
+    ports:
+      - "127.0.0.1:8080:8080" # наружу только через Caddy reverse_proxy
+    restart: unless-stopped
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip
+    command: ./bin/run-celery-with-beat.sh
+    depends_on: [glitchtip-postgres, glitchtip-redis]
+    environment: *gt-env
+    restart: unless-stopped
+
+  glitchtip-migrate:
+    image: glitchtip/glitchtip
+    command: ./bin/run-migrate.sh
+    depends_on: [glitchtip-postgres]
+    environment: *gt-env
+    restart: on-failure
+
+volumes:
+  glitchtip_pg:
