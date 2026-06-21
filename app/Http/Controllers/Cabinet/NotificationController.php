@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\NotificationRecipient;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
+use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Services\NotificationRecipientService;
 use App\Services\TenantService;
@@ -31,6 +32,7 @@ final class NotificationController extends Controller
         private readonly NotificationRecipientService $service,
         private readonly ChannelRepositoryInterface $channels,
         private readonly TenantService $tenants,
+        private readonly CrmConnectionRepositoryInterface $crm,
     ) {}
 
     public function index(Request $request): Response
@@ -40,6 +42,14 @@ final class NotificationController extends Controller
 
         $hasTelegramBot = $this->channels->forCurrentTenant()
             ->contains(fn (Channel $c): bool => $c->type === ChannelType::Telegram && $c->is_active);
+
+        // Без активного YClients события про запись (Новая запись / Клиент отменил
+        // запись) не возникают — не предлагаем подписываться на них.
+        $bookingActive = $this->crm->activeForCurrentTenant() !== null;
+        $events = array_values(array_filter(
+            OwnerEvent::cases(),
+            static fn (OwnerEvent $e): bool => $bookingActive || ! $e->requiresCrm(),
+        ));
 
         return Inertia::render('Cabinet/Notifications', [
             'recipients' => $this->recipients->forCurrentTenant()->map(fn (NotificationRecipient $r): array => [
@@ -67,7 +77,7 @@ final class NotificationController extends Controller
                 'available' => $features->has('aiInsights'),
                 'enabled' => (bool) ($tenant->settings['weekly_digest'] ?? true),
             ],
-            'eventOptions' => array_map(static fn (OwnerEvent $e): array => ['value' => $e->value, 'label' => $e->title()], OwnerEvent::cases()),
+            'eventOptions' => array_map(static fn (OwnerEvent $e): array => ['value' => $e->value, 'label' => $e->title()], $events),
             'roleOptions' => array_map(static fn (RecipientRole $r): array => ['value' => $r->value, 'label' => $r->label()], RecipientRole::cases()),
         ]);
     }

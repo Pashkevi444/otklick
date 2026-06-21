@@ -11,6 +11,9 @@ Artisan::command('inspire', function () {
 // Закрываем «протухшие» открытые диалоги (потерянные лиды) — раз в 5 минут.
 Schedule::command('conversations:close-stale')->everyFiveMinutes()->withoutOverlapping();
 
+// Авто-возврат боту диалогов, перехваченных оператором, после простоя — раз в 5 минут.
+Schedule::command('conversations:release-idle')->everyFiveMinutes()->withoutOverlapping();
+
 // Напоминания клиентам о записи (ставятся в очередь) — раз в 5 минут.
 Schedule::command('appointments:send-reminders')->everyFiveMinutes()->withoutOverlapping();
 

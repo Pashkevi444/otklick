@@ -52,6 +52,23 @@ interface ConversationRepositoryInterface
 
     public function touchLastMessage(Conversation $conversation): void;
 
+    /** Перехват диалога оператором: ставит флаг и фиксирует, кто перехватил. */
+    public function setOperator(Conversation $conversation, ?int $operatorUserId): void;
+
+    /** Снимает перехват — диалогом снова управляет бот. */
+    public function clearOperator(Conversation $conversation): void;
+
+    /** Продлевает перехват (активность оператора) — сдвигает таймер авто-возврата. */
+    public function touchOperator(Conversation $conversation): void;
+
+    /**
+     * Перехваченные диалоги текущего тенанта без активности оператора дольше
+     * порога (для авто-возврата боту).
+     *
+     * @return Collection<int, Conversation>
+     */
+    public function idleOperatorHandled(Carbon $before): Collection;
+
     /**
      * Закрывает открытые диалоги текущего тенанта без активности с момента
      * $before и без записи (потерянные лиды). Возвращает число закрытых.

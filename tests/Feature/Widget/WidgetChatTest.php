@@ -8,6 +8,7 @@ use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Services\ChannelService;
+use App\Services\ConversationHandoffService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -39,6 +40,27 @@ final class WidgetChatTest extends TestCase
     private function url(Channel $channel, string $action): string
     {
         return "/widget/v1/{$channel->tenant_id}/{$channel->id}/{$action}";
+    }
+
+    public function test_poll_delivers_operator_messages_and_status(): void
+    {
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+        $lastId = $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'привет'])
+            ->assertOk()->json('lastId');
+
+        // Оператор перехватывает диалог и пишет посетителю (в контексте тенанта).
+        $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
+        app(TenantInitializer::class)->run((string) $channel->tenant_id, function () use ($conv): void {
+            $handoff = app(ConversationHandoffService::class);
+            $handoff->takeOver($conv, 1);
+            $handoff->reply($conv, 'Это оператор, чем помочь?');
+        });
+
+        $poll = $this->postJson($this->url($channel, 'poll'), ['token' => $token, 'after' => $lastId]);
+
+        $poll->assertOk()->assertJsonPath('operatorActive', true);
+        $this->assertContains('Это оператор, чем помочь?', collect($poll->json('messages'))->pluck('text')->all());
     }
 
     public function test_session_then_message_returns_a_reply(): void

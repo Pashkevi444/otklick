@@ -63,6 +63,36 @@ final class IncomingMessageServiceTest extends TestCase
         (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
     }
 
+    public function test_operator_handling_silences_bot(): void
+    {
+        // Диалог перехвачен оператором → бот не отвечает: responder не зовём,
+        // исходящее не пишем и в канал не шлём (только фиксируем входящее).
+        $channel = $this->channel();
+        $conversation = new Conversation;
+        $conversation->operator_active_at = now();
+        $incoming = new IncomingMessage('555', '42', 'оператор тут?', 'Иван', null);
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $messages->shouldNotReceive('recordOutbound');
+
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldNotReceive('respond');
+
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
+        $gateway->shouldNotReceive('send');
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldNotReceive('fromInbound');
+
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class)))->handle($channel, $incoming);
+    }
+
     public function test_failed_send_queues_retry_and_does_not_lose_reply(): void
     {
         Bus::fake([DeliverBotReply::class]);

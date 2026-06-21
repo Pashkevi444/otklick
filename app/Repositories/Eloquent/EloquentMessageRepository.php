@@ -48,6 +48,15 @@ final class EloquentMessageRepository implements MessageRepositoryInterface
             ->get();
     }
 
+    public function sinceForConversation(Conversation $conversation, ?string $afterId): Collection
+    {
+        return Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->when($afterId !== null && $afterId !== '', fn ($q) => $q->where('id', '>', $afterId))
+            ->orderBy('id')
+            ->get();
+    }
+
     public function recordInbound(Conversation $conversation, IncomingMessage $incoming): ?Message
     {
         $alreadyRecorded = Message::query()

@@ -14,6 +14,8 @@ use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BookingFlow;
+use App\Services\ConversationHandoffService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,6 +32,7 @@ final class ConversationController extends Controller
         private readonly ConversationRepositoryInterface $conversations,
         private readonly MessageRepositoryInterface $messages,
         private readonly BookingFlow $booking,
+        private readonly ConversationHandoffService $handoff,
     ) {}
 
     public function index(Request $request): Response
@@ -69,7 +72,7 @@ final class ConversationController extends Controller
         ]);
     }
 
-    public function show(string $conversation): Response
+    public function show(Request $request, string $conversation): Response
     {
         $model = $this->conversations->findForCurrentTenant($conversation);
 
@@ -91,19 +94,93 @@ final class ConversationController extends Controller
                 // Связь лида с CRM-записью (id записи в CRM + какая CRM).
                 'crmRecordId' => $model->crm_record_id,
                 'crmProvider' => $model->crm_connection_id !== null ? ($model->crmConnection?->provider->label() ?? 'CRM') : null,
+                // Перехват диалога оператором (живой чат): кто и активен ли сейчас.
+                'operatorActive' => $model->isOperatorHandling(),
+                'operatorName' => $model->isOperatorHandling() ? $model->operator?->name : null,
             ],
             'outcomes' => array_map(
                 fn (ConversationOutcome $o): array => ['value' => $o->value, 'label' => $o->label()],
                 ConversationOutcome::cases(),
             ),
-            'messages' => $this->messages->allForConversation($model)->map(fn (Message $m): array => [
-                'id' => $m->id,
-                'direction' => $m->direction->value,
-                'text' => (string) $m->text,
-                'time' => $m->created_at?->format('H:i'),
-                'date' => $m->created_at?->format('d.m.Y'),
-            ])->all(),
+            'messages' => $this->messages->allForConversation($model)->map($this->presentMessage(...))->all(),
+            'canReply' => $request->user()->allows('conversations.edit'),
         ]);
+    }
+
+    /**
+     * Лайв-поллинг: новые сообщения после $after + текущее состояние перехвата.
+     */
+    public function messages(Request $request, string $conversation): JsonResponse
+    {
+        $model = $this->conversations->findForCurrentTenant($conversation);
+        abort_if($model === null, 404);
+
+        $after = trim((string) $request->query('after', ''));
+
+        return response()->json([
+            'messages' => $this->messages->sinceForConversation($model, $after !== '' ? $after : null)
+                ->map($this->presentMessage(...))->values()->all(),
+            'operatorActive' => $model->isOperatorHandling(),
+            'operatorName' => $model->isOperatorHandling() ? $model->operator?->name : null,
+            'status' => $model->status->value,
+            'statusLabel' => $model->status->label(),
+        ]);
+    }
+
+    /** Оператор перехватывает диалог у бота (бот замолкает). */
+    public function takeover(Request $request, string $conversation): JsonResponse
+    {
+        abort_unless($request->user()->allows('conversations.edit'), 403);
+
+        $model = $this->conversations->findForCurrentTenant($conversation);
+        abort_if($model === null, 404);
+
+        $this->handoff->takeOver($model, (int) $request->user()->id);
+
+        return response()->json(['operatorActive' => true, 'operatorName' => $request->user()->name]);
+    }
+
+    /** Оператор возвращает диалог боту. */
+    public function release(Request $request, string $conversation): JsonResponse
+    {
+        abort_unless($request->user()->allows('conversations.edit'), 403);
+
+        $model = $this->conversations->findForCurrentTenant($conversation);
+        abort_if($model === null, 404);
+
+        $this->handoff->release($model);
+
+        return response()->json(['operatorActive' => false]);
+    }
+
+    /** Ответ оператора клиенту (только при активном перехвате). */
+    public function reply(Request $request, string $conversation): JsonResponse
+    {
+        abort_unless($request->user()->allows('conversations.edit'), 403);
+
+        $model = $this->conversations->findForCurrentTenant($conversation);
+        abort_if($model === null, 404);
+
+        abort_unless($model->isOperatorHandling(), 422, 'Сначала перехватите диалог.');
+
+        $data = $request->validate(['text' => ['required', 'string', 'max:2000']]);
+        $message = $this->handoff->reply($model, (string) $data['text']);
+
+        return response()->json(['message' => $this->presentMessage($message)]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function presentMessage(Message $m): array
+    {
+        return [
+            'id' => $m->id,
+            'direction' => $m->direction->value,
+            'text' => (string) $m->text,
+            'time' => $m->created_at?->format('H:i'),
+            'date' => $m->created_at?->format('d.m.Y'),
+        ];
     }
 
     /**

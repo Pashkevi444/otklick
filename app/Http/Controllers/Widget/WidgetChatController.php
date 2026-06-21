@@ -70,7 +70,7 @@ final class WidgetChatController extends Controller
             $model = $this->resolve($channel);
             $origin = $this->guardOrigin($request, $model);
 
-            $reply = $this->widget->reply($model, (string) $validated['token'], (string) $validated['text'], $request->ip());
+            ['reply' => $reply, 'lastId' => $lastId] = $this->widget->reply($model, (string) $validated['token'], (string) $validated['text'], $request->ip());
 
             return $this->cors(response()->json([
                 'reply' => $reply->text,
@@ -80,7 +80,30 @@ final class WidgetChatController extends Controller
                 'options' => $reply->keyboard?->labels() ?? [],
                 // Фото примеров работ — отдельным полем (виджет рендерит как <img>).
                 'images' => $reply->images,
+                // Курсор для лайв-поллинга: с него виджет тянет ответы оператора.
+                'lastId' => $lastId,
             ]), $origin);
+        });
+    }
+
+    /**
+     * Лайв-поллинг виджета: новые сообщения (ответы оператора) после `after` +
+     * признак, что на связи оператор. Виджет опрашивает раз в ~3 сек.
+     */
+    public function poll(Request $request, string $tenant, string $channel): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+            'after' => ['nullable', 'string'],
+        ]);
+
+        return $this->tenancy->run($tenant, function () use ($request, $channel, $validated): JsonResponse {
+            $model = $this->resolve($channel);
+            $origin = $this->guardOrigin($request, $model);
+
+            $data = $this->widget->poll($model, (string) $validated['token'], $validated['after'] ?? null);
+
+            return $this->cors(response()->json($data), $origin);
         });
     }
 

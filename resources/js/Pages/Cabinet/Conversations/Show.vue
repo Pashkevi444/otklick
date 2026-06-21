@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { useCan } from '@/composables/useCan';
@@ -25,15 +25,111 @@ interface Conv {
     createdAt: string | null;
     crmRecordId: string | null;
     crmProvider: string | null;
+    operatorActive: boolean;
+    operatorName: string | null;
 }
 interface Outcome {
     value: string;
     label: string;
 }
 
-const props = defineProps<{ conversation: Conv; messages: Msg[]; outcomes: Outcome[] }>();
+const props = defineProps<{ conversation: Conv; messages: Msg[]; outcomes: Outcome[]; canReply: boolean }>();
 
 const lightbox = ref<string | null>(null);
+
+// --- Живой чат: лайв-поллинг + перехват диалога оператором ---
+const messages = ref<Msg[]>([...props.messages]);
+const operatorActive = ref(props.conversation.operatorActive);
+const operatorName = ref<string | null>(props.conversation.operatorName);
+const replyText = ref('');
+const busy = ref(false);
+let lastId = messages.value.length ? messages.value[messages.value.length - 1].id : '';
+
+const base = `/cabinet/conversations/${props.conversation.id}`;
+const xsrf = (): string =>
+    decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '');
+
+async function poll(): Promise<void> {
+    if (busy.value) return;
+    try {
+        const res = await fetch(`${base}/messages?after=${encodeURIComponent(lastId)}`, {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (!res.ok) return;
+        const d = await res.json();
+        if (Array.isArray(d.messages) && d.messages.length) {
+            for (const m of d.messages as Msg[]) {
+                messages.value.push(m);
+                lastId = m.id;
+            }
+        }
+        operatorActive.value = d.operatorActive;
+        operatorName.value = d.operatorName;
+    } catch {
+        /* сеть моргнула — повторим на следующем тике */
+    }
+}
+
+async function action(path: string, body?: object): Promise<Record<string, unknown>> {
+    const res = await fetch(`${base}/${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-XSRF-TOKEN': xsrf() },
+        credentials: 'same-origin',
+        body: JSON.stringify(body ?? {}),
+    });
+    if (!res.ok) throw res;
+    return res.json();
+}
+
+const takeOver = async (): Promise<void> => {
+    busy.value = true;
+    try {
+        const d = await action('takeover');
+        operatorActive.value = true;
+        operatorName.value = (d.operatorName as string) ?? null;
+    } finally {
+        busy.value = false;
+    }
+    void poll();
+};
+
+const release = async (): Promise<void> => {
+    busy.value = true;
+    try {
+        await action('release');
+        operatorActive.value = false;
+        operatorName.value = null;
+    } finally {
+        busy.value = false;
+    }
+    void poll();
+};
+
+const sendReply = async (): Promise<void> => {
+    const text = replyText.value.trim();
+    if (!text || busy.value) return;
+    busy.value = true;
+    try {
+        const d = await action('reply', { text });
+        if (d.message) {
+            const m = d.message as Msg;
+            messages.value.push(m);
+            lastId = m.id;
+        }
+        replyText.value = '';
+    } finally {
+        busy.value = false;
+    }
+};
+
+let timer: number | undefined;
+onMounted(() => {
+    timer = window.setInterval(poll, 3000);
+});
+onUnmounted(() => {
+    if (timer) window.clearInterval(timer);
+});
 
 const IMG_RE = /(https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp)(?:\?[^\s<>"']*)?)/gi;
 
@@ -61,7 +157,7 @@ function parse(text: string): { text: string; images: string[] } {
 // Группируем сообщения по дате; ссылки на фото рендерим как картинки.
 const groups = computed(() => {
     const out: { date: string | null; items: ParsedMsg[] }[] = [];
-    for (const m of props.messages) {
+    for (const m of messages.value) {
         const p = parse(m.text);
         const item: ParsedMsg = { id: m.id, direction: m.direction, time: m.time, date: m.date, text: p.text, images: p.images };
         const last = out[out.length - 1];
@@ -124,6 +220,25 @@ const removeLead = (): void => {
                 </div>
             </div>
             <div class="ml-auto flex items-center gap-2">
+                <template v-if="canReply">
+                    <button
+                        v-if="!operatorActive"
+                        type="button"
+                        :disabled="busy"
+                        class="rounded-xl bg-[#2E74B5] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#255f96] disabled:opacity-50"
+                        @click="takeOver"
+                    >
+                        💬 Перехватить диалог
+                    </button>
+                    <template v-else>
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>{{ operatorName || 'Оператор' }} на связи
+                        </span>
+                        <button type="button" :disabled="busy" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:text-[#1F4E79] disabled:opacity-50 dark:border-white/10 dark:text-slate-300" @click="release">
+                            Вернуть боту
+                        </button>
+                    </template>
+                </template>
                 <span class="rounded-full px-2.5 py-1 text-xs" :class="outcomeClass(conversation.outcome)">{{ conversation.outcomeLabel }}</span>
                 <select
                     v-if="can('conversations.edit')"
@@ -180,6 +295,31 @@ const removeLead = (): void => {
                 </div>
             </template>
         </div>
+
+        <!-- Ответ оператора (живой чат): доступен, пока диалог перехвачен -->
+        <div
+            v-if="canReply && operatorActive"
+            class="mt-3 flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/5"
+        >
+            <textarea
+                v-model="replyText"
+                rows="1"
+                placeholder="Ответьте клиенту…"
+                class="max-h-32 flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#2E74B5] dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                @keydown.enter.exact.prevent="sendReply"
+            ></textarea>
+            <button
+                type="button"
+                :disabled="busy || !replyText.trim()"
+                class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#255f96] disabled:opacity-50"
+                @click="sendReply"
+            >
+                Отправить
+            </button>
+        </div>
+        <p v-else-if="canReply" class="mt-3 text-center text-xs text-slate-400">
+            Нажмите «Перехватить диалог», чтобы ответить клиенту лично — бот при этом замолчит.
+        </p>
 
         <Teleport to="body">
             <Transition name="lb">

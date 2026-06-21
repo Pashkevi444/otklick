@@ -21,10 +21,14 @@ Route::post('/webhooks/telegram/{tenant}/{channel}', TelegramWebhookController::
 Route::get('/widget/v1/widget.js', [WidgetChatController::class, 'script'])->name('widget.script');
 Route::options('/widget/v1/{tenant}/{channel}/session', [WidgetChatController::class, 'preflight']);
 Route::options('/widget/v1/{tenant}/{channel}/message', [WidgetChatController::class, 'preflight']);
+Route::options('/widget/v1/{tenant}/{channel}/poll', [WidgetChatController::class, 'preflight']);
 Route::post('/widget/v1/{tenant}/{channel}/session', [WidgetChatController::class, 'session'])
     ->middleware('throttle:20,1')->name('widget.session');
 Route::post('/widget/v1/{tenant}/{channel}/message', [WidgetChatController::class, 'message'])
     ->middleware('throttle:40,1')->name('widget.message');
+// Лайв-поллинг (раз в ~3 сек): ответы оператора + статус «оператор на связи».
+Route::post('/widget/v1/{tenant}/{channel}/poll', [WidgetChatController::class, 'poll'])
+    ->middleware('throttle:120,1')->name('widget.poll');
 
 /*
  * YClients Marketplace: server-to-server вебхуки. Stateless (без сессий/CSRF).

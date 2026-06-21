@@ -23,4 +23,17 @@ enum OwnerEvent: string
             self::Cancelled => 'Клиент отменил запись',
         };
     }
+
+    /**
+     * Событие про запись (создание/отмена) — имеет смысл только при подключённой
+     * CRM (YClients). Без активного подключения такие события не возникают, и в
+     * настройках уведомлений их не показываем.
+     */
+    public function requiresCrm(): bool
+    {
+        return match ($this) {
+            self::Booked, self::Cancelled => true,
+            self::NewLead, self::NeedsHuman => false,
+        };
+    }
 }

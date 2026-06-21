@@ -83,6 +83,9 @@ final class IntegrationController extends Controller
 
         $conn = $this->findOrFail($connection);
 
+        // Напоминания о записи имеют смысл только при ВКЛЮЧЁННОМ подключении YClients.
+        abort_unless($conn->is_active, 403, 'Подключение к YClients неактивно.');
+
         $validated = $request->validate([
             'enabled' => ['boolean'],
             'offsets_hours' => ['array', 'max:5'],

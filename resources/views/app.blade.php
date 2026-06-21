@@ -13,6 +13,12 @@
         {{-- Подтверждение прав в Яндекс.Вебмастере. --}}
         <meta name="yandex-verification" content="451d14762ac81dea" />
 
+        {{-- Индексируем ТОЛЬКО маркетинг-домен. Кабинет/админка/вход
+             (business.<домен> и прочие хосты) — noindex: их не должно быть в поиске. --}}
+        @if (request()->getHost() !== config('app.marketing_domain'))
+            <meta name="robots" content="noindex, nofollow">
+        @endif
+
         {{-- Тема ставится до рендера, чтобы не было мигания. --}}
         <script>
             (function () {

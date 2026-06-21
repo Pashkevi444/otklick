@@ -91,4 +91,17 @@ final class AppointmentRemindersTest extends TestCase
         $this->assertTrue($reminders['enabled']);
         $this->assertSame([1440, 120], $reminders['offsets']); // часы → минуты, по убыванию
     }
+
+    public function test_cannot_save_reminders_for_inactive_yclients(): void
+    {
+        // Напоминания о записи имеют смысл только при ВКЛЮЧЁННОМ подключении.
+        $tenant = Tenant::factory()->max()->create();
+        $connection = CrmConnection::factory()->create(['tenant_id' => $tenant->id, 'is_active' => false]);
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->actingAs($owner)->put("/cabinet/integrations/{$connection->id}/reminders", [
+            'enabled' => true,
+            'offsets_hours' => [24],
+        ])->assertForbidden();
+    }
 }

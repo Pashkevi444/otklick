@@ -7,12 +7,14 @@ namespace App\Services;
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
 use App\Enums\ConversationStatus;
+use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -49,10 +51,14 @@ final readonly class WebWidgetService
     }
 
     /**
-     * Принимает сообщение посетителя и возвращает ответ бота по базе знаний.
-     * $clientIp сохраняется в деталях диалога (аналог ссылки на аккаунт в мессенджерах).
+     * Принимает сообщение посетителя и возвращает ответ бота по базе знаний +
+     * курсор `lastId` (id последнего сообщения — с него виджет продолжит поллинг,
+     * чтобы не задвоить уже показанный ответ). $clientIp сохраняется в деталях
+     * диалога (аналог ссылки на аккаунт в мессенджерах).
+     *
+     * @return array{reply: BotReply, lastId: string}
      */
-    public function reply(Channel $channel, string $token, string $text, ?string $clientIp = null): BotReply
+    public function reply(Channel $channel, string $token, string $text, ?string $clientIp = null): array
     {
         $sessionId = $this->sessionFromToken($channel, $token);
 
@@ -61,7 +67,7 @@ final readonly class WebWidgetService
         // жёсткое «Гость сайта» затирало перенесённое имя).
         $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null, $clientIp);
 
-        $this->messages->recordInbound($conversation, new IncomingMessage(
+        $inbound = $this->messages->recordInbound($conversation, new IncomingMessage(
             externalChatId: $sessionId,
             externalMessageId: (string) Str::uuid(),
             text: $text,
@@ -70,9 +76,17 @@ final readonly class WebWidgetService
         // Контакты клиента (телефон, имя) — до генерации ответа.
         $this->contacts->fromInbound($conversation, $text);
 
+        // Диалог перехвачен оператором — бот молчит; сообщение посетителя увидит
+        // оператор в кабинете и ответит сам (виджет получит ответ поллингом).
+        if ($conversation->isOperatorHandling()) {
+            $this->conversations->touchLastMessage($conversation);
+
+            return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
+        }
+
         $reply = $this->responder->respond($channel->tenant, $conversation, $text);
 
-        $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
+        $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
         $this->conversations->touchLastMessage($conversation);
 
         if ($reply->escalate) {
@@ -92,7 +106,32 @@ final readonly class WebWidgetService
 
         $this->notifyOwner($channel, $conversation, $text, $reply);
 
-        return $reply;
+        return ['reply' => $reply, 'lastId' => (string) $outbound->id];
+    }
+
+    /**
+     * Лайв-поллинг виджета: исходящие сообщения диалога (ответы бота И оператора),
+     * появившиеся после $afterId, + признак того, что сейчас на связи оператор
+     * (виджет покажет баннер). Диалога ещё нет (сессия без переписки) → пусто.
+     *
+     * @return array{messages: list<array{id: string, text: string}>, operatorActive: bool}
+     */
+    public function poll(Channel $channel, string $token, ?string $afterId): array
+    {
+        $sessionId = $this->sessionFromToken($channel, $token);
+        $conversation = $this->conversations->findActiveForChat($channel->id, $sessionId);
+
+        if ($conversation === null) {
+            return ['messages' => [], 'operatorActive' => false];
+        }
+
+        $messages = $this->messages->sinceForConversation($conversation, $afterId)
+            ->filter(fn (Message $m): bool => $m->direction === MessageDirection::Outbound && trim((string) $m->text) !== '')
+            ->map(fn (Message $m): array => ['id' => (string) $m->id, 'text' => (string) $m->text])
+            ->values()
+            ->all();
+
+        return ['messages' => $messages, 'operatorActive' => $conversation->isOperatorHandling()];
     }
 
     /**

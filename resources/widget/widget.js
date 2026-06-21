@@ -31,18 +31,22 @@
     // страницы (ключ привязан к конкретному виджету tenant/channel).
     var SKEY = 'otklik:' + tenant + ':' + channel;
     var history = [];
+    // Курсор лайв-поллинга: id последнего показанного сообщения сервера. Переживает
+    // перезагрузку, иначе после reload поллинг переотдал бы всю историю заново.
+    var lastId = '';
     (function () {
         try {
             var saved = JSON.parse(localStorage.getItem(SKEY) || '{}');
             if (saved && typeof saved.token === 'string') token = saved.token;
             if (saved && Array.isArray(saved.msgs)) history = saved.msgs;
+            if (saved && typeof saved.lastId === 'string') lastId = saved.lastId;
         } catch (e) {
             /* приватный режим / переполнение — работаем без памяти */
         }
     })();
     function persist() {
         try {
-            localStorage.setItem(SKEY, JSON.stringify({ token: token, msgs: history.slice(-60) }));
+            localStorage.setItem(SKEY, JSON.stringify({ token: token, msgs: history.slice(-60), lastId: lastId }));
         } catch (e) {
             /* запись недоступна — не падаем */
         }
@@ -50,6 +54,7 @@
     function resetSession() {
         token = null;
         history = [];
+        lastId = '';
         try {
             localStorage.removeItem(SKEY);
         } catch (e) {
@@ -93,6 +98,8 @@
         '.otk-send svg{width:19px;height:19px;fill:#fff}',
         '.otk-pow{text-align:center;font-size:11px;color:#9aa7b8;padding:6px 0 9px;background:#fff}',
         '.otk-pow a{color:#2E74B5;text-decoration:none;font-weight:600}.otk-pow a:hover{text-decoration:underline}',
+        '.otk-oper{display:none;font-size:11px;color:#1F4E79;background:#eaf2fb;text-align:center;padding:5px 10px;border-top:1px solid #dbe7f5}',
+        '.otk-oper.otk-on{display:block}',
         '.otk-img{margin-top:8px;max-width:220px;max-height:220px;width:auto;border-radius:13px;cursor:zoom-in;display:block;object-fit:cover;box-shadow:0 2px 10px rgba(16,42,73,.14);transition:transform .2s ease}',
         '.otk-img:hover{transform:scale(1.03)}',
         '.otk-lightbox{position:fixed;inset:0;z-index:2147483600;background:rgba(8,15,30,0);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;transition:background .28s ease}',
@@ -132,6 +139,7 @@
         '<textarea class="otk-in" rows="1" placeholder="Напишите сообщение…"></textarea>' +
         '<button class="otk-send" aria-label="Отправить">' + sendIcon + '</button>' +
         '</div>' +
+        '<div class="otk-oper">👤 Оператор на связи — отвечает лично</div>' +
         '<div class="otk-pow">Работает на <a href="https://otcl1ck.ru" target="_blank" rel="noopener">Отклик</a></div>';
 
     document.body.appendChild(launcher);
@@ -141,7 +149,12 @@
     var input = panel.querySelector('.otk-in');
     var sendBtn = panel.querySelector('.otk-send');
     var closeBtn = panel.querySelector('.otk-x');
+    var operEl = panel.querySelector('.otk-oper');
     var typingEl = null;
+
+    function setOperator(active) {
+        operEl.classList.toggle('otk-on', !!active);
+    }
 
     var IMG_RE = /(https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp)(?:\?[^\s<>"']*)?)/gi;
 
@@ -299,7 +312,13 @@
         post('/message', { token: token, text: text })
             .then(function (data) {
                 hideTyping();
-                addMsg(data.reply, 'bot', false, data.images);
+                // Курсор поллинга двигаем за уже показанный ответ, чтобы не задвоить.
+                if (data.lastId) { lastId = data.lastId; persist(); }
+                // При перехвате оператором бот молчит (reply пустой) — ничего не рисуем,
+                // ответ оператора придёт лайв-поллингом.
+                if (data.reply || (data.images && data.images.length)) {
+                    addMsg(data.reply, 'bot', false, data.images);
+                }
                 renderChips(data.options);
             })
             .catch(function (err) {
@@ -326,6 +345,26 @@
             setTimeout(function () { input.focus(); }, 300);
         }
     }
+
+    // Лайв-поллинг: тянем ответы оператора и статус «оператор на связи» раз в ~3с.
+    // Пропускаем во время отправки/старта (чтобы не задвоить ответ) и на скрытой
+    // вкладке (экономим запросы).
+    function poll() {
+        if (!token || sending || starting || document.hidden) return;
+        post('/poll', { token: token, after: lastId })
+            .then(function (data) {
+                if (data.messages && data.messages.length) {
+                    data.messages.forEach(function (m) {
+                        addMsg(m.text, 'bot');
+                        lastId = m.id;
+                    });
+                    persist();
+                }
+                setOperator(data.operatorActive);
+            })
+            .catch(function () { /* сеть моргнула — попробуем на следующем тике */ });
+    }
+    setInterval(poll, 3000);
 
     // Восстанавливаем прошлую переписку (если страницу перезагрузили).
     if (history.length) {

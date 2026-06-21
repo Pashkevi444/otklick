@@ -168,6 +168,38 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->first();
     }
 
+    public function setOperator(Conversation $conversation, ?int $operatorUserId): void
+    {
+        $conversation->forceFill([
+            'operator_active_at' => now(),
+            'operator_user_id' => $operatorUserId,
+        ])->save();
+    }
+
+    public function clearOperator(Conversation $conversation): void
+    {
+        $conversation->forceFill([
+            'operator_active_at' => null,
+            'operator_user_id' => null,
+        ])->save();
+    }
+
+    public function touchOperator(Conversation $conversation): void
+    {
+        $conversation->forceFill(['operator_active_at' => now()])->save();
+    }
+
+    /**
+     * @return Collection<int, Conversation>
+     */
+    public function idleOperatorHandled(Carbon $before): Collection
+    {
+        return Conversation::query()
+            ->whereNotNull('operator_active_at')
+            ->where('operator_active_at', '<', $before)
+            ->get();
+    }
+
     public function touchLastMessage(Conversation $conversation): void
     {
         $conversation->forceFill(['last_message_at' => now()])->save();

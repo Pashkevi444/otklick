@@ -39,6 +39,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $booked_for
  * @property list<int>|null $reminders_sent
  * @property Carbon|null $last_message_at
+ * @property Carbon|null $operator_active_at
+ * @property int|null $operator_user_id
  */
 class Conversation extends TenantOwnedModel
 {
@@ -69,7 +71,16 @@ class Conversation extends TenantOwnedModel
         'booked_for',
         'reminders_sent',
         'last_message_at',
+        'operator_active_at',
+        'operator_user_id',
     ];
+
+    /**
+     * Сколько минут без активности оператора держим диалог в ручном режиме,
+     * после чего бот снова отвечает (авто-возврат). Команда
+     * `conversations:release-idle` доводит флаг до конца и шлёт уведомление.
+     */
+    public const int OPERATOR_IDLE_MINUTES = 180;
 
     protected function casts(): array
     {
@@ -86,7 +97,18 @@ class Conversation extends TenantOwnedModel
             'booked_for' => 'datetime',
             'reminders_sent' => 'array',
             'last_message_at' => 'datetime',
+            'operator_active_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Диалог сейчас ведёт оператор (перехвачен), а не бот: флаг проставлен и не
+     * протух по таймауту бездействия. Бот в этом режиме молчит, отвечает человек.
+     */
+    public function isOperatorHandling(): bool
+    {
+        return $this->operator_active_at !== null
+            && $this->operator_active_at->gt(now()->subMinutes(self::OPERATOR_IDLE_MINUTES));
     }
 
     /**
@@ -128,6 +150,16 @@ class Conversation extends TenantOwnedModel
     public function channel(): BelongsTo
     {
         return $this->belongsTo(Channel::class);
+    }
+
+    /**
+     * Оператор, перехвативший диалог (если перехвачен).
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function operator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'operator_user_id');
     }
 
     /**

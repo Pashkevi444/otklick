@@ -51,9 +51,45 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'да, записывайте');
 
-        $reply = (new WebWidgetService($conversations, $messages, $responder, $contacts))
+        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts))
             ->reply($channel, $token, 'да, записывайте');
 
         $this->assertTrue($reply->booked);
+    }
+
+    public function test_operator_handling_silences_bot(): void
+    {
+        // Диалог перехвачен оператором → бот не отвечает (responder не зовём,
+        // исходящее не пишем), reply пустой; курсор поллинга — id входящего.
+        $channel = new Channel;
+        $channel->id = 'web-1';
+        $channel->setRelation('tenant', new Tenant(['name' => 'Бизнес']));
+
+        $token = Crypt::encryptString('web-1|sess-1');
+        $conversation = new Conversation;
+        $conversation->operator_active_at = now(); // активный перехват
+
+        $inbound = new Message;
+        $inbound->id = 'm-in-1';
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn($inbound);
+        $messages->shouldNotReceive('recordOutbound');
+
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldNotReceive('respond');
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts))
+            ->reply($channel, $token, 'есть кто живой?');
+
+        $this->assertSame('', $reply->text);
+        $this->assertSame('m-in-1', $lastId);
     }
 }

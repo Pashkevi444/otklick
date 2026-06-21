@@ -54,6 +54,14 @@ final readonly class IncomingMessageService
             return;
         }
 
+        // Диалог перехвачен оператором — бот молчит; входящее увидит оператор в
+        // кабинете и ответит сам.
+        if ($conversation->isOperatorHandling()) {
+            $this->conversations->touchLastMessage($conversation);
+
+            return;
+        }
+
         // Контакты клиента (телефон, имя) — до генерации ответа.
         $this->contacts->fromInbound($conversation, $incoming->text);
 

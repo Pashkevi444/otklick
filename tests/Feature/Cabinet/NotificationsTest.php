@@ -7,10 +7,12 @@ namespace Tests\Feature\Cabinet;
 use App\Enums\NotificationChannelType;
 use App\Enums\TenantPlan;
 use App\Models\Channel;
+use App\Models\CrmConnection;
 use App\Models\NotificationRecipient;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -37,6 +39,33 @@ final class NotificationsTest extends TestCase
                 ->where('limits.email', 1)
                 ->where('limits.telegram', 4)
                 ->has('recipients'));
+    }
+
+    public function test_booking_events_hidden_without_active_yclients(): void
+    {
+        // Без подключённого YClients события про запись (booked/cancelled) не
+        // возникают — их не предлагаем в настройках уведомлений.
+        [, $owner] = $this->owner();
+
+        $this->actingAs($owner)->get('/cabinet/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p
+                ->where('eventOptions', fn (Collection $opts): bool => $opts->pluck('value')->contains('new_lead')
+                    && $opts->pluck('value')->contains('needs_human')
+                    && $opts->pluck('value')->doesntContain('booked')
+                    && $opts->pluck('value')->doesntContain('cancelled')));
+    }
+
+    public function test_booking_events_shown_with_active_yclients(): void
+    {
+        [$tenant, $owner] = $this->owner();
+        CrmConnection::factory()->create(['tenant_id' => $tenant->id, 'is_active' => true]);
+
+        $this->actingAs($owner)->get('/cabinet/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p
+                ->where('eventOptions', fn (Collection $opts): bool => $opts->pluck('value')->contains('booked')
+                    && $opts->pluck('value')->contains('cancelled')));
     }
 
     public function test_owner_adds_email_recipient(): void

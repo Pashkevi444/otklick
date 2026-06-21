@@ -39,6 +39,15 @@ interface MessageRepositoryInterface
     public function allForConversation(Conversation $conversation): Collection;
 
     /**
+     * Сообщения диалога, появившиеся ПОСЛЕ сообщения с id $afterId (лайв-поллинг
+     * кабинета и виджета). $afterId=null/'' — все сообщения. Курсор — id (UUIDv7,
+     * монотонный по времени).
+     *
+     * @return Collection<int, Message>
+     */
+    public function sinceForConversation(Conversation $conversation, ?string $afterId): Collection;
+
+    /**
      * Сохраняет входящее сообщение. Возвращает null, если сообщение с таким
      * external_message_id уже записано в этом диалоге (идемпотентность ретраев).
      */
