@@ -25,19 +25,9 @@ final class AnnouncementController extends Controller
         return $this->feed($request, AnnouncementType::News);
     }
 
-    public function updates(Request $request): Response
-    {
-        return $this->feed($request, AnnouncementType::Update);
-    }
-
     public function showNews(Request $request, string $announcement): Response
     {
         return $this->show($request, AnnouncementType::News, $announcement);
-    }
-
-    public function showUpdate(Request $request, string $announcement): Response
-    {
-        return $this->show($request, AnnouncementType::Update, $announcement);
     }
 
     private function feed(Request $request, AnnouncementType $type): Response

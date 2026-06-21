@@ -31,7 +31,7 @@ const form = useForm<{ type: string; title: string; body: string; is_published: 
     is_published: true,
 });
 
-const base = computed(() => (props.type === 'news' ? '/admin/news' : '/admin/updates'));
+const base = computed(() => '/admin/news');
 const fmt = (d: string | null): string =>
     d ? new Date(d.replace(' ', 'T')).toLocaleString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 

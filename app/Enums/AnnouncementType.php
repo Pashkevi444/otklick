@@ -7,19 +7,17 @@ namespace App\Enums;
 use App\Enums\Contracts\HasLabel;
 
 /**
- * Тип анонса площадки: новость или обновление (патч). Механизм общий, цель разная
- * — отдельные ленты в кабинете и в админке.
+ * Тип анонса площадки. Сейчас одна лента — «Новости» (отдельная лента
+ * «Обновлений» убрана); enum оставлен для типизации и возможного расширения.
  */
 enum AnnouncementType: string implements HasLabel
 {
     case News = 'news';
-    case Update = 'update';
 
     public function label(): string
     {
         return match ($this) {
             self::News => 'Новости',
-            self::Update => 'Обновления',
         };
     }
 

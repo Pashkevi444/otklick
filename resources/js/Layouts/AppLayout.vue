@@ -16,9 +16,9 @@ interface NavItem {
     badge?: number; // непрочитанные анонсы — подсветка пункта меню
 }
 
-// Непрочитанные новости/обновления тенанта (для бейджа в меню).
-const unread = computed<{ news: number; update: number }>(
-    () => (page.props.announcementsUnread as { news: number; update: number } | null) ?? { news: 0, update: 0 },
+// Непрочитанные новости тенанта (для бейджа в меню).
+const unread = computed<{ news: number }>(
+    () => (page.props.announcementsUnread as { news: number } | null) ?? { news: 0 },
 );
 
 const navItems = computed<NavItem[]>(() => {
@@ -26,7 +26,6 @@ const navItems = computed<NavItem[]>(() => {
         return [
             { label: 'Бизнесы', href: '/admin/tenants' },
             { label: 'Новости', href: '/admin/news' },
-            { label: 'Обновления', href: '/admin/updates' },
             { label: 'Плашки', href: '/admin/dashboard-cards' },
             { label: 'Сайт', href: '/admin/site' },
         ];
@@ -37,7 +36,6 @@ const navItems = computed<NavItem[]>(() => {
 
     items.push(
         { label: 'Новости', href: '/cabinet/news', badge: unread.value.news },
-        { label: 'Обновления', href: '/cabinet/updates', badge: unread.value.update },
         { label: 'Подписка', href: '/cabinet/subscription' },
         { label: 'Оплата', href: '/cabinet/billing' },
     );

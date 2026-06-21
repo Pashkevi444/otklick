@@ -72,9 +72,8 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/site', [SiteController::class, 'edit'])->name('site.edit');
         Route::put('/site', [SiteController::class, 'update'])->name('site.update');
 
-        // Анонсы площадки: новости и обновления (патчи) — публикация для всех бизнесов.
+        // Новости площадки — публикация для всех бизнесов.
         Route::get('/news', [AdminAnnouncementController::class, 'news'])->name('news.index');
-        Route::get('/updates', [AdminAnnouncementController::class, 'updates'])->name('updates.index');
         Route::post('/announcements', [AdminAnnouncementController::class, 'store'])->name('announcements.store');
         Route::post('/announcements/images', [AdminAnnouncementController::class, 'uploadImage'])->name('announcements.images');
         Route::put('/announcements/{announcement}', [AdminAnnouncementController::class, 'update'])->name('announcements.update');
@@ -195,8 +194,6 @@ $onDomain(config('app.business_domain'), function (): void {
         // блокирует через EnsureCardAvailable). Открытие помечает их прочитанными.
         Route::get('/news', [AnnouncementController::class, 'news'])->name('news.index');
         Route::get('/news/{announcement}', [AnnouncementController::class, 'showNews'])->name('news.show');
-        Route::get('/updates', [AnnouncementController::class, 'updates'])->name('updates.index');
-        Route::get('/updates/{announcement}', [AnnouncementController::class, 'showUpdate'])->name('updates.show');
 
         // Веб-виджет (чат на сайт) — доступен на всех тарифах.
         Route::get('/widget', [WidgetController::class, 'index'])->name('widget.index');

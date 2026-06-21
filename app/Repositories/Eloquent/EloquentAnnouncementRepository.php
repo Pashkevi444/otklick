@@ -93,15 +93,12 @@ final class EloquentAnnouncementRepository implements AnnouncementRepositoryInte
     {
         $readIds = $this->readIdsForCurrentTenant();
 
-        $count = fn (AnnouncementType $type): int => Announcement::query()
-            ->where('type', $type)
-            ->where('is_published', true)
-            ->whereNotIn('id', $readIds)
-            ->count();
-
         return [
-            'news' => $count(AnnouncementType::News),
-            'update' => $count(AnnouncementType::Update),
+            'news' => Announcement::query()
+                ->where('type', AnnouncementType::News)
+                ->where('is_published', true)
+                ->whereNotIn('id', $readIds)
+                ->count(),
         ];
     }
 }

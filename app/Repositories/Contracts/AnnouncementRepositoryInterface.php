@@ -64,9 +64,9 @@ interface AnnouncementRepositoryInterface
     public function markReadForCurrentTenant(array $announcementIds, string $tenantId): void;
 
     /**
-     * Кол-во непрочитанного по типам для текущего тенанта.
+     * Кол-во непрочитанных новостей для текущего тенанта.
      *
-     * @return array{news: int, update: int}
+     * @return array{news: int}
      */
     public function unreadCountsForCurrentTenant(): array;
 }

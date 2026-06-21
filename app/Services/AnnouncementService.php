@@ -134,9 +134,9 @@ final readonly class AnnouncementService
     }
 
     /**
-     * Непрочитанное по типам для подсветки пунктов меню.
+     * Непрочитанные новости для подсветки пункта меню.
      *
-     * @return array{news: int, update: int}
+     * @return array{news: int}
      */
     public function unreadCounts(): array
     {

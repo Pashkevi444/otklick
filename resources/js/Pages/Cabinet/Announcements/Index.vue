@@ -19,7 +19,7 @@ interface Page {
 
 const props = defineProps<{ type: string; title: string; page: Page }>();
 
-const base = computed(() => (props.type === 'news' ? '/cabinet/news' : '/cabinet/updates'));
+const base = computed(() => '/cabinet/news');
 const fmt = (d: string | null): string =>
     d ? new Date(d.replace(' ', 'T')).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 

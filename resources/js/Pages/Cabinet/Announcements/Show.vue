@@ -12,7 +12,7 @@ interface Item {
 
 const props = defineProps<{ type: string; title: string; item: Item }>();
 
-const backHref = computed(() => (props.type === 'news' ? '/cabinet/news' : '/cabinet/updates'));
+const backHref = computed(() => '/cabinet/news');
 const fmt = (d: string | null): string =>
     d ? new Date(d.replace(' ', 'T')).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 </script>

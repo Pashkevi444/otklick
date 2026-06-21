@@ -33,11 +33,6 @@ final class AnnouncementController extends Controller
         return $this->page(AnnouncementType::News);
     }
 
-    public function updates(): Response
-    {
-        return $this->page(AnnouncementType::Update);
-    }
-
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validateInput($request, withType: true);
