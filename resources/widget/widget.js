@@ -349,17 +349,30 @@
     // Лайв-поллинг: тянем ответы оператора и статус «оператор на связи» раз в ~3с.
     // Пропускаем во время отправки/старта (чтобы не задвоить ответ) и на скрытой
     // вкладке (экономим запросы).
+    var primed = false;
+    var seenIds = {};
     function poll() {
         if (!token || sending || starting || document.hidden) return;
         post('/poll', { token: token, after: lastId })
             .then(function (data) {
                 if (data.messages && data.messages.length) {
-                    data.messages.forEach(function (m) {
-                        addMsg(m.text, 'bot');
-                        lastId = m.id;
-                    });
+                    if (!primed && !lastId && history.length) {
+                        // Восстановили старую сессию без курсора (диалог создан до
+                        // появления поллинга): бэклог уже показан из history — не
+                        // дублируем его, только ставим курсор на последнее.
+                        data.messages.forEach(function (m) { seenIds[m.id] = 1; });
+                        lastId = data.messages[data.messages.length - 1].id;
+                    } else {
+                        data.messages.forEach(function (m) {
+                            lastId = m.id;
+                            if (seenIds[m.id]) return; // страховка от дублей
+                            seenIds[m.id] = 1;
+                            addMsg(m.text, 'bot');
+                        });
+                    }
                     persist();
                 }
+                primed = true;
                 setOperator(data.operatorActive);
             })
             .catch(function () { /* сеть моргнула — попробуем на следующем тике */ });

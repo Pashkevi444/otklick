@@ -59,9 +59,12 @@ async function poll(): Promise<void> {
         if (!res.ok) return;
         const d = await res.json();
         if (Array.isArray(d.messages) && d.messages.length) {
+            const known = new Set(messages.value.map((m) => m.id));
             for (const m of d.messages as Msg[]) {
-                messages.value.push(m);
                 lastId = m.id;
+                if (known.has(m.id)) continue; // страховка от дублей
+                known.add(m.id);
+                messages.value.push(m);
             }
         }
         operatorActive.value = d.operatorActive;
