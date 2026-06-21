@@ -44,20 +44,38 @@ final class ScenariosTest extends TestCase
                 ->has('actionOptions'));
     }
 
-    public function test_index_exposes_grouped_flow_templates(): void
+    public function test_index_exposes_templates_for_general_and_tenant_niche_only(): void
     {
-        [, $owner] = $this->tenantWithOwner();
+        [$tenant, $owner] = $this->tenantWithOwner();
+        $tenant->update(['business_type' => 'barbershop']); // ниша тенанта
+
+        // Ожидаем только «Общие» (null) + ниша тенанта (barbershop), без чужих ниш.
+        $expected = ScenarioTemplate::query()
+            ->where(fn ($q) => $q->whereNull('business_type')->orWhere('business_type', 'barbershop'))
+            ->count();
 
         $this->actingAs($owner)
             ->get('/cabinet/scenarios')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('templates', ScenarioTemplate::count())
+                ->has('templates', $expected)
                 ->has('businessTypes', count(BusinessType::cases()))
-                // У каждого шаблона есть тег типа бизнеса (или null — «Общие»).
                 ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
                     && $t->contains(fn (array $x): bool => $x['businessType'] === null) // есть «Общие»
-                    && $t->contains(fn (array $x): bool => $x['businessType'] === 'barbershop'))); // и нишевые
+                    && $t->contains(fn (array $x): bool => $x['businessType'] === 'barbershop') // есть ниша тенанта
+                    && ! $t->contains(fn (array $x): bool => $x['businessType'] === 'nails'))); // чужих ниш нет
+    }
+
+    public function test_index_without_business_type_shows_only_general_templates(): void
+    {
+        [, $owner] = $this->tenantWithOwner(); // тип бизнеса не задан
+
+        $this->actingAs($owner)
+            ->get('/cabinet/scenarios')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('templates', ScenarioTemplate::whereNull('business_type')->count())
+                ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => $x['businessType'] === null)));
     }
 
     public function test_template_definition_saves_as_valid_flow(): void

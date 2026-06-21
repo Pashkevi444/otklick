@@ -46,19 +46,25 @@ final class KnowledgeBaseTest extends TestCase
                 ->has('entries', 1));
     }
 
-    public function test_index_exposes_grouped_kb_templates(): void
+    public function test_index_exposes_kb_templates_for_general_and_tenant_niche_only(): void
     {
-        [, $owner] = $this->tenantWithOwner();
+        [$tenant, $owner] = $this->tenantWithOwner();
+        $tenant->update(['business_type' => 'nails']); // ниша тенанта
+
+        $expected = KnowledgeTemplate::query()
+            ->where(fn ($q) => $q->whereNull('business_type')->orWhere('business_type', 'nails'))
+            ->count();
 
         $this->actingAs($owner)
             ->get('/cabinet/knowledge')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('templates', KnowledgeTemplate::count())
+                ->has('templates', $expected)
                 ->has('businessTypes', count(BusinessType::cases()))
                 ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
                     && $t->contains(fn (array $x): bool => $x['businessType'] === null) // «Общие»
-                    && $t->contains(fn (array $x): bool => $x['businessType'] === 'nails'))); // нишевые
+                    && $t->contains(fn (array $x): bool => $x['businessType'] === 'nails') // ниша тенанта
+                    && ! $t->contains(fn (array $x): bool => $x['businessType'] === 'barbershop'))); // чужих ниш нет
     }
 
     public function test_owner_creates_entry(): void

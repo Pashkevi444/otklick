@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\BusinessType;
 use App\Http\Controllers\Controller;
+use App\Models\BusinessType;
 use App\Models\KnowledgeTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,7 +36,7 @@ final class KnowledgeTemplateController extends Controller
                     'sort_order' => $t->sort_order,
                 ])
                 ->all(),
-            'businessTypes' => self::businessTypes(),
+            'businessTypes' => BusinessType::options(),
         ]);
     }
 
@@ -70,19 +70,8 @@ final class KnowledgeTemplateController extends Controller
             'key' => ['required', 'string', 'max:120', 'alpha_dash', Rule::unique('knowledge_templates', 'key')->ignore($template?->id)],
             'title' => ['required', 'string', 'max:200'],
             'content' => ['required', 'string', 'max:20000'],
-            'business_type' => ['nullable', Rule::in(array_column(BusinessType::cases(), 'value'))],
+            'business_type' => ['nullable', Rule::exists('business_types', 'key')],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
         ]);
-    }
-
-    /**
-     * @return list<array{value: string, label: string}>
-     */
-    private static function businessTypes(): array
-    {
-        return array_map(
-            fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
-            BusinessType::cases(),
-        );
     }
 }

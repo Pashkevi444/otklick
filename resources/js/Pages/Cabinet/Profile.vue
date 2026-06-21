@@ -14,7 +14,22 @@ interface ProfileData {
     avatar_url: string | null;
 }
 
-const props = defineProps<{ profile: ProfileData }>();
+interface BizType {
+    value: string;
+    label: string;
+}
+
+const props = defineProps<{ profile: ProfileData; businessType: string | null; businessTypes: BizType[] }>();
+
+// Тип бизнеса — отдельная мини-форма (плашка): смена ниши влияет на подбор
+// шаблонов сценариев и базы знаний.
+const btForm = useForm<{ business_type: string }>({ business_type: props.businessType ?? '' });
+const businessTypeLabel = computed(
+    () => props.businessTypes.find((t) => t.value === props.businessType)?.label ?? null,
+);
+const saveBusinessType = (): void => {
+    btForm.transform((d) => ({ business_type: d.business_type === '' ? null : d.business_type })).put('/cabinet/profile/business-type', { preserveScroll: true });
+};
 
 const form = useForm<{
     _method: string;
@@ -81,6 +96,35 @@ const submit = (): void => {
         <p class="mb-4 max-w-2xl text-sm text-slate-500">
             Это «контекст работы» — данные о бизнесе, которые бот использует в ответах, и витрина для карточки бизнеса.
         </p>
+
+        <!-- Тип бизнеса (ниша) — влияет на подбор шаблонов сценариев и базы знаний -->
+        <div class="ui-scope mb-4 max-w-2xl rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex-1">
+                    <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Тип бизнеса</div>
+                    <p class="mt-0.5 text-xs text-slate-500">
+                        Сейчас:
+                        <span class="font-medium text-slate-700 dark:text-slate-200">{{ businessTypeLabel ?? 'не задан' }}</span>.
+                        От него зависит, какие готовые шаблоны и элементы базы знаний вам показываются.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select v-model="btForm.business_type" class="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5">
+                        <option value="">Не задан</option>
+                        <option v-for="bt in businessTypes" :key="bt.value" :value="bt.value">{{ bt.label }}</option>
+                    </select>
+                    <button
+                        type="button"
+                        :disabled="btForm.processing || btForm.business_type === (businessType ?? '')"
+                        class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-40"
+                        @click="saveBusinessType"
+                    >
+                        Сохранить
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <form class="ui-scope max-w-2xl space-y-5 rounded-xl border border-slate-200 bg-white p-6 dark:border-white/10" @submit.prevent="submit">
             <!-- Аватар -->
             <div class="flex items-center gap-4">

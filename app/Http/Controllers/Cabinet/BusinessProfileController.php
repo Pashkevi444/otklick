@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Cabinet;
 use App\DTO\BusinessProfile;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\UpdateBusinessProfileRequest;
+use App\Models\BusinessType;
 use App\Services\TenantService;
 use App\Support\BusinessAvatarStorage;
 use Illuminate\Http\RedirectResponse;
@@ -35,7 +36,24 @@ final class BusinessProfileController extends Controller
                 'name' => $tenant->name,
                 ...$profile->toArray(),
             ],
+            // Тип бизнеса (ниша): плашка + смена. Влияет на подбор шаблонов и БЗ.
+            'businessType' => $tenant->business_type,
+            'businessTypes' => BusinessType::options(),
         ]);
+    }
+
+    /**
+     * Смена типа бизнеса тенантом (ниша из справочника или сброс в «не задан»).
+     */
+    public function updateBusinessType(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'business_type' => ['nullable', 'string', 'exists:business_types,key'],
+        ]);
+
+        $this->tenants->setBusinessType($request->user()->tenant, $data['business_type'] ?? null);
+
+        return redirect()->route('cabinet.profile.edit')->with('success', 'Тип бизнеса обновлён.');
     }
 
     public function update(UpdateBusinessProfileRequest $request): RedirectResponse

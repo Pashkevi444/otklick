@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\StoreTenantRequest;
 use App\Http\Requests\Admin\UpdateTenantOverridesRequest;
 use App\Http\Requests\Admin\UpdateTenantOwnerPasswordRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
+use App\Models\BusinessType;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Repositories\Contracts\TenantRepositoryInterface;
@@ -17,6 +18,7 @@ use App\Services\BusinessProvisioningService;
 use App\Services\TenantService;
 use App\Services\UserService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -65,6 +67,7 @@ final class TenantController extends Controller
         return Inertia::render('Admin/Tenants/Show', [
             'tenant' => $this->present($model),
             'plans' => $this->plans(),
+            'businessTypes' => BusinessType::options(),
             // Дефолтные возможности каждого тарифа — чтобы при выборе тарифа в СУ
             // галочки/лимиты подставлялись по тарифу (а правка — только на «Индивидуальном»).
             'planDefaults' => collect(TenantPlan::cases())
@@ -88,6 +91,21 @@ final class TenantController extends Controller
         );
 
         return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Подписка обновлена.');
+    }
+
+    /**
+     * Супер-админ задаёт тип бизнеса тенанту (пока вручную; в будущем — на
+     * регистрации). Влияет на подбор шаблонов сценариев и базы знаний.
+     */
+    public function updateBusinessType(Request $request, string $tenant): RedirectResponse
+    {
+        $data = $request->validate([
+            'business_type' => ['nullable', 'string', 'exists:business_types,key'],
+        ]);
+
+        $this->tenantService->setBusinessType($this->findOrFail($tenant), $data['business_type'] ?? null);
+
+        return redirect()->route('admin.tenants.show', $tenant)->with('success', 'Тип бизнеса обновлён.');
     }
 
     public function updateOwnerPassword(UpdateTenantOwnerPasswordRequest $request, string $tenant): RedirectResponse
@@ -167,6 +185,8 @@ final class TenantController extends Controller
             'slug' => $tenant->slug,
             'plan' => $tenant->plan->value,
             'plan_label' => $tenant->plan->label(),
+            'business_type' => $tenant->business_type,
+            'business_type_label' => $tenant->businessType?->label,
             'access_expires_at' => $tenant->access_expires_at?->toDateString(),
             'is_blocked' => $tenant->is_blocked,
             'has_active_access' => $tenant->hasActiveAccess(),

@@ -55,6 +55,15 @@ final readonly class TenantService
         ]);
     }
 
+    /**
+     * Задаёт тип бизнеса тенанта (ключ справочника business_types или null —
+     * «не задан»). Валидацию ключа делает вызывающий (по справочнику).
+     */
+    public function setBusinessType(Tenant $tenant, ?string $businessType): Tenant
+    {
+        return $this->tenants->update($tenant, ['business_type' => $businessType]);
+    }
+
     public function block(Tenant $tenant): Tenant
     {
         return $this->tenants->update($tenant, ['is_blocked' => true]);

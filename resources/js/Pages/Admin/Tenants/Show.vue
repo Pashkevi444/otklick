@@ -36,6 +36,8 @@ interface TenantInfo {
     features: Features;
     planDefaults: Features;
     hasOverrides: boolean;
+    business_type: string | null;
+    business_type_label: string | null;
 }
 interface UserRow {
     id: string;
@@ -43,13 +45,24 @@ interface UserRow {
     email: string;
     role: string;
 }
+interface BizType {
+    value: string;
+    label: string;
+}
 
 const props = defineProps<{
     tenant: TenantInfo;
     plans: Plan[];
     planDefaults: Record<string, Features>;
+    businessTypes: BizType[];
     users: UserRow[];
 }>();
+
+// Тип бизнеса тенанта (ниша) — СУ задаёт вручную; влияет на подбор шаблонов/БЗ.
+const btForm = useForm<{ business_type: string }>({ business_type: props.tenant.business_type ?? '' });
+const saveBusinessType = (): void => {
+    btForm.transform((d) => ({ business_type: d.business_type === '' ? null : d.business_type })).put(`/admin/tenants/${props.tenant.id}/business-type`, { preserveScroll: true });
+};
 
 const toggles: { key: keyof Features; label: string }[] = [
     { key: 'crm', label: 'YClients (запись)' },
@@ -140,6 +153,30 @@ const savePassword = (): void => {
             >
                 ➜ Войти в кабинет бизнеса
             </button>
+        </div>
+
+        <!-- Тип бизнеса (ниша) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 max-w-xl mb-6">
+            <div class="font-semibold text-[#1F4E79] mb-1">Тип бизнеса</div>
+            <p class="mb-3 text-xs text-slate-500">
+                Сейчас: <span class="font-medium text-slate-700">{{ tenant.business_type_label ?? 'не задан' }}</span>.
+                Влияет на подбор шаблонов сценариев и базы знаний в кабинете бизнеса.
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+                <select v-model="btForm.business_type" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Не задан</option>
+                    <option v-for="bt in businessTypes" :key="bt.value" :value="bt.value">{{ bt.label }}</option>
+                </select>
+                <button
+                    type="button"
+                    :disabled="btForm.processing || btForm.business_type === (tenant.business_type ?? '')"
+                    class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-40"
+                    @click="saveBusinessType"
+                >
+                    Сохранить
+                </button>
+                <span v-if="btForm.recentlySuccessful" class="text-sm text-green-600">Сохранено</span>
+            </div>
         </div>
 
         <!-- Подписка -->

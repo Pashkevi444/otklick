@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\BusinessType;
 use App\Http\Controllers\Controller;
+use App\Models\BusinessType;
 use App\Models\ScenarioTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,10 +38,7 @@ final class ScenarioTemplateController extends Controller
                     'sort_order' => $t->sort_order,
                 ])
                 ->all(),
-            'businessTypes' => array_map(
-                fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
-                BusinessType::cases(),
-            ),
+            'businessTypes' => BusinessType::options(),
         ]);
     }
 
@@ -75,7 +72,7 @@ final class ScenarioTemplateController extends Controller
             'key' => ['required', 'string', 'max:120', 'alpha_dash', Rule::unique('scenario_templates', 'key')->ignore($template?->id)],
             'name' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'business_type' => ['nullable', Rule::in(array_column(BusinessType::cases(), 'value'))],
+            'business_type' => ['nullable', Rule::exists('business_types', 'key')],
             'triggers' => ['array'],
             'triggers.*' => ['string', 'max:120'],
             'definition' => ['required', 'array'],

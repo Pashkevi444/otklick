@@ -10,6 +10,7 @@ use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -22,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $slug
  * @property TenantPlan $plan
+ * @property string|null $business_type
  * @property Carbon|null $access_expires_at
  * @property bool $is_blocked
  * @property array<string, mixed> $settings
@@ -35,6 +37,7 @@ class Tenant extends Model
         'name',
         'slug',
         'plan',
+        'business_type',
         'access_expires_at',
         'is_blocked',
         'settings',
@@ -80,5 +83,15 @@ class Tenant extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * Тип бизнеса из справочника (null = не задан).
+     *
+     * @return BelongsTo<BusinessType, $this>
+     */
+    public function businessType(): BelongsTo
+    {
+        return $this->belongsTo(BusinessType::class, 'business_type', 'key');
     }
 }

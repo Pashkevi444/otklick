@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
-use App\Enums\BusinessType;
 use App\Http\Controllers\Controller;
+use App\Models\BusinessType;
 use App\Models\Flow;
 use App\Models\KnowledgeEntry;
 use App\Models\ScenarioTemplate;
@@ -70,6 +70,7 @@ final class FlowController extends Controller
         $stats = $this->service->abStats();
 
         $yclientsActive = $this->crm->activeForCurrentTenant() !== null;
+        $tenantType = $request->user()->tenant->business_type;
 
         // Пагинация списка воронок (списки на тенанта небольшие — режем коллекцию
         // в памяти, отдельный SQL-paginate не нужен).
@@ -116,21 +117,27 @@ final class FlowController extends Controller
                 ['value' => 'contains', 'label' => 'содержит'],
                 ['value' => 'filled', 'label' => 'заполнена'],
             ],
-            // Готовые шаблоны сценариев (с тегом типа бизнеса) — бизнес берёт готовый
-            // и правит под себя. Источник — таблица `scenario_templates` (СУ её
-            // редактирует в админке). Группируются на фронте по `businessTypes`.
-            'templates' => ScenarioTemplate::query()->orderBy('sort_order')->get()->map(fn (ScenarioTemplate $t): array => [
-                'key' => $t->key,
-                'name' => $t->name,
-                'description' => $t->description,
-                'businessType' => $t->business_type,
-                'triggers' => $t->triggers,
-                'definition' => $t->definition,
-            ])->all(),
-            'businessTypes' => array_map(
-                fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
-                BusinessType::cases(),
-            ),
+            // Готовые шаблоны сценариев — бизнес берёт готовый и правит под себя.
+            // Источник — `scenario_templates` (СУ редактирует в админке). Показываем
+            // только «Общие» + нишу самого тенанта (`tenants.business_type`).
+            'templates' => ScenarioTemplate::query()
+                ->where(function ($q) use ($tenantType): void {
+                    $q->whereNull('business_type');
+                    if ($tenantType !== null) {
+                        $q->orWhere('business_type', $tenantType);
+                    }
+                })
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn (ScenarioTemplate $t): array => [
+                    'key' => $t->key,
+                    'name' => $t->name,
+                    'description' => $t->description,
+                    'businessType' => $t->business_type,
+                    'triggers' => $t->triggers,
+                    'definition' => $t->definition,
+                ])->all(),
+            'businessTypes' => BusinessType::options(),
         ]);
     }
 

@@ -603,12 +603,12 @@ const testSend = (text?: string): void => {
 
             <div class="space-y-3">
                 <div v-for="f in flows" :key="f.id" class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
                             <div class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ f.name }}</div>
                             <div class="mt-1 text-xs text-slate-400">Запуск по фразам: {{ f.triggers.join(', ') || '—' }}</div>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex flex-none items-center gap-3">
                             <Toggle :model-value="f.is_active" @update:model-value="toggle(f)" />
                             <button type="button" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="editFlow(f)">Редактировать</button>
                             <button type="button" class="text-sm text-red-600 hover:underline" @click="destroy(f)">Удалить</button>

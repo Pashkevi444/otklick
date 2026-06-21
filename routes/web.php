@@ -71,6 +71,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
         Route::put('/tenants/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
         Route::put('/tenants/{tenant}/owner-password', [TenantController::class, 'updateOwnerPassword'])->name('tenants.owner-password.update');
+        Route::put('/tenants/{tenant}/business-type', [TenantController::class, 'updateBusinessType'])->name('tenants.business-type.update');
         Route::put('/tenants/{tenant}/overrides', [TenantController::class, 'updateOverrides'])->name('tenants.overrides.update');
         Route::delete('/tenants/{tenant}/overrides', [TenantController::class, 'resetOverrides'])->name('tenants.overrides.reset');
         Route::post('/tenants/{tenant}/block', [TenantController::class, 'block'])->name('tenants.block');
@@ -140,6 +141,7 @@ $onDomain(config('app.business_domain'), function (): void {
 
         Route::get('/profile', [BusinessProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [BusinessProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/business-type', [BusinessProfileController::class, 'updateBusinessType'])->name('profile.business-type');
 
         // Главное меню бота — кнопки-подсказки, которые бот показывает после приветствия.
         Route::get('/menu', [BotMenuController::class, 'edit'])->name('menu.edit');

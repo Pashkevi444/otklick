@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cabinet;
 
 use App\DTO\KnowledgeEntryData;
-use App\Enums\BusinessType;
 use App\Enums\ChannelType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\KnowledgeEntryRequest;
 use App\Jobs\IndexKnowledge;
+use App\Models\BusinessType;
 use App\Models\KnowledgeEntry;
 use App\Models\KnowledgeGap;
 use App\Models\KnowledgeTemplate;
@@ -37,6 +37,8 @@ final class KnowledgeEntryController extends Controller
 
     public function index(Request $request): Response
     {
+        $tenantType = $request->user()->tenant->business_type;
+
         // Пагинация списка записей (на тенанта их немного — режем коллекцию
         // в памяти).
         $perPage = 9;
@@ -55,19 +57,25 @@ final class KnowledgeEntryController extends Controller
                 'total' => $allEntries->count(),
             ],
             'gaps' => $this->gaps->openForCurrentTenant()->map($this->presentGap(...))->all(),
-            // Готовые элементы базы знаний по типам бизнеса — добавляются в один клик,
-            // бизнес дозаполняет конкретику. Источник — таблица `knowledge_templates`
-            // (СУ редактирует в админке). Группируются на фронте по businessTypes.
-            'templates' => KnowledgeTemplate::query()->orderBy('sort_order')->get()->map(fn (KnowledgeTemplate $t): array => [
-                'key' => $t->key,
-                'title' => $t->title,
-                'content' => $t->content,
-                'businessType' => $t->business_type,
-            ])->all(),
-            'businessTypes' => array_map(
-                fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
-                BusinessType::cases(),
-            ),
+            // Готовые элементы базы знаний — добавляются в один клик, бизнес дозаполняет
+            // конкретику. Источник — `knowledge_templates` (СУ редактирует в админке).
+            // Показываем только «Общие» + нишу самого тенанта (`tenants.business_type`).
+            'templates' => KnowledgeTemplate::query()
+                ->where(function ($q) use ($tenantType): void {
+                    $q->whereNull('business_type');
+                    if ($tenantType !== null) {
+                        $q->orWhere('business_type', $tenantType);
+                    }
+                })
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn (KnowledgeTemplate $t): array => [
+                    'key' => $t->key,
+                    'title' => $t->title,
+                    'content' => $t->content,
+                    'businessType' => $t->business_type,
+                ])->all(),
+            'businessTypes' => BusinessType::options(),
         ]);
     }
 
