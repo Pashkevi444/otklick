@@ -21,3 +21,10 @@ business.otcl1ck.ru {
 	reverse_proxy app:8000
 	import offline
 }
+
+# Трекер ошибок (self-hosted GlitchTip — отдельный стек docker-compose.glitchtip.yml,
+# подключён к этой же docker-сети, поэтому доступен по имени контейнера).
+errors.otcl1ck.ru {
+	encode zstd gzip
+	reverse_proxy glitchtip-web:8080
+}

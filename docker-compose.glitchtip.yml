@@ -16,8 +16,9 @@ x-gt-env: &gt-env
   GLITCHTIP_DOMAIN: https://errors.otcl1ck.ru
   DEFAULT_FROM_EMAIL: support@otcl1ck.ru
   EMAIL_URL: consolemail://
-  # Регистрацию закрываем после создания первого аккаунта (ENABLE_USER_REGISTRATION=false).
-  ENABLE_OPEN_USER_REGISTRATION: "true"
+  # Регистрация закрыта (первый админ уже создан) — посторонние не заведут аккаунт.
+  ENABLE_USER_REGISTRATION: "false"
+  ENABLE_OPEN_USER_REGISTRATION: "false"
 
 services:
   glitchtip-postgres:
@@ -38,8 +39,9 @@ services:
     image: glitchtip/glitchtip
     depends_on: [glitchtip-postgres, glitchtip-redis]
     environment: *gt-env
-    ports:
-      - "127.0.0.1:8080:8080" # наружу только через Caddy reverse_proxy
+    networks:
+      - default # внутренняя сеть GlitchTip (postgres/redis/worker)
+      - app # сеть приложения — чтобы Caddy дотянулся до glitchtip-web по имени
     restart: unless-stopped
 
   glitchtip-worker:
@@ -58,3 +60,11 @@ services:
 
 volumes:
   glitchtip_pg:
+
+networks:
+  default:
+  # Сеть основного стека приложения (docker-compose.prod.yml) — к ней подключаем
+  # glitchtip-web, чтобы контейнер Caddy проксировал на него по имени.
+  app:
+    external: true
+    name: otklick_default
