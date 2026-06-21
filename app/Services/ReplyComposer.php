@@ -17,6 +17,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Support\ImageUrls;
 
 /**
  * Формирует ответ бота: системный промпт (профиль + опубликованная БЗ) + история
@@ -75,7 +76,11 @@ class ReplyComposer
         $phone = $conversation->displayPhone();
         $phoneKnown = $phone !== null && $phone !== '';
 
-        $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm, $knownName, $phoneKnown);
+        // Диалог уже начат, если бот ранее отвечал (в истории есть реплики
+        // ассистента) — тогда промпт запретит здороваться в каждом сообщении.
+        $conversationStarted = in_array('assistant', array_column($history, 'role'), true);
+
+        $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm, $knownName, $phoneKnown, $conversationStarted);
 
         $answer = trim($this->llm->generate($systemPrompt, $history));
 
@@ -142,7 +147,14 @@ class ReplyComposer
         // Бот ответил по делу — обнуляем серию непоняток.
         $this->resetStreak($conversation);
 
-        return new BotReply($answer, escalate: false);
+        // Ссылки на фото примеров работ выносим из текста — канал отправит их
+        // настоящими картинками (а не ссылкой, которой клиенты не доверяют).
+        [$text, $images] = ImageUrls::split($answer);
+        $finalText = $images === []
+            ? $answer
+            : ($text !== '' ? $text : 'Вот примеры наших работ 👇');
+
+        return new BotReply($finalText, escalate: false, images: $images);
     }
 
     /**

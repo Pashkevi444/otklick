@@ -17,7 +17,7 @@ use RuntimeException;
  */
 final class RecordingChannelGateway implements ChannelGateway
 {
-    /** @var list<array{chatId: string, text: string}> */
+    /** @var list<array{chatId: string, text: string, images: list<string>}> */
     public array $sent = [];
 
     public function __construct(
@@ -30,12 +30,12 @@ final class RecordingChannelGateway implements ChannelGateway
         return $this->type;
     }
 
-    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void
     {
         if ($this->throws) {
             throw new RuntimeException('boom');
         }
 
-        $this->sent[] = ['chatId' => $chatId, 'text' => $text];
+        $this->sent[] = ['chatId' => $chatId, 'text' => $text, 'images' => $images];
     }
 }

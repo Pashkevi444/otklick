@@ -33,15 +33,25 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
         return ChannelType::Telegram;
     }
 
-    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void
     {
-        $this->call($channel->botToken(), 'sendMessage', [
-            'chat_id' => $chatId,
-            'text' => $text,
-            // Reply-кнопки шлют свой текст обычным сообщением; при отсутствии
-            // клавиатуры снимаем прошлую, чтобы не висела на не-мастер-ответах.
-            'reply_markup' => $this->replyMarkup($keyboard),
-        ]);
+        if ($text !== '') {
+            $this->call($channel->botToken(), 'sendMessage', [
+                'chat_id' => $chatId,
+                'text' => $text,
+                // Reply-кнопки шлют свой текст обычным сообщением; при отсутствии
+                // клавиатуры снимаем прошлую, чтобы не висела на не-мастер-ответах.
+                'reply_markup' => $this->replyMarkup($keyboard),
+            ]);
+        }
+
+        // Картинки — настоящими фото (Telegram сам скачает по URL), а не ссылкой.
+        foreach ($images as $url) {
+            $this->call($channel->botToken(), 'sendPhoto', [
+                'chat_id' => $chatId,
+                'photo' => $url,
+            ]);
+        }
     }
 
     /**

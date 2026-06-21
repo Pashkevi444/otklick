@@ -26,11 +26,15 @@ final readonly class BotReply
         // Клавиатура-подсказка под сообщением (кликабельные дата/время/услуга/мастер
         // в мастере записи). null — обычный текст без кнопок.
         public ?ReplyKeyboard $keyboard = null,
+        // URL картинок (примеры работ из базы знаний), которые канал отправит как
+        // НАСТОЯЩИЕ фото, а не ссылкой в тексте.
+        /** @var list<string> */
+        public array $images = [],
     ) {}
 
     /** Тот же ответ с добавленной клавиатурой (напр. кнопка возврата в меню). */
     public function withKeyboard(ReplyKeyboard $keyboard): self
     {
-        return new self($this->text, $this->escalate, $this->booked, $this->cancelled, $this->startBooking, $this->knowledgeGap, $keyboard);
+        return new self($this->text, $this->escalate, $this->booked, $this->cancelled, $this->startBooking, $this->knowledgeGap, $keyboard, $this->images);
     }
 }

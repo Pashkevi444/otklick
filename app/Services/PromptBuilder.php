@@ -40,7 +40,7 @@ final class PromptBuilder
      *                                                               (услуги/цены/мастера/филиал) — приоритетнее
      *                                                               клиентской базы при расхождении.
      */
-    public function build(string $businessName, BusinessProfile $profile, Collection $entries, bool $bookingEnabled = false, ?Collection $crmEntries = null, ?string $clientName = null, bool $clientPhoneKnown = false): string
+    public function build(string $businessName, BusinessProfile $profile, Collection $entries, bool $bookingEnabled = false, ?Collection $crmEntries = null, ?string $clientName = null, bool $clientPhoneKnown = false, bool $conversationStarted = false): string
     {
         $sections = [];
 
@@ -83,7 +83,12 @@ final class PromptBuilder
             "без имени и спроси, как к нему обращаться.\n".
             '— Если клиент просит отменить запись — вежливо подтверди отмену и добавь в ответ метку '.self::CANCELLED.' '.
             "(в любом месте — клиент её не видит). Это сигнал закрыть диалог как отменённый клиентом.\n".
-            '— Пиши по-человечески и профессионально, без канцелярита и markdown-разметки.';
+            '— Пиши по-человечески и профессионально, без канцелярита и markdown-разметки.'.
+            ($conversationStarted
+                ? "\n— ВАЖНО: переписка с этим клиентом УЖЕ идёт (выше в истории есть твои прошлые сообщения). НЕ "
+                    .'здоровайся повторно («здравствуйте», «добрый день», «рады видеть» и т.п.) и не представляйся заново — '
+                    .'сразу продолжай по сути. Приветствие уместно только в самом первом сообщении диалога.'
+                : '');
 
         // Контакты клиента уже известны (узнали по чату/телефону/нику) — НЕ
         // переспрашиваем имя/телефон и обращаемся по имени.

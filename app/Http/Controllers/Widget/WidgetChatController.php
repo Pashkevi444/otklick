@@ -78,6 +78,8 @@ final class WidgetChatController extends Controller
                 // Кликабельные подсказки (календарь/время/услуги мастера записи) —
                 // как кнопки в мессенджерах; нажатие отправит подпись.
                 'options' => $reply->keyboard?->labels() ?? [],
+                // Фото примеров работ — отдельным полем (виджет рендерит как <img>).
+                'images' => $reply->images,
             ]), $origin);
         });
     }

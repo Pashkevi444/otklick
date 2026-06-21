@@ -31,7 +31,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
         return ChannelType::WhatsApp;
     }
 
-    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void
     {
         $message = $text;
 
@@ -42,9 +42,22 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
             $message .= "\n\n".implode("\n", array_map(static fn (string $l): string => '• '.$l, $labels));
         }
 
-        Http::asJson()->connectTimeout(5)->timeout(15)->retry(2, 300, throw: false)
-            ->post($this->url($channel, 'sendMessage'), ['chatId' => $chatId, 'message' => $message])
-            ->throw();
+        if ($message !== '') {
+            Http::asJson()->connectTimeout(5)->timeout(15)->retry(2, 300, throw: false)
+                ->post($this->url($channel, 'sendMessage'), ['chatId' => $chatId, 'message' => $message])
+                ->throw();
+        }
+
+        // Картинки — настоящими фото по URL (Green API скачает сам).
+        foreach ($images as $url) {
+            Http::asJson()->connectTimeout(5)->timeout(20)->retry(2, 300, throw: false)
+                ->post($this->url($channel, 'sendFileByUrl'), [
+                    'chatId' => $chatId,
+                    'urlFile' => $url,
+                    'fileName' => basename((string) (parse_url($url, PHP_URL_PATH) ?: 'photo.jpg')),
+                ])
+                ->throw();
+        }
     }
 
     /**

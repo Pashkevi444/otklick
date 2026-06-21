@@ -40,6 +40,8 @@ final class DeliverBotReply implements ShouldQueue
         public readonly ?ReplyKeyboard $keyboard,
         public readonly string $messageId,
         public readonly string $conversationId,
+        /** @var list<string> */
+        public readonly array $images = [],
     ) {}
 
     /**
@@ -66,7 +68,7 @@ final class DeliverBotReply implements ShouldQueue
             }
 
             // Бросит при сбое — очередь повторит с бэкоффом (для того и job).
-            $gateways->for($channel->type)->send($channel, $this->chatId, $this->text, $this->keyboard);
+            $gateways->for($channel->type)->send($channel, $this->chatId, $this->text, $this->keyboard, $this->images);
 
             $messages->markStatusById($this->messageId, MessageStatus::Sent);
             Log::info('delivery.retry_succeeded', ['conversation_id' => $this->conversationId, 'message_id' => $this->messageId]);

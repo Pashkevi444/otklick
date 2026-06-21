@@ -32,17 +32,57 @@ final readonly class MaxGateway implements ChannelGateway, ReceivesVoice
         return ChannelType::Max;
     }
 
-    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void
     {
-        // chat_id — в query, тело — NewMessageBody {text}. Короткие таймауты:
-        // недоступность MAX должна падать быстро с понятной ошибкой.
-        $body = ['text' => $text];
+        // Картинки грузим в MAX (POST /uploads → upload → вложение image) и шлём
+        // НАСТОЯЩИМИ фото. Любой сбой загрузки/приёма — деградируем к ссылке в
+        // тексте, чтобы доставка сообщения не ломалась.
+        $imageAttachments = [];
+        foreach ($images as $url) {
+            try {
+                $attachment = $this->uploadImage($channel, $url);
+                if ($attachment !== null) {
+                    $imageAttachments[] = $attachment;
+                }
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
 
+        $noneUploaded = $images !== [] && $imageAttachments === [];
+        $bodyText = $noneUploaded ? trim($text."\n".implode("\n", $images)) : $text;
+
+        try {
+            $this->postMessage($channel, $chatId, $bodyText, $this->keyboardAttachment($keyboard), $imageAttachments);
+        } catch (Throwable $e) {
+            if ($imageAttachments === []) {
+                throw $e; // картинки ни при чём — обычный сбой отправки
+            }
+            // MAX не принял вложения-картинки → доставляем текстом со ссылками.
+            report($e);
+            $this->postMessage($channel, $chatId, trim($text."\n".implode("\n", $images)), $this->keyboardAttachment($keyboard), []);
+        }
+    }
+
+    /**
+     * Отправляет сообщение MAX (текст + опц. вложения: клавиатура и/или картинки).
+     *
+     * @param  array{type: string, payload: array<string, mixed>}|null  $keyboardAttachment
+     * @param  list<array{type: string, payload: array<string, mixed>}>  $imageAttachments
+     */
+    private function postMessage(Channel $channel, string $chatId, string $text, ?array $keyboardAttachment, array $imageAttachments): void
+    {
         // MAX-кнопки — inline (callback): нажатие приходит как message_callback с
         // payload = подпись; его обрабатывает ProcessMaxUpdate как обычный ввод.
-        $attachment = $this->keyboardAttachment($keyboard);
-        if ($attachment !== null) {
-            $body['attachments'] = [$attachment];
+        $attachments = $keyboardAttachment !== null ? [$keyboardAttachment] : [];
+        foreach ($imageAttachments as $a) {
+            $attachments[] = $a;
+        }
+
+        // chat_id — в query, тело — NewMessageBody {text, attachments?}.
+        $body = ['text' => $text];
+        if ($attachments !== []) {
+            $body['attachments'] = $attachments;
         }
 
         $this->request($channel)
@@ -52,6 +92,47 @@ final readonly class MaxGateway implements ChannelGateway, ReceivesVoice
             ->withQueryParameters(['chat_id' => $chatId])
             ->post("{$this->apiUrl}/messages", $body)
             ->throw();
+    }
+
+    /**
+     * Загружает картинку (по URL) в MAX и возвращает вложение image для сообщения.
+     * null — если получить upload-URL или токен фото не удалось.
+     *
+     * @return array{type: string, payload: array<string, mixed>}|null
+     */
+    private function uploadImage(Channel $channel, string $url): ?array
+    {
+        // 1) Получаем одноразовый URL для загрузки картинки.
+        /** @var array<string, mixed> $up */
+        $up = $this->request($channel)
+            ->connectTimeout(5)->timeout(10)
+            ->withQueryParameters(['type' => 'image'])
+            ->post("{$this->apiUrl}/uploads")
+            ->throw()
+            ->json() ?? [];
+        $uploadUrl = $up['url'] ?? null;
+        if (! is_string($uploadUrl)) {
+            return null;
+        }
+
+        // 2) Качаем нашу картинку и заливаем в MAX (поле data).
+        $file = Http::connectTimeout(5)->timeout(15)->get($url);
+        if (! $file->successful()) {
+            return null;
+        }
+        /** @var array<string, mixed> $res */
+        $res = Http::connectTimeout(5)->timeout(20)
+            ->attach('data', $file->body(), 'photo.jpg')
+            ->post($uploadUrl)
+            ->json() ?? [];
+
+        // 3) Токены фото из ответа → вложение image.
+        $photos = $res['photos'] ?? null;
+        if (! is_array($photos) || $photos === []) {
+            return null;
+        }
+
+        return ['type' => 'image', 'payload' => ['photos' => $photos]];
     }
 
     /**

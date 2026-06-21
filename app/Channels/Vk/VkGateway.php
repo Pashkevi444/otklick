@@ -34,8 +34,32 @@ final readonly class VkGateway implements ChannelGateway, ReceivesVoice
         return ChannelType::Vk;
     }
 
-    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void
     {
+        // Картинки грузим на серверы VK (photos.getMessagesUploadServer → upload →
+        // saveMessagesPhoto) и прикрепляем как НАСТОЯЩИЕ фото. Если загрузка не
+        // удалась — шлём ссылкой в тексте (чтобы клиент всё же увидел фото).
+        $attachment = '';
+        if ($images !== []) {
+            $uploaded = [];
+            foreach ($images as $url) {
+                try {
+                    $photo = $this->uploadPhoto($channel, $chatId, $url);
+                    if ($photo !== null) {
+                        $uploaded[] = $photo;
+                    }
+                } catch (Throwable $e) {
+                    report($e);
+                }
+            }
+
+            if ($uploaded !== []) {
+                $attachment = implode(',', $uploaded);
+            } else {
+                $text = trim($text."\n".implode("\n", $images));
+            }
+        }
+
         $params = [
             'peer_id' => $chatId,
             'message' => $text,
@@ -43,6 +67,10 @@ final readonly class VkGateway implements ChannelGateway, ReceivesVoice
             'random_id' => random_int(1, 2_147_483_647),
             'group_id' => $channel->credential('group_id'),
         ];
+
+        if ($attachment !== '') {
+            $params['attachment'] = $attachment;
+        }
 
         $markup = $this->keyboard($keyboard);
         if ($markup !== null) {
@@ -208,6 +236,55 @@ final readonly class VkGateway implements ChannelGateway, ReceivesVoice
         }
 
         return null;
+    }
+
+    /**
+     * Загружает картинку (по URL) на серверы VK и возвращает строку вложения
+     * `photo{owner}_{id}` для messages.send. null — если загрузить не удалось.
+     */
+    private function uploadPhoto(Channel $channel, string $peerId, string $url): ?string
+    {
+        $server = $this->ensureOk(
+            $this->method($channel, 'photos.getMessagesUploadServer', [
+                'peer_id' => $peerId,
+                'group_id' => $channel->credential('group_id'),
+            ]),
+            'photos.getMessagesUploadServer',
+        );
+        $uploadUrl = data_get($server, 'response.upload_url');
+        if (! is_string($uploadUrl)) {
+            return null;
+        }
+
+        $file = Http::connectTimeout(5)->timeout(15)->get($url);
+        if (! $file->successful()) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $uploaded */
+        $uploaded = Http::connectTimeout(5)->timeout(20)
+            ->attach('photo', $file->body(), 'photo.jpg')
+            ->post($uploadUrl)
+            ->json() ?? [];
+        if (! isset($uploaded['photo'], $uploaded['server'], $uploaded['hash'])) {
+            return null;
+        }
+
+        $saved = $this->ensureOk(
+            $this->method($channel, 'photos.saveMessagesPhoto', [
+                'photo' => (string) $uploaded['photo'],
+                'server' => (string) $uploaded['server'],
+                'hash' => (string) $uploaded['hash'],
+            ]),
+            'photos.saveMessagesPhoto',
+        );
+        $owner = data_get($saved, 'response.0.owner_id');
+        $id = data_get($saved, 'response.0.id');
+        if ($owner === null || $id === null) {
+            return null;
+        }
+
+        return "photo{$owner}_{$id}";
     }
 
     /**

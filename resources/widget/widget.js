@@ -165,7 +165,7 @@
         requestAnimationFrame(function () { ov.classList.add('otk-lb-on'); });
     }
 
-    function addMsg(text, who, noSave) {
+    function addMsg(text, who, noSave, extraImages) {
         if (!noSave) {
             history.push({ t: String(text), w: who });
             persist();
@@ -178,6 +178,10 @@
         var images = [];
         var clean = String(text).replace(IMG_RE, function (u) { images.push(u); return ''; });
         clean = clean.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
+        // Картинки могут прийти отдельным полем (сервер уже вынес их из текста).
+        if (extraImages && extraImages.length) {
+            extraImages.forEach(function (u) { if (images.indexOf(u) < 0) images.push(u); });
+        }
 
         if (clean) {
             var t = document.createElement('div');
@@ -295,7 +299,7 @@
         post('/message', { token: token, text: text })
             .then(function (data) {
                 hideTyping();
-                addMsg(data.reply, 'bot');
+                addMsg(data.reply, 'bot', false, data.images);
                 renderChips(data.options);
             })
             .catch(function (err) {

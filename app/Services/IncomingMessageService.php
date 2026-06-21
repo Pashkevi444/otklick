@@ -62,7 +62,7 @@ final readonly class IncomingMessageService
         try {
             // Ответ уходит через шлюз того канала, откуда пришло сообщение
             // (Telegram/VK/…), а не через жёстко зашитый мессенджер.
-            $this->gateways->for($channel->type)->send($channel, $incoming->externalChatId, $reply->text, $reply->keyboard);
+            $this->gateways->for($channel->type)->send($channel, $incoming->externalChatId, $reply->text, $reply->keyboard, $reply->images);
             $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
         } catch (Throwable $e) {
             // Отправка сорвалась — НЕ теряем реплай и НЕ оставляем диалог висеть:
@@ -78,6 +78,7 @@ final readonly class IncomingMessageService
                 $reply->keyboard,
                 (string) $outbound->id,
                 (string) $conversation->id,
+                $reply->images,
             );
         }
 

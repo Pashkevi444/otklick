@@ -18,5 +18,9 @@ use App\Models\Channel;
  */
 interface MessengerGateway
 {
-    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null): void;
+    /**
+     * @param  list<string>  $images  URL картинок — канал отправляет их настоящими
+     *                                фото (где поддерживается) либо ссылкой в тексте.
+     */
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void;
 }
