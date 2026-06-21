@@ -10,6 +10,9 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         <meta name="theme-color" content="#1F4E79">
 
+        {{-- Подтверждение прав в Яндекс.Вебмастере. --}}
+        <meta name="yandex-verification" content="451d14762ac81dea" />
+
         {{-- Тема ставится до рендера, чтобы не было мигания. --}}
         <script>
             (function () {
