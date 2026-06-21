@@ -14,8 +14,10 @@ x-gt-env: &gt-env
   REDIS_URL: redis://glitchtip-redis:6379/0
   PORT: "8080"
   GLITCHTIP_DOMAIN: https://errors.otcl1ck.ru
-  DEFAULT_FROM_EMAIL: support@otcl1ck.ru
-  EMAIL_URL: consolemail://
+  # Почта для уведомлений об ошибках. По умолчанию consolemail:// (в лог), на проде
+  # переопределяется через .env.glitchtip реальным SMTP (переиспользуем SMTP приложения).
+  DEFAULT_FROM_EMAIL: ${GLITCHTIP_FROM_EMAIL:-support@otcl1ck.ru}
+  EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
   # Регистрация закрыта (первый админ уже создан) — посторонние не заведут аккаунт.
   ENABLE_USER_REGISTRATION: "false"
   ENABLE_OPEN_USER_REGISTRATION: "false"
