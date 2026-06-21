@@ -50,6 +50,21 @@ final class AnnouncementTest extends TestCase
                 ->where('page.data.0.is_new', true));
     }
 
+    public function test_admin_news_search_filters_by_title_and_body(): void
+    {
+        $su = User::factory()->superAdmin()->create();
+        Announcement::create(['type' => AnnouncementType::News, 'title' => 'Запуск рассылок', 'body' => 'детали', 'is_published' => true]);
+        Announcement::create(['type' => AnnouncementType::News, 'title' => 'Обновление каналов', 'body' => 'текст', 'is_published' => true]);
+
+        // Поиск по заголовку отдаёт только совпавшую новость (1 из 2), регистронезависимо.
+        $this->actingAs($su)->get('/admin/news?'.http_build_query(['search' => 'рассыл']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p
+                ->where('search', 'рассыл')
+                ->has('page.data', 1)
+                ->where('page.data.0.title', 'Запуск рассылок'));
+    }
+
     public function test_business_opens_detail_page(): void
     {
         $announcement = $this->publishedNews('Деталь');

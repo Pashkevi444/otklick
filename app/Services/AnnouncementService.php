@@ -26,10 +26,10 @@ final readonly class AnnouncementService
      *
      * @return array{data: list<array<string, mixed>>, current_page: int, last_page: int, total: int}
      */
-    public function adminPaginated(AnnouncementType $type): array
+    public function adminPaginated(AnnouncementType $type, ?string $search = null): array
     {
         return $this->paginate(
-            $this->announcements->paginateAllOfType($type, self::PER_PAGE),
+            $this->announcements->paginateAllOfType($type, self::PER_PAGE, $search),
             fn (Announcement $a): array => [
                 'id' => $a->id,
                 'title' => $a->title,

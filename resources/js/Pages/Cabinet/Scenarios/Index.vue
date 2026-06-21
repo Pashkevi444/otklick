@@ -99,20 +99,42 @@ const props = defineProps<{
 
 // Готовые шаблоны прячем за кнопкой, чтобы не занимали весь экран (их много).
 const showTemplates = ref(false);
+// Фильтр пикера шаблонов: поиск + тип бизнеса (иначе листать десятки штук тяжело).
+const tplQuery = ref('');
+const tplType = ref<string>('');
 
 // Пагинация списка сценариев (серверная, по ?page).
 const goToPage = (page: number): void => {
     router.get(route('cabinet.scenarios.index'), { page }, { preserveScroll: true, preserveState: false });
 };
 
-// Шаблоны, сгруппированные по типу бизнеса: сперва «Общие» (businessType=null,
-// дефолт для всех), затем по нишам в порядке реестра businessTypes.
+// Чипы-фильтры по типу бизнеса с количеством.
+const tplChips = computed(() => {
+    const chips = [{ key: '', label: 'Все', count: props.templates.length }];
+    const general = props.templates.filter((t) => !t.businessType).length;
+    if (general) chips.push({ key: 'general', label: 'Общие', count: general });
+    for (const bt of props.businessTypes) {
+        const count = props.templates.filter((t) => t.businessType === bt.value).length;
+        if (count) chips.push({ key: bt.value, label: bt.label, count });
+    }
+    return chips;
+});
+
+// Шаблоны, отфильтрованные (поиск + тип) и сгруппированные по типу бизнеса:
+// сперва «Общие» (businessType=null), затем по нишам в порядке реестра.
 const templateGroups = computed<{ key: string; label: string; items: FlowTemplate[] }[]>(() => {
+    const q = tplQuery.value.trim().toLowerCase();
+    const match = (t: FlowTemplate): boolean => {
+        const typeKey = t.businessType ?? 'general';
+        if (tplType.value && typeKey !== tplType.value) return false;
+        if (!q) return true;
+        return t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.triggers.some((x) => x.toLowerCase().includes(q));
+    };
     const groups: { key: string; label: string; items: FlowTemplate[] }[] = [];
-    const general = props.templates.filter((t) => !t.businessType);
+    const general = props.templates.filter((t) => !t.businessType && match(t));
     if (general.length) groups.push({ key: 'general', label: 'Общие сценарии', items: general });
     for (const bt of props.businessTypes) {
-        const items = props.templates.filter((t) => t.businessType === bt.value);
+        const items = props.templates.filter((t) => t.businessType === bt.value && match(t));
         if (items.length) groups.push({ key: bt.value, label: bt.label, items });
     }
     return groups;
@@ -529,6 +551,31 @@ const testSend = (text?: string): void => {
             <!-- Готовые шаблоны, сгруппированные по типу бизнеса (сперва «Общие») -->
             <div v-if="showTemplates && templates.length" class="mb-5">
                 <div class="mb-3 text-sm font-medium text-slate-600 dark:text-slate-300">Выберите готовый шаблон — он откроется в редакторе, останется поправить под себя:</div>
+
+                <!-- Поиск + фильтр по типу бизнеса -->
+                <input
+                    v-model="tplQuery"
+                    type="search"
+                    placeholder="Поиск шаблона по названию или фразе запуска…"
+                    class="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5"
+                />
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <button
+                        v-for="chip in tplChips"
+                        :key="chip.key"
+                        type="button"
+                        class="rounded-full px-3 py-1 text-xs font-medium transition"
+                        :class="tplType === chip.key ? 'bg-[#2E74B5] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300'"
+                        @click="tplType = chip.key"
+                    >
+                        {{ chip.label }} <span class="opacity-70">{{ chip.count }}</span>
+                    </button>
+                </div>
+
+                <div v-if="templateGroups.length === 0" class="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+                    Ничего не найдено — измените запрос или фильтр.
+                </div>
+
                 <div v-for="g in templateGroups" :key="g.key" class="mb-4">
                     <div class="mb-2 flex items-center gap-2">
                         <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ g.label }}</span>

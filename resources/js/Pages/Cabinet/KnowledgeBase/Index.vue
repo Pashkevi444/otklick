@@ -57,14 +57,36 @@ const goToPage = (page: number): void => {
 const tab = ref<'entries' | 'gaps'>('entries');
 const showForm = ref(false);
 const showTemplates = ref(false);
+// Фильтр пикера шаблонов: поиск + тип бизнеса (их сотни — иначе не найти нужный).
+const tplQuery = ref('');
+const tplType = ref<string>('');
 
-// Шаблоны базы знаний, сгруппированные по типу бизнеса (сперва «Общие», дефолт).
+// Чипы-фильтры по типу бизнеса с количеством.
+const tplChips = computed(() => {
+    const chips = [{ key: '', label: 'Все', count: props.templates.length }];
+    const general = props.templates.filter((t) => !t.businessType).length;
+    if (general) chips.push({ key: 'general', label: 'Общие', count: general });
+    for (const bt of props.businessTypes) {
+        const count = props.templates.filter((t) => t.businessType === bt.value).length;
+        if (count) chips.push({ key: bt.value, label: bt.label, count });
+    }
+    return chips;
+});
+
+// Шаблоны базы знаний: отфильтрованы (поиск + тип) и сгруппированы по типу бизнеса.
 const templateGroups = computed<{ key: string; label: string; items: KbTemplate[] }[]>(() => {
+    const q = tplQuery.value.trim().toLowerCase();
+    const match = (t: KbTemplate): boolean => {
+        const typeKey = t.businessType ?? 'general';
+        if (tplType.value && typeKey !== tplType.value) return false;
+        if (!q) return true;
+        return t.title.toLowerCase().includes(q) || t.content.toLowerCase().includes(q);
+    };
     const groups: { key: string; label: string; items: KbTemplate[] }[] = [];
-    const general = props.templates.filter((t) => !t.businessType);
+    const general = props.templates.filter((t) => !t.businessType && match(t));
     if (general.length) groups.push({ key: 'general', label: 'Общие', items: general });
     for (const bt of props.businessTypes) {
-        const items = props.templates.filter((t) => t.businessType === bt.value);
+        const items = props.templates.filter((t) => t.businessType === bt.value && match(t));
         if (items.length) groups.push({ key: bt.value, label: bt.label, items });
     }
     return groups;
@@ -185,6 +207,31 @@ const remove = (id: string): void => {
             <p class="text-xs text-slate-500 mb-3">
                 Возьмите готовый элемент и замените «…» на данные вашего бизнеса. Он подставится в форму — проверьте и сохраните.
             </p>
+
+            <!-- Поиск + фильтр по типу бизнеса -->
+            <input
+                v-model="tplQuery"
+                type="search"
+                placeholder="Поиск шаблона по заголовку или тексту…"
+                class="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5"
+            />
+            <div class="mb-4 flex flex-wrap gap-2">
+                <button
+                    v-for="chip in tplChips"
+                    :key="chip.key"
+                    type="button"
+                    class="rounded-full px-3 py-1 text-xs font-medium transition"
+                    :class="tplType === chip.key ? 'bg-[#2E74B5] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300'"
+                    @click="tplType = chip.key"
+                >
+                    {{ chip.label }} <span class="opacity-70">{{ chip.count }}</span>
+                </button>
+            </div>
+
+            <div v-if="templateGroups.length === 0" class="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+                Ничего не найдено — измените запрос или фильтр.
+            </div>
+
             <div v-for="g in templateGroups" :key="g.key" class="mb-4">
                 <div class="mb-2 flex items-center gap-2">
                     <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ g.label }}</span>

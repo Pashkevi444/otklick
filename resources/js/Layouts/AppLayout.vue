@@ -23,15 +23,8 @@ const unread = computed<{ news: number }>(
 
 const navItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'super_admin') {
-        return [
-            { label: 'Дашборд', href: '/admin' },
-            { label: 'Бизнесы', href: '/admin/tenants' },
-            { label: 'Новости', href: '/admin/news' },
-            { label: 'Плашки', href: '/admin/dashboard-cards' },
-            { label: 'Шаблоны сценариев', href: '/admin/scenario-templates' },
-            { label: 'Шаблоны БЗ', href: '/admin/knowledge-templates' },
-            { label: 'Сайт', href: '/admin/site' },
-        ];
+        // У СУ в меню только «Дашборд» — дальше навигация через плашки дашборда.
+        return [{ label: 'Дашборд', href: '/admin' }];
     }
 
     // Меню короткое: всё по разделам — на дашборде. Здесь только ключевое.

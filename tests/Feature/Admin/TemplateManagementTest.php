@@ -22,10 +22,11 @@ final class TemplateManagementTest extends TestCase
 
     public function test_migration_seeds_templates(): void
     {
-        // 20 общих + по 10 на 6 ниш = 80 шаблонов БЗ; сценарии тоже засеяны.
-        $this->assertSame(80, KnowledgeTemplate::count());
+        // 20 общих + по 30 на 6 ниш = 200 шаблонов БЗ; сценариев — по ~10+ на нишу.
+        $this->assertSame(200, KnowledgeTemplate::count());
         $this->assertSame(20, KnowledgeTemplate::whereNull('business_type')->count());
-        $this->assertGreaterThan(0, ScenarioTemplate::count());
+        $this->assertSame(30, KnowledgeTemplate::where('business_type', 'nails')->count());
+        $this->assertGreaterThanOrEqual(10, ScenarioTemplate::where('business_type', 'nails')->count());
 
         // В шаблонах сценариев нет действия start_booking (YClients может быть выключен).
         $this->assertFalse(

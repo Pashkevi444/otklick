@@ -25,10 +25,19 @@ final class EloquentAnnouncementRepository implements AnnouncementRepositoryInte
         return $this->publishedQuery($type)->paginate($perPage)->withQueryString();
     }
 
-    public function paginateAllOfType(AnnouncementType $type, int $perPage): LengthAwarePaginator
+    public function paginateAllOfType(AnnouncementType $type, int $perPage, ?string $search = null): LengthAwarePaginator
     {
+        $term = $search !== null ? mb_strtolower(trim($search)) : '';
+
         return Announcement::query()
             ->where('type', $type)
+            ->when($term !== '', function ($query) use ($term): void {
+                // LOWER(...) LIKE — кросс-СУБД регистронезависимый поиск (pg + sqlite).
+                $query->where(function ($q) use ($term): void {
+                    $q->whereRaw('LOWER(title) LIKE ?', ['%'.$term.'%'])
+                        ->orWhereRaw('LOWER(body) LIKE ?', ['%'.$term.'%']);
+                });
+            })
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->withQueryString();

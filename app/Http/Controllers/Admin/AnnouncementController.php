@@ -28,9 +28,9 @@ final class AnnouncementController extends Controller
         private readonly AnnouncementImageStorage $images,
     ) {}
 
-    public function news(): Response
+    public function news(Request $request): Response
     {
-        return $this->page(AnnouncementType::News);
+        return $this->page(AnnouncementType::News, $request->query('search'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -68,12 +68,15 @@ final class AnnouncementController extends Controller
         return response()->json(['url' => $this->images->store($request->file('image'))]);
     }
 
-    private function page(AnnouncementType $type): Response
+    private function page(AnnouncementType $type, ?string $search = null): Response
     {
+        $search = is_string($search) ? trim($search) : null;
+
         return Inertia::render('Admin/Announcements/Index', [
             'type' => $type->value,
             'title' => $type->label(),
-            'page' => $this->announcements->adminPaginated($type),
+            'search' => $search,
+            'page' => $this->announcements->adminPaginated($type, $search !== '' ? $search : null),
         ]);
     }
 

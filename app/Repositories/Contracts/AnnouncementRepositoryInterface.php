@@ -27,10 +27,11 @@ interface AnnouncementRepositoryInterface
 
     /**
      * Все анонсы типа постранично (админка СУ, включая черновики), новые сверху.
+     * `$search` — регистронезависимый поиск по заголовку/тексту (null/'' = без фильтра).
      *
      * @return LengthAwarePaginator<int, Announcement>
      */
-    public function paginateAllOfType(AnnouncementType $type, int $perPage): LengthAwarePaginator;
+    public function paginateAllOfType(AnnouncementType $type, int $perPage, ?string $search = null): LengthAwarePaginator;
 
     /** Опубликованный анонс типа по id (для детальной страницы бизнеса). */
     public function findPublished(string $id, AnnouncementType $type): ?Announcement;

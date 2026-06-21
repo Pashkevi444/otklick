@@ -20,10 +20,20 @@ interface Page {
     total: number;
 }
 
-const props = defineProps<{ type: string; title: string; page: Page }>();
+const props = defineProps<{ type: string; title: string; page: Page; search: string | null }>();
 
 const editingId = ref<string | null>(null);
 const showPreview = ref(false);
+
+// Серверный поиск по новостям (по заголовку/тексту), с дебаунсом.
+const search = ref(props.search ?? '');
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+const runSearch = (): void => {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        router.get(base.value, { search: search.value || undefined }, { preserveScroll: true, preserveState: true, replace: true });
+    }, 350);
+};
 const form = useForm<{ type: string; title: string; body: string; is_published: boolean }>({
     type: props.type,
     title: '',
@@ -63,7 +73,7 @@ const remove = (item: Item): void => {
     if (confirm('Удалить анонс?')) router.delete(`/admin/announcements/${item.id}`, { preserveScroll: true });
 };
 
-const goPage = (p: number): void => router.get(base.value, { page: p }, { preserveScroll: true, preserveState: true });
+const goPage = (p: number): void => router.get(base.value, { page: p, search: search.value || undefined }, { preserveScroll: true, preserveState: true });
 </script>
 
 <template>
@@ -113,10 +123,19 @@ const goPage = (p: number): void => router.get(base.value, { page: p }, { preser
                 </div>
             </form>
 
+            <!-- Поиск -->
+            <input
+                v-model="search"
+                type="search"
+                placeholder="Поиск по заголовку и тексту…"
+                class="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5"
+                @input="runSearch"
+            />
+
             <!-- Список -->
             <div class="space-y-3">
                 <p v-if="props.page.data.length === 0" class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
-                    Анонсов пока нет.
+                    {{ search ? 'Ничего не найдено.' : 'Анонсов пока нет.' }}
                 </p>
                 <article
                     v-for="item in props.page.data"
