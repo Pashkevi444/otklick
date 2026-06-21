@@ -8,9 +8,12 @@ use App\Channels\Telegram\TelegramGateway;
 use App\Enums\ChannelType;
 use App\Jobs\ProcessTelegramUpdate;
 use App\Models\Channel;
+use App\Support\SecretScrubber;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -71,7 +74,14 @@ final class PollTelegramUpdates extends Command
             if ($updates !== []) {
                 Cache::forever($this->offsetKey($channel->id), $offset);
             }
+        } catch (ConnectionException $e) {
+            // Транзиентный сетевой сбой до api.telegram.org (таймаут/блокировка
+            // маршрута из РФ) — обычное дело, поллер ретраит на следующем цикле.
+            // Не шумим в трекер; секрет (токен в URL) вырезаем из лога.
+            Log::warning('telegram.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
+            usleep(500_000);
         } catch (Throwable $e) {
+            Log::warning('telegram.poll_failed', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
             report($e);
             usleep(500_000); // не молотим Telegram при ошибке
         }

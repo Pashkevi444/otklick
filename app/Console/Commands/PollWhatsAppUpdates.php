@@ -8,7 +8,9 @@ use App\Channels\WhatsApp\WhatsAppGateway;
 use App\Enums\ChannelType;
 use App\Jobs\ProcessWhatsAppUpdate;
 use App\Models\Channel;
+use App\Support\SecretScrubber;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -70,8 +72,13 @@ final class PollWhatsAppUpdates extends Command
                 // очередь Green API забьётся и приём остановится.
                 $whatsapp->deleteNotification($channel, $note['receiptId']);
             }
+        } catch (ConnectionException $e) {
+            // Транзиентный сетевой сбой до Green API — поллер ретраит; не шумим в
+            // трекер, секрет (apiToken в URL) вырезаем из лога.
+            Log::warning('whatsapp.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
+            usleep(500_000);
         } catch (Throwable $e) {
-            Log::warning('whatsapp.poll_failed', ['channel_id' => $channel->id, 'error' => $e->getMessage()]);
+            Log::warning('whatsapp.poll_failed', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
             report($e);
             usleep(500_000); // не молотим Green API при ошибке
         }

@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\SentryScrubber;
+
 /**
  * Sentry Laravel SDK configuration file.
  *
@@ -52,8 +54,11 @@ return [
     // заголовки (в т.ч. Authorization) и тело запроса, где могли бы оказаться
     // токены каналов/CRM, коды подтверждения и ПДн клиента. Для разбора падения
     // хватает исключения, стека и тегов. НЕ включать без необходимости.
-    // (Не используем `before_send`-замыкание: оно ломает `config:cache`.)
     'send_default_pii' => env('SENTRY_SEND_DEFAULT_PII', false),
+
+    // Чистим секреты (токены каналов/CRM в URL HTTP-ошибок) из событий перед
+    // отправкой. Callable-массив (не замыкание) — чтобы `config:cache` не падал.
+    'before_send' => [SentryScrubber::class, 'scrub'],
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_exceptions
     // 'ignore_exceptions' => [],

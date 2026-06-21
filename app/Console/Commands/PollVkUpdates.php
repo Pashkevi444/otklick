@@ -8,7 +8,9 @@ use App\Channels\Vk\VkGateway;
 use App\Enums\ChannelType;
 use App\Jobs\ProcessVkUpdate;
 use App\Models\Channel;
+use App\Support\SecretScrubber;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -75,8 +77,13 @@ final class PollVkUpdates extends Command
 
             $state['ts'] = (string) ($result['ts'] ?? $state['ts']);
             Cache::forever($this->stateKey($channel->id), $state);
+        } catch (ConnectionException $e) {
+            // Транзиентный сетевой сбой до VK — поллер ретраит; не шумим в трекер,
+            // секрет (access_token в URL) вырезаем из лога.
+            Log::warning('vk.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
+            usleep(500_000);
         } catch (Throwable $e) {
-            Log::warning('vk.poll_failed', ['channel_id' => $channel->id, 'error' => $e->getMessage()]);
+            Log::warning('vk.poll_failed', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
             report($e);
             usleep(500_000); // не молотим VK при ошибке
         }

@@ -8,7 +8,9 @@ use App\Channels\Max\MaxGateway;
 use App\Enums\ChannelType;
 use App\Jobs\ProcessMaxUpdate;
 use App\Models\Channel;
+use App\Support\SecretScrubber;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -65,8 +67,13 @@ final class PollMaxUpdates extends Command
             if (isset($result['marker'])) {
                 Cache::forever($this->markerKey($channel->id), (int) $result['marker']);
             }
+        } catch (ConnectionException $e) {
+            // Транзиентный сетевой сбой до MAX — поллер ретраит; не шумим в трекер,
+            // секрет вырезаем из лога.
+            Log::warning('max.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
+            usleep(500_000);
         } catch (Throwable $e) {
-            Log::warning('max.poll_failed', ['channel_id' => $channel->id, 'error' => $e->getMessage()]);
+            Log::warning('max.poll_failed', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
             report($e);
             usleep(500_000); // не молотим MAX при ошибке
         }
