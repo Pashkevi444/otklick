@@ -11,12 +11,13 @@ final class SecretScrubberTest extends TestCase
 {
     public function test_redacts_telegram_bot_token_keeps_harmless_params(): void
     {
+        // ФЕЙКОВЫЙ токен (не реальный) — только чтобы совпасть с паттерном скрабера.
         $msg = 'cURL error 28: Connection timed out for '.
-            'https://api.telegram.org/bot8696382953:AAEZsM_4o9W3vnAqwbD-UvlDTCkIvu6pRqE/getUpdates?offset=297572702&timeout=25';
+            'https://api.telegram.org/bot1234567890:FAKEtokenForTestsOnly0000000000000/getUpdates?offset=297572702&timeout=25';
 
         $out = SecretScrubber::scrub($msg);
 
-        $this->assertStringNotContainsString('AAEZsM_4o9W3vnAqwbD-UvlDTCkIvu6pRqE', $out);
+        $this->assertStringNotContainsString('FAKEtokenForTestsOnly0000000000000', $out);
         $this->assertStringContainsString('bot[REDACTED]', $out);
         // Безобидные параметры long-polling не трогаем.
         $this->assertStringContainsString('timeout=25', $out);
