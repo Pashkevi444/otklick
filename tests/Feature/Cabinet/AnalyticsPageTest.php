@@ -29,7 +29,7 @@ final class AnalyticsPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Cabinet/Analytics')
-                ->has('analytics.kpis', 6)
+                ->has('analytics.kpis', 7)
                 ->where('analytics.totals.leads', 3)
                 ->has('analytics.daily')
                 ->has('insights'));
@@ -124,7 +124,7 @@ final class AnalyticsPageTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('aiInsights', false)
                 ->where('insights', null)
-                ->has('analytics.kpis', 6));
+                ->has('analytics.kpis', 7));
 
         // Ручной пересчёт ИИ-разбора тоже закрыт.
         $this->actingAs($owner)
@@ -194,7 +194,7 @@ final class AnalyticsPageTest extends TestCase
             ->get('/cabinet/analytics')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('analytics.kpis', 6) // общая аналитика на месте
+                ->has('analytics.kpis', 7) // общая аналитика на месте
                 ->has('valueReports', 0));  // CRM-отчёта нет
 
         $this->actingAs($owner)->get("/cabinet/analytics/export/value?crm={$crm->id}")->assertForbidden();

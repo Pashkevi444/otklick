@@ -86,11 +86,17 @@ final class LeadAnalyticsServiceTest extends TestCase
         $this->assertSame(4, $this->kpi($analytics->kpis, 'leads')->value);
         $this->assertSame(25.0, $this->kpi($analytics->kpis, 'conversion')->value); // 1/4
         $this->assertSame(50.0, $this->kpi($analytics->kpis, 'contacts')->value);   // 2/4 phone
+        // Пополнили базу (имя + телефон/email): Иван и Пётр → 2 (счётчик, не %).
+        $this->assertSame(2, $this->kpi($analytics->kpis, 'base_grew')->value);
         $this->assertSame(50.0, $this->kpi($analytics->kpis, 'engagement')->value); // inbound>=2: 2/4
         $this->assertSame(25.0, $this->kpi($analytics->kpis, 'needs_human')->value);
         $this->assertSame(0.75, $this->kpi($analytics->kpis, 'clarifications')->value);
 
-        // Воронка: обращения → диалог → контакт → запись.
+        // Воронка: обращения → диалог → контакт → в базе → запись.
+        $inBase = collect($analytics->funnel)->firstOrFail(fn (FunnelStage $s): bool => $s->key === 'in_base');
+        $this->assertSame(2, $inBase->value);
+        $this->assertSame(50.0, $inBase->pct);
+
         $booked = collect($analytics->funnel)->firstOrFail(fn (FunnelStage $s): bool => $s->key === 'booked');
         $this->assertSame(1, $booked->value);
         $this->assertSame(25.0, $booked->pct);

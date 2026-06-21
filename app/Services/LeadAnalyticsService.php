@@ -93,6 +93,7 @@ final readonly class LeadAnalyticsService
                 'booked' => $now['booked'],
                 'needsHuman' => $now['needsHuman'],
                 'withPhone' => $now['withPhone'],
+                'inBase' => $now['inBase'],
                 'engaged' => $now['engaged'],
                 'afterHours' => $now['afterHours'],
             ],
@@ -110,6 +111,10 @@ final readonly class LeadAnalyticsService
         $needsHuman = $leads->filter(fn (Conversation $c): bool => $c->status === ConversationStatus::NeedsHuman)->count();
         $withPhone = $leads->filter(fn (Conversation $c): bool => $this->filled($c->displayPhone()))->count();
         $withName = $leads->filter(fn (Conversation $c): bool => $this->hasRealName($c))->count();
+        // Попал в клиентскую базу: оставил имя И способ связи (телефон или email).
+        // Положительный сигнал даже без записи — база клиентов пополнилась.
+        $inBase = $leads->filter(fn (Conversation $c): bool => $this->hasRealName($c)
+            && ($this->filled($c->displayPhone()) || $this->filled($c->displayEmail())))->count();
         $engaged = $leads->filter(fn (Conversation $c): bool => (int) $c->getAttribute('inbound_count') >= 2)->count();
         $afterHours = $leads->filter(fn (Conversation $c): bool => $this->isAfterHours($c))->count();
         $clarSum = $leads->sum(fn (Conversation $c): int => (int) $c->clarification_attempts);
@@ -120,6 +125,8 @@ final readonly class LeadAnalyticsService
             'needsHuman' => $needsHuman,
             'withPhone' => $withPhone,
             'withName' => $withName,
+            'inBase' => $inBase,
+            'baseRate' => $this->rate($inBase, $count),
             'engaged' => $engaged,
             'afterHours' => $afterHours,
             'conversionRate' => $this->rate($booked, $count),
@@ -148,6 +155,9 @@ final readonly class LeadAnalyticsService
             new MetricCard('contacts', 'Собрано контактов', $now['contactRate'], '%',
                 $this->delta($now['contactRate'], $prev['contactRate'] ?? null), true,
                 'Доля лидов, оставивших телефон'),
+            new MetricCard('base_grew', 'Пополнили базу', $now['inBase'], '',
+                $this->delta($now['inBase'], $prev['inBase'] ?? null), true,
+                'Клиентов с именем и телефоном/почтой — попали в базу, даже если не записались'),
             new MetricCard('engagement', 'Вовлечённость', $now['engagementRate'], '%',
                 $this->delta($now['engagementRate'], $prev['engagementRate'] ?? null), true,
                 'Доля лидов с реальным диалогом (≥2 сообщений)'),
@@ -331,6 +341,7 @@ final readonly class LeadAnalyticsService
             new FunnelStage('leads', 'Обращения', $leads, 100.0),
             new FunnelStage('engaged', 'Диалог', (int) $now['engaged'], $this->rate((int) $now['engaged'], $leads)),
             new FunnelStage('contact', 'Контакт', (int) $now['withPhone'], $this->rate((int) $now['withPhone'], $leads)),
+            new FunnelStage('in_base', 'В базе', (int) $now['inBase'], $this->rate((int) $now['inBase'], $leads)),
             new FunnelStage('booked', 'Запись', (int) $now['booked'], $this->rate((int) $now['booked'], $leads)),
         ];
     }
