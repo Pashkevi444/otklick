@@ -25,7 +25,7 @@ final class BotMenuTest extends TestCase
 
         $this->actingAs($owner)->get('/cabinet/menu')->assertOk();
 
-        $this->actingAs($owner)->put('/cabinet/menu', [
+        $this->actingAs($owner)->from('/cabinet/menu')->put('/cabinet/menu', [
             'buttons' => ['Цены и услуги', '  ', 'Адрес'],
         ])->assertRedirect(route('cabinet.menu.edit'));
 

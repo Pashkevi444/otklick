@@ -41,10 +41,16 @@ final class BotMenuController extends Controller
     {
         $data = $request->validate([
             'buttons' => ['array', 'max:12'],
-            'buttons.*' => ['string', 'max:40'],
+            // nullable — пустые строки middleware превращает в null (их и отбрасываем).
+            'buttons.*' => ['nullable', 'string', 'max:40'],
         ]);
 
-        $this->tenants->updateBotMenu($request->user()->tenant, $data['buttons'] ?? []);
+        $buttons = array_values(array_filter(
+            $data['buttons'] ?? [],
+            static fn ($b): bool => is_string($b) && trim($b) !== '',
+        ));
+
+        $this->tenants->updateBotMenu($request->user()->tenant, $buttons);
 
         return redirect()->route('cabinet.menu.edit')->with('success', 'Главное меню обновлено.');
     }
