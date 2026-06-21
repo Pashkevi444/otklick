@@ -9,6 +9,7 @@ use App\Channels\Contracts\ReceivesVoice;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
+use App\Support\ImageBytes;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -48,17 +49,22 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
                 ->throw();
         }
 
-        // Картинки — настоящими фото по URL (Green API скачает сам). Сбой не роняет
+        // Картинки шлём ЗАГРУЗКОЙ БАЙТОВ (sendFileByUpload), а не URL: серверы Green
+        // API (за рубежом) не всегда скачают URL с РФ-хостинга. Сбой не роняет
         // отправку — что не ушло, отдаём ссылкой.
         $failed = [];
         foreach ($images as $url) {
             try {
-                Http::asJson()->connectTimeout(5)->timeout(20)->retry(2, 300, throw: false)
-                    ->post($this->url($channel, 'sendFileByUrl'), [
-                        'chatId' => $chatId,
-                        'urlFile' => $url,
-                        'fileName' => basename((string) (parse_url($url, PHP_URL_PATH) ?: 'photo.jpg')),
-                    ])
+                $bytes = ImageBytes::fetch($url);
+                if ($bytes === null) {
+                    $failed[] = $url;
+
+                    continue;
+                }
+
+                Http::connectTimeout(5)->timeout(25)->retry(2, 300, throw: false)
+                    ->attach('file', $bytes, basename((string) (parse_url($url, PHP_URL_PATH) ?: 'photo.jpg')))
+                    ->post($this->url($channel, 'sendFileByUpload'), ['chatId' => $chatId])
                     ->throw();
             } catch (Throwable $e) {
                 report($e);

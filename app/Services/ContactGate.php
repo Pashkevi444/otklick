@@ -60,9 +60,11 @@ class ContactGate
             return $this->welcome($tenant, "С возвращением, {$conversation->displayName()}! 👋 Рады снова вас видеть. Чем могу помочь?");
         }
 
-        // Собираем имя/телефон/email из сообщения. Безопасно даже на первом
-        // сообщении: `NameValidator` не даст вопрос/стоп-слово принять за имя.
-        $this->capture($conversation, $text, $phone);
+        // Собираем телефон/email из сообщения. ИМЯ из ПЕРВОГО сообщения НЕ берём:
+        // первое сообщение — это почти всегда вопрос/приветствие («часы работы»),
+        // а не представление. Имя начинаем ловить только ПОСЛЕ того, как бот сам
+        // попросил назвать имя и телефон.
+        $this->capture($conversation, $text, $phone, $firstContact);
 
         if ($this->isComplete($conversation)) {
             $this->conversations->markContactsGateDone($conversation);
@@ -93,13 +95,15 @@ class ContactGate
      *
      * @param  array{status: string, phone: string|null}  $phone
      */
-    private function capture(Conversation $conversation, string $text, array $phone): void
+    private function capture(Conversation $conversation, string $text, array $phone, bool $firstContact): void
     {
         if (! $this->hasPhone($conversation) && $phone['status'] === 'valid') {
             $this->clients->recordPhone($conversation, (string) $phone['phone']);
         }
 
-        if (! $this->hasName($conversation)) {
+        // Имя НЕ берём из первого сообщения (там вопрос, а не имя) — только после
+        // того, как бот попросил представиться.
+        if (! $firstContact && ! $this->hasName($conversation)) {
             $name = $this->extractName($text);
             if ($name !== null) {
                 $this->clients->recordName($conversation, $name);

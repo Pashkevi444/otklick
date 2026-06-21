@@ -9,6 +9,7 @@ use App\Channels\Contracts\ReceivesVoice;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
+use App\Support\ImageBytes;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -256,14 +257,14 @@ final readonly class VkGateway implements ChannelGateway, ReceivesVoice
             return null;
         }
 
-        $file = Http::connectTimeout(5)->timeout(15)->get($url);
-        if (! $file->successful()) {
+        $bytes = ImageBytes::fetch($url);
+        if ($bytes === null) {
             return null;
         }
 
         /** @var array<string, mixed> $uploaded */
         $uploaded = Http::connectTimeout(5)->timeout(20)
-            ->attach('photo', $file->body(), 'photo.jpg')
+            ->attach('photo', $bytes, 'photo.jpg')
             ->post($uploadUrl)
             ->json() ?? [];
         if (! isset($uploaded['photo'], $uploaded['server'], $uploaded['hash'])) {

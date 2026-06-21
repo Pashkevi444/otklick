@@ -9,6 +9,7 @@ use App\Channels\Contracts\ReceivesVoice;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
+use App\Support\ImageBytes;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -45,16 +46,24 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
             ]);
         }
 
-        // Картинки — настоящими фото (Telegram сам скачает по URL). Сбой sendPhoto
-        // НЕ роняет отправку (иначе внешний ретрай зациклит дубли текста) — что не
-        // ушло фото, отдаём ссылкой, чтобы клиент всё же увидел.
+        // Картинки шлём ЗАГРУЗКОЙ БАЙТОВ (multipart), а НЕ ссылкой: Telegram с
+        // зарубежных серверов не может скачать URL с РФ-хостинга («wrong type of
+        // the web page content»). Приложение само читает файл с локального диска и
+        // отдаёт его Telegram. Сбой не роняет отправку — что не ушло, даём ссылкой.
         $failed = [];
         foreach ($images as $url) {
             try {
-                $this->call($channel->botToken(), 'sendPhoto', [
-                    'chat_id' => $chatId,
-                    'photo' => $url,
-                ]);
+                $bytes = ImageBytes::fetch($url);
+                if ($bytes === null) {
+                    $failed[] = $url;
+
+                    continue;
+                }
+
+                $this->photoRequest()
+                    ->attach('photo', $bytes, 'photo.jpg')
+                    ->post("{$this->apiUrl}/bot{$channel->botToken()}/sendPhoto", ['chat_id' => $chatId])
+                    ->throw();
             } catch (Throwable $e) {
                 report($e);
                 $failed[] = $url;
@@ -67,6 +76,18 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
                 'text' => 'Примеры работ: '.implode(' ', $failed),
             ]);
         }
+    }
+
+    /** HTTP-клиент для multipart-загрузки фото (с форсингом IPv6 в РФ). */
+    private function photoRequest(): PendingRequest
+    {
+        $request = Http::connectTimeout(5)->timeout(20)->retry(2, 300, throw: false);
+
+        if ($this->forceIpv6) {
+            $request->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6]]);
+        }
+
+        return $request;
     }
 
     /**

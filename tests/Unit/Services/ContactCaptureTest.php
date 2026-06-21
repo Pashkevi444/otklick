@@ -47,16 +47,19 @@ final class ContactCaptureTest extends TestCase
         $this->capture($clients, $messages, $llm)->fromInbound($conversation, 'Павел');
     }
 
-    public function test_captures_name_and_phone_from_one_message_without_bot_asking(): void
+    public function test_does_not_capture_name_from_first_message(): void
     {
+        // Первое сообщение клиента (бот ещё НЕ ответил → latestOutboundText null):
+        // даже явное «меня зовут Паша» именем НЕ считаем — почти всегда это вопрос.
+        // Телефон однозначен — его всё равно забираем.
         $conversation = $this->conv(null, null);
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
-        $messages->shouldNotReceive('latestOutboundText'); // явное представление — без истории
+        $messages->shouldReceive('latestOutboundText')->once()->with($conversation)->andReturnNull();
 
         $clients = $this->clients();
         $clients->shouldReceive('recordPhone')->once()->with($conversation, '+79991234567');
-        $clients->shouldReceive('recordName')->once()->with($conversation, 'Паша');
+        $clients->shouldNotReceive('recordName');
 
         $this->capture($clients, $messages)->fromInbound($conversation, 'запиши меня к Савелию, меня зовут Паша, телефон 8 999 123-45-67');
     }

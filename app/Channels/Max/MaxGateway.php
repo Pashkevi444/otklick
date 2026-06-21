@@ -9,6 +9,7 @@ use App\Channels\Contracts\ReceivesVoice;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
+use App\Support\ImageBytes;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -115,14 +116,14 @@ final readonly class MaxGateway implements ChannelGateway, ReceivesVoice
             return null;
         }
 
-        // 2) Качаем нашу картинку и заливаем в MAX (поле data).
-        $file = Http::connectTimeout(5)->timeout(15)->get($url);
-        if (! $file->successful()) {
+        // 2) Берём байты нашей картинки (диск-first) и заливаем в MAX (поле data).
+        $bytes = ImageBytes::fetch($url);
+        if ($bytes === null) {
             return null;
         }
         /** @var array<string, mixed> $res */
         $res = Http::connectTimeout(5)->timeout(20)
-            ->attach('data', $file->body(), 'photo.jpg')
+            ->attach('data', $bytes, 'photo.jpg')
             ->post($uploadUrl)
             ->json() ?? [];
 

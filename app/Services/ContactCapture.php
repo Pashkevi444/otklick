@@ -41,10 +41,16 @@ class ContactCapture
         }
 
         if (! $this->hasName($conversation)) {
+            // Имя НЕ берём из ПЕРВОГО сообщения клиента (бот ещё не просил
+            // представиться) — первое сообщение почти всегда вопрос, а не имя.
+            // Начинаем ловить имя только ПОСЛЕ того, как бот ответил/спросил.
+            $lastOutbound = $this->messages->latestOutboundText($conversation);
+
             // Сначала явное представление в самом сообщении («меня зовут …»),
             // затем — короткий ответ на вопрос бота «Как вас зовут?» (через LLM).
-            $name = $this->names->fromText($text)
-                ?? $this->names->fromReply($this->messages->latestOutboundText($conversation), $text);
+            $name = $lastOutbound === null
+                ? null
+                : $this->names->fromText($text) ?? $this->names->fromReply($lastOutbound, $text);
 
             // ВАЖНО: LLM-имя проверяем тем же `NameValidator`, что и гейт, иначе
             // вопрос/стоп-слово («а меня нет в базе?» → «Нет») обходит защиту гейта.

@@ -60,8 +60,13 @@ final class WidgetChatTest extends TestCase
         $channel = $this->webChannel();
         $token = $this->postJson($this->url($channel, 'session'))->json('token');
 
-        // Заполнение контактной формы завершает её и отдаёт кнопки-варианты —
-        // виджет рендерит их кликабельными чипами (как в мессенджерах).
+        // Первое сообщение — вопрос (имя из него НЕ берём), бот приветствует и
+        // просит представиться. Уже СЛЕДУЮЩЕЕ сообщение с именем+телефоном
+        // завершает форму и отдаёт кнопки-варианты — виджет рендерит их
+        // кликабельными чипами (как в мессенджерах).
+        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'Здравствуйте, есть доставка?'])
+            ->assertOk();
+
         $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'Иван, +7 999 123-45-67'])
             ->assertOk()
             ->assertJsonPath('options', fn (array $o): bool => in_array('Записаться', $o, true));
