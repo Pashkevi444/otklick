@@ -48,14 +48,27 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
                 ->throw();
         }
 
-        // Картинки — настоящими фото по URL (Green API скачает сам).
+        // Картинки — настоящими фото по URL (Green API скачает сам). Сбой не роняет
+        // отправку — что не ушло, отдаём ссылкой.
+        $failed = [];
         foreach ($images as $url) {
-            Http::asJson()->connectTimeout(5)->timeout(20)->retry(2, 300, throw: false)
-                ->post($this->url($channel, 'sendFileByUrl'), [
-                    'chatId' => $chatId,
-                    'urlFile' => $url,
-                    'fileName' => basename((string) (parse_url($url, PHP_URL_PATH) ?: 'photo.jpg')),
-                ])
+            try {
+                Http::asJson()->connectTimeout(5)->timeout(20)->retry(2, 300, throw: false)
+                    ->post($this->url($channel, 'sendFileByUrl'), [
+                        'chatId' => $chatId,
+                        'urlFile' => $url,
+                        'fileName' => basename((string) (parse_url($url, PHP_URL_PATH) ?: 'photo.jpg')),
+                    ])
+                    ->throw();
+            } catch (Throwable $e) {
+                report($e);
+                $failed[] = $url;
+            }
+        }
+
+        if ($failed !== []) {
+            Http::asJson()->connectTimeout(5)->timeout(15)->retry(2, 300, throw: false)
+                ->post($this->url($channel, 'sendMessage'), ['chatId' => $chatId, 'message' => 'Примеры работ: '.implode(' ', $failed)])
                 ->throw();
         }
     }

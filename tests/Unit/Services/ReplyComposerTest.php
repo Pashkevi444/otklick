@@ -6,6 +6,7 @@ namespace Tests\Unit\Services;
 
 use App\Llm\Contracts\LlmClient;
 use App\Models\Conversation;
+use App\Models\KnowledgeEntry;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
@@ -187,5 +188,52 @@ final class ReplyComposerTest extends TestCase
 
         $this->assertFalse($reply->escalate);
         $this->assertSame('Да, конечно, записать вас?', $reply->text);
+    }
+
+    /**
+     * @param  list<array{path: string, url: string}>  $images
+     */
+    private function composerWithEntryImages(LlmClient $llm, array $images): ReplyComposer
+    {
+        $entry = new KnowledgeEntry(['title' => 'Стрижки', 'content' => 'Делаем фейды.', 'is_published' => true, 'links' => [], 'images' => $images]);
+
+        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$entry]));
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever->shouldReceive('retrieve')->andReturn(null);
+
+        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+    }
+
+    public function test_photos_marker_attaches_real_image_urls_and_strips_marker(): void
+    {
+        // Метка [[PHOTOS]] → прикрепляем ТОЧНЫЙ URL из данных (не из текста LLM),
+        // а саму метку убираем из видимого текста.
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Вот примеры наших работ! [[PHOTOS]]');
+
+        $reply = $this->composerWithEntryImages($llm, [['path' => 'knowledge/x.jpg', 'url' => 'https://otcl1ck.ru/storage/knowledge/x.jpg']])
+            ->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertSame(['https://otcl1ck.ru/storage/knowledge/x.jpg'], $reply->images);
+        $this->assertStringNotContainsString('PHOTOS', $reply->text);
+        $this->assertStringContainsString('примеры', $reply->text);
+    }
+
+    public function test_no_photos_marker_means_no_images(): void
+    {
+        // Без метки [[PHOTOS]] фото не прикрепляются, даже если у записи они есть.
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Мужская стрижка — 1500 ₽.');
+
+        $reply = $this->composerWithEntryImages($llm, [['path' => 'knowledge/x.jpg', 'url' => 'https://otcl1ck.ru/storage/knowledge/x.jpg']])
+            ->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertSame([], $reply->images);
+        $this->assertSame('Мужская стрижка — 1500 ₽.', $reply->text);
     }
 }

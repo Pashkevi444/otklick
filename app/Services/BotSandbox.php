@@ -104,6 +104,7 @@ final readonly class BotSandbox
                 booked: $reply->booked,
                 cancelled: $reply->cancelled,
                 note: $note,
+                images: $reply->images,
             );
         });
     }

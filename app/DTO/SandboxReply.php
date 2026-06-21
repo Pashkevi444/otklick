@@ -13,6 +13,7 @@ final readonly class SandboxReply
 {
     /**
      * @param  list<string>  $buttons  подписи кнопок-подсказок (плоским списком)
+     * @param  list<string>  $images  URL фото примеров работ (рендерятся картинками)
      */
     public function __construct(
         public string $text,
@@ -21,10 +22,11 @@ final readonly class SandboxReply
         public bool $booked = false,
         public bool $cancelled = false,
         public ?string $note = null,
+        public array $images = [],
     ) {}
 
     /**
-     * @return array{text: string, buttons: list<string>, escalate: bool, booked: bool, cancelled: bool, note: ?string}
+     * @return array{text: string, buttons: list<string>, escalate: bool, booked: bool, cancelled: bool, note: ?string, images: list<string>}
      */
     public function toArray(): array
     {
@@ -35,6 +37,7 @@ final readonly class SandboxReply
             'booked' => $this->booked,
             'cancelled' => $this->cancelled,
             'note' => $this->note,
+            'images' => $this->images,
         ];
     }
 }

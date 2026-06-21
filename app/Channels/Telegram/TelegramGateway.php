@@ -45,11 +45,26 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
             ]);
         }
 
-        // Картинки — настоящими фото (Telegram сам скачает по URL), а не ссылкой.
+        // Картинки — настоящими фото (Telegram сам скачает по URL). Сбой sendPhoto
+        // НЕ роняет отправку (иначе внешний ретрай зациклит дубли текста) — что не
+        // ушло фото, отдаём ссылкой, чтобы клиент всё же увидел.
+        $failed = [];
         foreach ($images as $url) {
-            $this->call($channel->botToken(), 'sendPhoto', [
+            try {
+                $this->call($channel->botToken(), 'sendPhoto', [
+                    'chat_id' => $chatId,
+                    'photo' => $url,
+                ]);
+            } catch (Throwable $e) {
+                report($e);
+                $failed[] = $url;
+            }
+        }
+
+        if ($failed !== []) {
+            $this->call($channel->botToken(), 'sendMessage', [
                 'chat_id' => $chatId,
-                'photo' => $url,
+                'text' => 'Примеры работ: '.implode(' ', $failed),
             ]);
         }
     }

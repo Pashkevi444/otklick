@@ -18,6 +18,7 @@ use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Support\ImageUrls;
+use Illuminate\Support\Collection;
 
 /**
  * Формирует ответ бота: системный промпт (профиль + опубликованная БЗ) + история
@@ -69,6 +70,10 @@ class ReplyComposer
             $published = $published->filter(fn (KnowledgeEntry $e): bool => in_array($e->id, $retrieved['manual'], true))->values();
             $crm = $crm->filter(fn (CrmKnowledgeEntry $e): bool => in_array($e->id, $retrieved['crm'], true))->values();
         }
+
+        // Реальные (точные) URL фото из найденных записей — их прикрепим, если бот
+        // поставит метку [[PHOTOS]]. URL в текст НЕ отдаём боту: LLM их искажает.
+        $availableImages = $this->imagesFrom($published);
 
         // Если клиент уже известен (узнали по чату/телефону/нику и перенесли
         // контакты) — промпт скажет боту звать по имени и не переспрашивать.
@@ -147,11 +152,14 @@ class ReplyComposer
         // Бот ответил по делу — обнуляем серию непоняток.
         $this->resetStreak($conversation);
 
-        // Ссылки на фото примеров работ выносим из текста — канал отправит их
-        // настоящими картинками (а не ссылкой, которой клиенты не доверяют).
-        [$text, $images] = ImageUrls::split($answer);
+        // Фото примеров работ: по метке [[PHOTOS]] прикрепляем ТОЧНЫЕ URL из данных
+        // (а не то, что напечатала LLM). На всякий случай ловим и пастнутые ботом
+        // ссылки (fallback) и тоже выносим их из текста — канал отправит фото.
+        $wantsPhotos = str_contains($answer, PromptBuilder::PHOTOS);
+        [$text, $pasted] = ImageUrls::split($this->stripSentinels($answer));
+        $images = array_values(array_unique(array_merge($wantsPhotos ? $availableImages : [], $pasted)));
         $finalText = $images === []
-            ? $answer
+            ? $text
             : ($text !== '' ? $text : 'Вот примеры наших работ 👇');
 
         return new BotReply($finalText, escalate: false, images: $images);
@@ -163,12 +171,33 @@ class ReplyComposer
     private function stripSentinels(string $text): string
     {
         $text = str_replace(
-            [PromptBuilder::ESCALATE, PromptBuilder::BOOKED, PromptBuilder::BOOK, PromptBuilder::CANCELLED, PromptBuilder::CLARIFY],
+            [PromptBuilder::ESCALATE, PromptBuilder::BOOKED, PromptBuilder::BOOK, PromptBuilder::CANCELLED, PromptBuilder::CLARIFY, PromptBuilder::PHOTOS],
             '',
             $text,
         );
 
         return trim((string) preg_replace('/ {2,}/', ' ', $text));
+    }
+
+    /**
+     * Точные URL фото примеров работ из записей знаний (не больше 6). Берём прямо
+     * из данных, минуя LLM (она искажает длинные ссылки).
+     *
+     * @param  Collection<int, KnowledgeEntry>  $entries
+     * @return list<string>
+     */
+    private function imagesFrom(Collection $entries): array
+    {
+        $urls = [];
+        foreach ($entries as $entry) {
+            foreach ($entry->images ?? [] as $img) {
+                if ($img['url'] !== '') {
+                    $urls[] = $img['url'];
+                }
+            }
+        }
+
+        return array_slice(array_values(array_unique($urls)), 0, 6);
     }
 
     /** Имя клиента, если он его называл (а не плейсхолдер «Гость»); иначе null. */

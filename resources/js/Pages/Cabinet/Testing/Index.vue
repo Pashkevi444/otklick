@@ -11,6 +11,7 @@ interface ChatMessage {
     from: 'bot' | 'client';
     text: string;
     buttons?: string[];
+    images?: string[];
     note?: string | null;
     escalate?: boolean;
     booked?: boolean;
@@ -23,6 +24,7 @@ interface BotReplyResponse {
     booked: boolean;
     cancelled: boolean;
     note: string | null;
+    images: string[];
 }
 
 const props = defineProps<{ history: HistoryItem[] }>();
@@ -63,6 +65,7 @@ const send = async (text?: string): Promise<void> => {
             from: 'bot',
             text: d.text,
             buttons: d.buttons,
+            images: d.images,
             note: d.note,
             escalate: d.escalate,
             booked: d.booked,
@@ -116,6 +119,12 @@ onMounted(scrollToEnd);
                                 : 'bg-slate-100 text-slate-800 dark:bg-white/10 dark:text-slate-100'"
                         >
                             <p class="whitespace-pre-line">{{ m.text }}</p>
+
+                            <div v-if="m.images && m.images.length" class="mt-2 flex flex-wrap gap-2">
+                                <a v-for="(img, ii) in m.images" :key="ii" :href="img" target="_blank" rel="noopener">
+                                    <img :src="img" alt="Пример работы" class="max-h-40 rounded-lg object-cover" loading="lazy" />
+                                </a>
+                            </div>
 
                             <div v-if="m.buttons && m.buttons.length" class="mt-2 flex flex-wrap gap-1.5">
                                 <button
