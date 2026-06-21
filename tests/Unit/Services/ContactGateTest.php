@@ -6,8 +6,10 @@ namespace Tests\Unit\Services;
 
 use App\Models\Client;
 use App\Models\Conversation;
+use App\Models\CrmConnection;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\ClientService;
 use App\Services\ContactGate;
@@ -28,7 +30,7 @@ final class ContactGateTest extends TestCase
         $this->client = new Client(['name' => null, 'phone' => null, 'email' => null]);
     }
 
-    private function gate(?string $lastOutbound = null): ContactGate
+    private function gate(?string $lastOutbound = null, bool $crmConnected = false): ContactGate
     {
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('markContactsGateDone')->andReturnUsing(fn (Conversation $c) => $c->contacts_gate_done = true)->byDefault();
@@ -41,7 +43,10 @@ final class ContactGateTest extends TestCase
         $clients->shouldReceive('recordPhone')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->phone = $v)->byDefault();
         $clients->shouldReceive('recordEmail')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->email = $v)->byDefault();
 
-        return new ContactGate($conversations, $messages, $clients);
+        $crm = Mockery::mock(CrmConnectionRepositoryInterface::class);
+        $crm->shouldReceive('activeForCurrentTenant')->andReturn($crmConnected ? new CrmConnection : null)->byDefault();
+
+        return new ContactGate($conversations, $messages, $clients, $crm);
     }
 
     private function conversation(array $attrs = []): Conversation
@@ -116,7 +121,7 @@ final class ContactGateTest extends TestCase
     {
         $c = $this->conversation();
 
-        $r = $this->gate(lastOutbound: 'форма')->handle($this->tenant(), $c, 'Алексей, +7 999 123-45-67, a@b.ru');
+        $r = $this->gate(lastOutbound: 'форма', crmConnected: true)->handle($this->tenant(), $c, 'Алексей, +7 999 123-45-67, a@b.ru');
 
         $this->assertNotNull($r);
         $this->assertSame('Алексей', $this->client->name);
@@ -149,7 +154,7 @@ final class ContactGateTest extends TestCase
         $this->client->phone = '+79991112233';
         $c = $this->conversation();
 
-        $r = $this->gate()->handle($this->tenant(), $c, 'привет');
+        $r = $this->gate(crmConnected: true)->handle($this->tenant(), $c, 'привет');
 
         $this->assertNotNull($r);
         $this->assertStringContainsString('С возвращением, Пётр', $r->text);

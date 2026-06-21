@@ -26,8 +26,7 @@ enum DashboardCard: string implements HasLabel
     case Notifications = 'notifications';
     case Integrations = 'integrations';
     case Team = 'team';
-    case News = 'news';
-    case Updates = 'updates';
+    case Menu = 'menu';
 
     public function label(): string
     {
@@ -45,8 +44,7 @@ enum DashboardCard: string implements HasLabel
             self::Notifications => 'Уведомления и эскалация',
             self::Integrations => 'YClients',
             self::Team => 'Команда',
-            self::News => 'Новости',
-            self::Updates => 'Обновления',
+            self::Menu => 'Главное меню бота',
         };
     }
 

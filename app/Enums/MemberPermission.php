@@ -32,6 +32,7 @@ enum MemberPermission: string implements HasLabel
     case Notifications = 'notifications';
     case Integrations = 'integrations';
     case Testing = 'testing';
+    case Menu = 'menu';
 
     // Права на действия внутри разделов.
     case ConversationsEdit = 'conversations.edit';
@@ -73,6 +74,7 @@ enum MemberPermission: string implements HasLabel
             self::Notifications => CabinetSection::Notifications,
             self::Integrations => CabinetSection::Integrations,
             self::Testing => CabinetSection::Testing,
+            self::Menu => CabinetSection::Menu,
         };
     }
 

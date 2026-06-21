@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Cabinet\AnalyticsController;
 use App\Http\Controllers\Cabinet\AnnouncementController;
 use App\Http\Controllers\Cabinet\BillingController;
+use App\Http\Controllers\Cabinet\BotMenuController;
 use App\Http\Controllers\Cabinet\BotTestController;
 use App\Http\Controllers\Cabinet\BroadcastController;
 use App\Http\Controllers\Cabinet\BusinessOverviewController;
@@ -122,6 +123,10 @@ $onDomain(config('app.business_domain'), function (): void {
 
         Route::get('/profile', [BusinessProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [BusinessProfileController::class, 'update'])->name('profile.update');
+
+        // Главное меню бота — кнопки-подсказки, которые бот показывает после приветствия.
+        Route::get('/menu', [BotMenuController::class, 'edit'])->name('menu.edit');
+        Route::put('/menu', [BotMenuController::class, 'update'])->name('menu.update');
 
         Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');

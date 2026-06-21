@@ -39,6 +39,7 @@ const allCards: Card[] = [
     { key: 'testing', icon: '🧪', label: 'Тестирование бота', text: 'Поговорите с ботом как клиент — проверьте ответы, не создавая лидов', href: '/cabinet/testing', section: 'testing' },
     { key: 'channels', icon: '📡', label: 'Каналы', text: 'Telegram и другие каналы общения с клиентами', href: '/cabinet/channels', section: 'channels' },
     { key: 'widget', icon: '🌐', label: 'Виджет на сайт', text: 'Чат с ботом для вашего сайта', href: '/cabinet/widget', section: 'widget' },
+    { key: 'menu', icon: '🧭', label: 'Главное меню бота', text: 'Кнопки-подсказки, которые бот показывает клиенту после приветствия', href: '/cabinet/menu', section: 'menu' },
     { key: 'profile', icon: '🏢', label: 'Профиль бизнеса', text: 'Часы работы, контакты, эскалация', href: '/cabinet/profile', section: 'profile' },
     { key: 'knowledge', icon: '📚', label: 'База знаний', text: 'Тексты, по которым отвечает бот', href: '/cabinet/knowledge', section: 'knowledge' },
     { key: 'notifications', icon: '🔔', label: 'Уведомления и эскалация', text: 'Лиды и записи на почту/в Telegram + ответ клиенту через бота', href: '/cabinet/notifications', section: 'notifications' },

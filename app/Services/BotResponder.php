@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\BotReply;
+use App\DTO\ReplyKeyboard;
 use App\Models\Conversation;
 use App\Models\Tenant;
+use App\Support\BotMenu;
 
 /**
  * Выбирает, кто отвечает клиенту: обычный бот по базе знаний (ReplyComposer)
@@ -52,6 +54,19 @@ class BotResponder
             return $this->booking->advance($tenant, $conversation, $text);
         }
 
+        // Запись предлагаем только при праве на CRM-интеграцию (YClients) И активном
+        // подключении. Нет права — бот не зовёт к записи (она уходит на человека).
+        $bookingEnabled = $tenant->features()->crm && $this->booking->isAvailable();
+
+        // Главное меню бота (кнопки бизнеса + авто-«Записаться» при подключённой
+        // записи). Пустое → бот не показывает ни меню, ни кнопку возврата.
+        $mainMenu = BotMenu::effective($tenant, $bookingEnabled);
+
+        // Возврат в главное меню по кнопке «🏠 Главное меню» (когда меню непустое).
+        if ($mainMenu !== [] && BotMenu::isReturn($text)) {
+            return new BotReply('Главное меню — выберите раздел:', escalate: false, keyboard: ReplyKeyboard::grid($mainMenu, 2));
+        }
+
         // Сценарии-воронки (no-code логика владельца): продолжаем активную воронку
         // или запускаем по триггеру — ДО LLM. Не сработали → отвечает ИИ по базе
         // знаний (свободный текст не по кнопкам выводит из воронки).
@@ -61,28 +76,33 @@ class BotResponder
             return $flow;
         }
 
-        // Явный выбор «Новая запись» из меню записей — заводим свежую запись,
-        // минуя меню и LLM (иначе [[BOOK]] снова показал бы меню — зацикливание).
+        // «Новая запись» из меню записей — заводим свежую запись, минуя меню и LLM
+        // (иначе [[BOOK]] снова показал бы меню — зацикливание). Это внутренняя кнопка
+        // мастера записи, а не редактируемая бизнесом подсказка.
         if (mb_strtolower(trim($text)) === 'новая запись') {
             return $this->booking->start($tenant, $conversation)
                 ?? new BotReply($text, escalate: true);
         }
 
-        // Запись предлагаем только при праве на CRM-интеграцию (YClients) И активном
-        // подключении. Нет права — бот не зовёт к записи (она уходит на человека).
-        $bookingEnabled = $tenant->features()->crm && $this->booking->isAvailable();
         $reply = $this->composer->compose($tenant, $conversation, $bookingEnabled);
 
         if ($reply->startBooking) {
             // У клиента уже есть предстоящая запись → предлагаем выбор (перенести/
             // отменить/новая), а не молча заводим вторую.
-            $menu = $this->booking->bookingChoiceMenu($conversation);
-            if ($menu !== null) {
-                return $menu;
+            $choice = $this->booking->bookingChoiceMenu($conversation);
+            if ($choice !== null) {
+                return $choice;
             }
 
             return $this->booking->start($tenant, $conversation)
                 ?? new BotReply($reply->text, escalate: true);
+        }
+
+        // К обычному ответу ИИ добавляем кнопку возврата в меню — чтобы клиент всегда
+        // мог вернуться в главное меню (когда оно задано). Не трогаем эскалации и
+        // ответы со своей клавиатурой.
+        if ($mainMenu !== [] && $reply->keyboard === null && ! $reply->escalate) {
+            return $reply->withKeyboard(ReplyKeyboard::grid([BotMenu::RETURN_BUTTON], 1));
         }
 
         return $reply;

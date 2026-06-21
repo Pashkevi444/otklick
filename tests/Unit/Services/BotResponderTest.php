@@ -133,6 +133,7 @@ final class BotResponderTest extends TestCase
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull();
+        $booking->shouldReceive('isAvailable')->andReturnTrue(); // для расчёта главного меню
         $booking->shouldReceive('start')->once()->andReturn(new BotReply('Какую услугу?', escalate: false));
         $booking->shouldNotReceive('bookingChoiceMenu');
 

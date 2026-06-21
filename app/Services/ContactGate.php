@@ -9,7 +9,9 @@ use App\DTO\ReplyKeyboard;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Support\BotMenu;
 use App\Support\EmailExtractor;
 use App\Support\NameValidator;
 use App\Support\PhoneExtractor;
@@ -33,6 +35,7 @@ class ContactGate
         private readonly ConversationRepositoryInterface $conversations,
         private readonly MessageRepositoryInterface $messages,
         private readonly ClientService $clients,
+        private readonly CrmConnectionRepositoryInterface $crm,
     ) {}
 
     /**
@@ -128,19 +131,18 @@ class ContactGate
         return new BotReply("Здравствуйте! 👋 Рады видеть вас в «{$tenant->name}». Чтобы записать вас и помочь, {$ask}", escalate: false);
     }
 
-    /** Приветствие + кликабельные варианты действий (на основе услуг/CRM/базы). */
+    /**
+     * Приветствие + главное меню бота (кнопки бизнеса + авто-«Записаться» при
+     * подключённой записи). Меню пустое → приветствие без кнопок. Нажатие
+     * отправляет подпись → обычный разбор (ReplyComposer/BookingFlow/воронки).
+     */
     private function welcome(Tenant $tenant, string $text): BotReply
     {
-        return new BotReply($text, escalate: false, keyboard: $this->suggestions());
-    }
+        $menu = BotMenu::effective($tenant, $this->crm->activeForCurrentTenant() !== null);
 
-    /**
-     * Варианты-кнопки: запись (если есть автозапись в CRM или ручная), цены и
-     * адрес. Нажатие отправляет подпись → обычный разбор (ReplyComposer/BookingFlow).
-     */
-    private function suggestions(): ReplyKeyboard
-    {
-        return ReplyKeyboard::grid(['Записаться', 'Цены и услуги', 'Адрес и часы'], 2);
+        return $menu === []
+            ? new BotReply($text, escalate: false)
+            : new BotReply($text, escalate: false, keyboard: ReplyKeyboard::grid($menu, 2));
     }
 
     private function ask(string $text): BotReply

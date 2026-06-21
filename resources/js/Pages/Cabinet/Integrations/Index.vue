@@ -102,6 +102,10 @@ const disconnect = (id: string): void => {
 
                 <!-- Подключено -->
                 <div v-if="integration.connection" class="space-y-4">
+                    <div class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                        <b>Важно:</b> после подключения YClients кнопка <b>«Записаться»</b> автоматически добавляется в
+                        <a href="/cabinet/menu" class="underline">Главное меню бота</a>. <b>Проверьте и поправьте главное меню</b> — если у вас уже была своя кнопка «Записаться», уберите дубль.
+                    </div>
                     <dl class="text-sm grid grid-cols-2 gap-2">
                         <template v-for="(value, label) in integration.connection.summary" :key="label">
                             <dt class="text-slate-500">{{ label }}</dt>

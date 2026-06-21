@@ -81,6 +81,23 @@ final readonly class TenantService
     }
 
     /**
+     * Главное меню бота — кнопки-подсказки бизнеса (settings['bot_menu']).
+     * Пустые подписи отбрасываются; авто-«Записаться» добавляет бот при CRM.
+     *
+     * @param  list<string>  $buttons
+     */
+    public function updateBotMenu(Tenant $tenant, array $buttons): Tenant
+    {
+        $settings = $tenant->settings;
+        $settings['bot_menu'] = array_values(array_filter(
+            array_map(static fn (string $b): string => trim($b), $buttons),
+            static fn (string $b): bool => $b !== '',
+        ));
+
+        return $this->tenants->update($tenant, ['settings' => $settings]);
+    }
+
+    /**
      * Индивидуальные оверрайды прав/лимитов бизнеса (поверх тарифа). Пустой
      * массив очищает оверрайды — бизнес возвращается к возможностям тарифа.
      *

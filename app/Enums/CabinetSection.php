@@ -26,6 +26,7 @@ enum CabinetSection: string implements HasLabel
     case Notifications = 'notifications';
     case Integrations = 'integrations';
     case Testing = 'testing';
+    case Menu = 'menu';
 
     public function label(): string
     {
@@ -42,6 +43,7 @@ enum CabinetSection: string implements HasLabel
             self::Notifications => 'Уведомления и эскалация',
             self::Integrations => 'YClients',
             self::Testing => 'Тестирование бота',
+            self::Menu => 'Главное меню бота',
         };
     }
 
