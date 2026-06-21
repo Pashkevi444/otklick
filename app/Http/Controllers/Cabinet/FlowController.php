@@ -6,11 +6,16 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\Http\Controllers\Controller;
 use App\Models\Flow;
+use App\Models\KnowledgeEntry;
+use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Services\FlowService;
 use App\Services\FlowSimulator;
+use App\Support\KnowledgeImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,6 +28,8 @@ final class FlowController extends Controller
     public function __construct(
         private readonly FlowService $service,
         private readonly FlowSimulator $simulator,
+        private readonly CrmConnectionRepositoryInterface $crm,
+        private readonly KnowledgeEntryRepositoryInterface $knowledge,
     ) {}
 
     /** Сухой прогон воронки для теста в кабинете (без побочных эффектов). */
@@ -40,18 +47,45 @@ final class FlowController extends Controller
         return response()->json($this->simulator->step((array) $data['definition'], $state, $data['text'] ?? null));
     }
 
+    /**
+     * Загрузка одной картинки для узла сценария. Возвращает {path, url} — фронт
+     * кладёт это в `images` узла (тот же формат, что в базе знаний). Сохранение
+     * самого сценария идёт обычным PUT/POST с definition (URL уже внутри).
+     */
+    public function image(Request $request, KnowledgeImageStorage $storage): JsonResponse
+    {
+        $request->validate(['image' => ['required', 'image', 'max:5120']]);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('image');
+        $stored = $storage->store((string) $request->user()->tenant_id, [$file], 'flows');
+
+        return response()->json($stored[0]);
+    }
+
     public function index(): Response
     {
         $stats = $this->service->abStats();
 
+        $yclientsActive = $this->crm->activeForCurrentTenant() !== null;
+
         return Inertia::render('Cabinet/Scenarios/Index', [
             'flows' => $this->service->forCurrentTenant()->map(fn (Flow $f): array => $this->present($f, $stats[$f->id] ?? []))->all(),
-            'actionOptions' => [
+            // Действие «Начать запись в YClients» показываем только если CRM
+            // подключена (иначе кнопка запустила бы мастер, которого нет).
+            'yclientsActive' => $yclientsActive,
+            // Элементы базы знаний для действия «Показать элемент базы знаний».
+            'knowledgeEntries' => $this->knowledge->forCurrentTenant()
+                ->map(fn (KnowledgeEntry $e): array => ['id' => $e->id, 'title' => $e->title])
+                ->values()
+                ->all(),
+            'actionOptions' => array_values(array_filter([
                 ['value' => 'none', 'label' => 'Нет (показать кнопки/сообщение)'],
-                ['value' => 'start_booking', 'label' => 'Начать запись в YClients'],
+                $yclientsActive ? ['value' => 'start_booking', 'label' => 'Начать запись в YClients'] : null,
+                ['value' => 'show_knowledge', 'label' => 'Показать элемент базы знаний'],
                 ['value' => 'escalate', 'label' => 'Позвать администратора'],
                 ['value' => 'end', 'label' => 'Завершить сценарий'],
-            ],
+            ])),
             'nodeTypeOptions' => [
                 ['value' => 'message', 'label' => 'Сообщение (текст + кнопки)'],
                 ['value' => 'input', 'label' => 'Вопрос (сохранить ответ в переменную)'],

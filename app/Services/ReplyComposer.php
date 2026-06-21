@@ -18,6 +18,7 @@ use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Support\ImageUrls;
+use App\Support\KnowledgeLinks;
 use Illuminate\Support\Collection;
 
 /**
@@ -74,6 +75,12 @@ class ReplyComposer
         // Реальные (точные) URL фото из найденных записей — их прикрепим, если бот
         // поставит метку [[PHOTOS]]. URL в текст НЕ отдаём боту: LLM их искажает.
         $availableImages = $this->imagesFrom($published);
+
+        // Ссылки сработавших элементов БЗ дописываем в ответ ВСЕГДА — но только
+        // когда RAG отобрал релевантные записи ($retrieved !== null). В фолбэке
+        // (вся база в промпте) этого не делаем, иначе к каждому ответу прилипли бы
+        // ссылки со всей базы. URL берём из данных, минуя LLM.
+        $availableLinks = $retrieved !== null ? $this->linksFrom($published) : [];
 
         // Если клиент уже известен (узнали по чату/телефону/нику и перенесли
         // контакты) — промпт скажет боту звать по имени и не переспрашивать.
@@ -162,6 +169,9 @@ class ReplyComposer
             ? $text
             : ($text !== '' ? $text : 'Вот примеры наших работ 👇');
 
+        // Ссылки сработавших записей — отдельным блоком в конце ответа.
+        $finalText = KnowledgeLinks::append($finalText, $availableLinks);
+
         return new BotReply($finalText, escalate: false, images: $images);
     }
 
@@ -198,6 +208,24 @@ class ReplyComposer
         }
 
         return array_slice(array_values(array_unique($urls)), 0, 6);
+    }
+
+    /**
+     * Ссылки из найденных записей знаний ({label, url}) — дописываются в ответ.
+     *
+     * @param  Collection<int, KnowledgeEntry>  $entries
+     * @return list<array{label?: string, url?: string}>
+     */
+    private function linksFrom(Collection $entries): array
+    {
+        $links = [];
+        foreach ($entries as $entry) {
+            foreach ($entry->links ?? [] as $link) {
+                $links[] = $link;
+            }
+        }
+
+        return $links;
     }
 
     /** Имя клиента, если он его называл (а не плейсхолдер «Гость»); иначе null. */

@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Cabinet;
 
 use App\Models\Flow;
+use App\Models\KnowledgeEntry;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -36,6 +40,59 @@ final class ScenariosTest extends TestCase
                 ->component('Cabinet/Scenarios/Index')
                 ->has('flows')
                 ->has('actionOptions'));
+    }
+
+    public function test_index_gates_booking_action_and_exposes_knowledge(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+        KnowledgeEntry::factory()->create(['tenant_id' => $tenant->id, 'title' => 'Барбер Никита']);
+
+        // Без подключённого YClients действие start_booking не предлагается,
+        // а элементы базы знаний доступны для действия «показать элемент БЗ».
+        $this->actingAs($owner)
+            ->get('/cabinet/scenarios')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('yclientsActive', false)
+                ->where('actionOptions', fn (Collection $opts): bool => $opts->doesntContain(fn (array $o): bool => $o['value'] === 'start_booking')
+                    && $opts->contains(fn (array $o): bool => $o['value'] === 'show_knowledge'))
+                ->where('knowledgeEntries', fn (Collection $k): bool => $k->contains(fn (array $e): bool => $e['title'] === 'Барбер Никита')));
+    }
+
+    public function test_store_preserves_show_knowledge_node_with_images(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+        $entry = KnowledgeEntry::factory()->create(['tenant_id' => $tenant->id, 'title' => 'Никита']);
+
+        $this->actingAs($owner)->post('/cabinet/scenarios', [
+            'name' => 'Барберы',
+            'is_active' => true,
+            'triggers' => ['барберы'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => [
+                    'type' => 'message', 'text' => 'Вот Никита', 'action' => 'show_knowledge',
+                    'knowledge_id' => $entry->id,
+                    'images' => [['path' => 'flows/x.jpg', 'url' => 'https://otcl1ck.ru/storage/flows/x.jpg']],
+                    'options' => [],
+                ],
+            ]],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $node = Flow::query()->where('tenant_id', $tenant->id)->firstOrFail()->definition['nodes']['n1'];
+        $this->assertSame('show_knowledge', $node['action']);
+        $this->assertSame($entry->id, $node['knowledge_id']);
+        $this->assertSame('https://otcl1ck.ru/storage/flows/x.jpg', $node['images'][0]['url']);
+    }
+
+    public function test_image_upload_returns_path_and_url(): void
+    {
+        Storage::fake('public');
+        [, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)
+            ->post('/cabinet/scenarios/image', ['image' => UploadedFile::fake()->image('photo.jpg')])
+            ->assertOk()
+            ->assertJsonStructure(['path', 'url']);
     }
 
     public function test_store_creates_flow_for_tenant(): void

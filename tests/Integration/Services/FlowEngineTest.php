@@ -9,6 +9,7 @@ use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Flow;
 use App\Models\FlowAbAssignment;
+use App\Models\KnowledgeEntry;
 use App\Models\Tenant;
 use App\Services\FlowEngine;
 use App\Services\FlowService;
@@ -309,6 +310,71 @@ final class FlowEngineTest extends TestCase
         // Не по кнопкам → выходим из воронки (null = дальше отвечает ИИ).
         $this->assertNull($reply);
         $this->assertNull(Conversation::withoutGlobalScopes()->findOrFail($conversation->id)->flow_state);
+    }
+
+    public function test_show_knowledge_action_sends_entry_with_links_and_images_and_ends(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        $entry = KnowledgeEntry::factory()->create([
+            'tenant_id' => $tenant->id,
+            'title' => 'Барбер Никита',
+            'content' => 'Никита — мастер фейдов, стаж 5 лет.',
+            'is_published' => true,
+            'links' => [['label' => 'Instagram', 'url' => 'https://example.com/nikita']],
+            'images' => [['path' => 'flows/x.jpg', 'url' => 'https://otcl1ck.ru/storage/flows/x.jpg']],
+        ]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Барберы',
+            'is_active' => true,
+            'triggers' => ['барберы'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'text' => 'Кто интересует?', 'action' => 'none', 'options' => [
+                    ['label' => 'Никита', 'next' => 'n2'],
+                ]],
+                // Кнопка ведёт на узел-действие: показать элемент базы знаний и завершить.
+                'n2' => ['type' => 'message', 'text' => 'Рассказываю:', 'action' => 'show_knowledge', 'knowledge_id' => $entry->id, 'options' => []],
+            ]],
+        ]));
+
+        $conversation->flow_state = ['flow_id' => Flow::withoutGlobalScopes()->where('tenant_id', $tenant->id)->firstOrFail()->id, 'node_id' => 'n1'];
+        $conversation->save();
+
+        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Никита'));
+
+        $this->assertNotNull($reply);
+        $this->assertFalse($reply->escalate);
+        $this->assertStringContainsString('мастер фейдов', $reply->text);
+        $this->assertStringContainsString('Рассказываю:', $reply->text);
+        $this->assertStringContainsString('https://example.com/nikita', $reply->text);
+        $this->assertSame(['https://otcl1ck.ru/storage/flows/x.jpg'], $reply->images);
+        // Сценарий завершён.
+        $this->assertNull(Conversation::withoutGlobalScopes()->findOrFail($conversation->id)->flow_state);
+    }
+
+    public function test_node_images_are_attached_to_reply(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Афиша',
+            'is_active' => true,
+            'triggers' => ['афиша'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'text' => 'Вот наша афиша', 'action' => 'end', 'options' => [],
+                    'images' => [['path' => 'flows/a.jpg', 'url' => 'https://otcl1ck.ru/storage/flows/a.jpg']]],
+            ]],
+        ]));
+
+        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'афиша'));
+
+        $this->assertNotNull($reply);
+        $this->assertSame(['https://otcl1ck.ru/storage/flows/a.jpg'], $reply->images);
     }
 
     public function test_no_trigger_returns_null(): void

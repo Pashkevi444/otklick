@@ -224,6 +224,42 @@ final class ReplyComposerTest extends TestCase
         $this->assertStringContainsString('примеры', $reply->text);
     }
 
+    public function test_links_of_retrieved_entry_are_appended_to_answer(): void
+    {
+        // Если RAG отобрал релевантную запись со ссылкой — ссылка ВСЕГДА попадает
+        // в ответ отдельным блоком (URL берём из данных, не из текста LLM).
+        $entry = new KnowledgeEntry([
+            'title' => 'Прайс',
+            'content' => 'Стрижка 1500 ₽.',
+            'is_published' => true,
+            'links' => [['label' => 'Прайс-лист', 'url' => 'https://otcl1ck.ru/price.pdf']],
+            'images' => [],
+        ]);
+        $entry->id = 'k1';
+
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Мужская стрижка стоит 1500 ₽.');
+
+        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$entry]));
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['k1'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+
+        // RAG включаем оверрайдом, иначе ретривер не вызывается (фолбэк на всю базу).
+        $tenant = new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]);
+        $reply = $composer->compose($tenant, new Conversation);
+
+        $this->assertStringContainsString('Мужская стрижка стоит 1500', $reply->text);
+        $this->assertStringContainsString('Прайс-лист', $reply->text);
+        $this->assertStringContainsString('https://otcl1ck.ru/price.pdf', $reply->text);
+    }
+
     public function test_no_photos_marker_means_no_images(): void
     {
         // Без метки [[PHOTOS]] фото не прикрепляются, даже если у записи они есть.

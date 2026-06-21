@@ -155,6 +155,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::middleware('plan:flows')->group(function (): void {
             Route::get('/scenarios', [FlowController::class, 'index'])->name('scenarios.index');
             Route::post('/scenarios/test', [FlowController::class, 'test'])->name('scenarios.test');
+            Route::post('/scenarios/image', [FlowController::class, 'image'])->name('scenarios.image');
             Route::post('/scenarios', [FlowController::class, 'store'])->name('scenarios.store');
             Route::put('/scenarios/{flow}', [FlowController::class, 'update'])->name('scenarios.update');
             Route::post('/scenarios/{flow}/toggle', [FlowController::class, 'toggle'])->name('scenarios.toggle');

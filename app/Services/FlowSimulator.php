@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\KnowledgeEntry;
+use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Support\FlowExpr;
+use App\Support\KnowledgeLinks;
 
 /**
  * Сухой прогон сценария-воронки для теста в кабинете: шагает по графу как боевой
@@ -14,10 +17,14 @@ use App\Support\FlowExpr;
  */
 final class FlowSimulator
 {
+    public function __construct(
+        private readonly KnowledgeEntryRepositoryInterface $knowledge,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $definition  {start, nodes}
      * @param  array{node: ?string, vars?: array<string,mixed>}|null  $state  null — начать с старта
-     * @return array{reply: ?string, buttons: list<string>, vars: array<string,mixed>, node: ?string, done: bool, note: ?string}
+     * @return array{reply: ?string, buttons: list<string>, vars: array<string,mixed>, node: ?string, done: bool, note: ?string, images: list<string>}
      */
     public function step(array $definition, ?array $state, ?string $text): array
     {
@@ -54,7 +61,7 @@ final class FlowSimulator
     /**
      * @param  array<string, mixed>  $nodes
      * @param  array<string, mixed>  $vars
-     * @return array{reply: ?string, buttons: list<string>, vars: array<string,mixed>, node: ?string, done: bool, note: ?string}
+     * @return array{reply: ?string, buttons: list<string>, vars: array<string,mixed>, node: ?string, done: bool, note: ?string, images: list<string>}
      */
     private function enter(array $nodes, string $nodeId, array $vars, int $depth): array
     {
@@ -87,6 +94,7 @@ final class FlowSimulator
 
         $action = (string) ($node['action'] ?? 'none');
         $textOut = FlowExpr::interpolate(trim((string) ($node['text'] ?? '')), $ctx);
+        $images = $this->nodeImages($node);
 
         if ($action === 'start_booking') {
             return $this->stop($vars, 'Действие: начнётся запись в YClients.', $textOut !== '' ? $textOut : null);
@@ -94,27 +102,87 @@ final class FlowSimulator
         if ($action === 'escalate') {
             return $this->stop($vars, 'Действие: передать администратору.', $textOut !== '' ? $textOut : null);
         }
+        if ($action === 'show_knowledge') {
+            return $this->knowledgeStep($node, $textOut, $images, $vars);
+        }
 
         if ($type === 'input') {
-            return ['reply' => $textOut, 'buttons' => [], 'vars' => $vars, 'node' => $nodeId, 'done' => false, 'note' => 'Жду ответ → переменная «'.($node['variable'] ?? '?').'»'];
+            return ['reply' => $textOut, 'buttons' => [], 'vars' => $vars, 'node' => $nodeId, 'done' => false, 'note' => 'Жду ответ → переменная «'.($node['variable'] ?? '?').'»', 'images' => $images];
         }
 
         $buttons = array_map(static fn (array $o): string => (string) $o['label'], $this->options($node));
 
         if ($buttons === [] || $action === 'end') {
-            return ['reply' => $textOut, 'buttons' => [], 'vars' => $vars, 'node' => null, 'done' => true, 'note' => null];
+            return ['reply' => $textOut, 'buttons' => [], 'vars' => $vars, 'node' => null, 'done' => true, 'note' => null, 'images' => $images];
         }
 
-        return ['reply' => $textOut, 'buttons' => $buttons, 'vars' => $vars, 'node' => $nodeId, 'done' => false, 'note' => null];
+        return ['reply' => $textOut, 'buttons' => $buttons, 'vars' => $vars, 'node' => $nodeId, 'done' => false, 'note' => null, 'images' => $images];
+    }
+
+    /**
+     * Шаг действия «показать элемент базы знаний» в тест-прогоне: подставляем
+     * содержимое выбранного элемента + ссылки + фото и завершаем сценарий.
+     *
+     * @param  array<string, mixed>  $node
+     * @param  list<string>  $nodeImages
+     * @param  array<string, mixed>  $vars
+     * @return array{reply: ?string, buttons: list<string>, vars: array<string,mixed>, node: ?string, done: bool, note: ?string, images: list<string>}
+     */
+    private function knowledgeStep(array $node, string $introText, array $nodeImages, array $vars): array
+    {
+        $id = trim((string) ($node['knowledge_id'] ?? ''));
+        $entry = $id !== '' ? $this->knowledge->find($id) : null;
+
+        if ($entry === null) {
+            return $this->stop($vars, 'Действие: показать элемент базы знаний (элемент не выбран).', $introText !== '' ? $introText : null);
+        }
+
+        $body = trim($introText.($introText !== '' ? "\n\n" : '').(string) $entry->content);
+        $body = KnowledgeLinks::append($body, $entry->links ?? []);
+        $images = array_values(array_unique(array_merge($nodeImages, $this->entryImages($entry))));
+
+        return ['reply' => $body, 'buttons' => [], 'vars' => $vars, 'node' => null, 'done' => true, 'note' => 'Действие: показан элемент БЗ «'.$entry->title.'».', 'images' => $images];
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return list<string>
+     */
+    private function nodeImages(array $node): array
+    {
+        $urls = [];
+        foreach ((array) ($node['images'] ?? []) as $img) {
+            $url = is_array($img) ? trim((string) ($img['url'] ?? '')) : '';
+            if ($url !== '') {
+                $urls[] = $url;
+            }
+        }
+
+        return array_values(array_unique($urls));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function entryImages(KnowledgeEntry $entry): array
+    {
+        $urls = [];
+        foreach ($entry->images ?? [] as $img) {
+            if ($img['url'] !== '') {
+                $urls[] = $img['url'];
+            }
+        }
+
+        return $urls;
     }
 
     /**
      * @param  array<string, mixed>  $vars
-     * @return array{reply: ?string, buttons: list<string>, vars: array<string,mixed>, node: ?string, done: bool, note: ?string}
+     * @return array{reply: ?string, buttons: list<string>, vars: array<string,mixed>, node: ?string, done: bool, note: ?string, images: list<string>}
      */
     private function stop(array $vars, string $note, ?string $reply = null): array
     {
-        return ['reply' => $reply, 'buttons' => [], 'vars' => $vars, 'node' => null, 'done' => true, 'note' => $note];
+        return ['reply' => $reply, 'buttons' => [], 'vars' => $vars, 'node' => null, 'done' => true, 'note' => $note, 'images' => []];
     }
 
     /**

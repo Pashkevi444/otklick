@@ -9,11 +9,14 @@ use App\DTO\ReplyKeyboard;
 use App\Llm\Contracts\Embedder;
 use App\Models\Conversation;
 use App\Models\Flow;
+use App\Models\KnowledgeEntry;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
+use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Support\FlowExpr;
+use App\Support\KnowledgeLinks;
 use App\Support\RussianStem;
 use App\Support\Vectors;
 use Throwable;
@@ -49,6 +52,7 @@ final readonly class FlowEngine
         private BookingFlow $booking,
         private Embedder $embedder,
         private FlowAbRepositoryInterface $ab,
+        private KnowledgeEntryRepositoryInterface $knowledge,
     ) {}
 
     public function handle(Tenant $tenant, Conversation $conversation, string $text): ?BotReply
@@ -311,11 +315,21 @@ final readonly class FlowEngine
             return new BotReply($text !== '' ? $text : 'Передаю вопрос администратору.', escalate: true);
         }
 
+        // Показать элемент базы знаний: бот отдаёт его текст + фото + ссылки и
+        // завершает сценарий (кнопка ведёт на такой узел вместо перехода далее).
+        if ($action === 'show_knowledge') {
+            $this->conversations->setFlowState($conversation, null);
+
+            return $this->knowledgeReply($node, $text);
+        }
+
+        $images = $this->nodeImages($node);
+
         // Узел-вопрос: показываем приглашение и ждём свободный ответ клиента.
         if (($node['type'] ?? 'message') === 'input') {
             $this->conversations->setFlowState($conversation, ['flow_id' => $flow->id, 'node_id' => $nodeId, 'vars' => $vars]);
 
-            return new BotReply($text, escalate: false);
+            return new BotReply($text, escalate: false, images: $images);
         }
 
         $options = $this->options($node);
@@ -324,16 +338,77 @@ final readonly class FlowEngine
         if ($options === [] || $action === 'end') {
             $this->conversations->setFlowState($conversation, null);
 
-            return new BotReply($text, escalate: false);
+            return new BotReply($text, escalate: false, images: $images);
         }
 
         // Сообщение с кнопками — остаёмся в узле, ждём выбор клиента.
         $this->conversations->setFlowState($conversation, ['flow_id' => $flow->id, 'node_id' => $nodeId, 'vars' => $vars]);
 
-        return new BotReply($text, escalate: false, keyboard: ReplyKeyboard::grid(
+        return new BotReply($text, escalate: false, images: $images, keyboard: ReplyKeyboard::grid(
             array_map(static fn (array $o): string => (string) $o['label'], $options),
             2,
         ));
+    }
+
+    /**
+     * Ответ узла-действия «показать элемент базы знаний»: текст узла (если задан) +
+     * содержимое выбранного элемента + его ссылки и фото. Элемент не выбран/не
+     * найден/снят с публикации → отдаём текст узла или мягкий фолбэк.
+     *
+     * @param  array<string, mixed>  $node
+     */
+    private function knowledgeReply(array $node, string $introText): BotReply
+    {
+        $id = trim((string) ($node['knowledge_id'] ?? ''));
+        $entry = $id !== '' ? $this->knowledge->find($id) : null;
+
+        if ($entry === null || ! $entry->is_published) {
+            return new BotReply(
+                $introText !== '' ? $introText : 'Информация временно недоступна, передам ваш вопрос администратору.',
+                escalate: $introText === '',
+                images: $this->nodeImages($node),
+            );
+        }
+
+        $body = trim($introText.($introText !== '' ? "\n\n" : '').(string) $entry->content);
+        $body = KnowledgeLinks::append($body, $entry->links ?? []);
+        $images = array_values(array_unique(array_merge($this->nodeImages($node), $this->entryImages($entry))));
+
+        return new BotReply($body, escalate: false, images: $images);
+    }
+
+    /**
+     * URL картинок, прикреплённых к узлу сценария (формат БЗ: [{path, url}]).
+     *
+     * @param  array<string, mixed>  $node
+     * @return list<string>
+     */
+    private function nodeImages(array $node): array
+    {
+        $urls = [];
+        foreach ((array) ($node['images'] ?? []) as $img) {
+            $url = is_array($img) ? trim((string) ($img['url'] ?? '')) : '';
+            if ($url !== '') {
+                $urls[] = $url;
+            }
+        }
+
+        return array_values(array_unique($urls));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function entryImages(KnowledgeEntry $entry): array
+    {
+        $urls = [];
+        foreach ($entry->images ?? [] as $img) {
+            if ($img['url'] !== '') {
+                $urls[] = $img['url'];
+            }
+        }
+
+        return $urls;
     }
 
     /**

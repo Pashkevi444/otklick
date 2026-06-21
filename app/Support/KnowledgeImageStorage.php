@@ -17,14 +17,15 @@ final class KnowledgeImageStorage
 
     /**
      * @param  list<UploadedFile>  $files
+     * @param  string  $dir  поддиректория диска (knowledge — БЗ, flows — узлы сценариев)
      * @return list<array{path: string, url: string}>
      */
-    public function store(string $tenantId, array $files): array
+    public function store(string $tenantId, array $files, string $dir = 'knowledge'): array
     {
         $stored = [];
 
         foreach ($files as $file) {
-            $path = $file->store("knowledge/{$tenantId}", self::DISK);
+            $path = $file->store("{$dir}/{$tenantId}", self::DISK);
             $stored[] = [
                 'path' => $path,
                 'url' => Storage::disk(self::DISK)->url($path),

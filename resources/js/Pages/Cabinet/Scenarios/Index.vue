@@ -15,6 +15,10 @@ interface Variant {
     label: string;
     next: string;
 }
+interface NodeImage {
+    path: string;
+    url: string;
+}
 interface FlowNodeDef {
     type?: string;
     text?: string;
@@ -26,6 +30,8 @@ interface FlowNodeDef {
     value?: string;
     else?: string;
     variants?: Variant[];
+    images?: NodeImage[];
+    knowledge_id?: string;
     position?: { x: number; y: number };
 }
 interface AbStat {
@@ -55,6 +61,8 @@ interface NodeEdit {
     value: string;
     else: string;
     variants: Variant[];
+    images: NodeImage[];
+    knowledgeId: string;
     x: number;
     y: number;
 }
@@ -63,7 +71,18 @@ interface Option {
     label: string;
 }
 
-const props = defineProps<{ flows: FlowRow[]; actionOptions: Option[]; nodeTypeOptions: Option[]; operatorOptions: Option[] }>();
+interface KnowledgeOption {
+    id: string;
+    title: string;
+}
+const props = defineProps<{
+    flows: FlowRow[];
+    actionOptions: Option[];
+    nodeTypeOptions: Option[];
+    operatorOptions: Option[];
+    yclientsActive: boolean;
+    knowledgeEntries: KnowledgeOption[];
+}>();
 
 const editing = ref<string | null | 'new'>(null);
 const form = useForm<{ id: string | null; name: string; is_active: boolean; triggers: string; start: string; nodes: NodeEdit[] }>({
@@ -107,6 +126,7 @@ const issues = computed<string[]>(() => {
         if (n.type === 'input' && !n.next) out.push(`Узел ${n.id} (вопрос): не задан переход «дальше».`);
         if (n.type === 'condition' && (!n.next || !n.else)) out.push(`Узел ${n.id} (условие): задай обе ветки — ДА и НЕТ.`);
         if (n.type === 'split' && n.variants.filter((v) => v.next).length < 2) out.push(`Узел ${n.id} (A/B): нужно минимум 2 варианта.`);
+        if (n.type === 'message' && n.action === 'show_knowledge' && !n.knowledgeId) out.push(`Узел ${n.id}: не выбран элемент базы знаний для показа.`);
     }
 
     if (ids.has(form.start)) {
@@ -133,7 +153,7 @@ const issues = computed<string[]>(() => {
 
 const blankNode = (id: string, x = 0, y = 0): NodeEdit => ({
     id, type: 'message', text: '', action: 'none', options: [],
-    variable: '', next: '', operator: 'eq', value: '', else: '', variants: [], x, y,
+    variable: '', next: '', operator: 'eq', value: '', else: '', variants: [], images: [], knowledgeId: '', x, y,
 });
 
 const newFlow = (): void => {
@@ -159,6 +179,8 @@ const editFlow = (f: FlowRow): void => {
         value: n.value ?? '',
         else: n.else ?? '',
         variants: (n.variants ?? []).map((v) => ({ label: v.label, next: v.next })),
+        images: (n.images ?? []).map((im) => ({ path: im.path, url: im.url })),
+        knowledgeId: n.knowledge_id ?? '',
         x: n.position?.x ?? 0,
         y: n.position?.y ?? 0,
     }));
@@ -231,11 +253,39 @@ const removeVariant = (node: NodeEdit, i: number): void => {
     node.variants.splice(i, 1);
 };
 
+// Загрузка фото узла: грузим сразу на сервер (как в базе знаний) и кладём {path,url}
+// в узел — сам сценарий сохранится обычным PUT/POST, URL уже внутри definition.
+const uploadingImage = ref<string | null>(null);
+const uploadNodeImage = async (node: NodeEdit, event: Event): Promise<void> => {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    uploadingImage.value = node.id;
+    try {
+        for (const file of files) {
+            const body = new FormData();
+            body.append('image', file);
+            const res = await fetch('/cabinet/scenarios/image', {
+                method: 'POST',
+                headers: { Accept: 'application/json', 'X-XSRF-TOKEN': xsrf() },
+                credentials: 'same-origin',
+                body,
+            });
+            if (res.ok) node.images.push((await res.json()) as NodeImage);
+        }
+    } finally {
+        uploadingImage.value = null;
+        input.value = '';
+    }
+};
+const removeNodeImage = (node: NodeEdit, i: number): void => {
+    node.images.splice(i, 1);
+};
+
 const buildDefinition = (): { start: string; nodes: Record<string, FlowNodeDef> } => {
     const nodes: Record<string, FlowNodeDef> = {};
     for (const n of form.nodes) {
         if (n.type === 'input') {
-            nodes[n.id] = { type: 'input', text: n.text, variable: n.variable.trim(), next: n.next };
+            nodes[n.id] = { type: 'input', text: n.text, variable: n.variable.trim(), next: n.next, images: n.images };
         } else if (n.type === 'condition') {
             nodes[n.id] = { type: 'condition', variable: n.variable.trim(), operator: n.operator, value: n.value, next: n.next, else: n.else };
         } else if (n.type === 'split') {
@@ -246,6 +296,9 @@ const buildDefinition = (): { start: string; nodes: Record<string, FlowNodeDef> 
                 text: n.text,
                 action: n.action,
                 options: n.action === 'none' ? n.options.filter((o) => o.label.trim() !== '' && o.next) : [],
+                images: n.images,
+                // Для действия «показать элемент базы знаний» — id выбранного элемента.
+                ...(n.action === 'show_knowledge' ? { knowledge_id: n.knowledgeId } : {}),
             };
         }
         nodes[n.id].position = { x: n.x, y: n.y }; // позиция на холсте (бэкенд игнорирует)
@@ -273,7 +326,23 @@ const destroy = (f: FlowRow): void => {
     if (confirm(`Удалить сценарий «${f.name}»?`)) router.delete(`/cabinet/scenarios/${f.id}`, { preserveScroll: true });
 };
 
-const actionLabel = (value: string): string => props.actionOptions.find((a) => a.value === value)?.label ?? value;
+// Подписи действий — на случай, если опции нет в списке (например start_booking
+// скрыт из-за отключённого YClients, но уже выбран в существующем узле).
+const KNOWN_ACTION_LABELS: Record<string, string> = {
+    none: 'Нет (показать кнопки/сообщение)',
+    start_booking: 'Начать запись в YClients',
+    show_knowledge: 'Показать элемент базы знаний',
+    escalate: 'Позвать администратора',
+    end: 'Завершить сценарий',
+};
+const actionLabel = (value: string): string => props.actionOptions.find((a) => a.value === value)?.label ?? KNOWN_ACTION_LABELS[value] ?? value;
+
+// Опции действия для узла: список с сервера + текущее действие, если его там нет
+// (чтобы выбранное действие не «потерялось» из дропдауна и не затёрлось при сохранении).
+const actionOptionsFor = (node: NodeEdit): Option[] =>
+    node.action && !props.actionOptions.some((a) => a.value === node.action)
+        ? [{ value: node.action, label: actionLabel(node.action) }, ...props.actionOptions]
+        : props.actionOptions;
 
 // Литералы с {{ }} нельзя писать прямо в шаблоне (Vue примет за интерполяцию) — выносим в строки.
 const msgPlaceholder = 'Сообщение бота. Можно подставлять {{переменную}}';
@@ -286,6 +355,7 @@ interface TestMsg {
     text: string;
     note?: string;
     buttons?: string[];
+    images?: string[];
 }
 interface TestState {
     node: string | null;
@@ -298,6 +368,7 @@ interface TestResult {
     node: string | null;
     done: boolean;
     note: string | null;
+    images?: string[];
 }
 const testOpen = ref(false);
 const testLog = ref<TestMsg[]>([]);
@@ -319,8 +390,8 @@ const testStep = async (text: string | null): Promise<void> => {
             body: JSON.stringify({ definition: buildDefinition(), state: testState.value, text }),
         });
         const d: TestResult = await res.json();
-        if (d.reply) testLog.value.push({ from: 'bot', text: d.reply, note: d.note ?? undefined, buttons: d.buttons });
-        else if (d.note) testLog.value.push({ from: 'bot', text: '—', note: d.note });
+        if (d.reply) testLog.value.push({ from: 'bot', text: d.reply, note: d.note ?? undefined, buttons: d.buttons, images: d.images });
+        else if (d.note) testLog.value.push({ from: 'bot', text: '—', note: d.note, images: d.images });
         testDone.value = d.done;
         testState.value = d.done ? null : { node: d.node, vars: d.vars };
     } finally {
@@ -459,6 +530,9 @@ const testSend = (text?: string): void => {
                     <div class="max-h-72 space-y-2 overflow-y-auto rounded-lg bg-slate-50 p-3 dark:bg-white/5">
                         <div v-for="(m, i) in testLog" :key="i" :class="m.from === 'you' ? 'text-right' : 'text-left'">
                             <span class="inline-block max-w-[85%] rounded-2xl px-3 py-1.5 text-sm" :class="m.from === 'you' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 dark:bg-white/10 dark:text-slate-200 dark:ring-white/10'">{{ m.text }}</span>
+                            <div v-if="m.images && m.images.length" class="mt-1 flex flex-wrap gap-1" :class="m.from === 'you' ? 'justify-end' : ''">
+                                <img v-for="(src, k) in m.images" :key="k" :src="src" alt="" class="h-20 w-20 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-white/10" />
+                            </div>
                             <div v-if="m.note" class="mt-0.5 text-xs italic text-slate-400">{{ m.note }}</div>
                             <div v-if="m.buttons && m.buttons.length" class="mt-1 flex flex-wrap gap-1" :class="m.from === 'you' ? 'justify-end' : ''">
                                 <button v-for="b in m.buttons" :key="b" type="button" class="rounded-full border border-[#2E74B5] px-2.5 py-0.5 text-xs text-[#2E74B5] hover:bg-[#EAF2FB] dark:border-sky-400 dark:text-sky-300" @click="testSend(b)">{{ b }}</button>
@@ -497,7 +571,7 @@ const testSend = (text?: string): void => {
                             <Hint text="Что бот сделает на этом шаге. «Нет» — просто покажет сообщение и кнопки. Или сразу начнёт запись в YClients / позовёт администратора / завершит сценарий." />
                         </label>
                         <select v-model="node.action" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
-                            <option v-for="a in actionOptions" :key="a.value" :value="a.value">{{ a.label }}</option>
+                            <option v-for="a in actionOptionsFor(node)" :key="a.value" :value="a.value">{{ a.label }}</option>
                         </select>
                     </div>
                     <div v-if="node.action === 'none'" class="mt-3">
@@ -515,6 +589,18 @@ const testSend = (text?: string): void => {
                             </div>
                         </div>
                         <button type="button" class="mt-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="addOption(node)">+ кнопка</button>
+                    </div>
+                    <!-- Действие «Показать элемент базы знаний» — выбор конкретного элемента -->
+                    <div v-else-if="node.action === 'show_knowledge'" class="mt-3">
+                        <label class="mb-1 block text-xs font-medium text-slate-500">Какой элемент базы знаний показать
+                            <Hint text="Бот отправит текст этого элемента вместе с его фото и ссылками и завершит сценарий. Удобно для кнопок вроде «Барбер Никита» — клиент сразу получит инфо из базы знаний." />
+                        </label>
+                        <select v-model="node.knowledgeId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                            <option value="">— выберите элемент —</option>
+                            <option v-for="k in knowledgeEntries" :key="k.id" :value="k.id">{{ k.title }}</option>
+                        </select>
+                        <p v-if="knowledgeEntries.length === 0" class="mt-1 text-xs text-amber-600 dark:text-amber-300">В базе знаний пока нет элементов — сначала добавьте их в разделе «База знаний».</p>
+                        <p class="mt-1 text-xs text-slate-400">Текст узла выше (если задан) добавится перед содержимым элемента. Это конечный шаг сценария.</p>
                     </div>
                     <p v-else class="mt-2 text-xs text-slate-400">{{ actionLabel(node.action) }} — это конечный шаг сценария.</p>
                 </template>
@@ -590,6 +676,23 @@ const testSend = (text?: string): void => {
                     <button type="button" class="mt-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="addVariant(node)">+ вариант</button>
                     <p class="mt-2 text-xs text-slate-400">Конверсия по вариантам (% записей) появится в карточке сценария в списке.</p>
                 </template>
+
+                <!-- Фото шага: бот пришлёт их настоящими картинками (как в базе знаний) -->
+                <div v-if="node.type === 'message' || node.type === 'input'" class="mt-3 border-t border-slate-100 pt-3 dark:border-white/10">
+                    <div class="mb-1 text-xs font-medium text-slate-500">Фото на этом шаге
+                        <Hint text="Прикреплённые фото бот отправит клиенту настоящими картинками вместе с сообщением (как примеры работ в базе знаний)." />
+                    </div>
+                    <div v-if="node.images.length" class="mb-2 flex flex-wrap gap-2">
+                        <div v-for="(img, i) in node.images" :key="img.path" class="relative">
+                            <img :src="img.url" alt="" class="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-white/10" />
+                            <button type="button" class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white" @click="removeNodeImage(node, i)">×</button>
+                        </div>
+                    </div>
+                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300">
+                        <input type="file" accept="image/*" multiple class="hidden" :disabled="uploadingImage === node.id" @change="uploadNodeImage(node, $event)" />
+                        {{ uploadingImage === node.id ? 'Загрузка…' : '+ фото' }}
+                    </label>
+                </div>
             </div>
 
             <button type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200" @click="addNode">
