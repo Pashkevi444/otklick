@@ -22,6 +22,21 @@ const tgUrl = computed(() => (props.site.telegram ? `https://t.me/${props.site.t
 
 const mobileOpen = ref(false);
 
+// mailto: открывается только при настроенном почтовом клиенте (на десктопе часто
+// нет). Поэтому по клику ещё и копируем адрес в буфер с подтверждением — тогда
+// кнопка «работает» у всех (mailto в href остаётся для тех, у кого клиент есть).
+const emailCopied = ref(false);
+const copyEmail = (): void => {
+    if (!props.site.email || !navigator.clipboard) return;
+    navigator.clipboard
+        .writeText(props.site.email)
+        .then(() => {
+            emailCopied.value = true;
+            window.setTimeout(() => (emailCopied.value = false), 2000);
+        })
+        .catch(() => {});
+};
+
 const navLinks = [
     { href: '#features', label: 'Возможности' },
     { href: '#how', label: 'Как работает' },
@@ -36,11 +51,11 @@ const metrics = ref([
     { target: 24, current: 0, prefix: '', suffix: '/7', label: 'на связи без выходных и перерывов' },
     { target: 2, current: 0, prefix: '<', suffix: ' сек', label: 'до первого ответа клиенту' },
     { target: 70, current: 0, prefix: '', suffix: '%', label: 'типовых вопросов берёт на себя' },
-    { target: 100, current: 0, prefix: '', suffix: '%', label: 'диалогов сохраняется в кабинете' },
+    { target: 100, current: 0, prefix: '', suffix: '%', label: 'обращений получают ответ — ни одного потерянного' },
 ]);
 
 const features = [
-    { icon: '💬', title: 'Все каналы в одном окне', text: 'Telegram, ВКонтакте, MAX и виджет на сайте. Один помощник отвечает везде одинаково ровно.' },
+    { icon: '💬', title: 'Все каналы в одном окне', text: 'Telegram, WhatsApp, ВКонтакте, MAX и виджет на сайте. Один помощник отвечает везде одинаково ровно.' },
     { icon: '🧠', title: 'Отвечает по вашему бизнесу', text: 'Цены, услуги, часы работы, условия — строго из вашей базы знаний, без фантазий и «я уточню».' },
     { icon: '📅', title: 'Записывает клиентов сам', text: 'Подбирает услугу и время, оформляет запись в вашей CRM (YClients), а также переносит, отменяет и напоминает клиенту о визите.' },
     { icon: '🎤', title: 'Понимает голосовые', text: 'Клиент отправил войс вместо текста — бот распознаёт речь и отвечает как обычно. Такое умеют единицы.' },
@@ -118,11 +133,26 @@ const pricing = [
 const year = new Date().getFullYear();
 
 const metricsEl = ref<HTMLElement | null>(null);
+// Анимации появления включаем только ПОСЛЕ монтирования JS: без JS/наблюдателя
+// контент остаётся видимым (страховка от «пустой страницы» для крауллеров/превью).
+const armed = ref(false);
 let revealObserver: IntersectionObserver | null = null;
 let metricsObserver: IntersectionObserver | null = null;
+let scrollRaf = 0;
 
 const prefersReduced = (): boolean =>
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Параллакс фона при прокрутке: прогресс 0..1 в CSS-переменную --sp.
+const onScroll = (): void => {
+    if (scrollRaf) return;
+    scrollRaf = requestAnimationFrame(() => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+        document.documentElement.style.setProperty('--sp', p.toFixed(4));
+        scrollRaf = 0;
+    });
+};
 
 function runCountUp(): void {
     if (prefersReduced()) {
@@ -143,6 +173,9 @@ function runCountUp(): void {
 }
 
 onMounted(() => {
+    // JS поднялся → можно прятать секции до появления (до этого они видимы).
+    armed.value = true;
+
     revealObserver = new IntersectionObserver(
         (entries) => {
             entries.forEach((entry) => {
@@ -155,6 +188,17 @@ onMounted(() => {
         { threshold: 0.12 },
     );
     document.querySelectorAll('[data-reveal]').forEach((el) => revealObserver?.observe(el));
+
+    // Страховка: через 2.5 с раскрываем всё, что наблюдатель не успел (медленный JS,
+    // экзотические браузеры) — контент гарантированно не «залипнет» невидимым.
+    window.setTimeout(() => {
+        document.querySelectorAll('[data-reveal]:not(.reveal-in)').forEach((el) => el.classList.add('reveal-in'));
+    }, 2500);
+
+    if (!prefersReduced()) {
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    }
 
     if (metricsEl.value) {
         metricsObserver = new IntersectionObserver(
@@ -175,6 +219,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
     revealObserver?.disconnect();
     metricsObserver?.disconnect();
+    window.removeEventListener('scroll', onScroll);
 });
 </script>
 
@@ -194,14 +239,16 @@ onBeforeUnmount(() => {
         />
     </Head>
 
-    <div class="page relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200">
-        <!-- Анимированный фон + плавающие орбы -->
+    <div class="page relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200" :class="{ 'reveal-armed': armed }">
+        <!-- Анимированный фон + плавающие орбы (с параллаксом при прокрутке) -->
         <div class="bg-base"></div>
         <div class="orbs" aria-hidden="true">
             <span class="orb orb-1"></span>
             <span class="orb orb-2"></span>
             <span class="orb orb-3"></span>
             <span class="orb orb-4"></span>
+            <span class="orb orb-5"></span>
+            <span class="orb orb-6"></span>
         </div>
 
         <!-- Шапка -->
@@ -276,6 +323,28 @@ onBeforeUnmount(() => {
                 <span class="glass rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-300">🕐 Круглосуточно</span>
                 <span class="glass rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-300">🇷🇺 Серверы в РФ</span>
                 <span class="glass rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-300">🔒 152-ФЗ</span>
+            </div>
+
+            <!-- Мокап чата: показываем продукт «в деле» -->
+            <div data-reveal style="transition-delay: 440ms" class="chat-wrap mx-auto mt-14 max-w-md">
+                <div class="chat-mock glass rounded-3xl p-4 text-left">
+                    <div class="flex items-center gap-2.5 border-b border-white/40 pb-3 dark:border-white/10">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2E74B5] text-lg shadow-sm">🤖</span>
+                        <div class="leading-tight">
+                            <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Отклик</div>
+                            <div class="flex items-center gap-1.5 text-[11px] text-emerald-500"><span class="live-dot"></span>на связи 24/7</div>
+                        </div>
+                    </div>
+                    <div class="space-y-2.5 pt-3.5">
+                        <div class="msg msg-client" style="--d: 0.3s">Здравствуйте! Сколько стоит мужская стрижка и есть окно сегодня?</div>
+                        <div class="msg msg-bot" style="--d: 1s">Мужская стрижка — 1500 ₽ 💈 Сегодня свободно в 15:00 и 18:30. На какое время записать?</div>
+                        <div class="chat-chips" style="--d: 1.7s">
+                            <span class="chip chip-primary">Записаться на 15:00</span>
+                            <span class="chip">18:30</span>
+                            <span class="chip">Другой день</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -454,8 +523,8 @@ onBeforeUnmount(() => {
                     <a v-if="site.phone" :href="`tel:${site.phone}`" class="rounded-2xl bg-white/15 px-6 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">
                         📞 {{ site.phone }}
                     </a>
-                    <a v-if="site.email" :href="`mailto:${site.email}`" class="rounded-2xl bg-white/15 px-6 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">
-                        ✉️ {{ site.email }}
+                    <a v-if="site.email" :href="`mailto:${site.email}`" :title="`Написать на ${site.email} (клик — скопировать адрес)`" class="rounded-2xl bg-white/15 px-6 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25" @click="copyEmail">
+                        ✉️ {{ emailCopied ? 'Скопировано ✓' : site.email }}
                     </a>
                     <a v-if="tgUrl" :href="tgUrl" target="_blank" class="rounded-2xl bg-white px-6 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 hover:bg-blue-50">
                         ✈️ Написать в Telegram
@@ -530,6 +599,10 @@ html.dark .bg-base {
     z-index: -1;
     overflow: hidden;
     pointer-events: none;
+    /* Параллакс: при прокрутке слой орбов плавно уплывает вверх (--sp задаёт JS). */
+    transform: translate3d(0, calc(var(--sp, 0) * -90px), 0);
+    transition: transform 0.2s linear;
+    will-change: transform;
 }
 
 .orb {
@@ -574,16 +647,35 @@ html.dark .orb {
     right: 20%;
     animation: floaty 26s ease-in-out infinite reverse;
 }
+.orb-5 {
+    width: 300px;
+    height: 300px;
+    background: #c7b3ff;
+    top: 52%;
+    left: 32%;
+    animation: floaty 24s ease-in-out infinite;
+}
+.orb-6 {
+    width: 380px;
+    height: 380px;
+    background: #7df3e1;
+    top: 78%;
+    right: 6%;
+    animation: floaty 19s ease-in-out infinite reverse;
+}
 
-/* Появление при скролле */
+/* Появление при скролле. Скрываем секции ТОЛЬКО когда JS поднялся (.reveal-armed):
+   без JS/наблюдателя контент остаётся видимым (страховка от пустой страницы). */
 [data-reveal] {
-    opacity: 0;
-    transform: translateY(28px);
     transition:
         opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
         transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-[data-reveal].reveal-in {
+.reveal-armed [data-reveal] {
+    opacity: 0;
+    transform: translateY(28px);
+}
+.reveal-armed [data-reveal].reveal-in {
     opacity: 1;
     transform: none;
 }
@@ -628,6 +720,77 @@ html.dark .card-hover:hover {
     box-shadow: 0 24px 60px rgba(31, 78, 121, 0.35);
 }
 
+/* Мокап чата в hero */
+.chat-mock {
+    box-shadow: 0 24px 60px rgba(31, 78, 121, 0.18);
+}
+html.dark .chat-mock {
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    animation: livePulse 2s infinite;
+}
+.msg {
+    max-width: 88%;
+    width: fit-content;
+    border-radius: 16px;
+    padding: 9px 13px;
+    font-size: 13px;
+    line-height: 1.45;
+    opacity: 0;
+    animation: bubbleIn 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: var(--d, 0s);
+}
+.msg-client {
+    margin-left: auto;
+    background: #2e74b5;
+    color: #fff;
+    border-bottom-right-radius: 5px;
+}
+.msg-bot {
+    background: rgba(255, 255, 255, 0.82);
+    color: #1f3550;
+    border-bottom-left-radius: 5px;
+}
+html.dark .msg-bot {
+    background: rgba(255, 255, 255, 0.1);
+    color: #dbe7f5;
+}
+.chat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding-top: 2px;
+    opacity: 0;
+    animation: bubbleIn 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: var(--d, 0s);
+}
+.chip {
+    border: 1px solid rgba(46, 116, 181, 0.35);
+    color: #2e74b5;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.55);
+}
+html.dark .chip {
+    color: #7cc0ff;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(124, 192, 255, 0.28);
+}
+.chip-primary {
+    background: #2e74b5;
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(46, 116, 181, 0.3);
+}
+
 @keyframes bgpan {
     0%,
     100% {
@@ -655,14 +818,45 @@ html.dark .card-hover:hover {
         left: 140%;
     }
 }
+@keyframes bubbleIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+@keyframes livePulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 7px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
     .bg-base,
     .orb,
-    .btn-shine::after {
+    .btn-shine::after,
+    .msg,
+    .chat-chips,
+    .live-dot {
         animation: none;
     }
-    [data-reveal] {
+    .orbs {
+        transform: none;
+    }
+    .msg,
+    .chat-chips {
+        opacity: 1;
+    }
+    .reveal-armed [data-reveal] {
         opacity: 1;
         transform: none;
         transition: none;
