@@ -34,6 +34,7 @@ use App\Http\Controllers\Cabinet\SuspendedController;
 use App\Http\Controllers\Cabinet\TeamController;
 use App\Http\Controllers\Cabinet\WidgetController;
 use App\Http\Controllers\Site\HomeController;
+use App\Http\Controllers\Site\SitemapController;
 use App\Http\Controllers\Yclients\MarketplaceController;
 use App\Http\Middleware\EnsureCardAvailable;
 use App\Http\Middleware\EnsureSectionAllowed;
@@ -53,6 +54,7 @@ $onDomain(config('app.marketing_domain'), function (): void {
     Route::get('/', [HomeController::class, 'home'])->name('home');
     Route::get('/contacts', [HomeController::class, 'contacts'])->name('site.contacts');
     Route::get('/privacy', [HomeController::class, 'privacy'])->name('site.privacy');
+    Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 });
 
 // Приложение: бизнес-поддомен (business.<домен>).

@@ -176,18 +176,46 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // SEO: Organization JSON-LD в корневом шаблоне (только полные загрузки страниц).
+        // SEO: Schema.org-разметка (@graph) в корневом шаблоне — Organization +
+        // WebSite + SoftwareApplication, чтобы поисковики понимали бренд и продукт.
         View::composer('app', function ($view): void {
             $site = $this->app->make(SiteSettingsService::class)->current();
 
+            $marketing = config('app.marketing_domain');
+            $url = $marketing ? 'https://'.$marketing : rtrim((string) config('app.url'), '/');
+            $description = 'AI-администратор для локального бизнеса: мгновенно отвечает клиентам в Telegram, ВКонтакте, MAX, WhatsApp и на сайте по базе знаний и записывает в CRM.';
+
             $view->with('siteJsonLd', (string) json_encode([
                 '@context' => 'https://schema.org',
-                '@type' => 'Organization',
-                'name' => 'Отклик',
-                'description' => 'AI-администратор для локального бизнеса: автоответы в Telegram, ВКонтакте, MAX и на сайте, запись клиентов.',
-                'url' => config('app.url'),
-                'telephone' => $site->phone,
-                'email' => $site->email,
+                '@graph' => [
+                    [
+                        '@type' => 'Organization',
+                        '@id' => $url.'/#organization',
+                        'name' => 'Отклик',
+                        'url' => $url,
+                        'logo' => $url.'/logo-otklik-light.svg',
+                        'description' => $description,
+                        'telephone' => $site->phone,
+                        'email' => $site->email,
+                    ],
+                    [
+                        '@type' => 'WebSite',
+                        '@id' => $url.'/#website',
+                        'name' => 'Отклик',
+                        'url' => $url,
+                        'inLanguage' => 'ru-RU',
+                        'publisher' => ['@id' => $url.'/#organization'],
+                    ],
+                    [
+                        '@type' => 'SoftwareApplication',
+                        'name' => 'Отклик',
+                        'applicationCategory' => 'BusinessApplication',
+                        'operatingSystem' => 'Web',
+                        'url' => $url,
+                        'description' => $description,
+                        'publisher' => ['@id' => $url.'/#organization'],
+                    ],
+                ],
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         });
     }

@@ -27,6 +27,33 @@ final class SiteHomeTest extends TestCase
                 ->has('loginUrl'));
     }
 
+    public function test_landing_html_has_server_rendered_seo_meta(): void
+    {
+        // Без SSR робот видит только серверный HTML — мета/заголовок/разметка
+        // ДОЛЖНЫ быть прямо в нём (а не выставляться клиентским Inertia-Head).
+        $res = $this->get('/');
+
+        $res->assertOk();
+        $res->assertSee('цифровой администратор', false); // <title>
+        $res->assertSee('<meta name="description"', false);
+        $res->assertSee('AI-администратор для салонов', false); // текст description
+        $res->assertSee('<link rel="canonical"', false);
+        $res->assertSee('property="og:title"', false);
+        $res->assertSee('SoftwareApplication', false); // расширенный JSON-LD @graph
+        $res->assertSee('"@type":"WebSite"', false);
+    }
+
+    public function test_sitemap_xml_lists_public_pages(): void
+    {
+        $res = $this->get('/sitemap.xml');
+
+        $res->assertOk();
+        $res->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
+        $res->assertSee('<urlset', false);
+        $res->assertSee('/contacts', false);
+        $res->assertSee('/privacy', false);
+    }
+
     public function test_contacts_page_renders(): void
     {
         $this->get('/contacts')

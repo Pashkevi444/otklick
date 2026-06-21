@@ -25,7 +25,12 @@ final class HomeController extends Controller
         return Inertia::render('Site/Home', [
             'site' => $this->present($this->site->current()),
             'loginUrl' => route('login'),
-        ]);
+        ])->withViewData($this->meta(
+            'Отклик — цифровой администратор для бизнеса: ответы в Telegram, ВКонтакте, MAX, WhatsApp и на сайте, запись клиентов',
+            'Отклик — AI-администратор для салонов, барбершопов, клиник и сервиса. Мгновенно отвечает клиентам в Telegram, ВКонтакте, MAX, WhatsApp и на сайте по вашей базе знаний и записывает в CRM. Не теряйте заявки 24/7.',
+            route('home'),
+            'AI-администратор, чат-бот для бизнеса, бот WhatsApp, автоответы Telegram, бот ВКонтакте, бот MAX, виджет на сайт, запись клиентов, бот для записи, распознавание голосовых сообщений, YClients, 152-ФЗ',
+        ));
     }
 
     public function contacts(): Response
@@ -33,7 +38,11 @@ final class HomeController extends Controller
         return Inertia::render('Site/Contacts', [
             'site' => $this->present($this->site->current()),
             'loginUrl' => route('login'),
-        ]);
+        ])->withViewData($this->meta(
+            'Контакты — Отклик, AI-администратор для бизнеса',
+            'Связаться с командой «Отклик»: телефон, почта, Telegram. AI-администратор для локального бизнеса — ответы клиентам и запись в CRM.',
+            route('site.contacts'),
+        ));
     }
 
     /**
@@ -45,7 +54,32 @@ final class HomeController extends Controller
         return Inertia::render('Site/Privacy', [
             'site' => $this->present($this->site->current()),
             'loginUrl' => route('login'),
-        ]);
+        ])->withViewData($this->meta(
+            'Политика конфиденциальности — Отклик',
+            'Политика обработки персональных данных сервиса «Отклик» (152-ФЗ): какие данные собираем, как храним и защищаем.',
+            route('site.privacy'),
+        ));
+    }
+
+    /**
+     * SEO-мета для серверного рендера в `<head>` (роботы не видят клиентский
+     * Inertia-Head без SSR). Передаём в корневой Blade через withViewData.
+     *
+     * @return array<string, string>
+     */
+    private function meta(string $title, string $description, string $canonical, ?string $keywords = null): array
+    {
+        $meta = [
+            'metaTitle' => $title,
+            'metaDescription' => $description,
+            'metaCanonical' => $canonical,
+        ];
+
+        if ($keywords !== null) {
+            $meta['metaKeywords'] = $keywords;
+        }
+
+        return $meta;
     }
 
     /**

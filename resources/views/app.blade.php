@@ -22,7 +22,30 @@
             })();
         </script>
 
-        <title inertia>{{ config('app.name', 'Отклик') }}</title>
+        <title inertia>{{ $metaTitle ?? config('app.name', 'Отклик') }}</title>
+
+        {{-- SEO-мета для публичных страниц (рендерим на сервере: SPA-Head без SSR
+             роботы не видят). Передаются контроллером через withViewData. --}}
+        @isset($metaDescription)
+            <meta name="description" content="{{ $metaDescription }}">
+        @endisset
+        @isset($metaKeywords)
+            <meta name="keywords" content="{{ $metaKeywords }}">
+        @endisset
+        @isset($metaCanonical)
+            <link rel="canonical" href="{{ $metaCanonical }}">
+            <meta property="og:url" content="{{ $metaCanonical }}">
+        @endisset
+        @isset($metaTitle)
+            <meta property="og:type" content="website">
+            <meta property="og:site_name" content="Отклик">
+            <meta property="og:title" content="{{ $metaOgTitle ?? $metaTitle }}">
+            <meta property="og:image" content="{{ $metaOgImage ?? (rtrim(config('app.url'), '/') . '/apple-touch-icon.png') }}">
+            <meta name="twitter:card" content="summary_large_image">
+            @isset($metaDescription)
+                <meta property="og:description" content="{{ $metaOgDescription ?? $metaDescription }}">
+            @endisset
+        @endisset
 
         @isset($siteJsonLd)
             <script type="application/ld+json">{!! $siteJsonLd !!}</script>
