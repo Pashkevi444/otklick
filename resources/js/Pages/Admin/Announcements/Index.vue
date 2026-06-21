@@ -123,17 +123,19 @@ const goPage = (p: number): void => router.get(base.value, { page: p, search: se
                 </div>
             </form>
 
-            <!-- Поиск -->
-            <input
-                v-model="search"
-                type="search"
-                placeholder="Поиск по заголовку и тексту…"
-                class="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5"
-                @input="runSearch"
-            />
+            <!-- Правая колонка: поиск + список -->
+            <div>
+                <!-- Поиск -->
+                <input
+                    v-model="search"
+                    type="search"
+                    placeholder="Поиск по заголовку и тексту…"
+                    class="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5"
+                    @input="runSearch"
+                />
 
-            <!-- Список -->
-            <div class="space-y-3">
+                <!-- Список -->
+                <div class="space-y-3">
                 <p v-if="props.page.data.length === 0" class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
                     {{ search ? 'Ничего не найдено.' : 'Анонсов пока нет.' }}
                 </p>
@@ -169,6 +171,7 @@ const goPage = (p: number): void => router.get(base.value, { page: p, search: se
                     <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15" :disabled="props.page.current_page <= 1" @click="goPage(props.page.current_page - 1)">←</button>
                     <span class="text-sm text-slate-500">{{ props.page.current_page }} / {{ props.page.last_page }}</span>
                     <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15" :disabled="props.page.current_page >= props.page.last_page" @click="goPage(props.page.current_page + 1)">→</button>
+                </div>
                 </div>
             </div>
         </div>
