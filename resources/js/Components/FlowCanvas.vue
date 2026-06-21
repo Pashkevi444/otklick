@@ -16,6 +16,7 @@ interface OptionEdge {
 interface CanvasNode {
     id: string;
     type: 'message' | 'input' | 'condition' | 'split';
+    title?: string;
     text: string;
     action: string;
     options: OptionEdge[];
@@ -125,7 +126,7 @@ const onEdgesChange = (changes: EdgeChange[]): void => {
             <template #node-fnode="{ data }">
                 <div class="fc-node" :class="`fc-${data.node.type}${data.start ? ' fc-start' : ''}`">
                     <Handle type="target" :position="Position.Top" />
-                    <div class="fc-title">{{ data.node.id }} · {{ TYPE_LABEL[data.node.type] }}<span v-if="data.start"> ⭐</span></div>
+                    <div class="fc-title">{{ data.node.id }} · {{ data.node.title || TYPE_LABEL[data.node.type] }}<span v-if="data.start"> ⭐</span></div>
                     <div class="fc-snip">{{ snippet(data.node).slice(0, 42) }}</div>
                     <Handle
                         v-for="(h, i) in data.handles"

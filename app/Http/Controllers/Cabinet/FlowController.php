@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
+use App\Enums\BusinessType;
 use App\Http\Controllers\Controller;
 use App\Models\Flow;
 use App\Models\KnowledgeEntry;
@@ -11,6 +12,7 @@ use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Services\FlowService;
 use App\Services\FlowSimulator;
+use App\Support\FlowTemplates;
 use App\Support\KnowledgeImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -98,6 +100,13 @@ final class FlowController extends Controller
                 ['value' => 'contains', 'label' => 'содержит'],
                 ['value' => 'filled', 'label' => 'заполнена'],
             ],
+            // Готовые шаблоны сценариев (с тегом типа бизнеса) — бизнес берёт готовый
+            // и правит под себя. Группируются на фронте по `businessTypes`.
+            'templates' => FlowTemplates::all(),
+            'businessTypes' => array_map(
+                fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
+                BusinessType::cases(),
+            ),
         ]);
     }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ImageUploader from '@/Components/ImageUploader.vue';
@@ -31,10 +31,33 @@ interface Gap {
     last_seen_at: string | null;
 }
 
-defineProps<{ entries: Entry[]; gaps: Gap[] }>();
+interface KbTemplate {
+    key: string;
+    title: string;
+    content: string;
+    businessType: string | null;
+}
+interface BizType {
+    value: string;
+    label: string;
+}
+const props = defineProps<{ entries: Entry[]; gaps: Gap[]; templates: KbTemplate[]; businessTypes: BizType[] }>();
 
 const tab = ref<'entries' | 'gaps'>('entries');
 const showForm = ref(false);
+const showTemplates = ref(false);
+
+// Шаблоны базы знаний, сгруппированные по типу бизнеса (сперва «Общие», дефолт).
+const templateGroups = computed<{ key: string; label: string; items: KbTemplate[] }[]>(() => {
+    const groups: { key: string; label: string; items: KbTemplate[] }[] = [];
+    const general = props.templates.filter((t) => !t.businessType);
+    if (general.length) groups.push({ key: 'general', label: 'Общие', items: general });
+    for (const bt of props.businessTypes) {
+        const items = props.templates.filter((t) => t.businessType === bt.value);
+        if (items.length) groups.push({ key: bt.value, label: bt.label, items });
+    }
+    return groups;
+});
 
 // «Развитие бота»: вопрос → черновик записи; скрыть/удалить как нерелевантный.
 const promoteGap = (id: string): void => {
@@ -68,6 +91,15 @@ const addLink = (): void => {
 };
 const removeLink = (i: number): void => {
     form.links.splice(i, 1);
+};
+
+// Применить шаблон: предзаполнить форму создания (бизнес дозаполняет «…» и сохраняет).
+const useTemplate = (t: KbTemplate): void => {
+    form.title = t.title;
+    form.content = t.content;
+    form.is_published = true;
+    showTemplates.value = false;
+    showForm.value = true;
 };
 
 const submit = (): void => {
@@ -119,7 +151,15 @@ const remove = (id: string): void => {
                 К записи можно прикрепить ссылки (прайс, соцсети) и картинки — примеры работ.
             </p>
 
-        <div class="flex justify-end mb-4">
+        <div class="flex flex-wrap justify-end gap-2 mb-4">
+            <button
+                v-if="templates.length"
+                type="button"
+                class="rounded-lg border border-[#2E74B5] px-4 py-2 text-sm font-medium text-[#2E74B5] hover:bg-[#EAF2FB] dark:hover:bg-white/10"
+                @click="showTemplates = !showTemplates"
+            >
+                {{ showTemplates ? 'Скрыть шаблоны' : '📋 Шаблоны базы знаний' }}
+            </button>
             <button
                 type="button"
                 class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]"
@@ -127,6 +167,31 @@ const remove = (id: string): void => {
             >
                 {{ showForm ? 'Отмена' : 'Новая запись' }}
             </button>
+        </div>
+
+        <!-- Готовые элементы базы знаний по типам бизнеса (сперва «Общие») -->
+        <div v-if="showTemplates" class="bg-white rounded-xl border border-slate-200 p-5 mb-6 dark:border-white/10 dark:bg-white/5">
+            <p class="text-xs text-slate-500 mb-3">
+                Возьмите готовый элемент и замените «…» на данные вашего бизнеса. Он подставится в форму — проверьте и сохраните.
+            </p>
+            <div v-for="g in templateGroups" :key="g.key" class="mb-4">
+                <div class="mb-2 flex items-center gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ g.label }}</span>
+                    <span class="h-px flex-1 bg-slate-200 dark:bg-white/10"></span>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <button
+                        v-for="t in g.items"
+                        :key="t.key"
+                        type="button"
+                        class="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-[#2E74B5] hover:shadow-sm dark:border-white/10 dark:bg-white/5"
+                        @click="useTemplate(t)"
+                    >
+                        <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">{{ t.title }}</div>
+                        <div class="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{{ t.content }}</div>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <form v-if="showForm" class="bg-white rounded-xl border border-slate-200 p-6 mb-6 space-y-5" @submit.prevent="submit">

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cabinet;
 
 use App\DTO\KnowledgeEntryData;
+use App\Enums\BusinessType;
 use App\Enums\ChannelType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\KnowledgeEntryRequest;
@@ -15,6 +16,7 @@ use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Services\KnowledgeBaseService;
 use App\Support\KnowledgeImageStorage;
+use App\Support\KnowledgeTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -40,6 +42,13 @@ final class KnowledgeEntryController extends Controller
         return Inertia::render('Cabinet/KnowledgeBase/Index', [
             'entries' => $this->knowledge->list()->map($this->present(...))->all(),
             'gaps' => $this->gaps->openForCurrentTenant()->map($this->presentGap(...))->all(),
+            // Готовые элементы базы знаний по типам бизнеса — добавляются в один клик,
+            // бизнес дозаполняет конкретику. Группируются на фронте по businessTypes.
+            'templates' => KnowledgeTemplates::all(),
+            'businessTypes' => array_map(
+                fn (BusinessType $t): array => ['value' => $t->value, 'label' => $t->label()],
+                BusinessType::cases(),
+            ),
         ]);
     }
 

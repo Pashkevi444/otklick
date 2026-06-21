@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
+use App\Enums\BusinessType;
 use App\Models\KnowledgeEntry;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\KnowledgeTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -41,6 +44,21 @@ final class KnowledgeBaseTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Cabinet/KnowledgeBase/Index')
                 ->has('entries', 1));
+    }
+
+    public function test_index_exposes_grouped_kb_templates(): void
+    {
+        [, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)
+            ->get('/cabinet/knowledge')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('templates', count(KnowledgeTemplates::all()))
+                ->has('businessTypes', count(BusinessType::cases()))
+                ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
+                    && $t->contains(fn (array $x): bool => $x['businessType'] === null) // «Общие»
+                    && $t->contains(fn (array $x): bool => $x['businessType'] === 'nails'))); // нишевые
     }
 
     public function test_owner_creates_entry(): void

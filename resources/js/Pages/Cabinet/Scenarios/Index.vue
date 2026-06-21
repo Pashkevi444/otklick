@@ -21,6 +21,7 @@ interface NodeImage {
 }
 interface FlowNodeDef {
     type?: string;
+    title?: string;
     text?: string;
     action?: string;
     options?: OptionEdge[];
@@ -52,6 +53,7 @@ type NodeKind = 'message' | 'input' | 'condition' | 'split';
 interface NodeEdit {
     id: string;
     type: NodeKind;
+    title: string;
     text: string;
     action: string;
     options: OptionEdge[];
@@ -75,6 +77,14 @@ interface KnowledgeOption {
     id: string;
     title: string;
 }
+interface FlowTemplate {
+    key: string;
+    name: string;
+    description: string;
+    businessType: string | null;
+    triggers: string[];
+    definition: { start?: string; nodes?: Record<string, FlowNodeDef> };
+}
 const props = defineProps<{
     flows: FlowRow[];
     actionOptions: Option[];
@@ -82,7 +92,22 @@ const props = defineProps<{
     operatorOptions: Option[];
     yclientsActive: boolean;
     knowledgeEntries: KnowledgeOption[];
+    templates: FlowTemplate[];
+    businessTypes: Option[];
 }>();
+
+// Шаблоны, сгруппированные по типу бизнеса: сперва «Общие» (businessType=null,
+// дефолт для всех), затем по нишам в порядке реестра businessTypes.
+const templateGroups = computed<{ key: string; label: string; items: FlowTemplate[] }[]>(() => {
+    const groups: { key: string; label: string; items: FlowTemplate[] }[] = [];
+    const general = props.templates.filter((t) => !t.businessType);
+    if (general.length) groups.push({ key: 'general', label: 'Общие сценарии', items: general });
+    for (const bt of props.businessTypes) {
+        const items = props.templates.filter((t) => t.businessType === bt.value);
+        if (items.length) groups.push({ key: bt.value, label: bt.label, items });
+    }
+    return groups;
+});
 
 const editing = ref<string | null | 'new'>(null);
 const form = useForm<{ id: string | null; name: string; is_active: boolean; triggers: string; start: string; nodes: NodeEdit[] }>({
@@ -101,6 +126,39 @@ const availableVars = computed<string[]>(() => {
     const captured = form.nodes.filter((n) => n.type === 'input' && n.variable.trim() !== '').map((n) => n.variable.trim());
     return ['client_name', 'client_phone', 'client_email', ...new Set(captured)];
 });
+
+// Человеческие подписи встроенных переменных (остальные — как назвал бизнес в вопросе).
+const VAR_LABELS: Record<string, string> = {
+    client_name: 'Имя клиента',
+    client_phone: 'Телефон клиента',
+    client_email: 'Email клиента',
+};
+const variableLabel = (v: string): string => VAR_LABELS[v] ?? `Ответ клиента: ${v}`;
+// Опции для выбора переменной в условии (вместо ручного ввода имени — выпадающий список).
+const variableOptions = computed<{ value: string; label: string }[]>(() =>
+    availableVars.value.map((v) => ({ value: v, label: variableLabel(v) })),
+);
+
+// Дружелюбное имя узла для выпадашек «→ узел»: своё название бизнеса > начало текста
+// > тип/действие. Бизнес видит «n2 · Запись», а не безликое «n2».
+const nodeLabel = (id: string): string => {
+    const n = form.nodes.find((x) => x.id === id);
+    if (!n) return id;
+    if (n.title.trim()) return `${id} · ${n.title.trim()}`;
+    const snippet = (n.text || '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (snippet) return `${id} · ${snippet}`;
+    const kind =
+        n.type === 'input'
+            ? 'Вопрос'
+            : n.type === 'condition'
+              ? 'Условие'
+              : n.type === 'split'
+                ? 'A/B'
+                : n.action !== 'none'
+                  ? actionLabel(n.action)
+                  : 'Сообщение';
+    return `${id} · ${kind}`;
+};
 
 // Переходы узла (куда он может вести) — для проверки целостности и достижимости.
 const nodeTargets = (n: NodeEdit): string[] => {
@@ -152,7 +210,7 @@ const issues = computed<string[]>(() => {
 });
 
 const blankNode = (id: string, x = 0, y = 0): NodeEdit => ({
-    id, type: 'message', text: '', action: 'none', options: [],
+    id, type: 'message', title: '', text: '', action: 'none', options: [],
     variable: '', next: '', operator: 'eq', value: '', else: '', variants: [], images: [], knowledgeId: '', x, y,
 });
 
@@ -164,12 +222,13 @@ const newFlow = (): void => {
     form.start = 'n1';
 };
 
-const editFlow = (f: FlowRow): void => {
-    editing.value = f.id;
-    const nodesObj = f.definition.nodes ?? {};
-    const nodes: NodeEdit[] = Object.entries(nodesObj).map(([id, n]) => ({
+// Узлы из definition (JSON) → редактируемые NodeEdit. Общая логика для правки
+// существующего сценария и старта из готового шаблона.
+const nodesFromDefinition = (nodesObj: Record<string, FlowNodeDef>): NodeEdit[] =>
+    Object.entries(nodesObj).map(([id, n]) => ({
         id,
         type: (['input', 'condition', 'split'].includes(n.type ?? '') ? n.type : 'message') as NodeKind,
+        title: n.title ?? '',
         text: n.text ?? '',
         action: n.action ?? 'none',
         options: (n.options ?? []).map((o) => ({ label: o.label, next: o.next })),
@@ -184,11 +243,29 @@ const editFlow = (f: FlowRow): void => {
         x: n.position?.x ?? 0,
         y: n.position?.y ?? 0,
     }));
+
+const editFlow = (f: FlowRow): void => {
+    editing.value = f.id;
+    const nodes = nodesFromDefinition(f.definition.nodes ?? {});
     form.id = f.id;
     form.name = f.name;
     form.is_active = f.is_active;
     form.triggers = f.triggers.join(', ');
     form.start = f.definition.start ?? nodes[0]?.id ?? 'n1';
+    form.nodes = nodes.length ? nodes : [blankNode('n1')];
+};
+
+// Открыть редактор, предзаполнив готовым шаблоном (новый сценарий — id=null).
+const startFromTemplate = (t: FlowTemplate): void => {
+    editing.value = 'new';
+    form.defaults({ id: null, name: '', is_active: true, triggers: '', start: 'n1', nodes: [] });
+    form.reset();
+    const nodes = nodesFromDefinition(t.definition.nodes ?? {});
+    form.id = null;
+    form.name = t.name;
+    form.is_active = true;
+    form.triggers = t.triggers.join(', ');
+    form.start = t.definition.start ?? nodes[0]?.id ?? 'n1';
     form.nodes = nodes.length ? nodes : [blankNode('n1')];
 };
 
@@ -301,6 +378,7 @@ const buildDefinition = (): { start: string; nodes: Record<string, FlowNodeDef> 
                 ...(n.action === 'show_knowledge' ? { knowledge_id: n.knowledgeId } : {}),
             };
         }
+        if (n.title.trim()) nodes[n.id].title = n.title.trim(); // своё название шага (движок игнорирует, для людей)
         nodes[n.id].position = { x: n.x, y: n.y }; // позиция на холсте (бэкенд игнорирует)
     }
     return { start: form.start, nodes };
@@ -426,11 +504,35 @@ const testSend = (text?: string): void => {
         <!-- Список сценариев -->
         <div v-if="editing === null">
             <button type="button" class="mb-4 rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]" @click="newFlow">
-                + Новый сценарий
+                + Новый сценарий с нуля
             </button>
 
+            <!-- Готовые шаблоны, сгруппированные по типу бизнеса (сперва «Общие») -->
+            <div v-if="templates.length" class="mb-5">
+                <div class="mb-3 text-sm font-medium text-slate-600 dark:text-slate-300">…или начните с готового шаблона:</div>
+                <div v-for="g in templateGroups" :key="g.key" class="mb-4">
+                    <div class="mb-2 flex items-center gap-2">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ g.label }}</span>
+                        <span class="h-px flex-1 bg-slate-200 dark:bg-white/10"></span>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <button
+                            v-for="t in g.items"
+                            :key="t.key"
+                            type="button"
+                            class="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-[#2E74B5] hover:shadow-sm dark:border-white/10 dark:bg-white/5"
+                            @click="startFromTemplate(t)"
+                        >
+                            <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">{{ t.name }}</div>
+                            <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ t.description }}</div>
+                            <div class="mt-2 text-[11px] text-slate-400">Запуск по: {{ t.triggers.slice(0, 3).join(', ') }}…</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div v-if="flows.length === 0" class="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400">
-                Сценариев пока нет. Создайте первый — например «акция» → предложить запись.
+                Сценариев пока нет. Создайте первый — возьмите шаблон выше или начните с нуля.
             </div>
 
             <div class="space-y-3">
@@ -497,7 +599,7 @@ const testSend = (text?: string): void => {
                         <Hint text="С какого шага начинается воронка, когда сработал запуск по фразам." />
                     </label>
                     <select v-model="form.start" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                        <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                        <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                     </select>
                 </div>
 
@@ -550,9 +652,19 @@ const testSend = (text?: string): void => {
 
             <!-- Узлы -->
             <div v-for="node in form.nodes" :id="`node-card-${node.id}`" :key="node.id" class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                <div class="mb-2 flex items-center justify-between">
-                    <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Узел {{ node.id }}<span v-if="form.start === node.id" class="ml-2 rounded bg-[#EAF2FB] px-1.5 py-0.5 text-xs text-[#2E74B5]">старт</span></div>
-                    <button v-if="form.nodes.length > 1" type="button" class="text-xs text-red-600 hover:underline" @click="removeNode(node.id)">Удалить узел</button>
+                <div class="mb-2 flex items-center justify-between gap-2">
+                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                        <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-white/10 dark:text-slate-300">{{ node.id }}</span>
+                        <span v-if="form.start === node.id" class="rounded bg-[#EAF2FB] px-1.5 py-0.5 text-xs text-[#2E74B5]">старт</span>
+                        <input
+                            v-model="node.title"
+                            type="text"
+                            maxlength="40"
+                            placeholder="Название шага (напр. Приветствие)"
+                            class="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-[#1F4E79] outline-none transition hover:border-slate-200 focus:border-[#2E74B5] dark:text-sky-200 dark:hover:border-white/10"
+                        />
+                    </div>
+                    <button v-if="form.nodes.length > 1" type="button" class="flex-none text-xs text-red-600 hover:underline" @click="removeNode(node.id)">Удалить узел</button>
                 </div>
                 <div class="mb-3">
                     <label class="mb-1 block text-xs font-medium text-slate-500">Тип узла
@@ -583,7 +695,7 @@ const testSend = (text?: string): void => {
                                 <input v-model="opt.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Текст кнопки" />
                                 <span class="text-slate-400">→</span>
                                 <select v-model="opt.next" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
-                                    <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                                    <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                                 </select>
                                 <button type="button" class="text-xs text-red-600 hover:underline" @click="removeOption(node, i)">убрать</button>
                             </div>
@@ -619,38 +731,44 @@ const testSend = (text?: string): void => {
                             <label class="mb-1 block text-xs font-medium text-slate-500">Дальше → узел</label>
                             <select v-model="node.next" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                                 <option value="">—</option>
-                                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                                <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                         </div>
                     </div>
                     <p class="mt-2 text-xs text-slate-400">{{ inputHint }}</p>
                 </template>
 
-                <!-- УСЛОВИЕ: если переменная … → да/нет -->
+                <!-- УСЛОВИЕ: если «что проверяем» «как» «значение» → да/нет -->
                 <template v-else-if="node.type === 'condition'">
-                    <div class="mb-1 text-xs font-medium text-slate-500">Если переменная…
-                        <Hint text="Сравните переменную со значением. Подходит → пойдём в ветку ДА, нет → в ветку НЕТ. Например: услуга содержит «маникюр». «Заполнена» — просто проверка, что значение есть." />
+                    <div class="mb-1 text-xs font-medium text-slate-500">Если…
+                        <Hint text="Проверяем данные клиента или его ответ из прошлого вопроса и ведём в нужную ветку. Пример: «Имя клиента — содержит — Иван» → ветка ДА, иначе НЕТ. «Заполнена» — просто проверка, что значение вообще есть (тогда поле справа не нужно). Сравнение идёт без участия клиента." />
                     </div>
-                    <div class="grid gap-2 sm:grid-cols-3">
-                        <input v-model="node.variable" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="переменная (name)" />
+                    <div class="grid items-center gap-2 sm:grid-cols-[auto_1fr_auto_1fr] sm:gap-3">
+                        <span class="text-sm text-slate-500">Если</span>
+                        <select v-model="node.variable" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                            <option value="">— что проверяем —</option>
+                            <option v-for="o in variableOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                            <option v-if="node.variable && !availableVars.includes(node.variable)" :value="node.variable">{{ node.variable }} (своя)</option>
+                        </select>
                         <select v-model="node.operator" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                             <option v-for="o in operatorOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                         </select>
-                        <input v-model="node.value" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="значение" :disabled="node.operator === 'filled'" />
+                        <input v-if="node.operator !== 'filled'" v-model="node.value" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="напр. маникюр" />
+                        <span v-else class="text-xs text-slate-400">значение не нужно</span>
                     </div>
                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-emerald-600">Если ДА → узел</label>
                             <select v-model="node.next" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                                 <option value="">—</option>
-                                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                                <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-red-600">Если НЕТ → узел</label>
                             <select v-model="node.else" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                                 <option value="">—</option>
-                                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                                <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                         </div>
                     </div>
@@ -668,7 +786,7 @@ const testSend = (text?: string): void => {
                             <span class="text-slate-400">→</span>
                             <select v-model="v.next" class="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                                 <option value="">—</option>
-                                <option v-for="id in nodeIds" :key="id" :value="id">{{ id }}</option>
+                                <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                             <button type="button" class="text-xs text-red-600 hover:underline" @click="removeVariant(node, i)">убрать</button>
                         </div>

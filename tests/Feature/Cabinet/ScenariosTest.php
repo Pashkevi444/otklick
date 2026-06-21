@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
+use App\Enums\BusinessType;
 use App\Models\Flow;
 use App\Models\KnowledgeEntry;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\FlowTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -40,6 +42,41 @@ final class ScenariosTest extends TestCase
                 ->component('Cabinet/Scenarios/Index')
                 ->has('flows')
                 ->has('actionOptions'));
+    }
+
+    public function test_index_exposes_grouped_flow_templates(): void
+    {
+        [, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)
+            ->get('/cabinet/scenarios')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('templates', count(FlowTemplates::all()))
+                ->has('businessTypes', count(BusinessType::cases()))
+                // У каждого шаблона есть тег типа бизнеса (или null — «Общие»).
+                ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
+                    && $t->contains(fn (array $x): bool => $x['businessType'] === null) // есть «Общие»
+                    && $t->contains(fn (array $x): bool => $x['businessType'] === 'barbershop'))); // и нишевые
+    }
+
+    public function test_template_definition_saves_as_valid_flow(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+        $template = collect(FlowTemplates::all())->firstWhere('key', 'lead_capture');
+
+        $this->actingAs($owner)->post('/cabinet/scenarios', [
+            'name' => $template['name'],
+            'is_active' => true,
+            'triggers' => $template['triggers'],
+            'definition' => $template['definition'],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $flow = Flow::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        $nodes = $flow->definition['nodes'];
+        $this->assertSame('input', $nodes['n1']['type']);
+        $this->assertSame('name', $nodes['n1']['variable']);
+        $this->assertSame('escalate', $nodes['n3']['action']);
     }
 
     public function test_index_gates_booking_action_and_exposes_knowledge(): void
@@ -134,6 +171,23 @@ final class ScenariosTest extends TestCase
         $this->assertSame('condition', $nodes['n2']['type']);
         $this->assertSame('contains', $nodes['n2']['operator']);
         $this->assertSame('n3', $nodes['n2']['else']);
+    }
+
+    public function test_store_preserves_custom_node_title(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+
+        $this->actingAs($owner)->post('/cabinet/scenarios', [
+            'name' => 'Приветствие',
+            'is_active' => true,
+            'triggers' => ['привет'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'title' => 'Приветствие клиента', 'text' => 'Здравствуйте!', 'action' => 'end', 'options' => []],
+            ]],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $node = Flow::query()->where('tenant_id', $tenant->id)->firstOrFail()->definition['nodes']['n1'];
+        $this->assertSame('Приветствие клиента', $node['title']);
     }
 
     public function test_store_preserves_canvas_positions(): void
