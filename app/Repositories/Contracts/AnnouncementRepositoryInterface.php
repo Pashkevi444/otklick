@@ -6,23 +6,34 @@ namespace App\Repositories\Contracts;
 
 use App\Enums\AnnouncementType;
 use App\Models\Announcement;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface AnnouncementRepositoryInterface
 {
-    /**
-     * Все анонсы типа (для админки СУ — включая черновики), новые сверху.
-     *
-     * @return Collection<int, Announcement>
-     */
-    public function allOfType(AnnouncementType $type): Collection;
-
     /**
      * Опубликованные анонсы типа (для кабинета бизнеса), новые сверху.
      *
      * @return Collection<int, Announcement>
      */
     public function publishedOfType(AnnouncementType $type): Collection;
+
+    /**
+     * Опубликованные анонсы типа постранично (кабинет), новые сверху.
+     *
+     * @return LengthAwarePaginator<int, Announcement>
+     */
+    public function paginatePublishedOfType(AnnouncementType $type, int $perPage): LengthAwarePaginator;
+
+    /**
+     * Все анонсы типа постранично (админка СУ, включая черновики), новые сверху.
+     *
+     * @return LengthAwarePaginator<int, Announcement>
+     */
+    public function paginateAllOfType(AnnouncementType $type, int $perPage): LengthAwarePaginator;
+
+    /** Опубликованный анонс типа по id (для детальной страницы бизнеса). */
+    public function findPublished(string $id, AnnouncementType $type): ?Announcement;
 
     public function find(string $id): ?Announcement;
 

@@ -10,6 +10,8 @@ use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\BotResponder;
+use App\Tenancy\TenantInitializer;
+use App\Tenancy\TestContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -62,6 +64,25 @@ final class BotTestingTest extends TestCase
 
         // Тестовый диалог существует — но только как «песочница».
         $this->assertSame(1, Conversation::query()->withTest()->count());
+    }
+
+    public function test_sandbox_client_phone_does_not_collide_with_real_client(): void
+    {
+        // Прод-баг: тестер вводил телефон реального клиента, в режиме теста реальные
+        // строки не видны → вставка падала на unique(tenant_id, phone). Частичный
+        // индекс исключает тестовых клиентов — конфликта быть не должно.
+        $tenant = Tenant::factory()->create();
+
+        app(TenantInitializer::class)->run($tenant->id, function () use ($tenant): void {
+            Client::factory()->create(['tenant_id' => $tenant->id, 'phone' => '+70001112233', 'is_test' => false]);
+
+            app(TestContext::class)->run(
+                fn () => Client::factory()->create(['tenant_id' => $tenant->id, 'phone' => '+70001112233']),
+            );
+
+            $this->assertSame(2, Client::query()->withTest()->where('phone', '+70001112233')->count());
+            $this->assertDatabaseHas('clients', ['phone' => '+70001112233', 'is_test' => true]);
+        });
     }
 
     public function test_pipeline_failure_does_not_500_the_chat(): void

@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\AnnouncementType;
 use App\Http\Controllers\Controller;
 use App\Services\AnnouncementService;
+use App\Support\AnnouncementImageStorage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,11 +18,15 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * Управление анонсами площадки супер-админом: новости и обновления (патчи) —
- * создание, правка, публикация, удаление. Бизнесы видят опубликованное.
+ * форматированный текст с картинками, публикация, удаление. Бизнесы видят
+ * опубликованное.
  */
 final class AnnouncementController extends Controller
 {
-    public function __construct(private readonly AnnouncementService $announcements) {}
+    public function __construct(
+        private readonly AnnouncementService $announcements,
+        private readonly AnnouncementImageStorage $images,
+    ) {}
 
     public function news(): Response
     {
@@ -59,12 +65,20 @@ final class AnnouncementController extends Controller
         return back()->with('success', 'Анонс удалён.');
     }
 
+    /** Загрузка картинки для вставки в текст анонса (редактор). */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate(['image' => ['required', 'image', 'max:5120']]);
+
+        return response()->json(['url' => $this->images->store($request->file('image'))]);
+    }
+
     private function page(AnnouncementType $type): Response
     {
         return Inertia::render('Admin/Announcements/Index', [
             'type' => $type->value,
             'title' => $type->label(),
-            'items' => $this->announcements->adminList($type),
+            'page' => $this->announcements->adminPaginated($type),
         ]);
     }
 

@@ -8,32 +8,54 @@ use App\Enums\AnnouncementType;
 use App\Models\Announcement;
 use App\Models\AnnouncementRead;
 use App\Repositories\Contracts\AnnouncementRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 final class EloquentAnnouncementRepository implements AnnouncementRepositoryInterface
 {
-    public function allOfType(AnnouncementType $type): Collection
-    {
-        return Announcement::query()
-            ->where('type', $type)
-            ->orderByDesc('created_at')
-            ->get();
-    }
-
     public function publishedOfType(AnnouncementType $type): Collection
     {
+        return $this->publishedQuery($type)->get();
+    }
+
+    public function paginatePublishedOfType(AnnouncementType $type, int $perPage): LengthAwarePaginator
+    {
+        return $this->publishedQuery($type)->paginate($perPage)->withQueryString();
+    }
+
+    public function paginateAllOfType(AnnouncementType $type, int $perPage): LengthAwarePaginator
+    {
         return Announcement::query()
             ->where('type', $type)
-            ->where('is_published', true)
-            ->orderByDesc('published_at')
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    public function findPublished(string $id, AnnouncementType $type): ?Announcement
+    {
+        return $this->publishedQuery($type)->whereKey($id)->first();
     }
 
     public function find(string $id): ?Announcement
     {
         return Announcement::query()->find($id);
+    }
+
+    /**
+     * Опубликованные анонсы типа, новые сверху.
+     *
+     * @return Builder<Announcement>
+     */
+    private function publishedQuery(AnnouncementType $type): Builder
+    {
+        return Announcement::query()
+            ->where('type', $type)
+            ->where('is_published', true)
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at');
     }
 
     public function create(array $attributes): Announcement

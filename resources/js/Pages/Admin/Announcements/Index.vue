@@ -1,20 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
 
 interface Item {
     id: string;
     title: string;
     body: string;
+    excerpt: string;
     is_published: boolean;
     published_at: string | null;
     created_at: string | null;
 }
+interface Page {
+    data: Item[];
+    current_page: number;
+    last_page: number;
+    total: number;
+}
 
-const props = defineProps<{ type: string; title: string; items: Item[] }>();
+const props = defineProps<{ type: string; title: string; page: Page }>();
 
 const editingId = ref<string | null>(null);
+const showPreview = ref(false);
 const form = useForm<{ type: string; title: string; body: string; is_published: boolean }>({
     type: props.type,
     title: '',
@@ -22,8 +31,13 @@ const form = useForm<{ type: string; title: string; body: string; is_published: 
     is_published: true,
 });
 
+const base = computed(() => (props.type === 'news' ? '/admin/news' : '/admin/updates'));
+const fmt = (d: string | null): string =>
+    d ? new Date(d.replace(' ', 'T')).toLocaleString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
 const reset = (): void => {
     editingId.value = null;
+    showPreview.value = false;
     form.reset();
     form.type = props.type;
     form.is_published = true;
@@ -34,6 +48,7 @@ const edit = (item: Item): void => {
     form.title = item.title;
     form.body = item.body;
     form.is_published = item.is_published;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 const submit = (): void => {
@@ -47,6 +62,8 @@ const submit = (): void => {
 const remove = (item: Item): void => {
     if (confirm('Удалить анонс?')) router.delete(`/admin/announcements/${item.id}`, { preserveScroll: true });
 };
+
+const goPage = (p: number): void => router.get(base.value, { page: p }, { preserveScroll: true, preserveState: true });
 </script>
 
 <template>
@@ -56,7 +73,12 @@ const remove = (item: Item): void => {
         <div class="grid gap-6 lg:grid-cols-2">
             <!-- Редактор -->
             <form class="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5" @submit.prevent="submit">
-                <h2 class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ editingId ? 'Редактировать' : 'Новый анонс' }}</h2>
+                <div class="flex items-center justify-between">
+                    <h2 class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ editingId ? 'Редактировать' : 'Новый анонс' }}</h2>
+                    <button type="button" class="text-sm text-slate-500 hover:underline" @click="showPreview = !showPreview">
+                        {{ showPreview ? 'Скрыть предпросмотр' : 'Предпросмотр' }}
+                    </button>
+                </div>
 
                 <input
                     v-model="form.title"
@@ -66,12 +88,16 @@ const remove = (item: Item): void => {
                 />
                 <p v-if="form.errors.title" class="text-xs text-rose-600">{{ form.errors.title }}</p>
 
-                <textarea
-                    v-model="form.body"
-                    rows="7"
-                    placeholder="Текст анонса…"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5"
-                ></textarea>
+                <template v-if="!showPreview">
+                    <RichTextEditor v-model="form.body" upload-url="/admin/announcements/images" />
+                    <p class="text-xs text-slate-400">Выделяйте жирным/курсивом, добавляйте заголовки, списки, ссылки и картинки прямо в текст.</p>
+                </template>
+
+                <!-- Предпросмотр (как увидит бизнес) -->
+                <div v-else class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+                    <h3 class="text-lg font-bold text-[#1F4E79] dark:text-sky-200">{{ form.title || 'Заголовок' }}</h3>
+                    <div class="rte mt-2 text-sm text-slate-700 dark:text-slate-200" v-html="form.body || '<p class=\'text-slate-400\'>Текст анонса…</p>'"></div>
+                </div>
                 <p v-if="form.errors.body" class="text-xs text-rose-600">{{ form.errors.body }}</p>
 
                 <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -89,11 +115,11 @@ const remove = (item: Item): void => {
 
             <!-- Список -->
             <div class="space-y-3">
-                <p v-if="props.items.length === 0" class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
+                <p v-if="props.page.data.length === 0" class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
                     Анонсов пока нет.
                 </p>
                 <article
-                    v-for="item in props.items"
+                    v-for="item in props.page.data"
                     :key="item.id"
                     class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5"
                 >
@@ -108,7 +134,10 @@ const remove = (item: Item): void => {
                                     {{ item.is_published ? 'Опубликовано' : 'Черновик' }}
                                 </span>
                             </div>
-                            <p class="mt-1 line-clamp-2 text-xs text-slate-500">{{ item.body }}</p>
+                            <p class="mt-1 line-clamp-2 text-xs text-slate-500">{{ item.excerpt }}</p>
+                            <p class="mt-1 text-[11px] text-slate-400">
+                                Создано: {{ fmt(item.created_at) }}<template v-if="item.published_at"> · Опубликовано: {{ fmt(item.published_at) }}</template>
+                            </p>
                         </div>
                         <div class="flex flex-none gap-2 text-sm">
                             <button type="button" class="text-[#2E74B5] hover:underline" @click="edit(item)">Править</button>
@@ -116,6 +145,12 @@ const remove = (item: Item): void => {
                         </div>
                     </div>
                 </article>
+
+                <div v-if="props.page.last_page > 1" class="flex items-center justify-center gap-3 pt-1">
+                    <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15" :disabled="props.page.current_page <= 1" @click="goPage(props.page.current_page - 1)">←</button>
+                    <span class="text-sm text-slate-500">{{ props.page.current_page }} / {{ props.page.last_page }}</span>
+                    <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15" :disabled="props.page.current_page >= props.page.last_page" @click="goPage(props.page.current_page + 1)">→</button>
+                </div>
             </div>
         </div>
     </AppLayout>

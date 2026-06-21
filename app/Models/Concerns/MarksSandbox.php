@@ -27,6 +27,15 @@ trait MarksSandbox
     {
         static::addGlobalScope(new SandboxScope);
 
+        // У моделей с колонкой is_test (напр. clients — для частичного unique-индекса
+        // по телефону) проставляем признак ДО вставки, иначе реестр заполняется уже
+        // ПОСЛЕ (в created) — поздно для constraint'а.
+        static::creating(function (Model $model): void {
+            if (app(TestContext::class)->active() && in_array('is_test', $model->getFillable(), true)) {
+                $model->setAttribute('is_test', true);
+            }
+        });
+
         static::created(function (Model $model): void {
             if (! app(TestContext::class)->active()) {
                 return;

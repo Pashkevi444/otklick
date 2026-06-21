@@ -46,8 +46,20 @@ final class AnnouncementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $p) => $p
                 ->component('Cabinet/Announcements/Index')
-                ->has('items', 1)
-                ->where('items.0.is_new', true));
+                ->has('page.data', 1)
+                ->where('page.data.0.is_new', true));
+    }
+
+    public function test_business_opens_detail_page(): void
+    {
+        $announcement = $this->publishedNews('Деталь');
+        $owner = User::factory()->owner(Tenant::factory()->create())->create();
+
+        $this->actingAs($owner)->get("/cabinet/news/{$announcement->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p
+                ->component('Cabinet/Announcements/Show')
+                ->where('item.title', 'Деталь'));
     }
 
     public function test_draft_is_hidden_from_business(): void
@@ -56,7 +68,7 @@ final class AnnouncementTest extends TestCase
 
         $owner = User::factory()->owner(Tenant::factory()->create())->create();
         $this->actingAs($owner)->get('/cabinet/news')
-            ->assertInertia(fn (AssertableInertia $p) => $p->has('items', 0));
+            ->assertInertia(fn (AssertableInertia $p) => $p->has('page.data', 0));
     }
 
     public function test_viewing_marks_read_and_is_per_tenant(): void
@@ -75,11 +87,11 @@ final class AnnouncementTest extends TestCase
 
         // Повторно у A — уже не новое.
         $this->actingAs($ownerA)->get('/cabinet/news')
-            ->assertInertia(fn (AssertableInertia $p) => $p->where('items.0.is_new', false));
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('page.data.0.is_new', false));
 
         // У тенанта B — всё ещё новое (чтение пер-тенант).
         $this->actingAs($ownerB)->get('/cabinet/news')
-            ->assertInertia(fn (AssertableInertia $p) => $p->where('items.0.is_new', true));
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('page.data.0.is_new', true));
     }
 
     public function test_unread_count_shared_to_menu(): void

@@ -35,13 +35,6 @@ const navItems = computed<NavItem[]>(() => {
     // Меню короткое: всё по разделам — на дашборде. Здесь только ключевое.
     const items: NavItem[] = [{ label: 'Дашборд', href: '/cabinet' }];
 
-    // Аналитика — только если доступна (входит в тариф и разрешена оператору).
-    const hasAnalytics = (user.value?.tenant?.features?.analytics ?? false)
-        && (user.value?.allowedSections?.includes('analytics') ?? false);
-    if (hasAnalytics) {
-        items.push({ label: 'Аналитика', href: '/cabinet/analytics' });
-    }
-
     items.push(
         { label: 'Новости', href: '/cabinet/news', badge: unread.value.news },
         { label: 'Обновления', href: '/cabinet/updates', badge: unread.value.update },
