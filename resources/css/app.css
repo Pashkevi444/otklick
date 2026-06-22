@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './marketing.css';
 
 /* Тёмная тема — по классу .dark на <html> (переключатель в шапке). */
 @custom-variant dark (&:where(.dark, .dark *));

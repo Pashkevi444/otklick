@@ -33,6 +33,32 @@ final class HomeController extends Controller
         ));
     }
 
+    public function capabilities(): Response
+    {
+        return Inertia::render('Site/Capabilities', [
+            'site' => $this->present($this->site->current()),
+            'loginUrl' => route('login'),
+        ])->withViewData($this->meta(
+            'Возможности «Отклик» — готовые шаблоны под нишу, интеграции, запуск за вечер',
+            'Что умеет «Отклик»: готовые сценарии и база знаний под десятки типов бизнеса, подключение Telegram/ВКонтакте/MAX/WhatsApp и YClients, запуск за один вечер.',
+            route('site.capabilities'),
+            'возможности чат-бота, готовые сценарии, шаблоны базы знаний, интеграция YClients, бот Telegram WhatsApp ВКонтакте MAX, no-code воронки',
+        ));
+    }
+
+    public function pricing(): Response
+    {
+        return Inertia::render('Site/Pricing', [
+            'site' => $this->present($this->site->current()),
+            'loginUrl' => route('login'),
+        ])->withViewData($this->meta(
+            'Тарифы «Отклик» — AI-администратор для бизнеса, пробный период включён',
+            'Тарифы «Отклик»: пробный период бесплатно, «Стандарт» и «Макс» с CRM, сценариями и аналитикой, индивидуальный для корпоративных клиентов.',
+            route('site.pricing'),
+            'тарифы чат-бот, стоимость AI-администратора, бот для бизнеса цена, пробный период',
+        ));
+    }
+
     public function contacts(): Response
     {
         return Inertia::render('Site/Contacts', [

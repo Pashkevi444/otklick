@@ -50,8 +50,24 @@ final class SiteHomeTest extends TestCase
         $res->assertOk();
         $res->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
         $res->assertSee('<urlset', false);
+        $res->assertSee('/vozmozhnosti', false);
+        $res->assertSee('/tarify', false);
         $res->assertSee('/contacts', false);
         $res->assertSee('/privacy', false);
+    }
+
+    public function test_capabilities_page_renders(): void
+    {
+        $this->get('/vozmozhnosti')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('Site/Capabilities')->has('site')->has('loginUrl'));
+    }
+
+    public function test_pricing_page_renders(): void
+    {
+        $this->get('/tarify')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('Site/Pricing')->has('site')->has('loginUrl'));
     }
 
     public function test_contacts_page_renders(): void

@@ -19,6 +19,8 @@ final class SitemapController extends Controller
         /** @var list<array{loc: string, changefreq: string, priority: string}> $urls */
         $urls = [
             ['loc' => route('home'), 'changefreq' => 'weekly', 'priority' => '1.0'],
+            ['loc' => route('site.capabilities'), 'changefreq' => 'weekly', 'priority' => '0.8'],
+            ['loc' => route('site.pricing'), 'changefreq' => 'weekly', 'priority' => '0.8'],
             ['loc' => route('site.contacts'), 'changefreq' => 'monthly', 'priority' => '0.5'],
             ['loc' => route('site.privacy'), 'changefreq' => 'yearly', 'priority' => '0.3'],
         ];

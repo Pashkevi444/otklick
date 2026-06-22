@@ -1,0 +1,383 @@
+/* Стили публичного маркетинг-сайта. Глобальные, но изолированы предком .mkt —
+   не пересекаются с кабинетом (там свои scoped .glass и пр.). Используются
+   общим SiteLayout и страницами лендинга. */
+
+.mkt {
+    position: relative;
+    min-height: 100vh;
+    overflow-x: clip;
+}
+
+/* iOS-стекло */
+.mkt .glass {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px rgba(31, 78, 121, 0.12);
+}
+html.dark .mkt .glass {
+    background: rgba(20, 30, 48, 0.55);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* Анимированный градиентный фон */
+.mkt .bg-base {
+    position: fixed;
+    inset: 0;
+    z-index: -3;
+    pointer-events: none;
+    background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
+    background-size: 200% 200%;
+    animation: mktBgpan 22s ease infinite;
+}
+html.dark .mkt .bg-base {
+    background: linear-gradient(125deg, #0b1220 0%, #0e1828 45%, #0a1a26 100%);
+    background-size: 200% 200%;
+}
+
+/* Плавающие орбы с параллаксом (--sp задаёт JS при прокрутке) */
+.mkt .orbs {
+    position: fixed;
+    inset: -220px 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translate3d(0, calc(var(--sp, 0) * -70px), 0);
+    transition: transform 0.2s linear;
+    will-change: transform;
+}
+.mkt .orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: 0.5;
+    will-change: transform;
+}
+html.dark .mkt .orb {
+    opacity: 0.28;
+}
+.mkt .orb-1 { width: 420px; height: 420px; background: #7cc0ff; top: -90px; left: -70px; animation: mktFloaty 18s ease-in-out infinite; }
+.mkt .orb-2 { width: 360px; height: 360px; background: #b9a8ff; top: 30%; right: -80px; animation: mktFloaty 22s ease-in-out infinite reverse; }
+.mkt .orb-3 { width: 300px; height: 300px; background: #7df3e1; bottom: 10%; left: 5%; animation: mktFloaty 20s ease-in-out infinite; }
+.mkt .orb-4 { width: 340px; height: 340px; background: #9fd0ff; bottom: -120px; right: 20%; animation: mktFloaty 26s ease-in-out infinite reverse; }
+.mkt .orb-5 { width: 300px; height: 300px; background: #c7b3ff; top: 52%; left: 32%; animation: mktFloaty 24s ease-in-out infinite; }
+.mkt .orb-6 { width: 380px; height: 380px; background: #7df3e1; top: 78%; right: 6%; animation: mktFloaty 19s ease-in-out infinite reverse; }
+
+/* ===== Интерактивные 3D-объекты ===== */
+/* Слой со сценой: перспектива + реакция на курсор (--mx/--my) и скролл (--sp). */
+.mkt .scene3d {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    perspective: 900px;
+    perspective-origin: 50% 40%;
+    overflow: hidden;
+}
+.mkt .obj3d {
+    position: absolute;
+    transform-style: preserve-3d;
+    will-change: transform;
+    /* База: следуем за курсором (наклон) + уплываем при скролле (параллакс). */
+    transform: translate3d(0, calc(var(--sp, 0) * var(--par, -90px)), 0)
+        rotateX(calc(var(--my, 0) * var(--tilt, 14deg)))
+        rotateY(calc(var(--mx, 0) * var(--tilt, 14deg) * -1));
+    transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mkt .obj3d > .face {
+    position: absolute;
+    inset: 0;
+    border-radius: 22px;
+}
+/* Стеклянная 3D-плитка с бликом и «толщиной» */
+.mkt .tile3d {
+    width: var(--s, 150px);
+    height: var(--s, 150px);
+    animation: mktFloat3d var(--dur, 12s) ease-in-out infinite;
+}
+.mkt .tile3d .f-front {
+    background: linear-gradient(135deg, rgba(124, 192, 255, 0.55), rgba(120, 170, 255, 0.25));
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 18px 50px rgba(46, 116, 181, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(6px);
+    overflow: hidden;
+}
+.mkt .tile3d .f-front::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: -30%;
+    width: 70%;
+    height: 220%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    transform: skewX(-18deg) translateX(calc(var(--mx, 0) * 60px));
+    transition: transform 0.3s ease;
+}
+.mkt .tile3d .f-back {
+    transform: translateZ(-26px);
+    background: rgba(46, 116, 181, 0.5);
+    filter: blur(2px);
+    border-radius: 22px;
+}
+/* «Кольцо/тор» из градиента */
+.mkt .ring3d {
+    width: var(--s, 180px);
+    height: var(--s, 180px);
+    border-radius: 9999px;
+    background: conic-gradient(from 120deg, #7cc0ff, #b9a8ff, #7df3e1, #9fd0ff, #7cc0ff);
+    -webkit-mask: radial-gradient(circle, transparent 38%, #000 39%, #000 60%, transparent 61%);
+    mask: radial-gradient(circle, transparent 38%, #000 39%, #000 60%, transparent 61%);
+    opacity: 0.85;
+    box-shadow: 0 18px 50px rgba(120, 170, 255, 0.35);
+    animation: mktSpin3d var(--dur, 26s) linear infinite;
+}
+html.dark .mkt .tile3d .f-front {
+    background: linear-gradient(135deg, rgba(46, 116, 181, 0.45), rgba(80, 120, 200, 0.2));
+}
+.mkt .obj-1 { top: 16%; left: 7%; --s: 130px; --par: -120px; --dur: 13s; }
+.mkt .obj-2 { top: 24%; right: 9%; --s: 170px; --par: -70px; --dur: 30s; }
+.mkt .obj-3 { top: 62%; left: 12%; --s: 150px; --par: -150px; --dur: 24s; }
+.mkt .obj-4 { top: 70%; right: 14%; --s: 120px; --par: -100px; --dur: 15s; }
+@media (max-width: 768px) {
+    .mkt .scene3d {
+        display: none; /* на мобиле 3D-слой прячем ради читаемости и батареи */
+    }
+}
+
+/* Появление при скролле */
+.mkt [data-reveal] {
+    transition:
+        opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+        transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mkt.reveal-armed [data-reveal] {
+    opacity: 0;
+    transform: translateY(28px);
+}
+.mkt.reveal-armed [data-reveal].reveal-in {
+    opacity: 1;
+    transform: none;
+}
+
+/* Появление страницы (переход между страницами) */
+.mkt {
+    animation: mktPageIn 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.mkt .card-hover {
+    transition:
+        transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+        box-shadow 0.35s ease,
+        opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mkt .card-hover:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 48px rgba(31, 78, 121, 0.18);
+}
+html.dark .mkt .card-hover:hover {
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+}
+
+.mkt .niche-chip {
+    cursor: pointer;
+}
+.mkt .niche-chip:hover {
+    transform: translateY(-2px);
+}
+.mkt .niche-chip-active {
+    background: linear-gradient(135deg, #2e74b5, #1f4e79);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(46, 116, 181, 0.35);
+}
+
+.mkt .swap-enter-active,
+.mkt .swap-leave-active {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mkt .swap-enter-from { opacity: 0; transform: translateY(12px); }
+.mkt .swap-leave-to { opacity: 0; transform: translateY(-12px); }
+
+.mkt .tpl-row {
+    animation: mktTplRow 0.45s both;
+}
+
+.mkt .ico {
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mkt .group:hover .ico,
+.mkt .card-hover:hover .ico {
+    animation: mktIcoPop 0.55s;
+}
+
+.mkt .btn-shine {
+    position: relative;
+    overflow: hidden;
+}
+.mkt .btn-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+    transform: skewX(-20deg);
+    animation: mktShine 3.4s ease-in-out infinite;
+}
+
+.mkt .cta-glass {
+    background: linear-gradient(135deg, rgba(31, 78, 121, 0.92), rgba(46, 116, 181, 0.92));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 24px 60px rgba(31, 78, 121, 0.35);
+}
+
+.mkt .chat-mock {
+    box-shadow: 0 24px 60px rgba(31, 78, 121, 0.18);
+}
+html.dark .mkt .chat-mock {
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.mkt .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    animation: mktLivePulse 2s infinite;
+}
+.mkt .msg {
+    max-width: 88%;
+    width: fit-content;
+    border-radius: 16px;
+    padding: 9px 13px;
+    font-size: 13px;
+    line-height: 1.45;
+    opacity: 0;
+    animation: mktBubbleIn 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: var(--d, 0s);
+}
+.mkt .msg-client {
+    margin-left: auto;
+    background: #2e74b5;
+    color: #fff;
+    border-bottom-right-radius: 5px;
+}
+.mkt .msg-bot {
+    background: rgba(255, 255, 255, 0.82);
+    color: #1f3550;
+    border-bottom-left-radius: 5px;
+}
+html.dark .mkt .msg-bot {
+    background: rgba(255, 255, 255, 0.1);
+    color: #dbe7f5;
+}
+.mkt .chat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding-top: 2px;
+    opacity: 0;
+    animation: mktBubbleIn 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: var(--d, 0s);
+}
+.mkt .chip {
+    border: 1px solid rgba(46, 116, 181, 0.35);
+    color: #2e74b5;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.55);
+}
+html.dark .mkt .chip {
+    color: #7cc0ff;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(124, 192, 255, 0.28);
+}
+.mkt .chip-primary {
+    background: #2e74b5;
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(46, 116, 181, 0.3);
+}
+
+@keyframes mktBgpan {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+@keyframes mktFloaty {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(26px, -34px) scale(1.06); }
+}
+@keyframes mktFloat3d {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -26px; }
+}
+@keyframes mktSpin3d {
+    from { rotate: 0deg; }
+    to { rotate: 360deg; }
+}
+@keyframes mktPageIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes mktShine {
+    0% { left: -120%; }
+    55%, 100% { left: 140%; }
+}
+@keyframes mktBubbleIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes mktLivePulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+@keyframes mktTplRow {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes mktIcoPop {
+    0% { transform: scale(1) rotate(0); }
+    35% { transform: scale(1.18) rotate(-7deg); }
+    70% { transform: scale(0.96) rotate(4deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mkt,
+    .mkt .bg-base,
+    .mkt .orb,
+    .mkt .obj3d,
+    .mkt .tile3d,
+    .mkt .ring3d,
+    .mkt .btn-shine::after,
+    .mkt .msg,
+    .mkt .chat-chips,
+    .mkt .live-dot,
+    .mkt .tpl-row,
+    .mkt .group:hover .ico,
+    .mkt .card-hover:hover .ico {
+        animation: none;
+    }
+    .mkt .orbs,
+    .mkt .obj3d {
+        transform: none;
+    }
+    .mkt .msg,
+    .mkt .chat-chips {
+        opacity: 1;
+    }
+    .mkt.reveal-armed [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
