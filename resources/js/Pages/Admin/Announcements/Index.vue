@@ -80,9 +80,9 @@ const goPage = (p: number): void => router.get(base.value, { page: p, search: se
     <Head :title="title" />
 
     <AppLayout :title="title">
-        <div class="grid gap-6 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <!-- Редактор -->
-            <form class="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5" @submit.prevent="submit">
+            <form class="min-w-0 space-y-3 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5" @submit.prevent="submit">
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ editingId ? 'Редактировать' : 'Новый анонс' }}</h2>
                     <button type="button" class="text-sm text-slate-500 hover:underline" @click="showPreview = !showPreview">
@@ -124,7 +124,7 @@ const goPage = (p: number): void => router.get(base.value, { page: p, search: se
             </form>
 
             <!-- Правая колонка: поиск + список -->
-            <div>
+            <div class="min-w-0">
                 <!-- Поиск -->
                 <input
                     v-model="search"

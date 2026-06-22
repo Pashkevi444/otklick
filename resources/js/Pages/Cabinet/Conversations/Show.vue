@@ -222,7 +222,7 @@ const removeLead = (): void => {
                     🗂 Запись в {{ conversation.crmProvider }}: <span class="font-medium text-slate-600 dark:text-slate-300">#{{ conversation.crmRecordId }}</span>
                 </div>
             </div>
-            <div class="ml-auto flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
                 <template v-if="canReply">
                     <button
                         v-if="!operatorActive"

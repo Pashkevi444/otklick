@@ -373,9 +373,9 @@ const remove = (id: string): void => {
 
             <div v-else class="space-y-3">
                 <div v-for="gap in gaps" :key="gap.id" class="bg-white rounded-xl border border-slate-200 p-5">
-                    <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                         <div class="min-w-0">
-                            <div class="font-medium text-slate-700">«{{ gap.question }}»</div>
+                            <div class="font-medium text-slate-700 break-words">«{{ gap.question }}»</div>
                             <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                                 <span>Спрашивали: <b class="text-slate-600">{{ gap.occurrences }}</b></span>
                                 <span v-if="gap.channel">Канал: {{ gap.channel }}</span>

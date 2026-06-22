@@ -72,15 +72,24 @@ class ReplyComposer
             $crm = $crm->filter(fn (CrmKnowledgeEntry $e): bool => in_array($e->id, $retrieved['crm'], true))->values();
         }
 
-        // Реальные (точные) URL фото из найденных записей — их прикрепим, если бот
-        // поставит метку [[PHOTOS]]. URL в текст НЕ отдаём боту: LLM их искажает.
-        $availableImages = $this->imagesFrom($published);
+        // Самая релевантная запись — верхний хит RAG ($retrieved['manual'][0]).
+        // И ссылки, и фото берём ТОЛЬКО из неё, а не из всех top-K: иначе к ответу
+        // примешиваются ссылки/картинки соседних, но не относящихся к вопросу
+        // записей (инстаграм мастера или чужие фото к вопросу про виды стрижек).
+        $topEntry = $retrieved !== null && $retrieved['manual'] !== []
+            ? $published->firstWhere('id', $retrieved['manual'][0])
+            : null;
 
-        // Ссылки сработавших элементов БЗ дописываем в ответ ВСЕГДА — но только
-        // когда RAG отобрал релевантные записи ($retrieved !== null). В фолбэке
-        // (вся база в промпте) этого не делаем, иначе к каждому ответу прилипли бы
-        // ссылки со всей базы. URL берём из данных, минуя LLM.
-        $availableLinks = $retrieved !== null ? $this->linksFrom($published) : [];
+        // Реальные (точные) URL фото — прикрепим, если бот поставит метку [[PHOTOS]].
+        // URL в текст НЕ отдаём боту (LLM их искажает). На RAG-пути — только из
+        // верхней записи; в фолбэке (вся база в промпте) — из всей базы, как было.
+        $availableImages = $retrieved !== null
+            ? ($topEntry !== null ? $this->imagesFrom(new Collection([$topEntry])) : [])
+            : $this->imagesFrom($published);
+
+        // Ссылки дописываем в конец ответа — тоже только из верхней записи; в
+        // фолбэке не дописываем вовсе. URL берём из данных, минуя LLM.
+        $availableLinks = $topEntry !== null ? $this->linksFrom(new Collection([$topEntry])) : [];
 
         // Если клиент уже известен (узнали по чату/телефону/нику и перенесли
         // контакты) — промпт скажет боту звать по имени и не переспрашивать.

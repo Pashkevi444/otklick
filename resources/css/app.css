@@ -178,3 +178,12 @@ html.dark .ui-scope .text-slate-300 {
 .rte-editable {
     min-height: 12rem;
 }
+
+/* Скрытая полоса прокрутки для горизонтальных табов/рядов (мобильный скролл) */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}

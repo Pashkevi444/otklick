@@ -260,6 +260,84 @@ final class ReplyComposerTest extends TestCase
         $this->assertStringContainsString('https://otcl1ck.ru/price.pdf', $reply->text);
     }
 
+    public function test_only_top_relevant_entry_links_are_appended(): void
+    {
+        // Регресс: при вопросе про стрижки бот не должен прилеплять ссылку из
+        // соседней (менее релевантной) записи — например, инстаграм мастера.
+        $top = new KnowledgeEntry([
+            'title' => 'Виды стрижек',
+            'content' => 'Фейд, андеркат, классика.',
+            'is_published' => true,
+            'links' => [['label' => 'Прайс', 'url' => 'https://otcl1ck.ru/price.pdf']],
+            'images' => [],
+        ]);
+        $top->id = 'top';
+        $other = new KnowledgeEntry([
+            'title' => 'Барбер Никита',
+            'content' => 'Мастер Никита.',
+            'is_published' => true,
+            'links' => [['label' => 'Instagram Никиты', 'url' => 'https://instagram.com/nikita']],
+            'images' => [],
+        ]);
+        $other->id = 'barber';
+
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Делаем фейд, андеркат и классику.');
+
+        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$top, $other]));
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        // Порядок = релевантность: «Виды стрижек» сверху, «Барбер Никита» ниже.
+        $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['top', 'barber'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+
+        $tenant = new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]);
+        $reply = $composer->compose($tenant, new Conversation);
+
+        // Ссылка верхней записи — есть; инстаграм соседней — нет.
+        $this->assertStringContainsString('https://otcl1ck.ru/price.pdf', $reply->text);
+        $this->assertStringNotContainsString('instagram.com/nikita', $reply->text);
+    }
+
+    public function test_only_top_relevant_entry_images_are_attached(): void
+    {
+        // Регресс: фото прикрепляются только из самой релевантной записи, а не из
+        // соседней (картинки из одного элемента БЗ не примешиваются в другой).
+        $top = new KnowledgeEntry([
+            'title' => 'Стрижки', 'content' => 'Фейды.', 'is_published' => true, 'links' => [],
+            'images' => [['path' => 'k/a.jpg', 'url' => 'https://otcl1ck.ru/a.jpg']],
+        ]);
+        $top->id = 'top';
+        $other = new KnowledgeEntry([
+            'title' => 'Маникюр', 'content' => 'Покрытие.', 'is_published' => true, 'links' => [],
+            'images' => [['path' => 'k/b.jpg', 'url' => 'https://otcl1ck.ru/b.jpg']],
+        ]);
+        $other->id = 'other';
+
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Вот примеры стрижек! [[PHOTOS]]');
+
+        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$top, $other]));
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['top', 'other'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $tenant = new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]);
+        $reply = $composer->compose($tenant, new Conversation);
+
+        $this->assertSame(['https://otcl1ck.ru/a.jpg'], $reply->images); // только фото верхней записи
+    }
+
     public function test_no_photos_marker_means_no_images(): void
     {
         // Без метки [[PHOTOS]] фото не прикрепляются, даже если у записи они есть.

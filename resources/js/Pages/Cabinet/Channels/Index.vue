@@ -34,7 +34,7 @@ const disconnect = (id: string): void => {
 
     <AppLayout title="Каналы">
         <form class="bg-white rounded-xl border border-slate-200 p-6 mb-6" @submit.prevent="connect">
-            <div class="flex gap-2 mb-4">
+            <div class="no-scrollbar -mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
                 <button
                     v-for="tab in [
                         { value: 'telegram', label: 'Telegram' },
@@ -44,7 +44,7 @@ const disconnect = (id: string): void => {
                     ]"
                     :key="tab.value"
                     type="button"
-                    class="rounded-lg px-4 py-1.5 text-sm font-medium border"
+                    class="shrink-0 whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium border"
                     :class="form.type === tab.value
                         ? 'bg-[#2E74B5] text-white border-[#2E74B5]'
                         : 'bg-white text-slate-600 border-slate-300 hover:border-[#2E74B5]'"
