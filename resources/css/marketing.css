@@ -323,9 +323,11 @@ html.dark .mkt .chip {
     from { rotate: 0deg; }
     to { rotate: 360deg; }
 }
+/* Только прозрачность: transform у .mkt сделал бы фон (position:fixed) привязанным
+   к блоку, а не к экрану — отсюда «брешь» в фоне внизу длинных страниц. */
 @keyframes mktPageIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: none; }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 @keyframes mktShine {
     0% { left: -120%; }

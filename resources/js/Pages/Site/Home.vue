@@ -3,7 +3,9 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import SiteLayout from '@/Layouts/SiteLayout.vue';
 import Icon from '@/Components/Icon.vue';
-import { features, metricsData } from '@/marketing';
+import { features, metricsData, reliability } from '@/marketing';
+
+const teaser = features.slice(0, 6);
 
 interface Site {
     heroTitle: string;
@@ -131,23 +133,34 @@ onBeforeUnmount(() => metricsObserver?.disconnect());
             </div>
         </section>
 
-        <!-- Что умеет -->
+        <!-- Что умеет — кратко, с переходом на «Возможности» -->
         <section class="mx-auto max-w-6xl px-6 py-16">
-            <div data-reveal class="mb-12 text-center">
+            <div data-reveal class="mb-9 text-center">
                 <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Что умеет «Отклик»</h2>
                 <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Виртуальный администратор, который встречает каждого клиента и доводит его до записи.</p>
             </div>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <div v-for="(f, i) in features" :key="f.title" data-reveal :style="{ transitionDelay: i * 60 + 'ms' }" class="card-hover glass group rounded-3xl p-6">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70 text-[#2E74B5] shadow-sm transition group-hover:scale-110 dark:bg-white/10 dark:text-sky-300">
-                        <Icon :name="f.icon" class="ico h-6 w-6" />
-                    </div>
-                    <div class="mt-4 font-semibold text-[#1F4E79] dark:text-sky-200">{{ f.title }}</div>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ f.text }}</p>
-                </div>
+            <div data-reveal class="mx-auto flex max-w-4xl flex-wrap justify-center gap-2.5">
+                <span v-for="f in teaser" :key="f.title" class="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                    <Icon :name="f.icon" class="h-4 w-4 text-[#2E74B5] dark:text-sky-300" />{{ f.title }}
+                </span>
             </div>
-            <div data-reveal class="mt-10 text-center">
-                <Link href="/vozmozhnosti" class="inline-flex items-center gap-1.5 font-medium text-[#2E74B5] hover:underline dark:text-sky-300">Шаблоны, интеграции и как это работает →</Link>
+            <div data-reveal class="mt-9 text-center">
+                <Link href="/vozmozhnosti" class="btn-shine inline-block rounded-2xl bg-[#2E74B5] px-8 py-3.5 font-semibold text-white shadow-lg shadow-[#2E74B5]/25 transition hover:-translate-y-0.5 hover:bg-[#255f96]">Все возможности →</Link>
+            </div>
+        </section>
+
+        <!-- Ваши данные в безопасности -->
+        <section class="mx-auto max-w-6xl px-6 py-16">
+            <div data-reveal class="mb-12 text-center">
+                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Ваши данные в безопасности</h2>
+                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Всё размещено в России и построено вокруг защиты вашего бизнеса.</p>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div v-for="(r, i) in reliability" :key="r.title" data-reveal :style="{ transitionDelay: i * 70 + 'ms' }" class="card-hover glass group rounded-3xl p-6">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/70 text-[#2E74B5] shadow-sm dark:bg-white/10 dark:text-sky-300"><Icon :name="r.icon" class="ico h-6 w-6" /></div>
+                    <div class="mt-3 font-semibold text-[#1F4E79] dark:text-sky-200">{{ r.title }}</div>
+                    <p class="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ r.text }}</p>
+                </div>
             </div>
         </section>
 

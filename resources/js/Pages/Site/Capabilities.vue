@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import SiteLayout from '@/Layouts/SiteLayout.vue';
 import Icon from '@/Components/Icon.vue';
-import { integrationsNow, niches, nicheTags, roadmap, steps, type Niche } from '@/marketing';
+import { features, integrationsNow, niches, nicheTags, roadmap, steps, type Niche } from '@/marketing';
 
 interface Site {
     phone: string | null;
@@ -31,6 +31,23 @@ const activeNicheData = computed<Niche>(() => niches.find((n) => n.key === activ
         <section class="mx-auto max-w-6xl px-6 pt-16 pb-6 text-center sm:pt-20">
             <h1 data-reveal class="mx-auto max-w-3xl text-4xl font-extrabold tracking-tight text-[#1F4E79] dark:text-sky-200 sm:text-5xl">Возможности «Отклик»</h1>
             <p data-reveal style="transition-delay: 100ms" class="mx-auto mt-5 max-w-2xl text-lg text-slate-600 dark:text-slate-300">Готовые шаблоны под вашу нишу, нужные каналы и CRM, запуск за один вечер.</p>
+        </section>
+
+        <!-- Что умеет «Отклик» -->
+        <section class="mx-auto max-w-6xl px-6 py-12">
+            <div data-reveal class="mb-12 text-center">
+                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Что умеет «Отклик»</h2>
+                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Виртуальный администратор, который встречает каждого клиента и доводит его до записи.</p>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div v-for="(f, i) in features" :key="f.title" data-reveal :style="{ transitionDelay: (i % 3) * 60 + 'ms' }" class="card-hover glass group rounded-3xl p-6">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70 text-[#2E74B5] shadow-sm transition group-hover:scale-110 dark:bg-white/10 dark:text-sky-300">
+                        <Icon :name="f.icon" class="ico h-6 w-6" />
+                    </div>
+                    <div class="mt-4 font-semibold text-[#1F4E79] dark:text-sky-200">{{ f.title }}</div>
+                    <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ f.text }}</p>
+                </div>
+            </div>
         </section>
 
         <!-- Готовые шаблоны под нишу -->

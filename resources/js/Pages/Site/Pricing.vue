@@ -2,7 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import SiteLayout from '@/Layouts/SiteLayout.vue';
 import Icon from '@/Components/Icon.vue';
-import { pricing, reliability } from '@/marketing';
+import { pricing } from '@/marketing';
 
 interface Site {
     phone: string | null;
@@ -53,21 +53,6 @@ defineProps<{ site: Site; loginUrl: string }>();
                         </li>
                     </ul>
                     <Link href="/contacts" class="mt-7 block rounded-xl px-5 py-3 text-center font-semibold transition hover:-translate-y-0.5" :class="p.highlight ? 'bg-[#2E74B5] text-white shadow-lg shadow-[#2E74B5]/25 hover:bg-[#255f96]' : 'border border-[#2E74B5]/30 bg-white/60 text-[#1F4E79] dark:bg-white/10 dark:text-sky-200'">{{ p.cta }}</Link>
-                </div>
-            </div>
-        </section>
-
-        <!-- Надёжность -->
-        <section class="mx-auto max-w-6xl px-6 py-16">
-            <div data-reveal class="mb-12 text-center">
-                <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Спокойно за данные и клиентов</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Всё размещено в России и построено вокруг защиты вашего бизнеса.</p>
-            </div>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                <div v-for="(r, i) in reliability" :key="r.title" data-reveal :style="{ transitionDelay: i * 70 + 'ms' }" class="card-hover glass rounded-3xl p-6">
-                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/70 text-[#2E74B5] shadow-sm dark:bg-white/10 dark:text-sky-300"><Icon :name="r.icon" class="ico h-6 w-6" /></div>
-                    <div class="mt-3 font-semibold text-[#1F4E79] dark:text-sky-200">{{ r.title }}</div>
-                    <p class="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ r.text }}</p>
                 </div>
             </div>
         </section>
