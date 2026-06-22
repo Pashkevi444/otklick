@@ -7,7 +7,9 @@ namespace App\Http\Controllers\Cabinet;
 use App\DTO\KnowledgeEntryData;
 use App\Enums\ChannelType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Cabinet\ImportSiteRequest;
 use App\Http\Requests\Cabinet\KnowledgeEntryRequest;
+use App\Jobs\ImportKnowledgeFromSite;
 use App\Jobs\IndexKnowledge;
 use App\Models\BusinessType;
 use App\Models\KnowledgeEntry;
@@ -16,7 +18,9 @@ use App\Models\KnowledgeTemplate;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Services\KnowledgeBaseService;
+use App\Services\SiteImportStatus;
 use App\Support\KnowledgeImageStorage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -138,6 +142,30 @@ final class KnowledgeEntryController extends Controller
         return redirect()
             ->route('cabinet.knowledge.index')
             ->with('success', 'Запись удалена.');
+    }
+
+    /**
+     * Запуск фонового импорта базы знаний с сайта бизнеса. Создаёт черновики —
+     * бизнес сам решает, что опубликовать. Прогресс — в {@see SiteImportStatus}.
+     */
+    public function importSite(ImportSiteRequest $request, SiteImportStatus $status): RedirectResponse
+    {
+        $tenantId = $this->tenantId($request);
+
+        $status->begin($tenantId);
+        ImportKnowledgeFromSite::dispatch($tenantId, (string) $request->string('url'));
+
+        return redirect()
+            ->route('cabinet.knowledge.index')
+            ->with('success', 'Импорт с сайта запущен — записи появятся черновиками через минуту.');
+    }
+
+    /**
+     * Прогресс импорта с сайта (для индикатора в кабинете).
+     */
+    public function importStatus(Request $request, SiteImportStatus $status): JsonResponse
+    {
+        return response()->json($status->get($this->tenantId($request)));
     }
 
     private function findOrFail(string $id): KnowledgeEntry

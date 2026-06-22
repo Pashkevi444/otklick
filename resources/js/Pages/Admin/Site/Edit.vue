@@ -47,7 +47,7 @@ const submit = (): void => {
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Подзаголовок (hero)</label>
-                <textarea v-model="form.hero_subtitle" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                <textarea v-model="form.hero_subtitle" rows="4" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
                 <p v-if="form.errors.hero_subtitle" class="mt-1 text-sm text-red-600">{{ form.errors.hero_subtitle }}</p>
             </div>
 

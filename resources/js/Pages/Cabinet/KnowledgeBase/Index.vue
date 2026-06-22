@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ImageUploader from '@/Components/ImageUploader.vue';
@@ -150,6 +150,64 @@ const remove = (id: string): void => {
         router.delete(`/cabinet/knowledge/${id}`);
     }
 };
+
+// --- Импорт базы знаний с сайта (фоновая задача + прогресс) ---
+const showImport = ref(false);
+const importForm = useForm({ url: '' });
+const importing = ref(false);
+const importPercent = ref(0);
+const importCreated = ref(0);
+const importDone = ref(false);
+const importFailed = ref(false);
+let importTimer: ReturnType<typeof setInterval> | null = null;
+
+const stopImportPolling = (): void => {
+    if (importTimer !== null) {
+        clearInterval(importTimer);
+        importTimer = null;
+    }
+};
+
+const pollImport = async (): Promise<void> => {
+    const res = await fetch('/cabinet/knowledge/import-site/status', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+    });
+    const data: { percent: number; state: string; created: number } = await res.json();
+    importPercent.value = data.percent ?? 0;
+    importCreated.value = data.created ?? 0;
+
+    if (data.state === 'done') {
+        importPercent.value = 100;
+        stopImportPolling();
+        importing.value = false;
+        importDone.value = true;
+        // Подтягиваем свежие черновики в список.
+        router.reload({ only: ['entries', 'pagination'] });
+    } else if (data.state === 'failed') {
+        stopImportPolling();
+        importing.value = false;
+        importFailed.value = true;
+    }
+};
+
+const startImport = (): void => {
+    importDone.value = false;
+    importFailed.value = false;
+    importForm.post('/cabinet/knowledge/import-site', {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            importing.value = true;
+            importPercent.value = 0;
+            importCreated.value = 0;
+            void pollImport();
+            importTimer = setInterval(() => void pollImport(), 1500);
+        },
+    });
+};
+
+onUnmounted(stopImportPolling);
 </script>
 
 <template>
@@ -186,6 +244,13 @@ const remove = (id: string): void => {
 
         <div class="flex flex-wrap justify-end gap-2 mb-4">
             <button
+                type="button"
+                class="rounded-lg border border-[#2E74B5] px-4 py-2 text-sm font-medium text-[#2E74B5] hover:bg-[#EAF2FB] dark:hover:bg-white/10"
+                @click="showImport = !showImport"
+            >
+                {{ showImport ? 'Скрыть импорт' : '✨ Заполнить с сайта' }}
+            </button>
+            <button
                 v-if="templates.length"
                 type="button"
                 class="rounded-lg border border-[#2E74B5] px-4 py-2 text-sm font-medium text-[#2E74B5] hover:bg-[#EAF2FB] dark:hover:bg-white/10"
@@ -200,6 +265,51 @@ const remove = (id: string): void => {
             >
                 {{ showForm ? 'Отмена' : 'Новая запись' }}
             </button>
+        </div>
+
+        <!-- Импорт базы знаний с сайта (AI собирает черновики) -->
+        <div v-if="showImport" class="mb-6 rounded-xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-5 dark:border-white/10 dark:from-white/10 dark:to-white/5">
+            <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Заполнить базу знаний с вашего сайта</div>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Дайте ссылку на сайт — AI пройдёт по ключевым страницам (услуги, цены, контакты) и соберёт записи.
+                Всё сохранится <b>черновиками</b> — проверьте и опубликуйте нужное.
+            </p>
+
+            <form class="mt-3 flex flex-col gap-2 sm:flex-row" @submit.prevent="startImport">
+                <input
+                    v-model="importForm.url"
+                    type="text"
+                    inputmode="url"
+                    placeholder="https://mysite.ru"
+                    :disabled="importing"
+                    class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5"
+                />
+                <button
+                    type="submit"
+                    :disabled="importing || !importForm.url.trim()"
+                    class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
+                >
+                    {{ importing ? `Импорт… ${importPercent}%` : 'Собрать с сайта' }}
+                </button>
+            </form>
+            <p v-if="importForm.errors.url" class="mt-1 text-sm text-red-600">{{ importForm.errors.url }}</p>
+
+            <!-- Прогресс -->
+            <div v-if="importing" class="mt-3 max-w-md">
+                <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                    <div class="h-full rounded-full bg-[#2E74B5] transition-all duration-500" :style="{ width: importPercent + '%' }"></div>
+                </div>
+                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Читаем сайт и собираем записи… {{ importPercent }}%<span v-if="importCreated"> · черновиков: {{ importCreated }}</span>
+                </div>
+            </div>
+
+            <div v-else-if="importDone" class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-500/10 dark:text-green-300">
+                Готово! Собрано черновиков: <b>{{ importCreated }}</b>. Они ниже в списке — проверьте и опубликуйте нужные.
+            </div>
+            <div v-else-if="importFailed" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+                Не удалось разобрать сайт. Проверьте адрес и попробуйте ещё раз.
+            </div>
         </div>
 
         <!-- Готовые элементы базы знаний по типам бизнеса (сперва «Общие») -->

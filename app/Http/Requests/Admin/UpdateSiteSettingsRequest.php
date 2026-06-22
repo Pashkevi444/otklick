@@ -18,7 +18,7 @@ final class UpdateSiteSettingsRequest extends AbstractFormRequest
     {
         return [
             'hero_title' => ['required', 'string', 'max:255'],
-            'hero_subtitle' => ['required', 'string', 'max:500'],
+            'hero_subtitle' => ['required', 'string', 'max:1000'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'telegram' => ['nullable', 'string', 'max:100'],
