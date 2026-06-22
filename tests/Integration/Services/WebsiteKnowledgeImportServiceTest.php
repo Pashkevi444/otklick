@@ -111,6 +111,69 @@ final class WebsiteKnowledgeImportServiceTest extends TestCase
         $this->assertSame(0, KnowledgeEntry::query()->count());
     }
 
+    public function test_extracts_content_from_spa_shell_via_jsonld_and_state(): void
+    {
+        // SPA без SSR: видимого текста почти нет, но контент лежит в JSON-LD и
+        // во встроенном состоянии (Inertia data-page) — парсер должен его достать.
+        $ld = (string) json_encode([
+            '@type' => 'Organization',
+            'name' => 'Барбершоп Метрополь',
+            'description' => 'Мужские стрижки, моделирование бороды, бритьё опасной бритвой и детские '
+                .'стрижки. Работаем ежедневно с 10:00 до 22:00 в самом центре города у метро.',
+        ], JSON_UNESCAPED_UNICODE);
+        $page = htmlspecialchars((string) json_encode([
+            'props' => [
+                'hero' => 'Стрижка от 1500 рублей, запись онлайн круглосуточно без выходных каждый день.',
+                'about' => 'Опытные барберы, авторские стрижки, кофе в подарок каждому гостю салона.',
+            ],
+        ], JSON_UNESCAPED_UNICODE), ENT_QUOTES);
+
+        $html = '<html><head><title>Барбершоп</title>'
+            .'<script type="application/ld+json">'.$ld.'</script></head>'
+            .'<body><div id="app" data-page="'.$page.'"></div></body></html>';
+
+        Http::fake(['*' => Http::response($html, 200)]);
+
+        // LLM, который реагирует на наличие текста (возвращает запись, если вход непустой).
+        $this->app->instance(LlmClient::class, new class implements LlmClient
+        {
+            public function generate(string $systemPrompt, array $messages): string
+            {
+                $text = $messages[0]['content'] ?? '';
+
+                return str_contains($text, 'Метрополь') || str_contains($text, 'Стрижка')
+                    ? (string) json_encode([['title' => 'О нас', 'content' => 'Барбершоп в центре.']], JSON_UNESCAPED_UNICODE)
+                    : '[]';
+            }
+        });
+
+        $created = $this->app->make(WebsiteKnowledgeImportService::class)->import('https://spa.ru');
+
+        $this->assertGreaterThan(0, $created);
+    }
+
+    public function test_discovers_subpages_via_sitemap(): void
+    {
+        // Корень без ссылок (как SPA), но подстраницы перечислены в sitemap.xml.
+        $body = '<html><body>'.str_repeat('Текст страницы про услуги и цены салона. ', 20).'</body></html>';
+
+        Http::fake([
+            'https://shop.ru/sitemap.xml' => Http::response(
+                '<?xml version="1.0"?><urlset><url><loc>https://shop.ru/uslugi</loc></url>'
+                .'<url><loc>https://shop.ru/contacts</loc></url></urlset>',
+                200,
+                ['Content-Type' => 'application/xml'],
+            ),
+            '*' => Http::response($body, 200),
+        ]);
+        $this->stubLlm();
+
+        $this->app->make(WebsiteKnowledgeImportService::class)->import('https://shop.ru');
+
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://shop.ru/uslugi');
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://shop.ru/contacts');
+    }
+
     public function test_skips_garbage_llm_output(): void
     {
         $this->fakeSite();

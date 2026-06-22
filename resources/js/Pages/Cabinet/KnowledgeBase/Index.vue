@@ -304,8 +304,11 @@ onUnmounted(stopImportPolling);
                 </div>
             </div>
 
-            <div v-else-if="importDone" class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-500/10 dark:text-green-300">
+            <div v-else-if="importDone && importCreated > 0" class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-500/10 dark:text-green-300">
                 Готово! Собрано черновиков: <b>{{ importCreated }}</b>. Они ниже в списке — проверьте и опубликуйте нужные.
+            </div>
+            <div v-else-if="importDone" class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                На сайте не нашлось текста для разбора. Так бывает, если сайт собран на конструкторе с JS-рендерингом (контент подгружается скриптами). Попробуйте другой адрес, добавьте записи вручную или возьмите из шаблонов.
             </div>
             <div v-else-if="importFailed" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
                 Не удалось разобрать сайт. Проверьте адрес и попробуйте ещё раз.
