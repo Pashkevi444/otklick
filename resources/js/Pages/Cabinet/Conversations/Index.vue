@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue';
+import { reactive, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Pagination from '@/Components/Pagination.vue';
 import { useCan } from '@/composables/useCan';
 
 interface Row {
@@ -89,15 +90,6 @@ const sortBy = (col: string): void => {
 };
 
 const arrow = (col: string): string => (state.sort !== col ? '' : state.dir === 'asc' ? ' ↑' : ' ↓');
-
-const pages = computed<number[]>(() => {
-    const { current, last } = props.pagination;
-    const from = Math.max(1, current - 2);
-    const to = Math.min(last, current + 2);
-    const out: number[] = [];
-    for (let i = from; i <= to; i++) out.push(i);
-    return out;
-});
 
 const outcomeClass = (o: string): string =>
     ({
@@ -263,37 +255,13 @@ const remove = (id: string): void => {
             </div>
 
             <!-- Пагинация -->
-            <div class="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <div class="text-sm text-slate-400">Показано {{ pagination.from }}–{{ pagination.to }} из {{ pagination.total }}</div>
-                <div v-if="pagination.last > 1" class="flex items-center gap-1">
-                    <button
-                        type="button"
-                        :disabled="pagination.current === 1"
-                        class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
-                        @click="go(pagination.current - 1)"
-                    >
-                        ←
-                    </button>
-                    <button
-                        v-for="p in pages"
-                        :key="p"
-                        type="button"
-                        class="min-w-9 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                        :class="p === pagination.current ? 'bg-[#2E74B5] text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
-                        @click="go(p)"
-                    >
-                        {{ p }}
-                    </button>
-                    <button
-                        type="button"
-                        :disabled="pagination.current === pagination.last"
-                        class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
-                        @click="go(pagination.current + 1)"
-                    >
-                        →
-                    </button>
-                </div>
-            </div>
+            <Pagination
+                :current="pagination.current"
+                :last="pagination.last"
+                :total="pagination.total"
+                :from="pagination.from"
+                :to="pagination.to"
+            />
         </template>
     </AppLayout>
 </template>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Pagination from '@/Components/Pagination.vue';
 
 interface Item {
     id: string;
@@ -22,10 +23,6 @@ const props = defineProps<{ type: string; title: string; page: Page }>();
 const base = computed(() => '/cabinet/news');
 const fmt = (d: string | null): string =>
     d ? new Date(d.replace(' ', 'T')).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-
-const goPage = (p: number): void => {
-    router.get(base.value, { page: p }, { preserveScroll: true, preserveState: true });
-};
 </script>
 
 <template>
@@ -56,25 +53,7 @@ const goPage = (p: number): void => {
             </div>
 
             <!-- Пагинация -->
-            <div v-if="page.last_page > 1" class="flex items-center justify-center gap-3 pt-2">
-                <button
-                    type="button"
-                    class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15"
-                    :disabled="page.current_page <= 1"
-                    @click="goPage(page.current_page - 1)"
-                >
-                    ← Назад
-                </button>
-                <span class="text-sm text-slate-500">Стр. {{ page.current_page }} из {{ page.last_page }}</span>
-                <button
-                    type="button"
-                    class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15"
-                    :disabled="page.current_page >= page.last_page"
-                    @click="goPage(page.current_page + 1)"
-                >
-                    Вперёд →
-                </button>
-            </div>
+            <Pagination :current="page.current_page" :last="page.last_page" :total="page.total" />
         </div>
     </AppLayout>
 </template>

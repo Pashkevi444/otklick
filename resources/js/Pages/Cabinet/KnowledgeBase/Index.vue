@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ImageUploader from '@/Components/ImageUploader.vue';
+import Pagination from '@/Components/Pagination.vue';
 import Toggle from '@/Components/Toggle.vue';
 
 interface LinkItem {
@@ -48,11 +49,6 @@ const props = defineProps<{
     templates: KbTemplate[];
     businessTypes: BizType[];
 }>();
-
-// Пагинация списка записей (серверная, по ?page).
-const goToPage = (page: number): void => {
-    router.get(route('cabinet.knowledge.index'), { page }, { preserveScroll: true, preserveState: false });
-};
 
 const tab = ref<'entries' | 'gaps'>('entries');
 const showForm = ref(false);
@@ -149,6 +145,11 @@ const remove = (id: string): void => {
     if (confirm('Удалить запись?')) {
         router.delete(`/cabinet/knowledge/${id}`);
     }
+};
+
+// Публикация/снятие прямо из списка (бот использует только опубликованные).
+const togglePublish = (entry: Entry): void => {
+    router.patch(`/cabinet/knowledge/${entry.id}/publish`, {}, { preserveScroll: true });
 };
 
 // --- Импорт базы знаний с сайта (фоновая задача + прогресс) ---
@@ -444,6 +445,16 @@ onUnmounted(stopImportPolling);
                         </div>
                     </div>
                     <div class="flex items-center gap-3 shrink-0">
+                        <button
+                            type="button"
+                            class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                            :class="entry.is_published
+                                ? 'border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300'
+                                : 'bg-green-600 text-white hover:bg-green-700'"
+                            @click="togglePublish(entry)"
+                        >
+                            {{ entry.is_published ? 'Снять с публикации' : 'Опубликовать' }}
+                        </button>
                         <Link :href="`/cabinet/knowledge/${entry.id}/edit`" class="text-sm text-[#2E74B5] hover:underline">Изменить</Link>
                         <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(entry.id)">Удалить</button>
                     </div>
@@ -452,25 +463,7 @@ onUnmounted(stopImportPolling);
         </div>
 
         <!-- Пагинация списка записей -->
-        <div v-if="pagination.last > 1" class="mt-5 flex items-center justify-center gap-3 text-sm">
-            <button
-                type="button"
-                class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40"
-                :disabled="pagination.current <= 1"
-                @click="goToPage(pagination.current - 1)"
-            >
-                ← Назад
-            </button>
-            <span class="text-slate-500">Стр. {{ pagination.current }} из {{ pagination.last }}</span>
-            <button
-                type="button"
-                class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40"
-                :disabled="pagination.current >= pagination.last"
-                @click="goToPage(pagination.current + 1)"
-            >
-                Вперёд →
-            </button>
-        </div>
+        <Pagination :current="pagination.current" :last="pagination.last" :total="pagination.total" />
         </div>
 
         <!-- Вкладка: развитие бота -->

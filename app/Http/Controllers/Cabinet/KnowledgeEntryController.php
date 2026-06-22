@@ -168,6 +168,29 @@ final class KnowledgeEntryController extends Controller
         return response()->json($status->get($this->tenantId($request)));
     }
 
+    /**
+     * Переключает публикацию записи прямо из списка (без открытия формы) —
+     * удобно публиковать черновики, в т.ч. собранные импортом с сайта. Остальные
+     * поля (ссылки/картинки) сохраняются как есть.
+     */
+    public function togglePublish(string $entry): RedirectResponse
+    {
+        $model = $this->findOrFail($entry);
+        $willPublish = ! $model->is_published;
+
+        $this->knowledge->update($model, new KnowledgeEntryData(
+            title: $model->title,
+            content: $model->content,
+            isPublished: $willPublish,
+            links: $model->links,
+            images: $model->images,
+        ));
+
+        IndexKnowledge::dispatch((string) $model->tenant_id);
+
+        return back()->with('success', $willPublish ? 'Запись опубликована.' : 'Запись снята с публикации.');
+    }
+
     private function findOrFail(string $id): KnowledgeEntry
     {
         $entry = $this->entries->find($id);

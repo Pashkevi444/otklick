@@ -67,6 +67,50 @@ final class KnowledgeBaseTest extends TestCase
                     && ! $t->contains(fn (array $x): bool => $x['businessType'] === 'barbershop'))); // чужих ниш нет
     }
 
+    public function test_pagination_returns_second_page(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+        KnowledgeEntry::factory()->count(12)->create(['tenant_id' => $tenant->id]);
+
+        // 9 на страницу → на второй странице 3 записи.
+        $this->actingAs($owner)
+            ->get('/cabinet/knowledge?page=2')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('entries', 3)
+                ->where('pagination.current', 2)
+                ->where('pagination.last', 2));
+    }
+
+    public function test_owner_publishes_draft_from_list(): void
+    {
+        [$tenant, $owner] = $this->tenantWithOwner();
+        $entry = KnowledgeEntry::factory()->create(['tenant_id' => $tenant->id, 'is_published' => false]);
+
+        $this->actingAs($owner)
+            ->patch("/cabinet/knowledge/{$entry->id}/publish")
+            ->assertRedirect();
+
+        $this->assertTrue($entry->fresh()->is_published);
+
+        // Повторный клик — снимает с публикации.
+        $this->actingAs($owner)->patch("/cabinet/knowledge/{$entry->id}/publish");
+        $this->assertFalse($entry->fresh()->is_published);
+    }
+
+    public function test_publish_toggle_is_scoped_to_tenant(): void
+    {
+        [, $owner] = $this->tenantWithOwner();
+        $otherTenant = Tenant::factory()->create();
+        $foreign = KnowledgeEntry::factory()->create(['tenant_id' => $otherTenant->id, 'is_published' => false]);
+
+        $this->actingAs($owner)
+            ->patch("/cabinet/knowledge/{$foreign->id}/publish")
+            ->assertNotFound();
+
+        $this->assertFalse($foreign->fresh()->is_published);
+    }
+
     public function test_owner_creates_entry(): void
     {
         [$tenant, $owner] = $this->tenantWithOwner();

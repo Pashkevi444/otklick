@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import RichTextEditor from '@/Components/RichTextEditor.vue';
+import Pagination from '@/Components/Pagination.vue';
 
 interface Item {
     id: string;
@@ -72,8 +73,6 @@ const submit = (): void => {
 const remove = (item: Item): void => {
     if (confirm('Удалить анонс?')) router.delete(`/admin/announcements/${item.id}`, { preserveScroll: true });
 };
-
-const goPage = (p: number): void => router.get(base.value, { page: p, search: search.value || undefined }, { preserveScroll: true, preserveState: true });
 </script>
 
 <template>
@@ -167,11 +166,7 @@ const goPage = (p: number): void => router.get(base.value, { page: p, search: se
                     </div>
                 </article>
 
-                <div v-if="props.page.last_page > 1" class="flex items-center justify-center gap-3 pt-1">
-                    <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15" :disabled="props.page.current_page <= 1" @click="goPage(props.page.current_page - 1)">←</button>
-                    <span class="text-sm text-slate-500">{{ props.page.current_page }} / {{ props.page.last_page }}</span>
-                    <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-white/15" :disabled="props.page.current_page >= props.page.last_page" @click="goPage(props.page.current_page + 1)">→</button>
-                </div>
+                <Pagination :current="props.page.current_page" :last="props.page.last_page" :total="props.page.total" />
                 </div>
             </div>
         </div>

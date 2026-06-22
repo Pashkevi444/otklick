@@ -194,6 +194,7 @@ $onDomain(config('app.business_domain'), function (): void {
         // Импорт базы знаний с сайта бизнеса (фоном, создаёт черновики).
         Route::post('/knowledge/import-site', [KnowledgeEntryController::class, 'importSite'])->name('knowledge.import-site');
         Route::get('/knowledge/import-site/status', [KnowledgeEntryController::class, 'importStatus'])->name('knowledge.import-site.status');
+        Route::patch('/knowledge/{entry}/publish', [KnowledgeEntryController::class, 'togglePublish'])->name('knowledge.publish');
         Route::get('/knowledge/{entry}/edit', [KnowledgeEntryController::class, 'edit'])->name('knowledge.edit');
         Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
         Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');

@@ -6,6 +6,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Toggle from '@/Components/Toggle.vue';
 import FlowCanvas from '@/Components/FlowCanvas.vue';
 import Hint from '@/Components/Hint.vue';
+import Pagination from '@/Components/Pagination.vue';
 
 interface OptionEdge {
     label: string;
@@ -102,11 +103,6 @@ const showTemplates = ref(false);
 // Фильтр пикера шаблонов: поиск + тип бизнеса (иначе листать десятки штук тяжело).
 const tplQuery = ref('');
 const tplType = ref<string>('');
-
-// Пагинация списка сценариев (серверная, по ?page).
-const goToPage = (page: number): void => {
-    router.get(route('cabinet.scenarios.index'), { page }, { preserveScroll: true, preserveState: false });
-};
 
 // Чипы-фильтры по типу бизнеса с количеством.
 const tplChips = computed(() => {
@@ -628,25 +624,7 @@ const testSend = (text?: string): void => {
             </div>
 
             <!-- Пагинация списка сценариев -->
-            <div v-if="pagination.last > 1" class="mt-5 flex items-center justify-center gap-3 text-sm">
-                <button
-                    type="button"
-                    class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40 dark:border-white/10 dark:text-slate-300"
-                    :disabled="pagination.current <= 1"
-                    @click="goToPage(pagination.current - 1)"
-                >
-                    ← Назад
-                </button>
-                <span class="text-slate-500 dark:text-slate-400">Стр. {{ pagination.current }} из {{ pagination.last }}</span>
-                <button
-                    type="button"
-                    class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 disabled:opacity-40 dark:border-white/10 dark:text-slate-300"
-                    :disabled="pagination.current >= pagination.last"
-                    @click="goToPage(pagination.current + 1)"
-                >
-                    Вперёд →
-                </button>
-            </div>
+            <Pagination :current="pagination.current" :last="pagination.last" :total="pagination.total" />
         </div>
 
         <!-- Редактор -->

@@ -2,6 +2,7 @@
 import { reactive, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Pagination from '@/Components/Pagination.vue';
 import { useCan } from '@/composables/useCan';
 
 interface Row {
@@ -199,26 +200,12 @@ const remove = (id: string): void => {
         </div>
 
         <!-- Пагинация -->
-        <div v-if="pagination.total > 0" class="mt-4 flex items-center justify-between text-sm text-slate-500">
-            <span>{{ pagination.from }}–{{ pagination.to }} из {{ pagination.total }}</span>
-            <div class="flex gap-1.5">
-                <button
-                    type="button"
-                    :disabled="pagination.current <= 1"
-                    class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 disabled:opacity-40"
-                    @click="go(pagination.current - 1)"
-                >
-                    Назад
-                </button>
-                <button
-                    type="button"
-                    :disabled="pagination.current >= pagination.last"
-                    class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 disabled:opacity-40"
-                    @click="go(pagination.current + 1)"
-                >
-                    Вперёд
-                </button>
-            </div>
-        </div>
+        <Pagination
+            :current="pagination.current"
+            :last="pagination.last"
+            :total="pagination.total"
+            :from="pagination.from"
+            :to="pagination.to"
+        />
     </AppLayout>
 </template>
