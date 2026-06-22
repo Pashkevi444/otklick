@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Enums\BusinessType;
+use App\Models\BusinessType;
 use App\Models\Flow;
 use App\Models\KnowledgeEntry;
 use App\Models\ScenarioTemplate;
@@ -59,7 +59,7 @@ final class ScenariosTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('templates', $expected)
-                ->has('businessTypes', count(BusinessType::cases()))
+                ->has('businessTypes', BusinessType::count())
                 ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
                     && $t->contains(fn (array $x): bool => $x['businessType'] === null) // есть «Общие»
                     && $t->contains(fn (array $x): bool => $x['businessType'] === 'barbershop') // есть ниша тенанта

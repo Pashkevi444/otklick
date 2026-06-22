@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Enums\BusinessType;
+use App\Models\BusinessType;
 use App\Models\KnowledgeEntry;
 use App\Models\KnowledgeTemplate;
 use App\Models\Tenant;
@@ -60,7 +60,7 @@ final class KnowledgeBaseTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('templates', $expected)
-                ->has('businessTypes', count(BusinessType::cases()))
+                ->has('businessTypes', BusinessType::count())
                 ->where('templates', fn (Collection $t): bool => $t->every(fn (array $x): bool => array_key_exists('businessType', $x))
                     && $t->contains(fn (array $x): bool => $x['businessType'] === null) // «Общие»
                     && $t->contains(fn (array $x): bool => $x['businessType'] === 'nails') // ниша тенанта

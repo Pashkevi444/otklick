@@ -21,8 +21,10 @@ final class BusinessTypeTest extends TestCase
 
     public function test_reference_table_is_seeded(): void
     {
-        $this->assertSame(6, BusinessType::count());
+        // Базовые ниши + добавленные миграциями (справочник растёт).
+        $this->assertGreaterThanOrEqual(6, BusinessType::count());
         $this->assertDatabaseHas('business_types', ['key' => 'barbershop', 'label' => 'Барбершоп']);
+        $this->assertDatabaseHas('business_types', ['key' => 'salon']);
     }
 
     public function test_super_admin_sets_tenant_business_type(): void
@@ -70,6 +72,6 @@ final class BusinessTypeTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $p) => $p
                 ->where('businessType', 'tattoo')
-                ->has('businessTypes', 6));
+                ->has('businessTypes', BusinessType::count()));
     }
 }
