@@ -166,9 +166,29 @@ final readonly class ChannelService
             $origins,
         ))));
 
+        // Мерджим в существующие настройки, чтобы не затереть цвет виджета и
+        // прочие ключи (settings — единый JSON-столбец).
         $this->channels->update($channel, [
-            'settings' => ['allowed_origins' => $normalized],
+            'settings' => [...$channel->settings, 'allowed_origins' => $normalized],
         ]);
+    }
+
+    /**
+     * Сохраняет цвет фирменного оформления веб-виджета (акцент кнопки/шапки).
+     * `null` — сбросить на брендовый цвет «Отклик». Цвет читает рантайм виджета
+     * через /widget/v1/{tenant}/{channel}/config и красит интерфейс под бизнес.
+     */
+    public function setWidgetColor(Channel $channel, ?string $color): void
+    {
+        $settings = $channel->settings;
+
+        if ($color === null) {
+            unset($settings['widget_color']);
+        } else {
+            $settings['widget_color'] = mb_strtolower($color);
+        }
+
+        $this->channels->update($channel, ['settings' => $settings]);
     }
 
     /**

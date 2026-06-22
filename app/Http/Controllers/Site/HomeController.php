@@ -43,7 +43,7 @@ final class HomeController extends Controller
             'Что умеет «Отклик»: готовые сценарии и база знаний под десятки типов бизнеса, подключение Telegram/ВКонтакте/MAX/WhatsApp и YClients, запуск за один вечер.',
             route('site.capabilities'),
             'возможности чат-бота, готовые сценарии, шаблоны базы знаний, интеграция YClients, бот Telegram WhatsApp ВКонтакте MAX, no-code воронки',
-        ));
+        ) + $this->pageLd([['Главная', route('home')], ['Возможности', route('site.capabilities')]]));
     }
 
     public function pricing(): Response
@@ -56,7 +56,7 @@ final class HomeController extends Controller
             'Тарифы «Отклик»: пробный период бесплатно, «Стандарт» и «Макс» с CRM, сценариями и аналитикой, индивидуальный для корпоративных клиентов.',
             route('site.pricing'),
             'тарифы чат-бот, стоимость AI-администратора, бот для бизнеса цена, пробный период',
-        ));
+        ) + $this->pageLd([['Главная', route('home')], ['Тарифы', route('site.pricing')]], [$this->priceOffers()]));
     }
 
     public function contacts(): Response
@@ -68,7 +68,7 @@ final class HomeController extends Controller
             'Контакты — Отклик, AI-администратор для бизнеса',
             'Связаться с командой «Отклик»: телефон, почта, Telegram. AI-администратор для локального бизнеса — ответы клиентам и запись в CRM.',
             route('site.contacts'),
-        ));
+        ) + $this->pageLd([['Главная', route('home')], ['Контакты', route('site.contacts')]]));
     }
 
     /**
@@ -84,7 +84,7 @@ final class HomeController extends Controller
             'Политика конфиденциальности — Отклик',
             'Политика обработки персональных данных сервиса «Отклик» (152-ФЗ): какие данные собираем, как храним и защищаем.',
             route('site.privacy'),
-        ));
+        ) + $this->pageLd([['Главная', route('home')], ['Конфиденциальность', route('site.privacy')]]));
     }
 
     /**
@@ -106,6 +106,61 @@ final class HomeController extends Controller
         }
 
         return $meta;
+    }
+
+    /**
+     * Per-page Schema.org-разметка: хлебные крошки (+ опционально доп. сущности,
+     * напр. Product/Offer на тарифах). Рендерится в Blade как отдельный JSON-LD.
+     *
+     * @param  list<array{0: string, 1: string}>  $trail  [[название, url], …]
+     * @param  list<array<string, mixed>>  $extra  доп. graph-объекты
+     * @return array{pageJsonLd: string}
+     */
+    private function pageLd(array $trail, array $extra = []): array
+    {
+        $items = [];
+        foreach ($trail as $i => $t) {
+            $items[] = ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $t[0], 'item' => $t[1]];
+        }
+
+        $graph = [['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $items]];
+        foreach ($extra as $g) {
+            $graph[] = $g;
+        }
+
+        $payload = count($graph) === 1 ? $graph[0] : $graph;
+
+        return ['pageJsonLd' => (string) json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)];
+    }
+
+    /**
+     * Product + Offers для страницы тарифов (rich-результаты по цене в поиске).
+     *
+     * @return array<string, mixed>
+     */
+    private function priceOffers(): array
+    {
+        $offer = fn (string $name, string $price): array => [
+            '@type' => 'Offer',
+            'name' => $name,
+            'price' => $price,
+            'priceCurrency' => 'RUB',
+            'availability' => 'https://schema.org/InStock',
+            'url' => route('site.pricing'),
+        ];
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => 'Отклик — AI-администратор для бизнеса',
+            'description' => 'AI-администратор: ответы клиентам в Telegram, ВКонтакте, MAX, WhatsApp и на сайте и запись в CRM.',
+            'brand' => ['@type' => 'Brand', 'name' => 'Отклик'],
+            'offers' => [
+                $offer('Пробный', '0'),
+                $offer('Стандарт', '3599'),
+                $offer('Макс', '5599'),
+            ],
+        ];
     }
 
     /**

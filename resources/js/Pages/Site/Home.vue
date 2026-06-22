@@ -71,15 +71,8 @@ onBeforeUnmount(() => metricsObserver?.disconnect());
 
     <SiteLayout :site="site" :login-url="loginUrl">
         <!-- Hero -->
-        <section class="relative mx-auto max-w-6xl px-6 pt-16 pb-14 text-center sm:pt-24">
-            <div data-reveal class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-[#2E74B5] dark:text-sky-300">
-                <span class="relative flex h-2 w-2">
-                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2E74B5] opacity-60"></span>
-                    <span class="relative inline-flex h-2 w-2 rounded-full bg-[#2E74B5]"></span>
-                </span>
-                AI-администратор для локального бизнеса
-            </div>
-            <h1 data-reveal style="transition-delay: 80ms" class="mx-auto mt-6 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1F4E79] dark:text-sky-200 sm:text-5xl lg:text-6xl">
+        <section class="relative mx-auto max-w-6xl px-6 pt-20 pb-14 text-center sm:pt-28">
+            <h1 data-reveal style="transition-delay: 80ms" class="mx-auto mt-2 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1F4E79] dark:text-sky-200 sm:text-5xl lg:text-6xl">
                 {{ site.heroTitle }}
             </h1>
             <p data-reveal style="transition-delay: 160ms" class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">

@@ -46,6 +46,22 @@ final class WidgetChatController extends Controller
         ]);
     }
 
+    /**
+     * Публичное оформление виджета (цвет акцента). Рантайм виджета запрашивает
+     * его при загрузке, чтобы покрасить кнопку/шапку под бизнес ещё до сессии.
+     */
+    public function config(Request $request, string $tenant, string $channel): JsonResponse
+    {
+        return $this->tenancy->run($tenant, function () use ($request, $channel): JsonResponse {
+            $model = $this->resolve($channel);
+            $origin = $this->guardOrigin($request, $model);
+
+            return $this->cors(response()->json([
+                'color' => $model->settings['widget_color'] ?? null,
+            ]), $origin);
+        });
+    }
+
     public function session(Request $request, string $tenant, string $channel): JsonResponse
     {
         return $this->tenancy->run($tenant, function () use ($request, $channel): JsonResponse {
@@ -175,7 +191,7 @@ final class WidgetChatController extends Controller
     {
         $response->headers->set('Access-Control-Allow-Origin', $origin);
         $response->headers->set('Vary', 'Origin');
-        $response->headers->set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Accept');
         $response->headers->set('Access-Control-Max-Age', '86400');
 

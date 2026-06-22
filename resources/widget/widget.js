@@ -62,43 +62,51 @@
         }
     }
 
+    // Фирменный цвет виджета задаётся через CSS-переменные --otk-a (акцент) и
+    // --otk-b (тёмный край градиента). По умолчанию — бренд «Отклик»; реальный
+    // цвет бизнеса подтягивается с /config и переопределяет переменные.
     var css = [
-        '.otk-launcher{position:fixed;right:22px;bottom:22px;width:60px;height:60px;border:0;border-radius:50%;cursor:pointer;z-index:2147483000;',
-        'background:linear-gradient(135deg,#2E74B5,#1F4E79);box-shadow:0 10px 28px rgba(31,78,121,.4);display:flex;align-items:center;justify-content:center;',
-        'transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease}',
-        '.otk-launcher:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 14px 34px rgba(31,78,121,.5)}',
-        '.otk-launcher svg{width:28px;height:28px;fill:#fff;transition:transform .3s ease}',
-        '.otk-launcher.otk-on svg{transform:rotate(90deg) scale(.9)}',
-        '.otk-panel{position:fixed;right:22px;bottom:94px;width:374px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 130px);z-index:2147483000;',
-        'background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(16,42,73,.34);display:flex;flex-direction:column;overflow:hidden;',
-        'font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:0;transform:translateY(22px) scale(.96);pointer-events:none;',
-        'transition:opacity .3s ease,transform .32s cubic-bezier(.2,.85,.25,1)}',
+        ':root{--otk-a:#2E74B5;--otk-b:#1F4E79}',
+        '.otk-launcher{position:fixed;right:22px;bottom:22px;width:62px;height:62px;border:0;border-radius:50%;cursor:pointer;z-index:2147483000;',
+        'background:linear-gradient(135deg,var(--otk-a),var(--otk-b));box-shadow:0 12px 30px rgba(16,42,73,.42),inset 0 1px 1px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;',
+        'transition:transform .28s cubic-bezier(.2,.85,.25,1),box-shadow .28s ease}',
+        '.otk-launcher::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--otk-a);opacity:.5;animation:otk-ring 2.6s ease-out infinite;pointer-events:none}',
+        '.otk-launcher:hover{transform:translateY(-3px) scale(1.06);box-shadow:0 18px 40px rgba(16,42,73,.5),inset 0 1px 1px rgba(255,255,255,.4)}',
+        '.otk-launcher svg{width:29px;height:29px;fill:#fff;transition:transform .35s cubic-bezier(.2,.85,.25,1)}',
+        '.otk-launcher.otk-on::before{display:none}',
+        '.otk-launcher.otk-on svg{transform:rotate(90deg) scale(.88)}',
+        '.otk-panel{position:fixed;right:22px;bottom:98px;width:380px;max-width:calc(100vw - 32px);height:566px;max-height:calc(100vh - 130px);z-index:2147483000;',
+        'background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.7);border-radius:22px;box-shadow:0 28px 80px rgba(16,42,73,.32);display:flex;flex-direction:column;overflow:hidden;',
+        'font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:0;transform:translateY(24px) scale(.95);pointer-events:none;transform-origin:bottom right;',
+        'transition:opacity .32s ease,transform .42s cubic-bezier(.2,.9,.25,1)}',
         '.otk-panel.otk-open{opacity:1;transform:none;pointer-events:auto}',
-        '.otk-head{background:linear-gradient(135deg,#2E74B5,#1F4E79);color:#fff;padding:15px 16px;display:flex;align-items:center;gap:11px}',
-        '.otk-ava{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:0 0 auto}',
-        '.otk-ava svg{width:21px;height:21px;fill:#fff}',
-        '.otk-ttl{font-weight:700;font-size:15px;line-height:1.1}',
-        '.otk-sub{font-size:12px;opacity:.85;display:flex;align-items:center;gap:5px;margin-top:2px}',
+        // Стеклянная шапка: градиент бренда + светящийся блик сверху.
+        '.otk-head{position:relative;background:linear-gradient(135deg,var(--otk-a),var(--otk-b));color:#fff;padding:16px 16px;display:flex;align-items:center;gap:11px;overflow:hidden}',
+        '.otk-head::after{content:"";position:absolute;top:-60%;left:-20%;width:80%;height:200%;background:radial-gradient(closest-side,rgba(255,255,255,.28),transparent);pointer-events:none}',
+        '.otk-ava{position:relative;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}',
+        '.otk-ava svg{width:22px;height:22px;fill:#fff}',
+        '.otk-ttl{position:relative;font-weight:700;font-size:15.5px;line-height:1.1;letter-spacing:.2px}',
+        '.otk-sub{position:relative;font-size:12px;opacity:.92;display:flex;align-items:center;gap:5px;margin-top:3px}',
         '.otk-dot{width:7px;height:7px;border-radius:50%;background:#7CF6C3;box-shadow:0 0 0 0 rgba(124,246,195,.7);animation:otk-pulse 2s infinite}',
-        '.otk-x{margin-left:auto;background:rgba(255,255,255,.15);border:0;color:#fff;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:15px;transition:background .2s}',
-        '.otk-x:hover{background:rgba(255,255,255,.28)}',
-        '.otk-body{flex:1;overflow-y:auto;padding:16px 14px;background:#f3f6fb;display:flex;flex-direction:column;gap:9px}',
+        '.otk-x{position:relative;margin-left:auto;background:rgba(255,255,255,.16);border:0;color:#fff;width:31px;height:31px;border-radius:10px;cursor:pointer;font-size:15px;transition:background .2s,transform .2s}',
+        '.otk-x:hover{background:rgba(255,255,255,.3);transform:rotate(90deg)}',
+        '.otk-body{flex:1;overflow-y:auto;padding:16px 14px;background:linear-gradient(180deg,#f4f7fc,#eef3fa);display:flex;flex-direction:column;gap:9px}',
         '.otk-body::-webkit-scrollbar{width:7px}.otk-body::-webkit-scrollbar-thumb{background:#cdd8e6;border-radius:9px}',
-        '.otk-msg{max-width:82%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.42;white-space:pre-wrap;word-wrap:break-word;animation:otk-in .32s cubic-bezier(.2,.85,.25,1) both}',
-        '.otk-bot{align-self:flex-start;background:#fff;color:#1f2a3a;border-bottom-left-radius:5px;box-shadow:0 2px 8px rgba(16,42,73,.07)}',
-        '.otk-me{align-self:flex-end;background:linear-gradient(135deg,#2E74B5,#255f96);color:#fff;border-bottom-right-radius:5px}',
-        '.otk-typing{align-self:flex-start;background:#fff;border-radius:16px;border-bottom-left-radius:5px;padding:13px 15px;display:flex;gap:5px;box-shadow:0 2px 8px rgba(16,42,73,.07)}',
+        '.otk-msg{max-width:82%;padding:10px 13px;border-radius:17px;font-size:14px;line-height:1.42;white-space:pre-wrap;word-wrap:break-word;animation:otk-in .34s cubic-bezier(.2,.85,.25,1) both}',
+        '.otk-bot{align-self:flex-start;background:#fff;color:#1f2a3a;border-bottom-left-radius:5px;box-shadow:0 3px 12px rgba(16,42,73,.08);border:1px solid rgba(16,42,73,.04)}',
+        '.otk-me{align-self:flex-end;background:linear-gradient(135deg,var(--otk-a),var(--otk-b));color:#fff;border-bottom-right-radius:5px;box-shadow:0 4px 14px rgba(16,42,73,.18)}',
+        '.otk-typing{align-self:flex-start;background:#fff;border-radius:17px;border-bottom-left-radius:5px;padding:13px 15px;display:flex;gap:5px;box-shadow:0 3px 12px rgba(16,42,73,.08);animation:otk-in .3s ease both}',
         '.otk-typing span{width:7px;height:7px;border-radius:50%;background:#9fb2c9;animation:otk-bounce 1.2s infinite}',
         '.otk-typing span:nth-child(2){animation-delay:.2s}.otk-typing span:nth-child(3){animation-delay:.4s}',
-        '.otk-foot{display:flex;gap:9px;padding:11px;border-top:1px solid #eef2f7;background:#fff;align-items:flex-end}',
-        '.otk-in{flex:1;border:1.5px solid #dde5ef;border-radius:13px;padding:10px 13px;font-size:14px;outline:none;resize:none;max-height:96px;font-family:inherit;transition:border-color .2s}',
-        '.otk-in:focus{border-color:#2E74B5}',
-        '.otk-send{flex:0 0 auto;width:42px;height:42px;border:0;border-radius:13px;background:linear-gradient(135deg,#2E74B5,#1F4E79);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,opacity .2s}',
-        '.otk-send:hover{transform:translateY(-1px)}.otk-send:disabled{opacity:.45;cursor:default;transform:none}',
+        '.otk-foot{display:flex;gap:9px;padding:11px;border-top:1px solid rgba(16,42,73,.06);background:rgba(255,255,255,.85);backdrop-filter:blur(6px);align-items:flex-end}',
+        '.otk-in{flex:1;border:1.5px solid #dde5ef;border-radius:14px;padding:10px 13px;font-size:14px;outline:none;resize:none;max-height:96px;font-family:inherit;transition:border-color .2s,box-shadow .2s}',
+        '.otk-in:focus{border-color:var(--otk-a);box-shadow:0 0 0 3px rgba(46,116,181,.12)}',
+        '.otk-send{flex:0 0 auto;width:43px;height:43px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--otk-a),var(--otk-b));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,opacity .2s,box-shadow .2s;box-shadow:0 4px 12px rgba(16,42,73,.2)}',
+        '.otk-send:hover{transform:translateY(-1px) scale(1.04)}.otk-send:disabled{opacity:.45;cursor:default;transform:none;box-shadow:none}',
         '.otk-send svg{width:19px;height:19px;fill:#fff}',
-        '.otk-pow{text-align:center;font-size:11px;color:#9aa7b8;padding:6px 0 9px;background:#fff}',
-        '.otk-pow a{color:#2E74B5;text-decoration:none;font-weight:600}.otk-pow a:hover{text-decoration:underline}',
-        '.otk-oper{display:none;font-size:11px;color:#1F4E79;background:#eaf2fb;text-align:center;padding:5px 10px;border-top:1px solid #dbe7f5}',
+        '.otk-pow{text-align:center;font-size:11px;color:#9aa7b8;padding:6px 0 9px;background:rgba(255,255,255,.85)}',
+        '.otk-pow a{color:var(--otk-a);text-decoration:none;font-weight:600}.otk-pow a:hover{text-decoration:underline}',
+        '.otk-oper{display:none;font-size:11px;color:var(--otk-b);background:rgba(46,116,181,.1);text-align:center;padding:5px 10px;border-top:1px solid rgba(46,116,181,.18)}',
         '.otk-oper.otk-on{display:block}',
         '.otk-img{margin-top:8px;max-width:220px;max-height:220px;width:auto;border-radius:13px;cursor:zoom-in;display:block;object-fit:cover;box-shadow:0 2px 10px rgba(16,42,73,.14);transition:transform .2s ease}',
         '.otk-img:hover{transform:scale(1.03)}',
@@ -110,11 +118,32 @@
         '@keyframes otk-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}',
         '@keyframes otk-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}',
         '@keyframes otk-pulse{0%{box-shadow:0 0 0 0 rgba(124,246,195,.6)}70%{box-shadow:0 0 0 7px rgba(124,246,195,0)}100%{box-shadow:0 0 0 0 rgba(124,246,195,0)}}',
-        '@media (prefers-reduced-motion:reduce){.otk-launcher,.otk-panel,.otk-msg,.otk-dot,.otk-typing span{transition:none;animation:none}}',
+        '@keyframes otk-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.35);opacity:0}100%{opacity:0}}',
+        '@media (prefers-reduced-motion:reduce){.otk-launcher,.otk-panel,.otk-msg,.otk-dot,.otk-typing span,.otk-launcher::before{transition:none;animation:none}}',
     ].join('');
     var style = document.createElement('style');
     style.textContent = css;
     document.head.appendChild(style);
+
+    // Перекраска под фирменный цвет бизнеса. Принимает один HEX (#RRGGBB),
+    // тёмный край градиента вычисляем затемнением — чтобы бизнесу хватило одного
+    // выбора цвета в кабинете.
+    function darken(hex, f) {
+        var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+        if (!m) return null;
+        var n = parseInt(m[1], 16);
+        var r = Math.round(((n >> 16) & 255) * f);
+        var g = Math.round(((n >> 8) & 255) * f);
+        var b = Math.round((n & 255) * f);
+        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+    function applyTheme(color) {
+        var dark = darken(color, 0.74);
+        if (!dark) return;
+        var root = document.documentElement;
+        root.style.setProperty('--otk-a', color);
+        root.style.setProperty('--otk-b', dark);
+    }
 
     var chatIcon =
         '<svg viewBox="0 0 24 24"><path d="M12 3C6.9 3 2.8 6.3 2.8 10.5c0 2 .95 3.8 2.5 5.2-.1.95-.5 2-.95 2.7-.2.3 0 .7.4.65 1.4-.2 2.6-.7 3.5-1.3.85.2 1.75.3 2.7.3 5.1 0 9.2-3.3 9.2-7.5S17.1 3 12 3z"/></svg>';
@@ -131,7 +160,7 @@
     panel.innerHTML =
         '<div class="otk-head">' +
         '<div class="otk-ava">' + chatIcon + '</div>' +
-        '<div><div class="otk-ttl">Отклик</div><div class="otk-sub"><span class="otk-dot"></span>Обычно отвечает сразу</div></div>' +
+        '<div><div class="otk-ttl">Отклик</div><div class="otk-sub"><span class="otk-dot"></span>Администратор в сети</div></div>' +
         '<button class="otk-x" aria-label="Закрыть">' + closeMark + '</button>' +
         '</div>' +
         '<div class="otk-body"></div>' +
@@ -293,7 +322,7 @@
             var b = document.createElement('button');
             b.type = 'button';
             b.textContent = label;
-            b.style.cssText = 'border:1px solid #2E74B5;background:#fff;color:#2E74B5;border-radius:14px;padding:5px 12px;font-size:13px;cursor:pointer;line-height:1.2';
+            b.style.cssText = 'border:1px solid var(--otk-a);background:#fff;color:var(--otk-a);border-radius:14px;padding:5px 12px;font-size:13px;cursor:pointer;line-height:1.2';
             b.addEventListener('click', function () { clearChips(); reallySend(label); });
             wrap.appendChild(b);
         });
@@ -378,6 +407,13 @@
             .catch(function () { /* сеть моргнула — попробуем на следующем тике */ });
     }
     setInterval(poll, 3000);
+
+    // Фирменный цвет бизнеса (если задан в кабинете) — красим кнопку и шапку
+    // ещё до открытия чата. Сбой/таймаут — остаёмся на брендовом цвете «Отклик».
+    fetch(api + '/config', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) { if (data && data.color) applyTheme(data.color); })
+        .catch(function () { /* нет конфига — дефолтная тема */ });
 
     // Восстанавливаем прошлую переписку (если страницу перезагрузили).
     if (history.length) {

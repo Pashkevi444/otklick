@@ -227,6 +227,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/widget', [WidgetController::class, 'index'])->name('widget.index');
         Route::post('/widget', [WidgetController::class, 'store'])->name('widget.store');
         Route::put('/widget/{channel}', [WidgetController::class, 'update'])->name('widget.update');
+        Route::put('/widget/{channel}/appearance', [WidgetController::class, 'appearance'])->name('widget.appearance');
         Route::delete('/widget/{channel}', [WidgetController::class, 'destroy'])->name('widget.destroy');
 
         // CRM-интеграции — возможность тарифа «Макс».

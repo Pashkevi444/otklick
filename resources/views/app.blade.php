@@ -48,16 +48,22 @@
         @isset($metaTitle)
             <meta property="og:type" content="website">
             <meta property="og:site_name" content="Отклик">
+            <meta property="og:locale" content="ru_RU">
             <meta property="og:title" content="{{ $metaOgTitle ?? $metaTitle }}">
             <meta property="og:image" content="{{ $metaOgImage ?? (rtrim(config('app.url'), '/') . '/apple-touch-icon.png') }}">
             <meta name="twitter:card" content="summary_large_image">
+            <meta name="twitter:title" content="{{ $metaOgTitle ?? $metaTitle }}">
             @isset($metaDescription)
                 <meta property="og:description" content="{{ $metaOgDescription ?? $metaDescription }}">
+                <meta name="twitter:description" content="{{ $metaOgDescription ?? $metaDescription }}">
             @endisset
         @endisset
 
         @isset($siteJsonLd)
             <script type="application/ld+json">{!! $siteJsonLd !!}</script>
+        @endisset
+        @isset($pageJsonLd)
+            <script type="application/ld+json">{!! $pageJsonLd !!}</script>
         @endisset
 
         @vite(['resources/css/app.css', 'resources/js/app.ts'])

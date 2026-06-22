@@ -178,6 +178,27 @@ final class WidgetChatTest extends TestCase
         $this->assertSame('203.0.113.7', $conv->contact_ref);
     }
 
+    public function test_config_returns_widget_color(): void
+    {
+        $channel = $this->webChannel();
+        app(TenantInitializer::class)->run((string) $channel->tenant_id, function () use ($channel): void {
+            app(ChannelService::class)->setWidgetColor($channel, '#7c3aed');
+        });
+
+        $this->getJson($this->url($channel, 'config'))
+            ->assertOk()
+            ->assertJsonPath('color', '#7c3aed');
+    }
+
+    public function test_config_returns_null_color_by_default(): void
+    {
+        $channel = $this->webChannel();
+
+        $this->getJson($this->url($channel, 'config'))
+            ->assertOk()
+            ->assertJsonPath('color', null);
+    }
+
     public function test_widget_script_is_served_as_javascript(): void
     {
         $this->get('/widget/v1/widget.js')

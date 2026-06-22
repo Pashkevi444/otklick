@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\Enums\ChannelType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Cabinet\UpdateWidgetAppearanceRequest;
 use App\Http\Requests\Cabinet\UpdateWidgetRequest;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
@@ -21,6 +22,9 @@ use Inertia\Response;
  */
 final class WidgetController extends Controller
 {
+    /** Брендовый акцент «Отклик» по умолчанию (если бизнес не выбрал свой). */
+    private const DEFAULT_COLOR = '#2E74B5';
+
     public function __construct(
         private readonly ChannelRepositoryInterface $channels,
         private readonly ChannelService $channelService,
@@ -36,6 +40,7 @@ final class WidgetController extends Controller
                 'id' => $channel->id,
                 'isActive' => $channel->is_active,
                 'allowedOrigins' => $channel->settings['allowed_origins'] ?? [],
+                'color' => $channel->settings['widget_color'] ?? self::DEFAULT_COLOR,
                 'scriptUrl' => $base.'/widget/v1/widget.js',
                 'snippet' => $this->snippet($base, $channel),
             ],
@@ -60,6 +65,17 @@ final class WidgetController extends Controller
         $this->channelService->setWidgetOrigins($model, $origins);
 
         return redirect()->route('cabinet.widget.index')->with('success', 'Список доменов сохранён.');
+    }
+
+    public function appearance(UpdateWidgetAppearanceRequest $request, string $channel): RedirectResponse
+    {
+        $model = $this->requireWebChannel($channel);
+
+        $color = trim((string) $request->string('color'));
+
+        $this->channelService->setWidgetColor($model, $color !== '' ? $color : null);
+
+        return redirect()->route('cabinet.widget.index')->with('success', 'Оформление виджета сохранено.');
     }
 
     public function destroy(string $channel): RedirectResponse

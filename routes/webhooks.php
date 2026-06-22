@@ -19,6 +19,10 @@ Route::post('/webhooks/telegram/{tenant}/{channel}', TelegramWebhookController::
  * Доступ к чату изолирован подписанным токеном сессии и origin allow-list.
  */
 Route::get('/widget/v1/widget.js', [WidgetChatController::class, 'script'])->name('widget.script');
+// Оформление виджета (цвет акцента) — читает рантайм при загрузке, до сессии.
+Route::get('/widget/v1/{tenant}/{channel}/config', [WidgetChatController::class, 'config'])
+    ->middleware('throttle:60,1')->name('widget.config');
+Route::options('/widget/v1/{tenant}/{channel}/config', [WidgetChatController::class, 'preflight']);
 Route::options('/widget/v1/{tenant}/{channel}/session', [WidgetChatController::class, 'preflight']);
 Route::options('/widget/v1/{tenant}/{channel}/message', [WidgetChatController::class, 'preflight']);
 Route::options('/widget/v1/{tenant}/{channel}/poll', [WidgetChatController::class, 'preflight']);
