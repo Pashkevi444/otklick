@@ -55,20 +55,24 @@ final readonly class FlowEngine
         private KnowledgeEntryRepositoryInterface $knowledge,
     ) {}
 
-    public function handle(Tenant $tenant, Conversation $conversation, string $text): ?BotReply
+    public function handle(Tenant $tenant, Conversation $conversation, string $text, bool $strict = false): ?BotReply
     {
         if (is_array($conversation->flow_state) && $conversation->flow_state !== []) {
             return $this->advance($tenant, $conversation, $text);
         }
 
-        // Сначала быстрый матчинг по основе слова, затем (если не совпало) —
-        // семантический по эмбеддингам (ловит синонимы: «скидка» ≈ «акция»).
-        $flow = $this->matchLexical($text) ?? $this->matchSemantic($text);
+        // $strict — точный интент (клик по кнопке меню): флоу запускаем ТОЛЬКО при
+        // точном совпадении триггера (подстрока/целое слово), без морфологии и
+        // семантики. Иначе кнопка «Типы стрижек» по стему «стрижк» цепляла бы флоу
+        // «Барберы» с триггером «стрижка». Свободный ввод — полный фаззи + семантика.
+        $flow = $strict
+            ? $this->matchLexical($text, true)
+            : ($this->matchLexical($text) ?? $this->matchSemantic($text));
 
         return $flow !== null ? $this->start($tenant, $conversation, $flow) : null;
     }
 
-    private function matchLexical(string $text): ?Flow
+    private function matchLexical(string $text, bool $strict = false): ?Flow
     {
         $needle = str_replace('ё', 'е', mb_strtolower(trim($text)));
 
@@ -86,7 +90,7 @@ final readonly class FlowEngine
 
         foreach ($this->flows->activeForCurrentTenant() as $flow) {
             foreach ($flow->triggers as $trigger) {
-                if ($this->triggerMatches((string) $trigger, $needle, $words, $stems)) {
+                if ($this->triggerMatches((string) $trigger, $needle, $words, $stems, $strict)) {
                     return $flow;
                 }
             }
@@ -103,10 +107,15 @@ final readonly class FlowEngine
      * Служебные слова ({@see self::STOPWORDS}) и совсем короткие слова из ключей
      * исключаем — иначе предлог «к» матчит «стри[ж]ки».
      *
+     * При $strict (точный интент — клик по кнопке меню) морфологию НЕ применяем:
+     * длинное слово триггера должно присутствовать в сообщении целиком (иначе
+     * «стрижка» по основе цепляла бы «типы стрижек»). Точная подстрока-фраза и
+     * короткие слова-целиком работают в обоих режимах.
+     *
      * @param  list<string>  $words  слова сообщения (для матча коротких слов целиком)
      * @param  list<string>  $stems  основы слов сообщения
      */
-    private function triggerMatches(string $trigger, string $needle, array $words, array $stems): bool
+    private function triggerMatches(string $trigger, string $needle, array $words, array $stems, bool $strict = false): bool
     {
         $t = str_replace('ё', 'е', mb_strtolower(trim($trigger)));
 
@@ -129,6 +138,17 @@ final readonly class FlowEngine
             // Короткое слово (нет надёжной основы) — матчим ТОЛЬКО как целое слово
             // сообщения, не подстрокой («лак» не должен ловить «потолок»).
             if (mb_strlen($word) < 4) {
+                if (in_array($word, $words, true)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            // Строгий режим: длинное слово триггера должно встретиться в сообщении
+            // ЦЕЛИКОМ (без морфологии) — кнопка меню «Типы стрижек» не должна
+            // запускать «Барберы» из-за общей основы «стрижк».
+            if ($strict) {
                 if (in_array($word, $words, true)) {
                     return true;
                 }

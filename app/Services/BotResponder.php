@@ -67,10 +67,17 @@ class BotResponder
             return new BotReply('Главное меню — выберите раздел:', escalate: false, keyboard: ReplyKeyboard::grid($mainMenu, 2));
         }
 
+        // Клик по кнопке меню — точный интент: матчим флоу строго (по точному
+        // совпадению триггера, без морфологии/семантики), чтобы кнопка «Типы
+        // стрижек» не запускала флоу «Барберы» из-за общей основы «стрижк». Не
+        // совпало строго → отвечает база знаний/ИИ по теме кнопки.
+        $norm = static fn (string $s): string => str_replace('ё', 'е', mb_strtolower(trim($s)));
+        $isMenuClick = in_array($norm($text), array_map($norm, $mainMenu), true);
+
         // Сценарии-воронки (no-code логика владельца): продолжаем активную воронку
         // или запускаем по триггеру — ДО LLM. Не сработали → отвечает ИИ по базе
         // знаний (свободный текст не по кнопкам выводит из воронки).
-        $flow = $this->flows->handle($tenant, $conversation, $text);
+        $flow = $this->flows->handle($tenant, $conversation, $text, $isMenuClick);
 
         if ($flow !== null) {
             return $flow;

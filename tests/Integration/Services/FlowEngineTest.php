@@ -127,6 +127,40 @@ final class FlowEngineTest extends TestCase
         $this->assertSame('Мы на Красном проспекте', $hit->text);
     }
 
+    public function test_menu_click_strict_match_does_not_fire_flow_by_morphology(): void
+    {
+        // Прод-баг (Метропольский и Друзья): кнопка меню «Типы стрижек» запускала
+        // флоу «Барберы» с триггером «стрижка» — по общей основе «стрижк». Клик по
+        // кнопке меню = точный интент: флоу запускаем только при точном совпадении.
+        $this->bindOrthogonalEmbedder();
+
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
+
+        app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
+            'name' => 'Барберы',
+            'is_active' => true,
+            'triggers' => ['барберы', 'мастера', 'стрижка'],
+            'definition' => ['start' => 'n1', 'nodes' => [
+                'n1' => ['type' => 'message', 'text' => 'У нас работают: Никита, Савелий, Кирилл', 'action' => 'end', 'options' => []],
+            ]],
+        ]));
+
+        // Строгий режим (клик меню): «Типы стрижек» НЕ должен запускать «Барберы».
+        $miss = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Типы стрижек', true));
+        $this->assertNull($miss);
+
+        // А кнопка «Барберы» (точное совпадение) — запускает флоу.
+        $hit = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Барберы', true));
+        $this->assertNotNull($hit);
+        $this->assertStringContainsString('Никита', $hit->text);
+
+        // Без строгого режима (свободный ввод) морфология работает как прежде.
+        $fuzzy = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'хочу стрижку'));
+        $this->assertNotNull($fuzzy);
+    }
+
     /** Эмбеддер-заглушка: ортогональные векторы по тексту (косинус ≈ 0 для разных строк). */
     private function bindOrthogonalEmbedder(): void
     {

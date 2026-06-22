@@ -675,6 +675,10 @@ const testSend = (text?: string): void => {
                             <Hint text="Слова, при которых сработает сценарий. Перечислите через запятую: акция, скидка, промо. Ловятся любые формы слова (акции, акцию) и опечатки по смыслу." />
                         </label>
                         <input v-model="form.triggers" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="акция, скидка, промо" />
+                        <div class="mt-2 flex items-start gap-2.5 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200">
+                            <span class="mt-px flex-none rounded-md bg-amber-400/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-100">Совет</span>
+                            <span>На один ключ — <b>одно-два слова без предлогов</b> (напр. «стрижка», а не «как записаться на стрижку»). Так бот точнее ловит запрос и не путает сценарии. Разные ключи — через запятую.</span>
+                        </div>
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
