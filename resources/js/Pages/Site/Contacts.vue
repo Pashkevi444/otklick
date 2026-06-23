@@ -93,12 +93,14 @@ const copyEmail = (): void => {
 
         <!-- CTA -->
         <section class="mx-auto max-w-6xl px-6 py-14">
-            <div data-reveal class="cta-glass relative overflow-hidden rounded-[2rem] px-6 py-14 text-center text-white">
-                <h2 class="text-3xl font-bold sm:text-4xl">Готовы подключить «Отклик»?</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-blue-50/90">Покажем, как бот будет отвечать вашим клиентам и записывать их — на пробном периоде, без оплаты.</p>
-                <div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
-                    <Link href="/tarify" class="rounded-2xl bg-white px-7 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 hover:bg-blue-50">Тарифы и доступ</Link>
-                    <a :href="loginUrl" class="rounded-2xl bg-white/15 px-7 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">Уже есть доступ? Войти</a>
+            <div data-reveal class="glow-frame" style="--gf-radius: 2rem">
+                <div class="cta-glass relative overflow-hidden rounded-[calc(2rem-2px)] px-6 py-14 text-center text-white">
+                    <h2 class="text-3xl font-bold sm:text-4xl">Готовы подключить «Отклик»?</h2>
+                    <p class="mx-auto mt-3 max-w-2xl text-blue-50/90">Покажем, как бот будет отвечать вашим клиентам и записывать их — на пробном периоде, без оплаты.</p>
+                    <div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
+                        <Link href="/tarify" class="rounded-2xl bg-white px-7 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 hover:bg-blue-50">Тарифы и доступ</Link>
+                        <a :href="loginUrl" class="rounded-2xl bg-white/15 px-7 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">Уже есть доступ? Войти</a>
+                    </div>
                 </div>
             </div>
         </section>

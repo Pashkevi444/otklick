@@ -92,19 +92,18 @@ onBeforeUnmount(() => {
 
 <template>
     <div ref="root" class="mkt text-slate-800 dark:text-slate-200" :class="{ 'reveal-armed': armed }">
-        <!-- Фон + орбы -->
+        <!-- Анимированный градиентный фон + мягкое аврора-свечение -->
         <div class="bg-base"></div>
-        <div class="orbs" aria-hidden="true">
-            <span class="orb orb-1"></span><span class="orb orb-2"></span><span class="orb orb-3"></span>
-            <span class="orb orb-4"></span><span class="orb orb-5"></span><span class="orb orb-6"></span>
-        </div>
+        <div class="aurora" aria-hidden="true"></div>
 
-        <!-- Интерактивные 3D-объекты (наклон за курсором, параллакс при скролле) -->
+        <!-- Анимированные 3D-роботы: параллакс при скролле + наклон за курсором.
+             Мы продаём ИИ — фон это подчёркивает. На мобиле слой скрыт (CSS). -->
         <div class="scene3d" aria-hidden="true">
-            <div class="obj3d obj-1 tile3d"><span class="face f-back"></span><span class="face f-front"></span></div>
-            <div class="obj3d obj-2 ring3d"></div>
-            <div class="obj3d obj-3 tile3d"><span class="face f-back"></span><span class="face f-front"></span></div>
-            <div class="obj3d obj-4 ring3d"></div>
+            <div v-for="n in 4" :key="n" class="obj3d robot3d" :class="`obj-${n}`">
+                <span class="r-antenna"></span>
+                <span class="r-head"><span class="r-eye"></span><span class="r-eye"></span></span>
+                <span class="r-body"></span>
+            </div>
         </div>
 
         <!-- Шапка -->

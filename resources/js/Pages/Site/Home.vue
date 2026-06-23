@@ -116,13 +116,15 @@ onBeforeUnmount(() => metricsObserver?.disconnect());
 
         <!-- Метрики -->
         <section class="mx-auto max-w-6xl px-6 py-8">
-            <div ref="metricsEl" data-reveal class="glass grid grid-cols-2 gap-6 rounded-3xl px-6 py-10 lg:grid-cols-4">
+            <div ref="metricsEl" data-reveal class="glow-frame" style="--gf-radius: 1.5rem">
+              <div class="glow-inner grid grid-cols-2 gap-6 px-6 py-10 lg:grid-cols-4">
                 <div v-for="m in metrics" :key="m.label" class="text-center">
                     <div class="bg-gradient-to-r from-[#1F4E79] to-[#2E74B5] bg-clip-text text-4xl font-extrabold text-transparent sm:text-5xl dark:from-sky-300 dark:to-blue-300">
                         {{ m.prefix }}{{ m.current }}{{ m.suffix }}
                     </div>
                     <div class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ m.label }}</div>
                 </div>
+              </div>
             </div>
         </section>
 
@@ -159,12 +161,14 @@ onBeforeUnmount(() => metricsObserver?.disconnect());
 
         <!-- CTA -->
         <section class="mx-auto max-w-6xl px-6 py-16">
-            <div data-reveal class="cta-glass relative overflow-hidden rounded-[2rem] px-6 py-16 text-center text-white">
-                <h2 class="text-3xl font-bold sm:text-4xl">Запустите «Отклик» за вечер</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-blue-50/90">{{ site.accessNote }}</p>
-                <div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
-                    <Link href="/tarify" class="rounded-2xl bg-white px-7 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 hover:bg-blue-50">Тарифы и доступ</Link>
-                    <Link href="/contacts" class="rounded-2xl bg-white/15 px-7 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">Связаться с нами</Link>
+            <div data-reveal class="glow-frame" style="--gf-radius: 2rem">
+                <div class="cta-glass relative overflow-hidden rounded-[calc(2rem-2px)] px-6 py-16 text-center text-white">
+                    <h2 class="text-3xl font-bold sm:text-4xl">Запустите «Отклик» за вечер</h2>
+                    <p class="mx-auto mt-3 max-w-2xl text-blue-50/90">{{ site.accessNote }}</p>
+                    <div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
+                        <Link href="/tarify" class="rounded-2xl bg-white px-7 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 hover:bg-blue-50">Тарифы и доступ</Link>
+                        <Link href="/contacts" class="rounded-2xl bg-white/15 px-7 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">Связаться с нами</Link>
+                    </div>
                 </div>
             </div>
         </section>

@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import SiteLayout from '@/Layouts/SiteLayout.vue';
 import Icon from '@/Components/Icon.vue';
-import { features, integrationsNow, niches, nicheTags, roadmap, steps, type Niche } from '@/marketing';
+import { featureGroups, integrationsNow, niches, nicheTags, roadmap, steps, type Niche } from '@/marketing';
 
 interface Site {
     phone: string | null;
@@ -36,19 +36,48 @@ const importDrafts = ['Услуги и цены', 'Часы работы и ад
             <p data-reveal style="transition-delay: 100ms" class="mx-auto mt-5 max-w-2xl text-lg text-slate-600 dark:text-slate-300">Готовые шаблоны под вашу нишу, нужные каналы и CRM, запуск за один вечер.</p>
         </section>
 
-        <!-- Что умеет «Отклик» -->
+        <!-- Что умеет «Отклик» — маркетинговый бенто по смыслу -->
         <section class="mx-auto max-w-6xl px-6 py-12">
-            <div data-reveal class="mb-12 text-center">
+            <div data-reveal class="mb-10 text-center">
                 <h2 class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Что умеет «Отклик»</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Виртуальный администратор, который встречает каждого клиента и доводит его до записи.</p>
+                <p class="mx-auto mt-3 max-w-2xl text-slate-500 dark:text-slate-400">Не список галочек, а пять зон, где помощник закрывает работу администратора целиком.</p>
             </div>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <div v-for="(f, i) in features" :key="f.title" data-reveal :style="{ transitionDelay: (i % 3) * 60 + 'ms' }" class="card-hover glass group rounded-3xl p-6">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70 text-[#2E74B5] shadow-sm transition group-hover:scale-110 dark:bg-white/10 dark:text-sky-300">
-                        <Icon :name="f.icon" class="ico h-6 w-6" />
+            <div class="grid items-stretch gap-5 lg:grid-cols-3">
+                <div v-for="(g, i) in featureGroups" :key="g.title" data-reveal :style="{ transitionDelay: (i % 3) * 70 + 'ms' }" :class="g.accent ? 'lg:col-span-2' : ''">
+                    <!-- Флагман — с переливающейся рамкой -->
+                    <div v-if="g.accent" class="glow-frame h-full" style="--gf-radius: 1.5rem">
+                        <div class="glow-inner group flex h-full flex-col p-6 sm:p-8">
+                            <div class="mb-5 flex items-center gap-3">
+                                <span class="flex h-12 w-12 flex-none items-center justify-center rounded-2xl bg-gradient-to-br from-[#2E74B5] to-[#5b53c9] text-white shadow-lg shadow-[#2E74B5]/30 transition group-hover:scale-110"><Icon :name="g.icon" class="ico h-6 w-6" /></span>
+                                <div>
+                                    <div class="text-xl font-bold text-[#1F4E79] dark:text-sky-100">{{ g.title }}</div>
+                                    <div class="text-xs font-semibold uppercase tracking-wide text-[#2E74B5] dark:text-sky-300">{{ g.tagline }}</div>
+                                </div>
+                            </div>
+                            <ul class="grid gap-2.5 sm:grid-cols-2 sm:gap-x-6">
+                                <li v-for="p in g.points" :key="p" class="flex items-start gap-2.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                                    <span class="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><Icon name="check" class="h-3 w-3" /></span>
+                                    <span>{{ p }}</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                    <div class="mt-4 font-semibold text-[#1F4E79] dark:text-sky-200">{{ f.title }}</div>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ f.text }}</p>
+                    <!-- Обычная карточка -->
+                    <div v-else class="card-hover glass group flex h-full flex-col rounded-3xl p-6 sm:p-7">
+                        <div class="mb-4 flex items-center gap-3">
+                            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white/70 text-[#2E74B5] shadow-sm transition group-hover:scale-110 dark:bg-white/10 dark:text-sky-300"><Icon :name="g.icon" class="ico h-5 w-5" /></span>
+                            <div>
+                                <div class="font-bold text-[#1F4E79] dark:text-sky-200">{{ g.title }}</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-[#2E74B5]/80 dark:text-sky-300/80">{{ g.tagline }}</div>
+                            </div>
+                        </div>
+                        <ul class="space-y-2.5">
+                            <li v-for="p in g.points" :key="p" class="flex items-start gap-2.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                                <span class="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"><Icon name="check" class="h-3 w-3" /></span>
+                                <span>{{ p }}</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>
@@ -118,8 +147,8 @@ const importDrafts = ['Услуги и цены', 'Часы работы и ад
 
         <!-- ✨ Импорт базы знаний с сайта (выделенный блок) -->
         <section class="mx-auto max-w-6xl px-6 py-12">
-            <div data-reveal class="relative overflow-hidden rounded-[2rem] p-[1.5px]" style="background: linear-gradient(120deg, #2E74B5, #7C3AED, #2E74B5); background-size: 200% 200%; animation: mktBgpan 8s ease infinite">
-                <div class="relative rounded-[2rem] bg-white/90 px-6 py-10 backdrop-blur-xl sm:px-10 dark:bg-slate-900/80">
+            <div data-reveal class="glow-frame">
+                <div class="glow-inner px-6 py-10 sm:px-10">
                     <div class="grid items-center gap-8 lg:grid-cols-2">
                         <div>
                             <div class="inline-flex items-center gap-2 rounded-full bg-[#2E74B5]/10 px-3 py-1 text-xs font-semibold text-[#2E74B5] dark:text-sky-300">

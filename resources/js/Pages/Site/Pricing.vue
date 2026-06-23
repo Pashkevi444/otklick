@@ -38,7 +38,7 @@ defineProps<{ site: Site; loginUrl: string }>();
                     data-reveal
                     :style="{ transitionDelay: i * 90 + 'ms' }"
                     class="card-hover glass relative rounded-3xl p-7"
-                    :class="p.highlight ? 'ring-2 ring-[#2E74B5]' : ''"
+                    :class="p.highlight ? 'glow-edge' : ''"
                 >
                     <div v-if="p.highlight" class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2E74B5] px-3 py-1 text-xs font-medium text-white shadow">Популярный</div>
                     <div class="text-lg font-bold text-[#1F4E79] dark:text-sky-200">{{ p.name }}</div>
@@ -59,12 +59,14 @@ defineProps<{ site: Site; loginUrl: string }>();
 
         <!-- CTA -->
         <section class="mx-auto max-w-6xl px-6 py-16">
-            <div data-reveal class="cta-glass relative overflow-hidden rounded-[2rem] px-6 py-16 text-center text-white">
-                <h2 class="text-3xl font-bold sm:text-4xl">Подключите «Отклик» к своему бизнесу</h2>
-                <p class="mx-auto mt-3 max-w-2xl text-blue-50/90">{{ site.accessNote }}</p>
-                <div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
-                    <Link href="/contacts" class="rounded-2xl bg-white px-7 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 hover:bg-blue-50">Связаться с нами</Link>
-                    <a :href="loginUrl" class="rounded-2xl bg-white/15 px-7 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">Уже есть доступ? Войти</a>
+            <div data-reveal class="glow-frame" style="--gf-radius: 2rem">
+                <div class="cta-glass relative overflow-hidden rounded-[calc(2rem-2px)] px-6 py-16 text-center text-white">
+                    <h2 class="text-3xl font-bold sm:text-4xl">Подключите «Отклик» к своему бизнесу</h2>
+                    <p class="mx-auto mt-3 max-w-2xl text-blue-50/90">{{ site.accessNote }}</p>
+                    <div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
+                        <Link href="/contacts" class="rounded-2xl bg-white px-7 py-3.5 font-semibold text-[#1F4E79] transition hover:-translate-y-0.5 hover:bg-blue-50">Связаться с нами</Link>
+                        <a :href="loginUrl" class="rounded-2xl bg-white/15 px-7 py-3.5 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25">Уже есть доступ? Войти</a>
+                    </div>
                 </div>
             </div>
         </section>

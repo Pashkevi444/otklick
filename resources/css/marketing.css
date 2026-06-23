@@ -22,6 +22,63 @@ html.dark .mkt .glass {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
+/* ===== Переливающаяся градиентная рамка (как на блоке импорта) ===== */
+/* Обёртка с анимированным градиент-бордером. Внутрь кладём контент со своим фоном
+   (напр. .glow-inner). Используется на ключевых блоках по всему сайту. */
+.mkt .glow-frame {
+    position: relative;
+    padding: 1.5px;
+    border-radius: var(--gf-radius, 2rem);
+    background: linear-gradient(120deg, #2e74b5, #7c3aed, #18b6c9, #2e74b5);
+    background-size: 280% 280%;
+    animation: mktGlowpan 7s ease infinite;
+    box-shadow: 0 22px 60px rgba(46, 116, 181, 0.22);
+}
+.mkt .glow-frame > .glow-inner {
+    position: relative;
+    border-radius: calc(var(--gf-radius, 2rem) - 1.5px);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    overflow: hidden;
+}
+html.dark .mkt .glow-frame > .glow-inner {
+    background: rgba(14, 22, 38, 0.86);
+}
+/* Переливающаяся рамка прямо на элементе (без обёртки) — через mask-композит.
+   Не тонирует «стекло» внутри, рисует только бордюр. Для популярного тарифа и т.п. */
+.mkt .glow-edge {
+    position: relative;
+}
+.mkt .glow-edge::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(120deg, #2e74b5, #7c3aed, #18b6c9, #2e74b5);
+    background-size: 280% 280%;
+    animation: mktGlowpan 7s ease infinite;
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* Лёгкий внутренний блик у переливающихся блоков */
+.mkt .glow-inner::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 55%;
+    height: 180%;
+    background: radial-gradient(closest-side, rgba(124, 192, 255, 0.18), transparent);
+    pointer-events: none;
+}
+
 /* Анимированный градиентный фон */
 .mkt .bg-base {
     position: fixed;
@@ -37,33 +94,23 @@ html.dark .mkt .bg-base {
     background-size: 200% 200%;
 }
 
-/* Плавающие орбы с параллаксом (--sp задаёт JS при прокрутке) */
-.mkt .orbs {
+/* Мягкое аврора-свечение для глубины фона (без «кружков» — заменены роботами).
+   Параллакс при прокрутке (--sp задаёт JS). */
+.mkt .aurora {
     position: fixed;
-    inset: -220px 0;
+    inset: -10% -5%;
     z-index: -2;
-    overflow: hidden;
     pointer-events: none;
-    transform: translate3d(0, calc(var(--sp, 0) * -70px), 0);
+    background:
+        radial-gradient(40% 35% at 18% 12%, rgba(124, 192, 255, 0.35), transparent 70%),
+        radial-gradient(36% 32% at 85% 22%, rgba(150, 130, 255, 0.3), transparent 70%),
+        radial-gradient(42% 38% at 75% 88%, rgba(24, 182, 201, 0.26), transparent 72%);
+    filter: blur(20px);
+    transform: translate3d(0, calc(var(--sp, 0) * -60px), 0);
     transition: transform 0.2s linear;
     will-change: transform;
 }
-.mkt .orb {
-    position: absolute;
-    border-radius: 9999px;
-    filter: blur(70px);
-    opacity: 0.5;
-    will-change: transform;
-}
-html.dark .mkt .orb {
-    opacity: 0.28;
-}
-.mkt .orb-1 { width: 420px; height: 420px; background: #7cc0ff; top: -90px; left: -70px; animation: mktFloaty 18s ease-in-out infinite; }
-.mkt .orb-2 { width: 360px; height: 360px; background: #b9a8ff; top: 30%; right: -80px; animation: mktFloaty 22s ease-in-out infinite reverse; }
-.mkt .orb-3 { width: 300px; height: 300px; background: #7df3e1; bottom: 10%; left: 5%; animation: mktFloaty 20s ease-in-out infinite; }
-.mkt .orb-4 { width: 340px; height: 340px; background: #9fd0ff; bottom: -120px; right: 20%; animation: mktFloaty 26s ease-in-out infinite reverse; }
-.mkt .orb-5 { width: 300px; height: 300px; background: #c7b3ff; top: 52%; left: 32%; animation: mktFloaty 24s ease-in-out infinite; }
-.mkt .orb-6 { width: 380px; height: 380px; background: #7df3e1; top: 78%; right: 6%; animation: mktFloaty 19s ease-in-out infinite reverse; }
+html.dark .mkt .aurora { opacity: 0.5; }
 
 /* ===== Интерактивные 3D-объекты ===== */
 /* Слой со сценой: перспектива + реакция на курсор (--mx/--my) и скролл (--sp). */
@@ -91,55 +138,106 @@ html.dark .mkt .orb {
     inset: 0;
     border-radius: 22px;
 }
-/* Стеклянная 3D-плитка с бликом и «толщиной» */
-.mkt .tile3d {
-    width: var(--s, 150px);
-    height: var(--s, 150px);
-    animation: mktFloat3d var(--dur, 12s) ease-in-out infinite;
+/* ===== 3D-роботы (продаём ИИ) — плавают с параллаксом, наклон за курсором ===== */
+.mkt .robot3d {
+    width: var(--s, 120px);
+    height: calc(var(--s, 120px) * 1.28);
+    animation: mktFloat3d var(--dur, 14s) ease-in-out infinite;
+    filter: drop-shadow(0 calc(var(--s, 120px) * 0.18) calc(var(--s, 120px) * 0.22) rgba(31, 78, 121, 0.3));
+    opacity: 0.95;
 }
-.mkt .tile3d .f-front {
-    background: linear-gradient(135deg, rgba(124, 192, 255, 0.55), rgba(120, 170, 255, 0.25));
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 18px 50px rgba(46, 116, 181, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(6px);
-    overflow: hidden;
+html.dark .mkt .robot3d { opacity: 0.82; }
+/* Голова */
+.mkt .robot3d .r-head {
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    top: 16%;
+    height: 50%;
+    border-radius: 30%;
+    background: linear-gradient(150deg, #6aa9e8, #2e74b5 52%, #5b53c9);
+    box-shadow:
+        inset 0 calc(var(--s, 120px) * 0.02) 0 rgba(255, 255, 255, 0.5),
+        inset 0 calc(var(--s, 120px) * -0.07) calc(var(--s, 120px) * 0.07) rgba(11, 20, 40, 0.35);
 }
-.mkt .tile3d .f-front::after {
+/* «Уши»-наушники */
+.mkt .robot3d .r-head::before,
+.mkt .robot3d .r-head::after {
     content: '';
     position: absolute;
-    top: -60%;
-    left: -30%;
-    width: 70%;
-    height: 220%;
-    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.65), transparent);
-    transform: skewX(-18deg) translateX(calc(var(--mx, 0) * 60px));
-    transition: transform 0.3s ease;
+    top: 34%;
+    width: 9%;
+    height: 30%;
+    border-radius: 40%;
+    background: linear-gradient(#7aa7e0, #3f6fb8);
 }
-.mkt .tile3d .f-back {
-    transform: translateZ(-26px);
-    background: rgba(46, 116, 181, 0.5);
-    filter: blur(2px);
-    border-radius: 22px;
+.mkt .robot3d .r-head::before { left: -7%; }
+.mkt .robot3d .r-head::after { right: -7%; }
+/* Глаза */
+.mkt .robot3d .r-eye {
+    position: absolute;
+    top: 38%;
+    width: 18%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #eafcff, #58d6ff 58%, #1f8fd1);
+    box-shadow: 0 0 calc(var(--s, 120px) * 0.07) rgba(88, 214, 255, 0.95);
+    animation: mktRobotBlink 5.5s infinite;
 }
-/* «Кольцо/тор» из градиента */
-.mkt .ring3d {
-    width: var(--s, 180px);
-    height: var(--s, 180px);
-    border-radius: 9999px;
-    background: conic-gradient(from 120deg, #7cc0ff, #b9a8ff, #7df3e1, #9fd0ff, #7cc0ff);
-    -webkit-mask: radial-gradient(circle, transparent 38%, #000 39%, #000 60%, transparent 61%);
-    mask: radial-gradient(circle, transparent 38%, #000 39%, #000 60%, transparent 61%);
-    opacity: 0.85;
-    box-shadow: 0 18px 50px rgba(120, 170, 255, 0.35);
-    animation: mktSpin3d var(--dur, 26s) linear infinite;
+.mkt .robot3d .r-eye:first-of-type { left: 24%; }
+.mkt .robot3d .r-eye:last-of-type { right: 24%; }
+/* Антенна */
+.mkt .robot3d .r-antenna {
+    position: absolute;
+    left: 50%;
+    top: 3%;
+    width: 3px;
+    height: 15%;
+    transform: translateX(-50%);
+    background: linear-gradient(#9fd0ff, #2e74b5);
+    border-radius: 3px;
 }
-html.dark .mkt .tile3d .f-front {
-    background: linear-gradient(135deg, rgba(46, 116, 181, 0.45), rgba(80, 120, 200, 0.2));
+.mkt .robot3d .r-antenna::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: calc(var(--s, 120px) * -0.07);
+    width: calc(var(--s, 120px) * 0.13);
+    height: calc(var(--s, 120px) * 0.13);
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #eafcff, #6ee7ff 60%, #2bb6e6);
+    box-shadow: 0 0 calc(var(--s, 120px) * 0.1) rgba(110, 231, 255, 0.95);
+    animation: mktRobotPulse 2.4s ease-in-out infinite;
 }
-.mkt .obj-1 { top: 16%; left: 7%; --s: 130px; --par: -120px; --dur: 13s; }
-.mkt .obj-2 { top: 24%; right: 9%; --s: 170px; --par: -70px; --dur: 30s; }
-.mkt .obj-3 { top: 62%; left: 12%; --s: 150px; --par: -150px; --dur: 24s; }
-.mkt .obj-4 { top: 70%; right: 14%; --s: 120px; --par: -100px; --dur: 15s; }
+/* Корпус */
+.mkt .robot3d .r-body {
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    top: 68%;
+    height: 27%;
+    border-radius: 34% 34% 26% 26% / 44% 44% 26% 26%;
+    background: linear-gradient(150deg, #5b97dd, #285fa0 58%, #4a42b8);
+    box-shadow: inset 0 calc(var(--s, 120px) * 0.02) 0 rgba(255, 255, 255, 0.4);
+}
+.mkt .robot3d .r-body::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 32%;
+    width: 24%;
+    aspect-ratio: 1;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, #bfefff, #5ad6ff 60%, transparent);
+    box-shadow: 0 0 calc(var(--s, 120px) * 0.06) rgba(90, 214, 255, 0.85);
+    animation: mktRobotPulse 3s ease-in-out infinite;
+}
+.mkt .obj-1 { top: 14%; left: 6%; --s: 108px; --par: -130px; --dur: 13s; }
+.mkt .obj-2 { top: 21%; right: 7%; --s: 140px; --par: -75px; --dur: 17s; }
+.mkt .obj-3 { top: 60%; left: 9%; --s: 92px; --par: -170px; --dur: 15s; }
+.mkt .obj-4 { top: 67%; right: 11%; --s: 122px; --par: -105px; --dur: 19s; }
 @media (max-width: 768px) {
     .mkt .scene3d {
         display: none; /* на мобиле 3D-слой прячем ради читаемости и батареи */
@@ -311,10 +409,6 @@ html.dark .mkt .chip {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
 }
-@keyframes mktFloaty {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(26px, -34px) scale(1.06); }
-}
 @keyframes mktFloat3d {
     0%, 100% { translate: 0 0; }
     50% { translate: 0 -26px; }
@@ -322,6 +416,18 @@ html.dark .mkt .chip {
 @keyframes mktSpin3d {
     from { rotate: 0deg; }
     to { rotate: 360deg; }
+}
+@keyframes mktGlowpan {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+@keyframes mktRobotBlink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.1); }
+}
+@keyframes mktRobotPulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
 }
 /* Только прозрачность: transform у .mkt сделал бы фон (position:fixed) привязанным
    к блоку, а не к экрану — отсюда «брешь» в фоне внизу длинных страниц. */
@@ -358,8 +464,11 @@ html.dark .mkt .chip {
     .mkt .bg-base,
     .mkt .orb,
     .mkt .obj3d,
-    .mkt .tile3d,
-    .mkt .ring3d,
+    .mkt .robot3d,
+    .mkt .robot3d .r-eye,
+    .mkt .robot3d .r-antenna::after,
+    .mkt .robot3d .r-body::before,
+    .mkt .glow-frame,
     .mkt .btn-shine::after,
     .mkt .msg,
     .mkt .chat-chips,
