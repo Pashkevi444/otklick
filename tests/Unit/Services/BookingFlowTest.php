@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Crm\CrmGatewayResolver;
-use App\Crm\Data\CrmService;
-use App\Crm\Data\CrmStaff;
-use App\Crm\Data\TimeSlot;
+use App\Booking\BookingGatewayResolver;
+use App\Booking\Data\CrmService;
+use App\Booking\Data\CrmStaff;
+use App\Booking\Data\TimeSlot;
 use App\Enums\CrmProvider;
 use App\Llm\Contracts\LlmClient;
 use App\Llm\FakeLlmClient;
@@ -24,7 +24,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
-use Tests\Support\FakeCrmGateway;
+use Tests\Support\FakeBookingGateway;
 use Tests\TestCase;
 
 final class BookingFlowTest extends TestCase
@@ -43,7 +43,7 @@ final class BookingFlowTest extends TestCase
         parent::tearDown();
     }
 
-    private function flow(FakeCrmGateway $crm, bool $connected = true, ?LlmClient $llm = null, ?Conversation $lastBooked = null, ?Collection $activeBookings = null): BookingFlow
+    private function flow(FakeBookingGateway $crm, bool $connected = true, ?LlmClient $llm = null, ?Conversation $lastBooked = null, ?Collection $activeBookings = null): BookingFlow
     {
         $connection = new CrmConnection;
         $connection->id = 'crm-1';
@@ -85,7 +85,7 @@ final class BookingFlowTest extends TestCase
         $clients->shouldReceive('recordEmail')->byDefault();
         $clients->shouldReceive('attachClient')->byDefault();
 
-        return new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient, $clients);
+        return new BookingFlow($connections, new BookingGatewayResolver([$crm]), $conversations, $llm ?? new FakeLlmClient, $clients);
     }
 
     private function conversation(?string $phone = '+79990000000'): Conversation
@@ -102,9 +102,9 @@ final class BookingFlowTest extends TestCase
         return new Tenant(['name' => 'Барбершоп', 'settings' => ['overrides' => ['crm' => true], 'profile' => ['phone' => '+7 383 000-00-00']]]);
     }
 
-    private function crm(): FakeCrmGateway
+    private function crm(): FakeBookingGateway
     {
-        $crm = new FakeCrmGateway;
+        $crm = new FakeBookingGateway;
         $crm->services = [new CrmService('s1', 'Маникюр', 1500), new CrmService('s2', 'Педикюр', 2000)];
         $crm->staff = [new CrmStaff('m1', 'Анна'), new CrmStaff('m2', 'Ольга')];
         $crm->slots = [new TimeSlot('2026-06-17T10:00:00+03:00'), new TimeSlot('2026-06-17T11:30:00+03:00')];
@@ -426,7 +426,7 @@ final class BookingFlowTest extends TestCase
         $conversations->shouldReceive('lastWithCrmRecordForChat')->once()->with('ch-1', '9001')->andReturn($booked);
         $conversations->shouldReceive('setCrmRecordId')->once()->with($booked, null); // снят после отмены
 
-        $flow = new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, new FakeLlmClient, Mockery::mock(ClientService::class));
+        $flow = new BookingFlow($connections, new BookingGatewayResolver([$crm]), $conversations, new FakeLlmClient, Mockery::mock(ClientService::class));
 
         $current = new Conversation;
         $current->channel_id = 'ch-1';

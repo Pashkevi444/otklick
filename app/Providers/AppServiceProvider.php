@@ -2,14 +2,14 @@
 
 namespace App\Providers;
 
+use App\Booking\BookingGatewayResolver;
+use App\Booking\Yclients\YclientsGateway;
 use App\Channels\ChannelGatewayResolver;
 use App\Channels\Contracts\MessengerGateway;
 use App\Channels\Max\MaxGateway;
 use App\Channels\Telegram\TelegramGateway;
 use App\Channels\Vk\VkGateway;
 use App\Channels\WhatsApp\WhatsAppGateway;
-use App\Crm\CrmGatewayResolver;
-use App\Crm\Yclients\YclientsGateway;
 use App\Llm\Contracts\Embedder;
 use App\Llm\Contracts\LlmClient;
 use App\Llm\FakeEmbedder;
@@ -58,10 +58,10 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         // Реестр CRM-стратегий: новый CRM добавляется в этот тег.
-        $this->app->tag([YclientsGateway::class], 'crm.gateways');
+        $this->app->tag([YclientsGateway::class], 'booking.gateways');
         $this->app->singleton(
-            CrmGatewayResolver::class,
-            fn ($app): CrmGatewayResolver => new CrmGatewayResolver($app->tagged('crm.gateways')),
+            BookingGatewayResolver::class,
+            fn ($app): BookingGatewayResolver => new BookingGatewayResolver($app->tagged('booking.gateways')),
         );
 
         // Стратегии каналов выбираются по ChannelType. Новый канал = новый

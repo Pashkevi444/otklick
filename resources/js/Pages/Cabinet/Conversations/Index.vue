@@ -125,9 +125,9 @@ const remove = (id: string): void => {
 </script>
 
 <template>
-    <Head title="Лиды" />
+    <Head title="Диалоги" />
 
-    <AppLayout title="Лиды">
+    <AppLayout title="Диалоги">
         <p class="mb-5 max-w-2xl text-sm text-slate-500">
             Все обращения клиентов — 100% лидов и переписки бота сохраняется здесь. Ищите, фильтруйте и сортируйте.
         </p>

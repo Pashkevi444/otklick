@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Crm\CrmGatewayResolver;
+use App\Booking\BookingGatewayResolver;
 use App\Enums\UserRole;
 use App\Models\Channel;
 use App\Models\Client;
@@ -15,7 +15,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
-use Tests\Support\FakeCrmGateway;
+use Tests\Support\FakeBookingGateway;
 use Tests\TestCase;
 
 final class MemberPermissionTest extends TestCase
@@ -78,8 +78,8 @@ final class MemberPermissionTest extends TestCase
         ]);
 
         // Подменяем CRM-шлюз фейком, чтобы поймать отмену.
-        $fake = new FakeCrmGateway;
-        $this->app->instance(CrmGatewayResolver::class, new CrmGatewayResolver([$fake]));
+        $fake = new FakeBookingGateway;
+        $this->app->instance(BookingGatewayResolver::class, new BookingGatewayResolver([$fake]));
 
         $this->actingAs($owner)->delete("/cabinet/conversations/{$lead->id}")->assertRedirect();
 
@@ -189,11 +189,11 @@ final class MemberPermissionTest extends TestCase
         $owner = User::factory()->owner(Tenant::factory()->create())->create(); // trial
         $this->actingAs($owner)
             ->get('/cabinet/team')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 8)); // базовые + тестирование + главное меню (без clients/analytics/broadcasts/scenarios/integrations)
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 8)); // базовые разделы (без clients/analytics/broadcasts/scenarios/integrations и CRM-блока лиды/сделки — всё это требует тариф)
 
         $maxOwner = User::factory()->owner(Tenant::factory()->max()->create())->create();
         $this->actingAs($maxOwner)
             ->get('/cabinet/team')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 13)); // все разделы
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 15)); // все разделы, включая CRM (лиды, сделки, интеграции)
     }
 }

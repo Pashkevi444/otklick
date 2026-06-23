@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Crm\Contracts\CrmGateway;
-use App\Crm\CrmGatewayResolver;
-use App\Crm\Data\BookingRequest;
-use App\Crm\Data\BookingResult;
-use App\Crm\Data\CrmService;
-use App\Crm\Data\CrmStaff;
-use App\Crm\Data\SlotQuery;
-use App\Crm\Data\TimeSlot;
+use App\Booking\BookingGatewayResolver;
+use App\Booking\Contracts\BookingGateway;
+use App\Booking\Data\BookingRequest;
+use App\Booking\Data\BookingResult;
+use App\Booking\Data\CrmService;
+use App\Booking\Data\CrmStaff;
+use App\Booking\Data\SlotQuery;
+use App\Booking\Data\TimeSlot;
 use App\DTO\BotReply;
 use App\DTO\BusinessProfile;
 use App\DTO\ReplyKeyboard;
@@ -64,7 +64,7 @@ class BookingFlow
 
     public function __construct(
         private readonly CrmConnectionRepositoryInterface $connections,
-        private readonly CrmGatewayResolver $gateways,
+        private readonly BookingGatewayResolver $gateways,
         private readonly ConversationRepositoryInterface $conversations,
         private readonly LlmClient $llm,
         private readonly ClientService $clients,
@@ -363,7 +363,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function onService(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onService(Conversation $conversation, array $state, string $text, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
@@ -380,7 +380,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function onStaff(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onStaff(Conversation $conversation, array $state, string $text, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         $choice = $this->resolveChoice($state['options'] ?? [], $text);
 
@@ -397,7 +397,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function onDate(Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onDate(Conversation $conversation, array $state, string $text, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         // «в 15» / «к 18» — это ВРЕМЯ, а не день. Не отдаём в ИИ (он мог вернуть
         // 15-е число) — просим сначала выбрать день.
@@ -428,7 +428,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function onSlot(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onSlot(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         // На шаге времени голое число — это ЧАС («14» = 14:00), а не номер пункта.
         // Иначе бронировали не то время (прод-баг). Если час не нашёлся среди окон —
@@ -486,7 +486,7 @@ class BookingFlow
      *
      * @param  array<string, mixed>  $state
      */
-    private function onConfirmContact(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onConfirmContact(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         $phone = PhoneExtractor::fromText($text);
 
@@ -516,7 +516,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function onContact(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function onContact(Tenant $tenant, Conversation $conversation, array $state, string $text, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         // Имя/телефон мог уже распознать ContactCapture (ИИ) в вызывающем слое;
         // здесь — детерминированный фолбэк, чтобы запись точно получила оба поля.
@@ -555,7 +555,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function enterStaff(Conversation $conversation, array $state, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function enterStaff(Conversation $conversation, array $state, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         $staff = $gateway->staff($connection);
 
@@ -589,7 +589,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function enterSlot(Conversation $conversation, array $state, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function enterSlot(Conversation $conversation, array $state, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         $slots = $gateway->availableSlots($connection, new SlotQuery(
             staffId: (string) $state['staff_id'],
@@ -629,7 +629,7 @@ class BookingFlow
     /**
      * @param  array<string, mixed>  $state
      */
-    private function book(Tenant $tenant, Conversation $conversation, array $state, CrmConnection $connection, CrmGateway $gateway): BotReply
+    private function book(Tenant $tenant, Conversation $conversation, array $state, CrmConnection $connection, BookingGateway $gateway): BotReply
     {
         $this->log('create_request', $conversation, [
             'service_id' => $state['service_id'] ?? null,
@@ -749,7 +749,7 @@ class BookingFlow
      * валит запись — новая уже создана; просто логируем (старая «зависнет», её
      * увидит администратор).
      */
-    private function cancelSuperseded(Conversation $conversation, CrmConnection $connection, CrmGateway $gateway, string $recordId): void
+    private function cancelSuperseded(Conversation $conversation, CrmConnection $connection, BookingGateway $gateway, string $recordId): void
     {
         try {
             $result = $this->inSandbox()

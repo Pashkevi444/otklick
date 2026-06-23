@@ -33,6 +33,11 @@ final class MemberPermissionTest extends TestCase
         $this->assertNotContains('analytics', $grantable);
         $this->assertNotContains('integrations', $grantable);
         $this->assertNotContains('scenarios', $grantable);
+        // CRM-блок (лиды/сделки и их редактирование) — только на тарифе с crm.
+        $this->assertNotContains('leads', $grantable);
+        $this->assertNotContains('leads.edit', $grantable);
+        $this->assertNotContains('deals', $grantable);
+        $this->assertNotContains('deals.edit', $grantable);
         // Базовые — есть.
         $this->assertContains('conversations', $grantable);
         $this->assertContains('conversations.delete', $grantable);
@@ -43,5 +48,9 @@ final class MemberPermissionTest extends TestCase
         $max = array_map(fn (MemberPermission $p): string => $p->value, MemberPermission::grantableWith(TenantPlan::Max->features()));
         $this->assertContains('clients.delete', $max);
         $this->assertContains('scenarios', $max);
+        $this->assertContains('leads', $max);
+        $this->assertContains('leads.edit', $max);
+        $this->assertContains('deals', $max);
+        $this->assertContains('deals.edit', $max);
     }
 }

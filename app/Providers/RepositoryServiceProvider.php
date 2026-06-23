@@ -12,14 +12,19 @@ use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
+use App\Repositories\Contracts\CustomFieldDefRepositoryInterface;
 use App\Repositories\Contracts\DashboardCardStateRepositoryInterface;
+use App\Repositories\Contracts\DealRepositoryInterface;
+use App\Repositories\Contracts\DealStageRepositoryInterface;
 use App\Repositories\Contracts\EmailChangeCodeRepositoryInterface;
 use App\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Repositories\Contracts\FlowRepositoryInterface;
+use App\Repositories\Contracts\GridViewRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeChunkRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
+use App\Repositories\Contracts\LeadRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
@@ -35,14 +40,19 @@ use App\Repositories\Eloquent\EloquentClientRepository;
 use App\Repositories\Eloquent\EloquentConversationRepository;
 use App\Repositories\Eloquent\EloquentCrmConnectionRepository;
 use App\Repositories\Eloquent\EloquentCrmKnowledgeRepository;
+use App\Repositories\Eloquent\EloquentCustomFieldDefRepository;
 use App\Repositories\Eloquent\EloquentDashboardCardStateRepository;
+use App\Repositories\Eloquent\EloquentDealRepository;
+use App\Repositories\Eloquent\EloquentDealStageRepository;
 use App\Repositories\Eloquent\EloquentEmailChangeCodeRepository;
 use App\Repositories\Eloquent\EloquentFlowAbRepository;
 use App\Repositories\Eloquent\EloquentFlowRepository;
+use App\Repositories\Eloquent\EloquentGridViewRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeChunkRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeEntryRepository;
 use App\Repositories\Eloquent\EloquentKnowledgeGapRepository;
 use App\Repositories\Eloquent\EloquentLeadAnalyticsRepository;
+use App\Repositories\Eloquent\EloquentLeadRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
 use App\Repositories\Eloquent\EloquentNotificationRecipientRepository;
 use App\Repositories\Eloquent\EloquentPasswordResetCodeRepository;
@@ -69,6 +79,11 @@ final class RepositoryServiceProvider extends ServiceProvider
         KnowledgeGapRepositoryInterface::class => EloquentKnowledgeGapRepository::class,
         ClientRepositoryInterface::class => EloquentClientRepository::class,
         ClientIdentityRepositoryInterface::class => EloquentClientIdentityRepository::class,
+        DealStageRepositoryInterface::class => EloquentDealStageRepository::class,
+        DealRepositoryInterface::class => EloquentDealRepository::class,
+        LeadRepositoryInterface::class => EloquentLeadRepository::class,
+        CustomFieldDefRepositoryInterface::class => EloquentCustomFieldDefRepository::class,
+        GridViewRepositoryInterface::class => EloquentGridViewRepository::class,
         BroadcastRepositoryInterface::class => EloquentBroadcastRepository::class,
         FlowRepositoryInterface::class => EloquentFlowRepository::class,
         FlowAbRepositoryInterface::class => EloquentFlowAbRepository::class,

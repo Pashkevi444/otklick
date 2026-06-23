@@ -21,6 +21,8 @@ enum MemberPermission: string implements HasLabel
 {
     // Доступ к разделам (значение совпадает с CabinetSection).
     case Conversations = 'conversations';
+    case Leads = 'leads';
+    case Deals = 'deals';
     case Clients = 'clients';
     case Broadcasts = 'broadcasts';
     case Scenarios = 'scenarios';
@@ -40,6 +42,8 @@ enum MemberPermission: string implements HasLabel
     case ClientsEdit = 'clients.edit';
     case ClientsDelete = 'clients.delete';
     case KnowledgeEdit = 'knowledge.edit';
+    case LeadsEdit = 'leads.edit';
+    case DealsEdit = 'deals.edit';
 
     public function label(): string
     {
@@ -49,6 +53,8 @@ enum MemberPermission: string implements HasLabel
             self::ClientsEdit => 'Редактирование клиентов',
             self::ClientsDelete => 'Удаление клиентов',
             self::KnowledgeEdit => 'Редактирование базы знаний',
+            self::LeadsEdit => 'Редактирование лидов',
+            self::DealsEdit => 'Редактирование сделок',
             // Право-доступ к разделу — берём подпись раздела.
             default => $this->section()->label(),
         };
@@ -65,6 +71,8 @@ enum MemberPermission: string implements HasLabel
     {
         return match ($this) {
             self::Conversations, self::ConversationsEdit, self::ConversationsDelete => CabinetSection::Conversations,
+            self::Leads, self::LeadsEdit => CabinetSection::Leads,
+            self::Deals, self::DealsEdit => CabinetSection::Deals,
             self::Clients, self::ClientsEdit, self::ClientsDelete => CabinetSection::Clients,
             self::Broadcasts => CabinetSection::Broadcasts,
             self::Scenarios => CabinetSection::Scenarios,

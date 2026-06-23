@@ -15,6 +15,8 @@ use App\Enums\Contracts\HasLabel;
 enum CabinetSection: string implements HasLabel
 {
     case Conversations = 'conversations';
+    case Leads = 'leads';
+    case Deals = 'deals';
     case Clients = 'clients';
     case Broadcasts = 'broadcasts';
     case Scenarios = 'scenarios';
@@ -31,7 +33,9 @@ enum CabinetSection: string implements HasLabel
     public function label(): string
     {
         return match ($this) {
-            self::Conversations => 'Лиды',
+            self::Conversations => 'Диалоги',
+            self::Leads => 'Лиды',
+            self::Deals => 'Сделки',
             self::Clients => 'База клиентов',
             self::Broadcasts => 'Рассылки',
             self::Scenarios => 'Сценарии',
@@ -59,7 +63,7 @@ enum CabinetSection: string implements HasLabel
             self::Clients => 'clientBase',
             self::Broadcasts => 'broadcasts',
             self::Scenarios => 'flows',
-            self::Integrations => 'crm',
+            self::Integrations, self::Leads, self::Deals => 'crm',
             default => null,
         };
     }

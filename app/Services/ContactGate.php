@@ -36,7 +36,22 @@ class ContactGate
         private readonly MessageRepositoryInterface $messages,
         private readonly ClientService $clients,
         private readonly CrmConnectionRepositoryInterface $crm,
+        private readonly LeadService $leads,
     ) {}
+
+    /**
+     * Контактная форма пройдена: фиксируем флаг и заводим лид из диалога — НО
+     * только если у бизнеса есть CRM (тариф «Макс»). Без CRM остаётся только
+     * диалог, лиды не создаются. Идемпотентно.
+     */
+    private function completeGate(Tenant $tenant, Conversation $conversation): void
+    {
+        $this->conversations->markContactsGateDone($conversation);
+
+        if ($tenant->features()->crm) {
+            $this->leads->createFromConversation($conversation);
+        }
+    }
 
     /**
      * Ведёт контактную форму. Возвращает ответ бота, пока форма не отработала;
@@ -55,7 +70,7 @@ class ContactGate
         // прошлого диалога чата) — присутствуют на ПЕРВОМ сообщении и НЕ пришли в
         // нём самом. Иначе это новичок — приветствуем по-другому (ниже).
         if ($firstContact && $this->isComplete($conversation) && $phone['status'] !== 'valid') {
-            $this->conversations->markContactsGateDone($conversation);
+            $this->completeGate($tenant, $conversation);
 
             return $this->welcome($tenant, "С возвращением, {$conversation->displayName()}! 👋 Рады снова вас видеть. Чем могу помочь?");
         }
@@ -67,7 +82,7 @@ class ContactGate
         $this->capture($conversation, $text, $phone, $firstContact);
 
         if ($this->isComplete($conversation)) {
-            $this->conversations->markContactsGateDone($conversation);
+            $this->completeGate($tenant, $conversation);
 
             return $this->welcome($tenant, "Спасибо, {$conversation->displayName()}! 🙌 Чем могу помочь?");
         }
