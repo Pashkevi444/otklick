@@ -59,6 +59,9 @@ $onDomain(config('app.marketing_domain'), function (): void {
     Route::get('/tarify', [HomeController::class, 'pricing'])->name('site.pricing');
     Route::get('/contacts', [HomeController::class, 'contacts'])->name('site.contacts');
     Route::get('/privacy', [HomeController::class, 'privacy'])->name('site.privacy');
+    Route::get('/offer', [HomeController::class, 'offer'])->name('site.offer');
+    Route::get('/terms', [HomeController::class, 'terms'])->name('site.terms');
+    Route::get('/consent', [HomeController::class, 'consent'])->name('site.consent');
     Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 });
 

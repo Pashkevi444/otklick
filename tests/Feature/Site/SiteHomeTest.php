@@ -91,4 +91,21 @@ final class SiteHomeTest extends TestCase
                 ->where('site.inn', '543807917255')
                 ->has('loginUrl'));
     }
+
+    public function test_legal_pages_render(): void
+    {
+        foreach (['/offer' => 'Site/Offer', '/terms' => 'Site/Terms', '/consent' => 'Site/Consent'] as $url => $component) {
+            $this->get($url)
+                ->assertOk()
+                ->assertInertia(fn (AssertableInertia $page) => $page->component($component)->has('site')->has('loginUrl'));
+        }
+    }
+
+    public function test_sitemap_lists_legal_pages(): void
+    {
+        $res = $this->get('/sitemap.xml')->assertOk();
+        $res->assertSee('/offer', false);
+        $res->assertSee('/terms', false);
+        $res->assertSee('/consent', false);
+    }
 }

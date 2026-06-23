@@ -186,6 +186,13 @@ interface ConversationRepositoryInterface
     public function upcomingBookedForCurrentTenant(Carbon $from, Carbon $to): Collection;
 
     /**
+     * Краткие счётчики для дашборда: лиды сегодня/за 7 дней и записи за 7 дней.
+     *
+     * @return array{leadsToday: int, leadsWeek: int, bookedWeek: int}
+     */
+    public function dashboardStats(): array;
+
+    /**
      * Диалоги текущего тенанта (scoped/RLS) для журнала: с каналом, последним
      * сообщением и числом сообщений, новые сверху.
      *

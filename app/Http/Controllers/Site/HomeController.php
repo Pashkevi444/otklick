@@ -87,6 +87,45 @@ final class HomeController extends Controller
         ) + $this->pageLd([['Главная', route('home')], ['Конфиденциальность', route('site.privacy')]]));
     }
 
+    /** Публичная оферта (договор оказания услуг). */
+    public function offer(): Response
+    {
+        return Inertia::render('Site/Offer', [
+            'site' => $this->present($this->site->current()),
+            'loginUrl' => route('login'),
+        ])->withViewData($this->meta(
+            'Публичная оферта — Отклик',
+            'Публичная оферта на оказание услуг сервиса «Отклик»: предмет договора, тарифы, оплата, ответственность сторон, реквизиты.',
+            route('site.offer'),
+        ) + $this->pageLd([['Главная', route('home')], ['Оферта', route('site.offer')]]));
+    }
+
+    /** Пользовательское соглашение (условия использования). */
+    public function terms(): Response
+    {
+        return Inertia::render('Site/Terms', [
+            'site' => $this->present($this->site->current()),
+            'loginUrl' => route('login'),
+        ])->withViewData($this->meta(
+            'Пользовательское соглашение — Отклик',
+            'Условия использования сервиса «Отклик»: регистрация, правила, ответственность, интеллектуальная собственность.',
+            route('site.terms'),
+        ) + $this->pageLd([['Главная', route('home')], ['Пользовательское соглашение', route('site.terms')]]));
+    }
+
+    /** Согласие на обработку персональных данных. */
+    public function consent(): Response
+    {
+        return Inertia::render('Site/Consent', [
+            'site' => $this->present($this->site->current()),
+            'loginUrl' => route('login'),
+        ])->withViewData($this->meta(
+            'Согласие на обработку персональных данных — Отклик',
+            'Согласие на обработку персональных данных при использовании сервиса «Отклик» и отправке форм на сайте (152-ФЗ).',
+            route('site.consent'),
+        ) + $this->pageLd([['Главная', route('home')], ['Согласие на обработку ПДн', route('site.consent')]]));
+    }
+
     /**
      * SEO-мета для серверного рендера в `<head>` (роботы не видят клиентский
      * Inertia-Head без SSR). Передаём в корневой Blade через withViewData.

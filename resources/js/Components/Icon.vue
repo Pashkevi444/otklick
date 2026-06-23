@@ -39,6 +39,11 @@ const icons: Record<string, string> = {
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
     rocket: '<path d="M5 15c-1.5 1.5-2 5-2 5s3.5-.5 5-2M14 5c3-3 6-3 6-3s0 3-3 6l-5 5-4-4z"/><path d="M9 11l-4 1M13 15l-1 4"/>',
+    flask: '<path d="M9 3h6M10 3v6.5L5.2 18A2 2 0 0 0 7 21h10a2 2 0 0 0 1.8-3L14 9.5V3"/><path d="M8 15h8"/>',
+    radio: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M6 6a9 9 0 0 0 0 12M18 6a9 9 0 0 1 0 12"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 2.6 15 0 18M12 3c-2.6 2.6-2.6 15 0 18"/>',
+    building: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-3h4v3"/>',
+    bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
 </script>
 

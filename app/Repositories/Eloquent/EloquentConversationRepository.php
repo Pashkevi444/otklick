@@ -64,6 +64,17 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill($fields)->save();
     }
 
+    public function dashboardStats(): array
+    {
+        $weekAgo = now()->subDays(7);
+
+        return [
+            'leadsToday' => Conversation::query()->where('created_at', '>=', now()->startOfDay())->count(),
+            'leadsWeek' => Conversation::query()->where('created_at', '>=', $weekAgo)->count(),
+            'bookedWeek' => Conversation::query()->where('booked_at', '>=', $weekAgo)->count(),
+        ];
+    }
+
     public function forCurrentTenant(): Collection
     {
         return Conversation::query()

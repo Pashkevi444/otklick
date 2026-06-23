@@ -71,6 +71,9 @@ interface ClientRepositoryInterface
      */
     public function marketingAudienceCountForCurrentTenant(): int;
 
+    /** Всего клиентов текущего тенанта (для счётчика на дашборде). */
+    public function countForCurrentTenant(): int;
+
     /**
      * Лёгкий список клиентов для выбора получателей (id, имя, телефон, отписка).
      *

@@ -244,6 +244,52 @@ html.dark .mkt .robot3d { opacity: 0.82; }
     }
 }
 
+/* Правовые страницы (оферта/соглашение/согласие/политика) */
+.mkt .prose-policy h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f4e79;
+    margin-bottom: 0.5rem;
+}
+html.dark .mkt .prose-policy h2 {
+    color: #bae6fd;
+}
+.mkt .prose-policy p {
+    line-height: 1.7;
+    margin-top: 0.5rem;
+}
+.mkt .prose-policy ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+    line-height: 1.7;
+}
+.mkt .prose-policy li {
+    margin-top: 0.25rem;
+}
+.mkt .prose-policy a {
+    color: #2e74b5;
+    text-decoration: underline;
+}
+html.dark .mkt .prose-policy a {
+    color: #7dd3fc;
+}
+.mkt .req-table {
+    width: 100%;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+.mkt .req-table td {
+    padding: 0.4rem 0;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(100, 116, 139, 0.15);
+}
+.mkt .req-table td:first-child {
+    color: #64748b;
+    width: 40%;
+    padding-right: 1rem;
+}
+
 /* Появление при скролле */
 .mkt [data-reveal] {
     transition:

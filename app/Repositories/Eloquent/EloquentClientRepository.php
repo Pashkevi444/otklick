@@ -42,6 +42,11 @@ final class EloquentClientRepository implements ClientRepositoryInterface
         $client->delete();
     }
 
+    public function countForCurrentTenant(): int
+    {
+        return Client::query()->count();
+    }
+
     public function paginateForCurrentTenant(
         ?string $search,
         ?string $channel,

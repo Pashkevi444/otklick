@@ -25,7 +25,6 @@ const year = new Date().getFullYear();
 const navLinks = [
     { href: '/', label: 'Главная' },
     { href: '/vozmozhnosti', label: 'Возможности' },
-    { href: '/tarify', label: 'Тарифы' },
     { href: '/contacts', label: 'Контакты' },
 ];
 
@@ -164,7 +163,11 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="flex flex-wrap items-start gap-x-6 gap-y-2 text-sm">
                         <Link v-for="l in navLinks" :key="l.href" :href="l.href" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">{{ l.label }}</Link>
+                        <Link href="/tarify" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Тарифы</Link>
                         <Link href="/privacy" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Конфиденциальность</Link>
+                        <Link href="/offer" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Оферта</Link>
+                        <Link href="/terms" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Соглашение</Link>
+                        <Link href="/consent" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Согласие на ПДн</Link>
                         <a :href="loginUrl" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Вход</a>
                     </div>
                 </div>

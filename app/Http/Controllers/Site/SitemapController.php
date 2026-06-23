@@ -23,6 +23,9 @@ final class SitemapController extends Controller
             ['loc' => route('site.pricing'), 'changefreq' => 'weekly', 'priority' => '0.8'],
             ['loc' => route('site.contacts'), 'changefreq' => 'monthly', 'priority' => '0.5'],
             ['loc' => route('site.privacy'), 'changefreq' => 'yearly', 'priority' => '0.3'],
+            ['loc' => route('site.offer'), 'changefreq' => 'yearly', 'priority' => '0.3'],
+            ['loc' => route('site.terms'), 'changefreq' => 'yearly', 'priority' => '0.3'],
+            ['loc' => route('site.consent'), 'changefreq' => 'yearly', 'priority' => '0.3'],
         ];
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
