@@ -102,8 +102,8 @@ const submit = (): void => {
 
         <!-- Тип бизнеса (ниша) — влияет на подбор шаблонов сценариев и базы знаний -->
         <div class="ui-scope mb-4 max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10">
-            <div class="flex flex-wrap items-center gap-3">
-                <div class="flex-1">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div class="min-w-0 sm:flex-1">
                     <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Тип бизнеса</div>
                     <p class="mt-0.5 text-xs text-slate-500">
                         Сейчас:
@@ -111,15 +111,15 @@ const submit = (): void => {
                         От него зависит, какие готовые шаблоны и элементы базы знаний вам показываются.
                     </p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <select v-model="btForm.business_type" class="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5">
+                <div class="flex items-stretch gap-2">
+                    <select v-model="btForm.business_type" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm sm:flex-none dark:border-white/10 dark:bg-white/5">
                         <option value="">Не задан</option>
                         <option v-for="bt in businessTypes" :key="bt.value" :value="bt.value">{{ bt.label }}</option>
                     </select>
                     <button
                         type="button"
                         :disabled="btForm.processing || btForm.business_type === (businessType ?? '')"
-                        class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-40"
+                        class="flex-none whitespace-nowrap rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-40"
                         @click="saveBusinessType"
                     >
                         Сохранить

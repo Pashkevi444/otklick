@@ -99,7 +99,7 @@ const shortcuts = computed<Shortcut[]>(() =>
             </div>
             <div class="px-5 pb-6 sm:px-8">
                 <div class="flex flex-col gap-x-5 gap-y-3 sm:flex-row sm:items-start">
-                    <div class="-mt-12 flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-[#EAF2FB] text-2xl font-bold text-[#1F4E79] shadow-md sm:h-28 sm:w-28 dark:border-slate-800 dark:bg-white/10 dark:text-sky-200">
+                    <div class="relative z-10 -mt-12 flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-[#EAF2FB] text-2xl font-bold text-[#1F4E79] shadow-md sm:h-28 sm:w-28 dark:border-slate-800 dark:bg-white/10 dark:text-sky-200">
                         <img v-if="business.avatar_url" :src="business.avatar_url" alt="Аватар бизнеса" class="h-full w-full object-cover" />
                         <span v-else>{{ initials }}</span>
                     </div>
