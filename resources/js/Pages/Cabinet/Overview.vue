@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Icon from '@/Components/Icon.vue';
 
 const page = usePage();
 const features = computed(() => page.props.auth.user?.tenant?.features);
@@ -46,16 +47,17 @@ interface Fact {
 
 const facts = computed<Fact[]>(() => {
     const out: Fact[] = [];
-    if (props.business.phone) out.push({ icon: '📞', label: 'Телефон', value: props.business.phone, href: `tel:${props.business.phone}` });
-    if (props.business.working_hours) out.push({ icon: '🕑', label: 'Часы работы', value: props.business.working_hours });
-    if (props.business.address) out.push({ icon: '📍', label: 'Адрес', value: props.business.address });
-    if (websiteHref.value) out.push({ icon: '🌐', label: 'Сайт', value: props.business.website as string, href: websiteHref.value });
+    if (props.business.phone) out.push({ icon: 'phone', label: 'Телефон', value: props.business.phone, href: `tel:${props.business.phone}` });
+    if (props.business.working_hours) out.push({ icon: 'clock', label: 'Часы работы', value: props.business.working_hours });
+    if (props.business.address) out.push({ icon: 'pin', label: 'Адрес', value: props.business.address });
+    if (websiteHref.value) out.push({ icon: 'globe', label: 'Сайт', value: props.business.website as string, href: websiteHref.value });
     return out;
 });
 
 interface Shortcut {
     label: string;
     icon: string;
+    accent: string;
     href: string;
     section?: string; // раздел из allowedSections (доступ оператора)
     feature?: 'analytics' | 'clientBase'; // возможность тарифа
@@ -65,10 +67,10 @@ interface Shortcut {
 // Главные плашки бизнеса — с гейтингом (тариф/роль/доступ), чтобы недоступные
 // не показывались и не давали 403.
 const allShortcuts: Shortcut[] = [
-    { label: 'Лиды', icon: '💬', href: '/cabinet/conversations', section: 'conversations' },
-    { label: 'База клиентов', icon: '👤', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
-    { label: 'Аналитика', icon: '📈', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
-    { label: 'Команда', icon: '👥', href: '/cabinet/team', owner: true },
+    { label: 'Лиды', icon: 'chat', accent: 'bg-[#2E74B5]/12 text-[#2E74B5] dark:bg-sky-400/15 dark:text-sky-300', href: '/cabinet/conversations', section: 'conversations' },
+    { label: 'База клиентов', icon: 'users', accent: 'bg-violet-500/12 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
+    { label: 'Аналитика', icon: 'chart', accent: 'bg-emerald-500/12 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
+    { label: 'Команда', icon: 'users', accent: 'bg-amber-500/12 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300', href: '/cabinet/team', owner: true },
 ];
 
 const shortcuts = computed<Shortcut[]>(() =>
@@ -118,10 +120,10 @@ const shortcuts = computed<Shortcut[]>(() =>
                         :key="f.label"
                         :href="f.href"
                         :target="f.href && f.href.startsWith('http') ? '_blank' : undefined"
-                        class="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-white/5"
-                        :class="f.href ? 'transition hover:border-[#2E74B5]/40' : ''"
+                        class="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+                        :class="f.href ? 'transition hover:-translate-y-0.5 hover:border-[#2E74B5]/40 hover:shadow-sm' : ''"
                     >
-                        <span class="text-lg leading-none">{{ f.icon }}</span>
+                        <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white text-[#2E74B5] shadow-sm transition group-hover:scale-110 dark:bg-white/10 dark:text-sky-300"><Icon :name="f.icon" class="h-5 w-5" /></span>
                         <span class="min-w-0">
                             <span class="block text-xs text-slate-400">{{ f.label }}</span>
                             <span class="block truncate text-sm font-medium text-slate-700 dark:text-slate-200">{{ f.value }}</span>
@@ -138,9 +140,9 @@ const shortcuts = computed<Shortcut[]>(() =>
                 v-for="s in shortcuts"
                 :key="s.href"
                 :href="s.href"
-                class="ui-scope flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#2E74B5]/40 dark:border-white/10"
+                class="ui-scope group flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-1 hover:border-[#2E74B5]/40 hover:shadow-lg hover:shadow-slate-200/60 dark:border-white/10 dark:hover:shadow-black/30"
             >
-                <span class="text-2xl">{{ s.icon }}</span>
+                <span class="flex h-11 w-11 items-center justify-center rounded-2xl transition group-hover:scale-110" :class="s.accent"><Icon :name="s.icon" class="h-6 w-6" /></span>
                 <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ s.label }}</span>
             </Link>
         </div>
