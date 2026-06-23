@@ -10,6 +10,7 @@ use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use App\Support\ImageBytes;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -25,11 +26,27 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
+        private ?string $proxy = null,
     ) {}
 
     public function provider(): ChannelType
     {
         return ChannelType::WhatsApp;
+    }
+
+    /**
+     * Базовый HTTP-клиент Green API: через прокси (VPN, обход блокировки), если
+     * задан. Все вызовы к Green API и его медиа идут отсюда.
+     */
+    private function http(): PendingRequest
+    {
+        $request = Http::connectTimeout(5);
+
+        if ($this->proxy !== null && $this->proxy !== '') {
+            $request->withOptions(['proxy' => $this->proxy]);
+        }
+
+        return $request;
     }
 
     public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void
@@ -44,7 +61,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
         }
 
         if ($message !== '') {
-            Http::asJson()->connectTimeout(5)->timeout(15)->retry(2, 300, throw: false)
+            $this->http()->asJson()->timeout(15)->retry(2, 300, throw: false)
                 ->post($this->url($channel, 'sendMessage'), ['chatId' => $chatId, 'message' => $message])
                 ->throw();
         }
@@ -62,7 +79,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
                     continue;
                 }
 
-                Http::connectTimeout(5)->timeout(25)->retry(2, 300, throw: false)
+                $this->http()->timeout(25)->retry(2, 300, throw: false)
                     ->attach('file', $bytes, basename((string) (parse_url($url, PHP_URL_PATH) ?: 'photo.jpg')))
                     ->post($this->url($channel, 'sendFileByUpload'), ['chatId' => $chatId])
                     ->throw();
@@ -73,7 +90,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
         }
 
         if ($failed !== []) {
-            Http::asJson()->connectTimeout(5)->timeout(15)->retry(2, 300, throw: false)
+            $this->http()->asJson()->timeout(15)->retry(2, 300, throw: false)
                 ->post($this->url($channel, 'sendMessage'), ['chatId' => $chatId, 'message' => 'Примеры работ: '.implode(' ', $failed)])
                 ->throw();
         }
@@ -85,7 +102,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
      */
     public function stateInstance(Channel $channel): ?string
     {
-        $state = Http::asJson()->connectTimeout(5)->timeout(10)
+        $state = $this->http()->asJson()->timeout(10)
             ->get($this->url($channel, 'getStateInstance'))
             ->throw()
             ->json('stateInstance');
@@ -101,7 +118,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
      */
     public function receiveNotification(Channel $channel, int $timeout): ?array
     {
-        $data = Http::asJson()->connectTimeout(5)->timeout($timeout + 10)
+        $data = $this->http()->asJson()->timeout($timeout + 10)
             ->get($this->url($channel, 'receiveNotification'), ['receiveTimeout' => $timeout])
             ->throw()
             ->json();
@@ -122,7 +139,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
      */
     public function deleteNotification(Channel $channel, int $receiptId): void
     {
-        Http::asJson()->connectTimeout(5)->timeout(10)->retry(1, 300, throw: false)
+        $this->http()->asJson()->timeout(10)->retry(1, 300, throw: false)
             ->delete($this->url($channel, 'deleteNotification').'/'.$receiptId);
     }
 
@@ -178,7 +195,7 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
         }
 
         try {
-            $audio = Http::connectTimeout(5)->timeout(20)->get($url)->throw()->body();
+            $audio = $this->http()->timeout(20)->get($url)->throw()->body();
 
             return $audio !== '' ? $audio : null;
         } catch (Throwable $e) {

@@ -27,7 +27,28 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
     public function __construct(
         private string $apiUrl,
         private bool $forceIpv6 = false,
+        private ?string $proxy = null,
     ) {}
+
+    /**
+     * Сетевые опции для запросов к Telegram: через прокси (VPN, обход блокировки)
+     * — приоритетно; иначе форсим IPv6. Прокси сам решает маршрут, IPv6-форс с ним
+     * не нужен.
+     *
+     * @return array<string, mixed>
+     */
+    private function netOptions(): array
+    {
+        if ($this->proxy !== null && $this->proxy !== '') {
+            return ['proxy' => $this->proxy];
+        }
+
+        if ($this->forceIpv6) {
+            return ['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6]];
+        }
+
+        return [];
+    }
 
     public function provider(): ChannelType
     {
@@ -81,13 +102,8 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
     /** HTTP-клиент для multipart-загрузки фото (с форсингом IPv6 в РФ). */
     private function photoRequest(): PendingRequest
     {
-        $request = Http::connectTimeout(5)->timeout(20)->retry(2, 300, throw: false);
-
-        if ($this->forceIpv6) {
-            $request->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6]]);
-        }
-
-        return $request;
+        return Http::connectTimeout(5)->timeout(20)->retry(2, 300, throw: false)
+            ->withOptions($this->netOptions());
     }
 
     /**
@@ -258,12 +274,6 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
      */
     private function request(): PendingRequest
     {
-        $request = Http::asJson();
-
-        if ($this->forceIpv6) {
-            $request->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6]]);
-        }
-
-        return $request;
+        return Http::asJson()->withOptions($this->netOptions());
     }
 }

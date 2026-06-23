@@ -37,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(TelegramGateway::class, fn (): TelegramGateway => new TelegramGateway(
             (string) config('services.telegram.api_url'),
             (bool) config('services.telegram.force_ipv6'),
+            config('services.telegram.proxy'),
         ));
 
         $this->app->singleton(VkGateway::class, fn (): VkGateway => new VkGateway(
@@ -50,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(WhatsAppGateway::class, fn (): WhatsAppGateway => new WhatsAppGateway(
             (string) config('services.whatsapp.api_url'),
+            config('services.whatsapp.proxy'),
         ));
 
         $this->app->singleton(YclientsGateway::class, fn (): YclientsGateway => new YclientsGateway(

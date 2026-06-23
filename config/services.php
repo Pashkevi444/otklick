@@ -44,6 +44,9 @@ return [
         // заблокирован по IPv4, и без этого Guzzle сначала висит на IPv4-таймауте
         // (~5 с на каждый вызов, включая ответы бота), потом уходит в IPv6.
         'force_ipv6' => (bool) env('TELEGRAM_FORCE_IPV6', false),
+        // Прокси для запросов к Telegram (напр. socks5h://singbox:1080) — обход
+        // блокировки РКН через VPN. Общий CHANNEL_PROXY или свой TELEGRAM_PROXY.
+        'proxy' => env('TELEGRAM_PROXY', env('CHANNEL_PROXY')) ?: null,
     ],
 
     'yclients' => [
@@ -92,6 +95,9 @@ return [
     'whatsapp' => [
         // WhatsApp через провайдера Green API (привязка реального аккаунта по QR).
         'api_url' => env('GREENAPI_API_URL', 'https://api.green-api.com'),
+        // Прокси для Green API (VPN, обход блокировки). Общий CHANNEL_PROXY или
+        // свой WHATSAPP_PROXY.
+        'proxy' => env('WHATSAPP_PROXY', env('CHANNEL_PROXY')) ?: null,
     ],
 
     'max' => [
