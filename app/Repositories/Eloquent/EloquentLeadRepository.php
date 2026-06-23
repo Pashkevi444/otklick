@@ -50,4 +50,9 @@ final class EloquentLeadRepository implements LeadRepositoryInterface
     {
         return Lead::query()->where('conversation_id', $conversationId)->exists();
     }
+
+    public function findByConversation(string $conversationId): ?Lead
+    {
+        return Lead::query()->where('conversation_id', $conversationId)->first();
+    }
 }

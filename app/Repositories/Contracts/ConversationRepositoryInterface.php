@@ -83,6 +83,14 @@ interface ConversationRepositoryInterface
     public function closeCompletedBookingsForCurrentTenant(Carbon $now): int;
 
     /**
+     * Диалоги с завершённой CRM-записью (время визита прошло), которые сейчас
+     * будут закрыты — чтобы перед закрытием двинуть их сделки в «Выиграно».
+     *
+     * @return Collection<int, Conversation>
+     */
+    public function completedBookingsForCurrentTenant(Carbon $now): Collection;
+
+    /**
      * Увеличивает счётчик подряд идущих уточняющих вопросов бота и возвращает
      * новое значение.
      */

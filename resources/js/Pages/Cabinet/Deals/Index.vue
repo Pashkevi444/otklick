@@ -54,10 +54,19 @@ const props = defineProps<{
     views: SavedView[];
 }>();
 
+const search = ref('');
+const filteredDeals = computed<Deal[]>(() => {
+    const q = search.value.trim().toLowerCase();
+    if (!q) return props.deals;
+    return props.deals.filter((d) =>
+        [d.title, d.client?.name, d.client?.phone, d.notes, d.assigned?.name].some((x) => (x ?? '').toString().toLowerCase().includes(q)),
+    );
+});
+
 const dealsByStage = computed<Record<string, Deal[]>>(() => {
     const map: Record<string, Deal[]> = {};
     for (const s of props.stages) map[s.id] = [];
-    for (const d of props.deals) (map[d.stage_id] ??= []).push(d);
+    for (const d of filteredDeals.value) (map[d.stage_id] ??= []).push(d);
     return map;
 });
 
@@ -152,7 +161,7 @@ const columns = computed<ColumnDef[]>(() => [
 ]);
 
 const gridRows = computed<Row[]>(() =>
-    props.deals.map((d) => ({
+    filteredDeals.value.map((d) => ({
         ...d,
         title: cardTitle(d),
         stage_name: stageNameById.value[d.stage_id] ?? '',
@@ -175,6 +184,7 @@ const onRowClick = (row: Row): void => {
                 Воронка продаж. Тащите карточки между стадиями, ведите сумму и ответственного.
             </p>
             <div class="flex flex-wrap items-center gap-3">
+                <input v-model="search" type="search" placeholder="Поиск по сделкам…" class="w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5" />
                 <div class="inline-flex rounded-lg border border-slate-200 p-0.5 dark:border-white/10">
                     <button type="button" class="rounded-md px-3 py-1 text-sm font-medium" :class="viewMode === 'kanban' ? 'bg-[#2E74B5] text-white' : 'text-slate-500'" @click="viewMode = 'kanban'">Канбан</button>
                     <button type="button" class="rounded-md px-3 py-1 text-sm font-medium" :class="viewMode === 'table' ? 'bg-[#2E74B5] text-white' : 'text-slate-500'" @click="viewMode = 'table'">Таблица</button>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\DealStageAutomation;
 use App\Enums\DealStageKind;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $tenant_id
  * @property string $name
  * @property DealStageKind $kind
+ * @property DealStageAutomation|null $automation
  * @property int $sort_order
  * @property string|null $color
  */
@@ -23,6 +25,7 @@ final class DealStage extends TenantOwnedModel
         'tenant_id',
         'name',
         'kind',
+        'automation',
         'sort_order',
         'color',
     ];
@@ -31,6 +34,7 @@ final class DealStage extends TenantOwnedModel
     {
         return [
             'kind' => DealStageKind::class,
+            'automation' => DealStageAutomation::class,
             'sort_order' => 'integer',
         ];
     }

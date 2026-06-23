@@ -238,6 +238,16 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->update(['status' => ConversationStatus::Closed]);
     }
 
+    public function completedBookingsForCurrentTenant(Carbon $now): Collection
+    {
+        return Conversation::query()
+            ->where('status', ConversationStatus::Open)
+            ->whereNotNull('crm_record_id')
+            ->whereNotNull('booked_for')
+            ->where('booked_for', '<', $now)
+            ->get();
+    }
+
     public function bumpClarificationAttempts(Conversation $conversation): int
     {
         $next = ($conversation->clarification_attempts ?? 0) + 1;

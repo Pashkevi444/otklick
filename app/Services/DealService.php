@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\DealData;
+use App\Enums\DealStageAutomation;
 use App\Enums\DealStageKind;
 use App\Models\Deal;
 use App\Repositories\Contracts\DealRepositoryInterface;
@@ -18,13 +19,16 @@ use App\Repositories\Contracts\DealStageRepositoryInterface;
  */
 class DealService
 {
-    /** Дефолтная воронка — создаётся при первом обращении тенанта. */
+    /**
+     * Дефолтная воронка — создаётся при первом обращении тенанта. Каждой стадии
+     * задана automation-роль: по ней бот авто-двигает сделку при событиях диалога.
+     */
     private const array DEFAULT_STAGES = [
-        ['name' => 'Новый', 'kind' => DealStageKind::Active],
-        ['name' => 'В работе', 'kind' => DealStageKind::Active],
-        ['name' => 'Переговоры', 'kind' => DealStageKind::Active],
-        ['name' => 'Выиграно', 'kind' => DealStageKind::Won],
-        ['name' => 'Проиграно', 'kind' => DealStageKind::Lost],
+        ['name' => 'Новый', 'kind' => DealStageKind::Active, 'automation' => DealStageAutomation::New],
+        ['name' => 'В работе', 'kind' => DealStageKind::Active, 'automation' => DealStageAutomation::Working],
+        ['name' => 'Нужен человек', 'kind' => DealStageKind::Active, 'automation' => DealStageAutomation::NeedsHuman],
+        ['name' => 'Выиграно', 'kind' => DealStageKind::Won, 'automation' => DealStageAutomation::Won],
+        ['name' => 'Проиграно', 'kind' => DealStageKind::Lost, 'automation' => DealStageAutomation::Lost],
     ];
 
     public function __construct(
@@ -43,6 +47,7 @@ class DealService
             $this->stages->create([
                 'name' => $stage['name'],
                 'kind' => $stage['kind'],
+                'automation' => $stage['automation'],
                 'sort_order' => $i,
             ]);
         }

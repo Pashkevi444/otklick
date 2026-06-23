@@ -30,4 +30,7 @@ interface LeadRepositoryInterface
 
     /** Уже есть лид по этому диалогу (идемпотентность авто-создания). */
     public function existsForConversation(string $conversationId): bool;
+
+    /** Лид, привязанный к диалогу (для авто-движка воронки). */
+    public function findByConversation(string $conversationId): ?Lead;
 }

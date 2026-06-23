@@ -11,6 +11,7 @@ use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Enums\PipelineEvent;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
@@ -38,6 +39,7 @@ final readonly class WebWidgetService
         private BotResponder $responder,
         private ContactCapture $contacts,
         private SpamDetector $spam,
+        private DealAutomationService $pipeline,
     ) {}
 
     /**
@@ -110,17 +112,20 @@ final readonly class WebWidgetService
 
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+            $this->pipeline->onEvent($conversation, PipelineEvent::NeedsHuman);
         } elseif ($reply->booked) {
             // Запись оформлена (лид «в работе» до визита) — фиксируем + обновляем
-            // резюме клиента (как в Telegram-пути).
+            // резюме клиента (как в Telegram-пути) + двигаем сделку «в работу».
             $this->conversations->markBooked($conversation);
+            $this->pipeline->onEvent($conversation, PipelineEvent::Booked);
             if ($conversation->client_id !== null) {
                 RefreshClientSummary::dispatch((string) $channel->tenant_id, (string) $conversation->client_id);
             }
         } elseif ($reply->cancelled) {
-            // Клиент отменил запись — отменяем в CRM и закрываем диалог.
+            // Клиент отменил запись — отменяем в CRM, сделку → «проиграно».
             $this->responder->cancelBookingInCrm($conversation);
             $this->conversations->markCancelled($conversation);
+            $this->pipeline->onEvent($conversation, PipelineEvent::Cancelled);
         }
 
         $this->notifyOwner($channel, $conversation, $text, $reply);

@@ -36,6 +36,16 @@ const props = defineProps<{ leads: Lead[]; clients: PickerClient[]; fields: Fiel
 const canEdit = useCan()('leads.edit');
 const showFields = ref(false);
 
+// --- Поиск ---
+const search = ref('');
+const filteredLeads = computed<Lead[]>(() => {
+    const q = search.value.trim().toLowerCase();
+    if (!q) return props.leads;
+    return props.leads.filter((l) =>
+        [l.title, l.client?.name, l.client?.phone, l.notes].some((x) => (x ?? '').toString().toLowerCase().includes(q)),
+    );
+});
+
 // --- Табличный вид (универсальный грид) ---
 const viewMode = ref<'cards' | 'table'>('cards');
 const columns = computed<ColumnDef[]>(() => [
@@ -48,7 +58,7 @@ const columns = computed<ColumnDef[]>(() => [
     ...props.fields.map((f): ColumnDef => ({ key: `custom.${f.key}`, label: f.label, type: f.type, options: f.options })),
 ]);
 const gridRows = computed<Row[]>(() =>
-    props.leads.map((l) => ({
+    filteredLeads.value.map((l) => ({
         ...l,
         title: l.title || l.client?.name || 'Без названия',
         source_label: l.source === 'bot' ? 'Из диалога' : 'Вручную',
@@ -97,6 +107,7 @@ const submit = (): void => {
                 конвертируйте в сделки.
             </p>
             <div class="flex flex-wrap items-center gap-3">
+                <input v-model="search" type="search" placeholder="Поиск по лидам…" class="w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5" />
                 <div class="inline-flex rounded-lg border border-slate-200 p-0.5 dark:border-white/10">
                     <button type="button" class="rounded-md px-3 py-1 text-sm font-medium" :class="viewMode === 'cards' ? 'bg-[#2E74B5] text-white' : 'text-slate-500'" @click="viewMode = 'cards'">Карточки</button>
                     <button type="button" class="rounded-md px-3 py-1 text-sm font-medium" :class="viewMode === 'table' ? 'bg-[#2E74B5] text-white' : 'text-slate-500'" @click="viewMode = 'table'">Таблица</button>
@@ -114,13 +125,13 @@ const submit = (): void => {
 
         <CrmGrid v-if="viewMode === 'table'" entity="lead" :columns="columns" :rows="gridRows" :views="views" />
 
-        <p v-else-if="leads.length === 0" class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
-            Пока нет лидов. Как только клиент пройдёт контактную форму у бота — лид появится здесь.
+        <p v-else-if="filteredLeads.length === 0" class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
+            {{ search ? 'Ничего не найдено.' : 'Пока нет лидов. Как только клиент пройдёт контактную форму у бота — лид появится здесь.' }}
         </p>
 
         <div v-else class="space-y-3">
             <div
-                v-for="l in leads"
+                v-for="l in filteredLeads"
                 :key="l.id"
                 class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-white/5"
             >
