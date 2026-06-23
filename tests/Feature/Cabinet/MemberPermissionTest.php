@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Booking\BookingGatewayResolver;
+use App\Crm\CrmGatewayResolver;
 use App\Enums\UserRole;
 use App\Models\Channel;
 use App\Models\Client;
@@ -15,7 +15,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
-use Tests\Support\FakeBookingGateway;
+use Tests\Support\FakeCrmGateway;
 use Tests\TestCase;
 
 final class MemberPermissionTest extends TestCase
@@ -78,8 +78,8 @@ final class MemberPermissionTest extends TestCase
         ]);
 
         // Подменяем CRM-шлюз фейком, чтобы поймать отмену.
-        $fake = new FakeBookingGateway;
-        $this->app->instance(BookingGatewayResolver::class, new BookingGatewayResolver([$fake]));
+        $fake = new FakeCrmGateway;
+        $this->app->instance(CrmGatewayResolver::class, new CrmGatewayResolver([$fake]));
 
         $this->actingAs($owner)->delete("/cabinet/conversations/{$lead->id}")->assertRedirect();
 
@@ -109,29 +109,26 @@ final class MemberPermissionTest extends TestCase
         $this->assertDatabaseMissing('conversations', ['id' => $lead->id]);
     }
 
-    public function test_member_without_edit_right_cannot_take_over_dialog(): void
+    public function test_member_without_edit_right_cannot_change_lead_status(): void
     {
-        // `conversations.edit` теперь гейтит операторский перехват/ответ (статусов
-        // у диалога больше нет — воронка в сделках).
         $tenant = Tenant::factory()->create();
         $member = $this->member($tenant, ['conversations']);
         $lead = $this->lead($tenant);
 
         $this->actingAs($member)
-            ->post("/cabinet/conversations/{$lead->id}/takeover")
+            ->put("/cabinet/conversations/{$lead->id}/status", ['outcome' => 'spam'])
             ->assertForbidden();
     }
 
-    public function test_member_with_edit_right_takes_over_dialog(): void
+    public function test_member_with_edit_right_changes_lead_status(): void
     {
         $tenant = Tenant::factory()->create();
         $member = $this->member($tenant, ['conversations', 'conversations.edit']);
         $lead = $this->lead($tenant);
 
         $this->actingAs($member)
-            ->post("/cabinet/conversations/{$lead->id}/takeover")
-            ->assertOk()
-            ->assertJson(['operatorActive' => true]);
+            ->put("/cabinet/conversations/{$lead->id}/status", ['outcome' => 'spam'])
+            ->assertRedirect();
     }
 
     public function test_clients_actions_gated_by_member_rights(): void
@@ -192,11 +189,11 @@ final class MemberPermissionTest extends TestCase
         $owner = User::factory()->owner(Tenant::factory()->create())->create(); // trial
         $this->actingAs($owner)
             ->get('/cabinet/team')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 8)); // базовые разделы (без clients/analytics/broadcasts/scenarios/integrations и CRM-блока лиды/сделки — всё это требует тариф)
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 8)); // базовые + тестирование + главное меню (без clients/analytics/broadcasts/scenarios/integrations)
 
         $maxOwner = User::factory()->owner(Tenant::factory()->max()->create())->create();
         $this->actingAs($maxOwner)
             ->get('/cabinet/team')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 15)); // все разделы, включая CRM (лиды, сделки, интеграции)
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('permissionGroups', 13)); // все разделы
     }
 }

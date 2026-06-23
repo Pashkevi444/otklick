@@ -14,7 +14,6 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BotResponder;
 use App\Services\ContactCapture;
-use App\Services\DealAutomationService;
 use App\Services\SpamDetector;
 use App\Services\WebWidgetService;
 use Illuminate\Support\Facades\Crypt;
@@ -53,7 +52,7 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'да, записывайте');
 
-        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), $this->pipeline()))
+        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock()))
             ->reply($channel, $token, 'да, записывайте');
 
         $this->assertTrue($reply->booked);
@@ -88,18 +87,10 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), $this->pipeline()))
+        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock()))
             ->reply($channel, $token, 'есть кто живой?');
 
         $this->assertSame('', $reply->text);
         $this->assertSame('m-in-1', $lastId);
-    }
-
-    private function pipeline(): DealAutomationService
-    {
-        $pipeline = Mockery::mock(DealAutomationService::class);
-        $pipeline->shouldReceive('onEvent')->byDefault();
-
-        return $pipeline;
     }
 }

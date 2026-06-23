@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Enums\PipelineEvent;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
-use App\Services\DealAutomationService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Console\Command;
 
@@ -29,20 +27,14 @@ final class ReconcileBookings extends Command
         TenantInitializer $tenancy,
         ConversationRepositoryInterface $conversations,
         CrmConnectionRepositoryInterface $connections,
-        DealAutomationService $pipeline,
     ): int {
         $closed = 0;
 
-        Tenant::query()->pluck('id')->each(function (string $tenantId) use ($tenancy, $conversations, $connections, $pipeline, &$closed): void {
-            $closed += $tenancy->run($tenantId, function () use ($conversations, $connections, $pipeline): int {
+        Tenant::query()->pluck('id')->each(function (string $tenantId) use ($tenancy, $conversations, $connections, &$closed): void {
+            $closed += $tenancy->run($tenantId, function () use ($conversations, $connections): int {
                 // Нет CRM — запись всегда уходит на человека, обменов/закрытий нет.
                 if ($connections->activeForCurrentTenant() === null) {
                     return 0;
-                }
-
-                // Услуга оказана → двигаем сделки в «Выиграно», затем закрываем диалоги.
-                foreach ($conversations->completedBookingsForCurrentTenant(now()) as $conversation) {
-                    $pipeline->onEvent($conversation, PipelineEvent::Won);
                 }
 
                 return $conversations->closeCompletedBookingsForCurrentTenant(now());

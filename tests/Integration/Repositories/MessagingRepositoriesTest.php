@@ -7,6 +7,7 @@ namespace Tests\Integration\Repositories;
 use App\DTO\IncomingMessage;
 use App\DTO\NewChannelData;
 use App\Enums\ChannelType;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
@@ -166,18 +167,20 @@ final class MessagingRepositoriesTest extends TestCase
         $this->conversations->setCrmRecordId($conv, 'rec-1');
         $this->conversations->setBookedFor($conv, now()->addDay()); // визит завтра
 
-        // Запись оформлена, но сессия «в работе» (не закрыта), пока визит впереди.
+        // Запись оформлена, но лид «в работе» (не закрыт), пока визит впереди.
         $conv->refresh();
         $this->assertSame(ConversationStatus::Open, $conv->status);
         $this->assertNotNull($conv->booked_at);
+        $this->assertSame(ConversationOutcome::Open, $conv->outcome());
 
-        // Время визита прошло → планировщик закрывает сессию.
+        // Время визита прошло → планировщик закрывает, лид становится «Успешным».
         $this->conversations->setBookedFor($conv, now()->subHour());
         $closed = $this->conversations->closeCompletedBookingsForCurrentTenant(now());
 
         $this->assertSame(1, $closed);
         $conv->refresh();
         $this->assertSame(ConversationStatus::Closed, $conv->status);
+        $this->assertSame(ConversationOutcome::Booked, $conv->outcome());
     }
 
     public function test_active_bookings_for_chat_returns_only_upcoming_with_record(): void

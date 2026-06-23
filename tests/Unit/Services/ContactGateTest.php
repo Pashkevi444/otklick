@@ -13,7 +13,6 @@ use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\ClientService;
 use App\Services\ContactGate;
-use App\Services\LeadService;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;
@@ -47,10 +46,7 @@ final class ContactGateTest extends TestCase
         $crm = Mockery::mock(CrmConnectionRepositoryInterface::class);
         $crm->shouldReceive('activeForCurrentTenant')->andReturn($crmConnected ? new CrmConnection : null)->byDefault();
 
-        $leads = Mockery::mock(LeadService::class);
-        $leads->shouldReceive('createFromConversation')->byDefault();
-
-        return new ContactGate($conversations, $messages, $clients, $crm, $leads);
+        return new ContactGate($conversations, $messages, $clients, $crm);
     }
 
     private function conversation(array $attrs = []): Conversation

@@ -8,7 +8,7 @@ use App\Enums\NotificationChannelType;
 use App\Notifications\Contracts\Notifier;
 
 /**
- * Реестр нотификаторов по каналу (тот же паттерн, что BookingGatewayResolver).
+ * Реестр нотификаторов по каналу (тот же паттерн, что CrmGatewayResolver).
  */
 final class NotifierResolver
 {

@@ -8,7 +8,6 @@ use App\Models\DashboardCardState;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
@@ -59,22 +58,5 @@ final class DashboardCardStateTest extends TestCase
 
         $this->actingAs($owner)->get('/admin/dashboard-cards')->assertForbidden();
         $this->actingAs($owner)->put('/admin/dashboard-cards', ['states' => []])->assertForbidden();
-    }
-
-    public function test_crm_cards_are_in_catalog_and_maintenance_blocks_them(): void
-    {
-        $su = User::factory()->superAdmin()->create();
-
-        // Новые CRM-плашки доступны в каталоге редактора СУ.
-        $this->actingAs($su)
-            ->get('/admin/dashboard-cards')
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('cards', fn ($cards) => collect($cards)->pluck('key')->contains('leads')
-                    && collect($cards)->pluck('key')->contains('deals')));
-
-        // «Тех. работы» на плашке «Сделки» закрывают раздел (на тарифе с CRM).
-        DashboardCardState::create(['card_key' => 'deals', 'state' => 'maintenance']);
-        $owner = User::factory()->owner(Tenant::factory()->max()->create())->create();
-        $this->actingAs($owner)->get('/cabinet/deals')->assertForbidden();
     }
 }

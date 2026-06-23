@@ -11,6 +11,8 @@ interface Row {
     phone: string | null;
     channel: string;
     source: string;
+    outcome: string;
+    outcomeLabel: string;
     messagesCount: number;
     lastMessage: string | null;
     lastMessageAt: string | null;
@@ -24,6 +26,7 @@ interface Pagination {
 }
 interface Filters {
     search: string;
+    status: string;
     channel: string;
     sort: string;
     dir: string;
@@ -37,6 +40,7 @@ const props = defineProps<{
     conversations: Row[];
     pagination: Pagination;
     filters: Filters;
+    statuses: Option[];
     channels: Option[];
 }>();
 
@@ -47,6 +51,7 @@ const go = (page = 1): void => {
         '/cabinet/conversations',
         {
             search: state.search || undefined,
+            status: state.status || undefined,
             channel: state.channel || undefined,
             sort: state.sort,
             dir: state.dir,
@@ -65,6 +70,11 @@ watch(
     },
 );
 
+const setStatus = (v: string): void => {
+    state.status = v;
+    go();
+};
+
 const setChannel = (v: string): void => {
     state.channel = v;
     go();
@@ -81,6 +91,19 @@ const sortBy = (col: string): void => {
 
 const arrow = (col: string): string => (state.sort !== col ? '' : state.dir === 'asc' ? ' ↑' : ' ↓');
 
+const outcomeClass = (o: string): string =>
+    ({
+        booked: 'bg-green-100 text-green-700',
+        lost: 'bg-red-100 text-red-700',
+        cancelled: 'bg-amber-100 text-amber-700',
+        spam: 'bg-slate-100 text-slate-500',
+        needs_human: 'bg-amber-100 text-amber-700',
+        open: 'bg-green-100 text-green-700',
+    })[o] ?? 'bg-slate-100 text-slate-500';
+
+const outcomeIcon = (o: string): string =>
+    ({ booked: '✅', lost: '✖', cancelled: '🚫', spam: '🗑', needs_human: '🙋', open: '⏳' })[o] ?? '';
+
 const initials = (name: string): string =>
     name
         .split(' ')
@@ -95,24 +118,23 @@ const open = (id: string): void => {
 
 const can = useCan();
 const remove = (id: string): void => {
-    if (confirm('Удалить диалог? Переписка удалится безвозвратно.')) {
+    if (confirm('Удалить лид? Диалог и переписка удалятся безвозвратно.')) {
         router.delete(`/cabinet/conversations/${id}`, { preserveScroll: true });
     }
 };
 </script>
 
 <template>
-    <Head title="Диалоги" />
+    <Head title="Лиды" />
 
-    <AppLayout title="Диалоги">
+    <AppLayout title="Лиды">
         <p class="mb-5 max-w-2xl text-sm text-slate-500">
-            Вся переписка бота с клиентами сохраняется здесь. Ищите, фильтруйте по каналу и сортируйте. Воронка и
-            статусы — в разделе «Сделки».
+            Все обращения клиентов — 100% лидов и переписки бота сохраняется здесь. Ищите, фильтруйте и сортируйте.
         </p>
 
-        <!-- Тулбар: поиск -->
-        <div class="mb-4">
-            <div class="relative">
+        <!-- Тулбар: поиск + фильтр статуса -->
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="relative flex-1">
                 <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                 <input
                     v-model="state.search"
@@ -120,6 +142,26 @@ const remove = (id: string): void => {
                     placeholder="Поиск по имени, телефону или тексту сообщений…"
                     class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[#2E74B5]"
                 />
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+                <button
+                    type="button"
+                    class="rounded-lg px-3 py-2 text-sm font-medium transition"
+                    :class="state.status === '' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                    @click="setStatus('')"
+                >
+                    Все
+                </button>
+                <button
+                    v-for="s in statuses"
+                    :key="s.value"
+                    type="button"
+                    class="rounded-lg px-3 py-2 text-sm font-medium transition"
+                    :class="state.status === s.value ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                    @click="setStatus(s.value)"
+                >
+                    {{ s.label }}
+                </button>
             </div>
         </div>
 
@@ -147,7 +189,7 @@ const remove = (id: string): void => {
         </div>
 
         <div v-if="conversations.length === 0" class="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400">
-            {{ state.search || state.channel ? 'Ничего не найдено. Измените поиск или фильтр.' : 'Пока нет диалогов. Как только клиент напишет боту — переписка появится здесь.' }}
+            {{ state.search || state.status ? 'Ничего не найдено. Измените поиск или фильтр.' : 'Пока нет лидов. Как только клиент напишет боту — обращение появится здесь.' }}
         </div>
 
         <template v-else>
@@ -161,7 +203,7 @@ const remove = (id: string): void => {
                 >
                     <div class="flex items-center justify-between gap-2">
                         <span class="font-medium text-slate-800">{{ c.contact }}</span>
-                        <span class="flex-none text-xs text-slate-400">{{ c.lastMessageAt }}</span>
+                        <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                     </div>
                     <p v-if="c.phone" class="mt-1 text-sm font-medium text-[#2E74B5]">📞 {{ c.phone }}</p>
                     <p class="mt-1 truncate text-sm text-slate-500">{{ c.lastMessage ?? '—' }}</p>
@@ -169,7 +211,7 @@ const remove = (id: string): void => {
                         <span>{{ c.source }} · {{ c.messagesCount }} сообщ.</span>
                         <span>{{ c.lastMessageAt }}</span>
                     </div>
-                    <button v-if="can('conversations.delete')" type="button" class="mt-2 text-xs text-red-600 hover:underline" @click.prevent.stop="remove(c.id)">Удалить</button>
+                    <button v-if="can('conversations.delete')" type="button" class="mt-2 text-xs text-red-600 hover:underline" @click.prevent.stop="remove(c.id)">Удалить лид</button>
                 </Link>
             </div>
 
@@ -183,6 +225,7 @@ const remove = (id: string): void => {
                             <th class="px-5 py-3 font-medium">Источник</th>
                             <th class="px-5 py-3 font-medium">Последнее сообщение</th>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('messages')">Сообщений{{ arrow('messages') }}</th>
+                            <th class="px-5 py-3 font-medium">Статус</th>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('last')">Обновлён{{ arrow('last') }}</th>
                             <th v-if="can('conversations.delete')" class="px-5 py-3" />
                         </tr>
@@ -199,6 +242,9 @@ const remove = (id: string): void => {
                             <td class="px-5 py-3 text-slate-500">{{ c.source }}</td>
                             <td class="max-w-xs truncate px-5 py-3 text-slate-500">{{ c.lastMessage ?? '—' }}</td>
                             <td class="px-5 py-3 text-slate-500">{{ c.messagesCount }}</td>
+                            <td class="px-5 py-3">
+                                <span class="rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
+                            </td>
                             <td class="whitespace-nowrap px-5 py-3 text-slate-400">{{ c.lastMessageAt }}</td>
                             <td v-if="can('conversations.delete')" class="px-5 py-3 text-right" @click.stop>
                                 <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>

@@ -40,8 +40,9 @@ interface RecentLead {
     contact: string;
     phone: string | null;
     channel: string;
+    status: string;
+    statusLabel: string;
     booked: boolean;
-    escalated: boolean;
     messages: number;
     createdAt: string | null;
 }
@@ -51,7 +52,7 @@ interface Analytics {
     kpis: Kpi[];
     daily: { date: string; label: string; value: number }[];
     byChannel: Slice[];
-    byStage: Slice[];
+    byOutcome: Slice[];
     byDaypart: Slice[];
     funnel: Stage[];
     hourly: { hour: number; value: number }[];
@@ -166,6 +167,12 @@ const gapClass = (s: string): string =>
     })[s] ?? 'border-slate-200 bg-slate-50';
 const gapIcon = (s: string): string => ({ high: '⚠️', medium: '⚡', low: 'ℹ️', ok: '✅' })[s] ?? 'ℹ️';
 
+const statusClass = (s: string): string =>
+    s === 'needs_human'
+        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+        : s === 'closed'
+          ? 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300'
+          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
 </script>
 
 <template>
@@ -313,9 +320,8 @@ const gapIcon = (s: string): string => ({ high: '⚠️', medium: '⚡', low: '�
                     <DonutChart :slices="analytics.byChannel" center-label="лидов" :center-value="analytics.totals.leads" />
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">Сделки по стадиям</div>
-                    <DonutChart v-if="analytics.byStage.length" :slices="analytics.byStage" center-label="сделок" :center-value="analytics.totals.deals" />
-                    <p v-else class="py-10 text-center text-sm text-slate-400">Сделок за период нет — воронка появится, когда бот доведёт лиды до сделок.</p>
+                    <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">Результаты лидов</div>
+                    <DonutChart :slices="analytics.byOutcome" center-label="лидов" :center-value="analytics.totals.leads" />
                 </div>
             </div>
 
@@ -406,7 +412,7 @@ const gapIcon = (s: string): string => ({ high: '⚠️', medium: '⚡', low: '�
                             <tr>
                                 <th class="py-2 pr-3 font-medium">Клиент</th>
                                 <th class="py-2 pr-3 font-medium">Источник</th>
-                                <th class="py-2 pr-3 font-medium">Итог</th>
+                                <th class="py-2 pr-3 font-medium">Статус</th>
                                 <th class="py-2 pr-3 text-center font-medium">Сообщений</th>
                                 <th class="py-2 font-medium">Когда</th>
                             </tr>
@@ -423,11 +429,7 @@ const gapIcon = (s: string): string => ({ high: '⚠️', medium: '⚡', low: '�
                                     <div v-if="r.phone" class="text-xs text-slate-400">{{ r.phone }}</div>
                                 </td>
                                 <td class="py-2.5 pr-3 text-slate-500">{{ r.channel }}</td>
-                                <td class="py-2.5 pr-3">
-                                    <span v-if="r.booked" class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">✅ Запись</span>
-                                    <span v-else-if="r.escalated" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">🙋 На человека</span>
-                                    <span v-else class="text-xs text-slate-400">—</span>
-                                </td>
+                                <td class="py-2.5 pr-3"><span class="rounded-full px-2 py-0.5 text-xs" :class="statusClass(r.status)">{{ r.statusLabel }}</span></td>
                                 <td class="py-2.5 pr-3 text-center text-slate-500">{{ r.messages }}</td>
                                 <td class="py-2.5 text-slate-400">{{ r.createdAt }}</td>
                             </tr>

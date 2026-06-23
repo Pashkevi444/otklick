@@ -14,8 +14,6 @@ use App\Enums\Contracts\HasLabel;
 enum DashboardCard: string implements HasLabel
 {
     case Analytics = 'analytics';
-    case Leads = 'leads';
-    case Deals = 'deals';
     case Conversations = 'conversations';
     case Clients = 'clients';
     case Broadcasts = 'broadcasts';
@@ -34,9 +32,7 @@ enum DashboardCard: string implements HasLabel
     {
         return match ($this) {
             self::Analytics => 'Аналитика',
-            self::Leads => 'Лиды',
-            self::Deals => 'Сделки',
-            self::Conversations => 'Диалоги',
+            self::Conversations => 'Лиды',
             self::Clients => 'База клиентов',
             self::Broadcasts => 'Рассылки',
             self::Scenarios => 'Сценарии',

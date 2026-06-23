@@ -10,13 +10,11 @@ use App\DTO\Analytics\FunnelStage;
 use App\DTO\Analytics\Gap;
 use App\DTO\Analytics\MetricCard;
 use App\Enums\ChannelType;
-use App\Enums\DealStageKind;
+use App\Enums\ConversationStatus;
 use App\Enums\LeadAnalyticsPeriod;
 use App\Models\Channel;
 use App\Models\Client;
 use App\Models\Conversation;
-use App\Models\Deal;
-use App\Models\DealStage;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Services\LeadAnalyticsService;
 use Illuminate\Support\Collection;
@@ -33,16 +31,16 @@ final class LeadAnalyticsServiceTest extends TestCase
         ?string $phone,
         ?string $name,
         int $inbound,
-        bool $escalated,
+        ConversationStatus $status,
         bool $booked,
         int $clarifications = 0,
     ): Conversation {
         $c = new Conversation([
+            'status' => $status,
             'clarification_attempts' => $clarifications,
         ]);
         $c->created_at = now()->subDays(1);
         $c->booked_at = $booked ? now() : null;
-        $c->escalated_at = $escalated ? now() : null;
         $c->setAttribute('inbound_count', $inbound);
         // Имя/телефон — атрибуты карточки клиента (лид к ней привязан).
         $c->setRelation('client', new Client(['name' => $name, 'phone' => $phone]));
@@ -63,7 +61,6 @@ final class LeadAnalyticsServiceTest extends TestCase
         $repo = Mockery::mock(LeadAnalyticsRepositoryInterface::class);
         // Первый вызов — текущий период, второй (для динамики) — пустой прошлый.
         $repo->shouldReceive('leadsForAnalytics')->andReturn(new Collection($leads), new Collection);
-        $repo->shouldReceive('dealsForAnalytics')->andReturn(new Collection);
         $repo->shouldReceive('connectedChannelTypes')->andReturn($connectedChannels);
         $repo->shouldReceive('recentLeads')->andReturn(new Collection);
 
@@ -78,10 +75,10 @@ final class LeadAnalyticsServiceTest extends TestCase
     public function test_computes_core_kpis_and_funnel(): void
     {
         $leads = [
-            $this->lead(ChannelType::Telegram, '+79990000001', 'Иван', 3, false, true, 0),
-            $this->lead(ChannelType::Telegram, null, null, 1, false, false, 2),
-            $this->lead(ChannelType::Web, '+79990000003', 'Пётр', 2, true, false, 1),
-            $this->lead(ChannelType::Web, null, null, 1, false, false, 0),
+            $this->lead(ChannelType::Telegram, '+79990000001', 'Иван', 3, ConversationStatus::Closed, true, 0),
+            $this->lead(ChannelType::Telegram, null, null, 1, ConversationStatus::Open, false, 2),
+            $this->lead(ChannelType::Web, '+79990000003', 'Пётр', 2, ConversationStatus::NeedsHuman, false, 1),
+            $this->lead(ChannelType::Web, null, null, 1, ConversationStatus::Closed, false, 0),
         ];
 
         $analytics = $this->service($leads)->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
@@ -113,8 +110,8 @@ final class LeadAnalyticsServiceTest extends TestCase
     public function test_flags_contact_gap_when_few_phones(): void
     {
         $leads = [
-            $this->lead(ChannelType::Telegram, null, null, 1, false, false),
-            $this->lead(ChannelType::Telegram, null, null, 1, false, false),
+            $this->lead(ChannelType::Telegram, null, null, 1, ConversationStatus::Open, false),
+            $this->lead(ChannelType::Telegram, null, null, 1, ConversationStatus::Open, false),
         ];
 
         $analytics = $this->service($leads)->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
@@ -126,7 +123,7 @@ final class LeadAnalyticsServiceTest extends TestCase
     public function test_flags_missing_channel(): void
     {
         $leads = [
-            $this->lead(ChannelType::Telegram, '+79990000001', 'Иван', 3, false, true),
+            $this->lead(ChannelType::Telegram, '+79990000001', 'Иван', 3, ConversationStatus::Closed, true),
         ];
 
         // Подключён только telegram — web должен попасть в пробелы.
@@ -138,11 +135,11 @@ final class LeadAnalyticsServiceTest extends TestCase
 
     public function test_daypart_coverage_and_engagement_depth(): void
     {
-        $day = $this->lead(ChannelType::Telegram, '+79990000001', 'A', 1, false, false);
+        $day = $this->lead(ChannelType::Telegram, '+79990000001', 'A', 1, ConversationStatus::Open, false);
         $day->created_at = now()->setTime(12, 0); // рабочее время, 1 сообщение
-        $night = $this->lead(ChannelType::Telegram, null, null, 5, false, false);
+        $night = $this->lead(ChannelType::Telegram, null, null, 5, ConversationStatus::Open, false);
         $night->created_at = now()->setTime(23, 0); // нерабочее, 5 сообщений
-        $early = $this->lead(ChannelType::Web, null, null, 3, false, false);
+        $early = $this->lead(ChannelType::Web, null, null, 3, ConversationStatus::Open, false);
         $early->created_at = now()->setTime(6, 0); // нерабочее, 3 сообщения
 
         $analytics = $this->service([$day, $night, $early])->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
@@ -168,45 +165,5 @@ final class LeadAnalyticsServiceTest extends TestCase
         $this->assertSame('Пока нет лидов', $analytics->gaps[0]->title);
         $this->assertCount(24, $analytics->hourly);
         $this->assertCount(7, $analytics->weekday);
-    }
-
-    public function test_breaks_down_deals_by_stage(): void
-    {
-        $won = $this->stage('s-won', 'Выиграно', DealStageKind::Won);
-        $active = $this->stage('s-act', 'В работе', DealStageKind::Active);
-        $deals = new Collection([
-            $this->deal($won), $this->deal($won), $this->deal($active),
-        ]);
-
-        $repo = Mockery::mock(LeadAnalyticsRepositoryInterface::class);
-        $repo->shouldReceive('leadsForAnalytics')->andReturn(new Collection, new Collection);
-        $repo->shouldReceive('dealsForAnalytics')->andReturn($deals);
-        $repo->shouldReceive('connectedChannelTypes')->andReturn(['telegram', 'web']);
-        $repo->shouldReceive('recentLeads')->andReturn(new Collection);
-
-        $analytics = (new LeadAnalyticsService($repo))->forPeriod(AnalyticsRange::fromPeriod(LeadAnalyticsPeriod::Month));
-
-        $this->assertSame(3, $analytics->totals['deals']);
-        $wonSlice = collect($analytics->byStage)->firstOrFail(fn (BreakdownSlice $s): bool => $s->key === 's-won');
-        $this->assertSame(2, $wonSlice->value);
-        $this->assertSame('Выиграно', $wonSlice->label);
-        // Крупная стадия — первой.
-        $this->assertSame('s-won', $analytics->byStage[0]->key);
-    }
-
-    private function stage(string $id, string $name, DealStageKind $kind): DealStage
-    {
-        $stage = new DealStage(['name' => $name, 'kind' => $kind]);
-        $stage->id = $id;
-
-        return $stage;
-    }
-
-    private function deal(DealStage $stage): Deal
-    {
-        $deal = new Deal(['stage_id' => $stage->id]);
-        $deal->setRelation('stage', $stage);
-
-        return $deal;
     }
 }

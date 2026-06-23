@@ -16,7 +16,7 @@ final readonly class LeadAnalytics
      * @param  list<MetricCard>  $kpis
      * @param  list<array{date: string, label: string, value: int}>  $daily
      * @param  list<BreakdownSlice>  $byChannel
-     * @param  list<BreakdownSlice>  $byStage
+     * @param  list<BreakdownSlice>  $byOutcome
      * @param  list<BreakdownSlice>  $byDaypart
      * @param  list<FunnelStage>  $funnel
      * @param  list<array{hour: int, value: int}>  $hourly
@@ -32,7 +32,7 @@ final readonly class LeadAnalytics
         public array $kpis,
         public array $daily,
         public array $byChannel,
-        public array $byStage,
+        public array $byOutcome,
         public array $byDaypart,
         public array $funnel,
         public array $hourly,
@@ -54,7 +54,7 @@ final readonly class LeadAnalytics
             'kpis' => array_map(fn (MetricCard $m): array => $m->toArray(), $this->kpis),
             'daily' => $this->daily,
             'byChannel' => array_map(fn (BreakdownSlice $s): array => $s->toArray(), $this->byChannel),
-            'byStage' => array_map(fn (BreakdownSlice $s): array => $s->toArray(), $this->byStage),
+            'byOutcome' => array_map(fn (BreakdownSlice $s): array => $s->toArray(), $this->byOutcome),
             'byDaypart' => array_map(fn (BreakdownSlice $s): array => $s->toArray(), $this->byDaypart),
             'funnel' => array_map(fn (FunnelStage $s): array => $s->toArray(), $this->funnel),
             'hourly' => $this->hourly,

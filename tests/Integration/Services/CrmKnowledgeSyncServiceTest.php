@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Booking\BookingGatewayResolver;
-use App\Booking\Data\CrmCompany;
-use App\Booking\Data\CrmService;
-use App\Booking\Data\CrmStaff;
+use App\Crm\CrmGatewayResolver;
+use App\Crm\Data\CrmCompany;
+use App\Crm\Data\CrmService;
+use App\Crm\Data\CrmStaff;
 use App\Models\CrmConnection;
 use App\Models\CrmKnowledgeEntry;
 use App\Models\KnowledgeEntry;
@@ -15,7 +15,7 @@ use App\Models\Tenant;
 use App\Services\CrmKnowledgeSyncService;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Support\FakeBookingGateway;
+use Tests\Support\FakeCrmGateway;
 use Tests\TestCase;
 
 final class CrmKnowledgeSyncServiceTest extends TestCase
@@ -24,7 +24,7 @@ final class CrmKnowledgeSyncServiceTest extends TestCase
 
     private Tenant $tenant;
 
-    private FakeBookingGateway $crm;
+    private FakeCrmGateway $crm;
 
     protected function setUp(): void
     {
@@ -34,11 +34,11 @@ final class CrmKnowledgeSyncServiceTest extends TestCase
         $this->app->make(TenantContext::class)->set($this->tenant->id);
         CrmConnection::factory()->create(['tenant_id' => $this->tenant->id]);
 
-        $this->crm = new FakeBookingGateway;
+        $this->crm = new FakeCrmGateway;
         $this->crm->services = [new CrmService('s1', 'Стрижка', price: 1500, durationMinutes: 45)];
         $this->crm->staff = [new CrmStaff('m1', 'Савелий', 'барбер')];
         $this->crm->company = new CrmCompany('Барбершоп', 'Ленина 1', '+7 999');
-        $this->app->instance(BookingGatewayResolver::class, new BookingGatewayResolver([$this->crm]));
+        $this->app->instance(CrmGatewayResolver::class, new CrmGatewayResolver([$this->crm]));
     }
 
     private function sync(): void

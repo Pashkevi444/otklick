@@ -7,7 +7,6 @@ namespace App\Repositories\Eloquent;
 use App\Enums\MessageDirection;
 use App\Models\Channel;
 use App\Models\Conversation;
-use App\Models\Deal;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use Illuminate\Contracts\Database\Query\Builder as BuilderContract;
 use Illuminate\Support\Carbon;
@@ -22,14 +21,6 @@ final class EloquentLeadAnalyticsRepository implements LeadAnalyticsRepositoryIn
             ->with(['channel:id,type', 'client:id,name,phone,email'])
             ->withCount(['messages as inbound_count' => fn (BuilderContract $q): BuilderContract => $q
                 ->where('direction', MessageDirection::Inbound->value)])
-            ->get();
-    }
-
-    public function dealsForAnalytics(Carbon $from, Carbon $to): Collection
-    {
-        return Deal::query()
-            ->whereBetween('created_at', [$from, $to])
-            ->with('stage:id,name,kind,automation')
             ->get();
     }
 

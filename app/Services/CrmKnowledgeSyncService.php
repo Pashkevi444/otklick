@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Booking\BookingGatewayResolver;
-use App\Booking\Data\CrmCompany;
-use App\Booking\Data\CrmService;
-use App\Booking\Data\CrmStaff;
+use App\Crm\CrmGatewayResolver;
+use App\Crm\Data\CrmCompany;
+use App\Crm\Data\CrmService;
+use App\Crm\Data\CrmStaff;
 use App\Enums\CrmKnowledgeCategory;
 use App\Jobs\SyncCrmKnowledge;
 use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
@@ -24,7 +24,7 @@ final readonly class CrmKnowledgeSyncService
 {
     public function __construct(
         private CrmConnectionRepositoryInterface $connections,
-        private BookingGatewayResolver $gateways,
+        private CrmGatewayResolver $gateways,
         private CrmKnowledgeRepositoryInterface $knowledge,
     ) {}
 

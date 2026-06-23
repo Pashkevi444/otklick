@@ -18,14 +18,22 @@ interface Conv {
     channel: string;
     source: string;
     contactRef: string | null;
+    status: string;
+    statusLabel: string;
+    outcome: string;
+    outcomeLabel: string;
     createdAt: string | null;
     crmRecordId: string | null;
     crmProvider: string | null;
     operatorActive: boolean;
     operatorName: string | null;
 }
+interface Outcome {
+    value: string;
+    label: string;
+}
 
-const props = defineProps<{ conversation: Conv; messages: Msg[]; canReply: boolean }>();
+const props = defineProps<{ conversation: Conv; messages: Msg[]; outcomes: Outcome[]; canReply: boolean }>();
 
 const lightbox = ref<string | null>(null);
 
@@ -162,9 +170,23 @@ const groups = computed(() => {
     return out;
 });
 
+const outcomeClass = (o: string): string =>
+    ({
+        booked: 'bg-green-100 text-green-700',
+        lost: 'bg-red-100 text-red-700',
+        cancelled: 'bg-amber-100 text-amber-700',
+        spam: 'bg-slate-100 text-slate-500',
+        needs_human: 'bg-amber-100 text-amber-700',
+        open: 'bg-green-100 text-green-700',
+    })[o] ?? 'bg-slate-100 text-slate-500';
+
+const setOutcome = (outcome: string): void => {
+    router.put(`/cabinet/conversations/${props.conversation.id}/status`, { outcome }, { preserveScroll: true });
+};
+
 const can = useCan();
 const removeLead = (): void => {
-    if (confirm('Удалить диалог? Переписка удалится безвозвратно.')) {
+    if (confirm('Удалить лид? Диалог и переписка удалятся безвозвратно.')) {
         router.delete(`/cabinet/conversations/${props.conversation.id}`);
     }
 };
@@ -174,7 +196,7 @@ const removeLead = (): void => {
     <Head :title="`Переписка — ${conversation.contact}`" />
 
     <AppLayout>
-        <Link href="/cabinet/conversations" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300">← К списку диалогов</Link>
+        <Link href="/cabinet/conversations" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300">← К списку лидов</Link>
 
         <!-- Шапка диалога -->
         <div class="mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
@@ -220,6 +242,16 @@ const removeLead = (): void => {
                         </button>
                     </template>
                 </template>
+                <span class="rounded-full px-2.5 py-1 text-xs" :class="outcomeClass(conversation.outcome)">{{ conversation.outcomeLabel }}</span>
+                <select
+                    v-if="can('conversations.edit')"
+                    :value="conversation.outcome"
+                    class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 outline-none transition hover:text-[#1F4E79] focus:border-[#2E74B5] dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                    title="Статус лида"
+                    @change="setOutcome(($event.target as HTMLSelectElement).value)"
+                >
+                    <option v-for="o in outcomes" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </select>
                 <button v-if="can('conversations.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="removeLead">Удалить</button>
             </div>
         </div>

@@ -26,15 +26,11 @@ use App\Http\Controllers\Cabinet\ChannelController;
 use App\Http\Controllers\Cabinet\ClientController;
 use App\Http\Controllers\Cabinet\ConversationController;
 use App\Http\Controllers\Cabinet\CrmKnowledgeController;
-use App\Http\Controllers\Cabinet\CustomFieldController;
 use App\Http\Controllers\Cabinet\DashboardController;
-use App\Http\Controllers\Cabinet\DealController;
 use App\Http\Controllers\Cabinet\FlowController;
-use App\Http\Controllers\Cabinet\GridViewController;
 use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
 use App\Http\Controllers\Cabinet\KnowledgeGapController;
-use App\Http\Controllers\Cabinet\LeadController;
 use App\Http\Controllers\Cabinet\NotificationController;
 use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
@@ -163,34 +159,8 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::post('/conversations/{conversation}/takeover', [ConversationController::class, 'takeover'])->name('conversations.takeover');
         Route::post('/conversations/{conversation}/release', [ConversationController::class, 'release'])->name('conversations.release');
         Route::post('/conversations/{conversation}/reply', [ConversationController::class, 'reply'])->name('conversations.reply');
+        Route::put('/conversations/{conversation}/status', [ConversationController::class, 'setStatus'])->name('conversations.status');
         Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->name('conversations.destroy');
-
-        // CRM-блок (лиды + сделки) — возможность тарифа «Макс» (`crm`). Без CRM
-        // создаются только диалоги, лиды/сделки недоступны.
-        Route::middleware('plan:crm')->group(function (): void {
-            Route::get('/deals', [DealController::class, 'index'])->name('deals.index');
-            Route::post('/deals', [DealController::class, 'store'])->name('deals.store');
-            Route::put('/deals/{deal}', [DealController::class, 'update'])->name('deals.update');
-            Route::delete('/deals/{deal}', [DealController::class, 'destroy'])->name('deals.destroy');
-
-            // Входящие лиды + конвертация в сделку.
-            Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
-            Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
-            Route::put('/leads/{lead}', [LeadController::class, 'update'])->name('leads.update');
-            Route::post('/leads/{lead}/convert', [LeadController::class, 'convert'])->name('leads.convert');
-            Route::delete('/leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
-
-            // Кастомные поля лидов/сделок (схема; значения правятся в карточках).
-            Route::post('/custom-fields', [CustomFieldController::class, 'store'])->name('custom-fields.store');
-            Route::put('/custom-fields/{field}', [CustomFieldController::class, 'update'])->name('custom-fields.update');
-            Route::delete('/custom-fields/{field}', [CustomFieldController::class, 'destroy'])->name('custom-fields.destroy');
-        });
-
-        // Личные сохранённые виды универсального грида (любая сущность; UI-настройка,
-        // без тарифного гейта — применимо и к клиентам/диалогам).
-        Route::post('/grid-views', [GridViewController::class, 'store'])->name('grid-views.store');
-        Route::put('/grid-views/{view}', [GridViewController::class, 'update'])->name('grid-views.update');
-        Route::delete('/grid-views/{view}', [GridViewController::class, 'destroy'])->name('grid-views.destroy');
 
         // База клиентов — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
         Route::middleware('plan:clientBase')->group(function (): void {

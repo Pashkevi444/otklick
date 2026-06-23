@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Booking\BookingGatewayResolver;
-use App\Booking\Data\BookingRequest;
-use App\Booking\Data\BookingResult;
-use App\Booking\Data\CredentialField;
-use App\Booking\Data\CrmService;
-use App\Booking\Data\CrmStaff;
-use App\Booking\Data\SlotQuery;
-use App\Booking\Data\TimeSlot;
+use App\Crm\CrmGatewayResolver;
+use App\Crm\Data\BookingRequest;
+use App\Crm\Data\BookingResult;
+use App\Crm\Data\CredentialField;
+use App\Crm\Data\CrmService;
+use App\Crm\Data\CrmStaff;
+use App\Crm\Data\SlotQuery;
+use App\Crm\Data\TimeSlot;
 use App\DTO\NewCrmConnectionData;
 use App\Enums\CrmProvider;
 use App\Models\CrmConnection;
@@ -25,7 +25,7 @@ final readonly class CrmConnectionService
 {
     public function __construct(
         private CrmConnectionRepositoryInterface $connections,
-        private BookingGatewayResolver $gateways,
+        private CrmGatewayResolver $gateways,
     ) {}
 
     /**

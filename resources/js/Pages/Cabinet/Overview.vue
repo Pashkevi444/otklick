@@ -60,16 +60,14 @@ interface Shortcut {
     accent: string;
     href: string;
     section?: string; // раздел из allowedSections (доступ оператора)
-    feature?: 'analytics' | 'clientBase' | 'crm'; // возможность тарифа
+    feature?: 'analytics' | 'clientBase'; // возможность тарифа
     owner?: boolean; // только владелец
 }
 
 // Главные плашки бизнеса — с гейтингом (тариф/роль/доступ), чтобы недоступные
 // не показывались и не давали 403.
 const allShortcuts: Shortcut[] = [
-    { label: 'Лиды', icon: 'bolt', accent: 'bg-[#2E74B5]/12 text-[#2E74B5] dark:bg-sky-400/15 dark:text-sky-300', href: '/cabinet/leads', section: 'leads', feature: 'crm' },
-    { label: 'Сделки', icon: 'target', accent: 'bg-emerald-500/12 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300', href: '/cabinet/deals', section: 'deals', feature: 'crm' },
-    { label: 'Диалоги', icon: 'chat', accent: 'bg-violet-500/12 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300', href: '/cabinet/conversations', section: 'conversations' },
+    { label: 'Лиды', icon: 'chat', accent: 'bg-[#2E74B5]/12 text-[#2E74B5] dark:bg-sky-400/15 dark:text-sky-300', href: '/cabinet/conversations', section: 'conversations' },
     { label: 'База клиентов', icon: 'users', accent: 'bg-violet-500/12 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300', href: '/cabinet/clients', section: 'clients', feature: 'clientBase' },
     { label: 'Аналитика', icon: 'chart', accent: 'bg-emerald-500/12 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300', href: '/cabinet/analytics', section: 'analytics', feature: 'analytics' },
     { label: 'Команда', icon: 'users', accent: 'bg-amber-500/12 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300', href: '/cabinet/team', owner: true },

@@ -6,11 +6,11 @@ namespace App\Services;
 
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
-use App\Enums\PipelineEvent;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
@@ -38,7 +38,6 @@ final readonly class WebWidgetService
         private BotResponder $responder,
         private ContactCapture $contacts,
         private SpamDetector $spam,
-        private DealAutomationService $pipeline,
     ) {}
 
     /**
@@ -96,9 +95,9 @@ final readonly class WebWidgetService
             return ['reply' => $reply, 'lastId' => (string) $outbound->id];
         }
 
-        // Явный спам — молчим (без LLM) и закрываем сессию.
+        // Явный спам — молчим (без LLM), помечаем диалог как спам.
         if ($this->spam->isSpam($conversation, $text)) {
-            $this->conversations->updateStatus($conversation, ConversationStatus::Closed);
+            $this->conversations->setOutcome($conversation, ConversationOutcome::Spam);
             $this->conversations->touchLastMessage($conversation);
 
             return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
@@ -111,21 +110,17 @@ final readonly class WebWidgetService
 
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
-            $this->conversations->markEscalated($conversation);
-            $this->pipeline->onEvent($conversation, PipelineEvent::NeedsHuman);
         } elseif ($reply->booked) {
             // Запись оформлена (лид «в работе» до визита) — фиксируем + обновляем
-            // резюме клиента (как в Telegram-пути) + двигаем сделку «в работу».
+            // резюме клиента (как в Telegram-пути).
             $this->conversations->markBooked($conversation);
-            $this->pipeline->onEvent($conversation, PipelineEvent::Booked);
             if ($conversation->client_id !== null) {
                 RefreshClientSummary::dispatch((string) $channel->tenant_id, (string) $conversation->client_id);
             }
         } elseif ($reply->cancelled) {
-            // Клиент отменил запись — отменяем в CRM, сделку → «проиграно».
+            // Клиент отменил запись — отменяем в CRM и закрываем диалог.
             $this->responder->cancelBookingInCrm($conversation);
             $this->conversations->markCancelled($conversation);
-            $this->pipeline->onEvent($conversation, PipelineEvent::Cancelled);
         }
 
         $this->notifyOwner($channel, $conversation, $text, $reply);

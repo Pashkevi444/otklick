@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -45,6 +46,7 @@ final class ReconcileBookingsTest extends TestCase
         $this->artisan('bookings:reconcile')->assertSuccessful();
 
         $this->assertSame(ConversationStatus::Closed, $crmConv->fresh()->status);
+        $this->assertSame(ConversationOutcome::Booked, $crmConv->fresh()->outcome());
 
         $this->assertSame(ConversationStatus::Open, $noCrmConv->fresh()->status);
     }
@@ -57,6 +59,7 @@ final class ReconcileBookingsTest extends TestCase
 
         $this->artisan('bookings:reconcile')->assertSuccessful();
 
-        $this->assertSame(ConversationStatus::Open, $future->fresh()->status); // ещё «в работе»
+        $this->assertSame(ConversationStatus::Open, $future->fresh()->status);
+        $this->assertSame(ConversationOutcome::Open, $future->fresh()->outcome()); // ещё «в работе»
     }
 }

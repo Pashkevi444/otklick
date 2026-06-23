@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Eloquent;
 
 use App\Enums\ChannelType;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Channel;
 use App\Models\Client;
@@ -20,13 +21,6 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
     public function updateStatus(Conversation $conversation, ConversationStatus $status): void
     {
         $conversation->forceFill(['status' => $status])->save();
-    }
-
-    public function markEscalated(Conversation $conversation): void
-    {
-        if ($conversation->escalated_at === null) {
-            $conversation->forceFill(['escalated_at' => now()])->save();
-        }
     }
 
     public function markBooked(Conversation $conversation): void
@@ -48,6 +42,26 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             'status' => ConversationStatus::Closed,
             'cancelled_at' => now(),
         ])->save();
+    }
+
+    public function setOutcome(Conversation $conversation, ConversationOutcome $outcome): void
+    {
+        $status = match ($outcome) {
+            ConversationOutcome::Open => ConversationStatus::Open,
+            ConversationOutcome::NeedsHuman => ConversationStatus::NeedsHuman,
+            default => ConversationStatus::Closed,
+        };
+
+        $fields = ['outcome_override' => $outcome, 'status' => $status];
+
+        if ($outcome === ConversationOutcome::Booked && $conversation->booked_at === null) {
+            $fields['booked_at'] = now();
+        }
+        if ($outcome === ConversationOutcome::Cancelled && $conversation->cancelled_at === null) {
+            $fields['cancelled_at'] = now();
+        }
+
+        $conversation->forceFill($fields)->save();
     }
 
     public function dashboardStats(): array
@@ -222,16 +236,6 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->whereNotNull('booked_for')
             ->where('booked_for', '<', $now)
             ->update(['status' => ConversationStatus::Closed]);
-    }
-
-    public function completedBookingsForCurrentTenant(Carbon $now): Collection
-    {
-        return Conversation::query()
-            ->where('status', ConversationStatus::Open)
-            ->whereNotNull('crm_record_id')
-            ->whereNotNull('booked_for')
-            ->where('booked_for', '<', $now)
-            ->get();
     }
 
     public function bumpClarificationAttempts(Conversation $conversation): int

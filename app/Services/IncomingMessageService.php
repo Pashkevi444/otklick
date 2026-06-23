@@ -7,10 +7,10 @@ namespace App\Services;
 use App\Channels\ChannelGatewayResolver;
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
-use App\Enums\PipelineEvent;
 use App\Jobs\DeliverBotReply;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
@@ -38,7 +38,6 @@ final readonly class IncomingMessageService
         private ContactCapture $contacts,
         private KnowledgeGapRepositoryInterface $gaps,
         private SpamDetector $spam,
-        private DealAutomationService $pipeline,
     ) {}
 
     public function handle(Channel $channel, IncomingMessage $incoming): void
@@ -73,9 +72,8 @@ final readonly class IncomingMessageService
             // Забаненному клиенту бот отвечает фиксированным уведомлением (без LLM).
             $reply = new BotReply($channel->tenant->banNotice(), escalate: false);
         } elseif ($this->spam->isSpam($conversation, $incoming->text)) {
-            // Явный спам — молчим (не тратим LLM) и закрываем сессию: следующее
-            // реальное сообщение начнёт свежий диалог.
-            $this->conversations->updateStatus($conversation, ConversationStatus::Closed);
+            // Явный спам — молчим (не тратим LLM), помечаем диалог как спам.
+            $this->conversations->setOutcome($conversation, ConversationOutcome::Spam);
             $this->conversations->touchLastMessage($conversation);
 
             return;
@@ -110,8 +108,6 @@ final readonly class IncomingMessageService
 
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
-            $this->conversations->markEscalated($conversation);
-            $this->pipeline->onEvent($conversation, PipelineEvent::NeedsHuman);
 
             // Бот не нашёл ответа в базе знаний — фиксируем вопрос в «пробелах
             // бота», чтобы бизнес дополнил базу (рост доверия → удержание).
@@ -119,19 +115,17 @@ final readonly class IncomingMessageService
                 $this->gaps->record($incoming->text, (string) $conversation->id, $channel->type->value);
             }
         } elseif ($reply->booked) {
-            // Запись оформлена — фиксируем конверсию и двигаем сделку «в работу».
+            // Запись оформлена — закрываем диалог и фиксируем конверсию.
             $this->conversations->markBooked($conversation);
-            $this->pipeline->onEvent($conversation, PipelineEvent::Booked);
 
             // Обновляем резюме клиента по итогам записи (в фоне), если привязан.
             if ($conversation->client_id !== null) {
                 RefreshClientSummary::dispatch((string) $channel->tenant_id, (string) $conversation->client_id);
             }
         } elseif ($reply->cancelled) {
-            // Клиент отменил запись — отменяем в CRM, сделку → «проиграно».
+            // Клиент отменил запись — отменяем в CRM и закрываем диалог.
             $this->responder->cancelBookingInCrm($conversation);
             $this->conversations->markCancelled($conversation);
-            $this->pipeline->onEvent($conversation, PipelineEvent::Cancelled);
         }
 
         $this->notifyOwner($channel, $conversation, $incoming->text, $reply);

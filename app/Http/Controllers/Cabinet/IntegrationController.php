@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
-use App\Booking\Data\CredentialField;
+use App\Crm\Data\CredentialField;
 use App\DTO\ReminderSettings;
 use App\Enums\CrmProvider;
 use App\Http\Controllers\Controller;
@@ -18,7 +18,7 @@ use Inertia\Response;
 
 /**
  * Таб «Интеграции» в кабинете тенанта. Полностью провайдер-агностичен: список
- * CRM, поля подключения и т.д. берутся из стратегий (BookingGateway), здесь нет
+ * CRM, поля подключения и т.д. берутся из стратегий (CrmGateway), здесь нет
  * знания о конкретной CRM.
  */
 final class IntegrationController extends Controller
