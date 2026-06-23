@@ -89,7 +89,14 @@ const shortcuts = computed<Shortcut[]>(() =>
     <AppLayout>
         <!-- Карточка бизнеса -->
         <div class="ui-scope overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/10">
-            <div class="h-24 bg-gradient-to-r from-[#2E74B5] to-[#1F4E79] sm:h-28"></div>
+            <div class="profile-banner relative h-28 overflow-hidden sm:h-32">
+                <span class="pb-orb pb-orb-1"></span>
+                <span class="pb-orb pb-orb-2"></span>
+                <span class="pb-orb pb-orb-3"></span>
+                <span class="pb-grid"></span>
+                <span class="pb-sheen"></span>
+                <Icon name="sparkle" class="absolute right-5 top-4 h-16 w-16 text-white/15 sm:right-8" />
+            </div>
             <div class="px-5 pb-6 sm:px-8">
                 <div class="flex flex-col gap-x-5 gap-y-3 sm:flex-row sm:items-start">
                     <div class="-mt-12 flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-[#EAF2FB] text-2xl font-bold text-[#1F4E79] shadow-md sm:h-28 sm:w-28 dark:border-slate-800 dark:bg-white/10 dark:text-sky-200">
@@ -148,3 +155,60 @@ const shortcuts = computed<Shortcut[]>(() =>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+/* Живая шапка карточки бизнеса: переливающийся градиент + плавающие свечения +
+   точечная сетка + диагональный блик. */
+.profile-banner {
+    background: linear-gradient(120deg, #2e74b5, #1f4e79 42%, #4f46e5 78%, #2e74b5);
+    background-size: 240% 240%;
+    animation: pbPan 14s ease infinite;
+}
+.pb-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(26px);
+    opacity: 0.55;
+    pointer-events: none;
+    will-change: transform;
+}
+.pb-orb-1 { width: 170px; height: 170px; background: #7cc0ff; top: -70px; left: 6%; animation: pbFloat 9s ease-in-out infinite; }
+.pb-orb-2 { width: 130px; height: 130px; background: #a78bfa; top: -30px; right: 16%; animation: pbFloat 12s ease-in-out infinite reverse; }
+.pb-orb-3 { width: 110px; height: 110px; background: #5eead4; bottom: -60px; left: 44%; animation: pbFloat 10s ease-in-out infinite; }
+.pb-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1.4px);
+    background-size: 16px 16px;
+    mask-image: linear-gradient(180deg, #000, transparent);
+    -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+    pointer-events: none;
+}
+.pb-sheen {
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 55%;
+    height: 100%;
+    background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+    transform: skewX(-18deg);
+    animation: pbSheen 6s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes pbPan {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+@keyframes pbFloat {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, 14px); }
+}
+@keyframes pbSheen {
+    0% { left: -120%; }
+    55%, 100% { left: 160%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .profile-banner, .pb-orb, .pb-sheen { animation: none; }
+    .pb-sheen { display: none; }
+}
+</style>
