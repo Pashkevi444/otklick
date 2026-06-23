@@ -19,6 +19,7 @@ final class UpdateBusinessProfileRequest extends AbstractFormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'working_hours' => ['nullable', 'string', 'max:255'],
             'escalation_note' => ['nullable', 'string', 'max:2000'],

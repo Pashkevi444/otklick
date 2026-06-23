@@ -105,6 +105,26 @@ final class ClientController extends Controller
         return back()->with('success', 'Резюме обновлено.');
     }
 
+    /** Заблокировать клиента: бот перестаёт вести с ним диалог (без LLM). */
+    public function ban(Request $request, string $client): RedirectResponse
+    {
+        abort_unless($request->user()->allows('clients.edit'), 403);
+
+        $this->clients->update($this->findOrFail($client), ['banned_at' => now()]);
+
+        return back()->with('success', 'Клиент заблокирован.');
+    }
+
+    /** Снять блокировку клиента. */
+    public function unban(Request $request, string $client): RedirectResponse
+    {
+        abort_unless($request->user()->allows('clients.edit'), 403);
+
+        $this->clients->update($this->findOrFail($client), ['banned_at' => null]);
+
+        return back()->with('success', 'Клиент разблокирован.');
+    }
+
     public function destroy(Request $request, string $client): RedirectResponse
     {
         abort_unless($request->user()->allows('clients.delete'), 403);
@@ -147,6 +167,7 @@ final class ClientController extends Controller
             'conversations_count' => (int) $client->getAttribute('conversations_count'),
             'has_summary' => $client->summary !== null && $client->summary !== '',
             'last_seen_at' => $client->last_seen_at?->toDateString(),
+            'banned' => $client->isBanned(),
         ];
     }
 
@@ -169,6 +190,7 @@ final class ClientController extends Controller
             'summary' => $client->summary,
             'summary_generated_at' => $client->summary_generated_at?->toDateTimeString(),
             'notes' => $client->notes,
+            'banned' => $client->isBanned(),
         ];
     }
 

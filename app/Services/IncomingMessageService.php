@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Channels\ChannelGatewayResolver;
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
@@ -36,6 +37,7 @@ final readonly class IncomingMessageService
         private BotResponder $responder,
         private ContactCapture $contacts,
         private KnowledgeGapRepositoryInterface $gaps,
+        private SpamDetector $spam,
     ) {}
 
     public function handle(Channel $channel, IncomingMessage $incoming): void
@@ -62,10 +64,22 @@ final readonly class IncomingMessageService
             return;
         }
 
-        // Контакты клиента (телефон, имя) — до генерации ответа.
+        // Контакты клиента (телефон, имя) — до генерации ответа. Здесь же
+        // резолвится карточка клиента по нативной идентичности канала.
         $this->contacts->fromInbound($conversation, $incoming->text);
 
-        $reply = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
+        if ($conversation->client?->isBanned()) {
+            // Забаненному клиенту бот отвечает фиксированным уведомлением (без LLM).
+            $reply = new BotReply($channel->tenant->banNotice(), escalate: false);
+        } elseif ($this->spam->isSpam($conversation, $incoming->text)) {
+            // Явный спам — молчим (не тратим LLM), помечаем диалог как спам.
+            $this->conversations->setOutcome($conversation, ConversationOutcome::Spam);
+            $this->conversations->touchLastMessage($conversation);
+
+            return;
+        } else {
+            $reply = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
+        }
 
         try {
             // Ответ уходит через шлюз того канала, откуда пришло сообщение

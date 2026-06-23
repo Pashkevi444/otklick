@@ -14,6 +14,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BotResponder;
 use App\Services\ContactCapture;
+use App\Services\SpamDetector;
 use App\Services\WebWidgetService;
 use Illuminate\Support\Facades\Crypt;
 use Mockery;
@@ -51,7 +52,7 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'да, записывайте');
 
-        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts))
+        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock()))
             ->reply($channel, $token, 'да, записывайте');
 
         $this->assertTrue($reply->booked);
@@ -86,7 +87,7 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts))
+        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock()))
             ->reply($channel, $token, 'есть кто живой?');
 
         $this->assertSame('', $reply->text);

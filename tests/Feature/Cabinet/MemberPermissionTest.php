@@ -10,6 +10,7 @@ use App\Models\Channel;
 use App\Models\Client;
 use App\Models\Conversation;
 use App\Models\CrmConnection;
+use App\Models\KnowledgeEntry;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -146,6 +147,25 @@ final class MemberPermissionTest extends TestCase
         $this->assertDatabaseHas('clients', ['id' => $client->id, 'name' => 'Новое']);
         $this->actingAs($editor)->delete("/cabinet/clients/{$client->id}")->assertRedirect();
         $this->assertDatabaseMissing('clients', ['id' => $client->id]);
+    }
+
+    public function test_knowledge_actions_gated_by_member_rights(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        $entry = KnowledgeEntry::factory()->create(['tenant_id' => $tenant->id, 'is_published' => false]);
+
+        // Доступ к разделу есть (просмотр), права на изменение — нет.
+        $viewer = $this->member($tenant, ['knowledge']);
+        $this->actingAs($viewer)->get('/cabinet/knowledge')->assertOk();
+        $this->actingAs($viewer)->patch("/cabinet/knowledge/{$entry->id}/publish")->assertForbidden();
+        $this->actingAs($viewer)->post('/cabinet/knowledge', ['title' => 'X', 'content' => 'Y'])->assertForbidden();
+        $this->actingAs($viewer)->post('/cabinet/knowledge/import-site', ['url' => 'https://x.ru'])->assertForbidden();
+        $this->assertFalse($entry->fresh()->is_published);
+
+        // С правом «Редактирование базы знаний» — можно.
+        $editor = $this->member($tenant, ['knowledge', 'knowledge.edit']);
+        $this->actingAs($editor)->patch("/cabinet/knowledge/{$entry->id}/publish")->assertRedirect();
+        $this->assertTrue($entry->fresh()->is_published);
     }
 
     public function test_owner_cannot_grant_permission_outside_plan(): void

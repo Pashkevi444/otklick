@@ -6,6 +6,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 interface ProfileData {
     name: string;
     phone: string | null;
+    email: string | null;
     address: string | null;
     working_hours: string | null;
     escalation_note: string | null;
@@ -35,6 +36,7 @@ const form = useForm<{
     _method: string;
     name: string;
     phone: string;
+    email: string;
     address: string;
     working_hours: string;
     escalation_note: string;
@@ -46,6 +48,7 @@ const form = useForm<{
     _method: 'put',
     name: props.profile.name,
     phone: props.profile.phone ?? '',
+    email: props.profile.email ?? '',
     address: props.profile.address ?? '',
     working_hours: props.profile.working_hours ?? '',
     escalation_note: props.profile.escalation_note ?? '',
@@ -160,6 +163,11 @@ const submit = (): void => {
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Телефон</label>
                     <input v-model="form.phone" type="text" placeholder="+7 900 123-45-67" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-white/15 dark:bg-white/5" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Почта</label>
+                    <input v-model="form.email" type="email" placeholder="hello@business.ru" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-white/15 dark:bg-white/5" />
+                    <p v-if="form.errors.email" class="mt-1 text-sm text-red-600">{{ form.errors.email }}</p>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Часы работы</label>

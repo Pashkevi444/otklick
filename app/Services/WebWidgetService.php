@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
+use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
@@ -36,6 +37,7 @@ final readonly class WebWidgetService
         private MessageRepositoryInterface $messages,
         private BotResponder $responder,
         private ContactCapture $contacts,
+        private SpamDetector $spam,
     ) {}
 
     /**
@@ -79,6 +81,23 @@ final readonly class WebWidgetService
         // Диалог перехвачен оператором — бот молчит; сообщение посетителя увидит
         // оператор в кабинете и ответит сам (виджет получит ответ поллингом).
         if ($conversation->isOperatorHandling()) {
+            $this->conversations->touchLastMessage($conversation);
+
+            return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
+        }
+
+        // Забаненный посетитель — фиксированное уведомление без LLM.
+        if ($conversation->client?->isBanned()) {
+            $reply = new BotReply($channel->tenant->banNotice(), escalate: false);
+            $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
+            $this->conversations->touchLastMessage($conversation);
+
+            return ['reply' => $reply, 'lastId' => (string) $outbound->id];
+        }
+
+        // Явный спам — молчим (без LLM), помечаем диалог как спам.
+        if ($this->spam->isSpam($conversation, $text)) {
+            $this->conversations->setOutcome($conversation, ConversationOutcome::Spam);
             $this->conversations->touchLastMessage($conversation);
 
             return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];

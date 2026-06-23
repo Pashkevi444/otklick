@@ -15,6 +15,7 @@ interface Client {
     summary: string | null;
     summary_generated_at: string | null;
     notes: string | null;
+    banned: boolean;
 }
 interface ConversationRow {
     id: string;
@@ -48,6 +49,15 @@ const remove = (): void => {
     }
 };
 
+// Бан/разбан клиента (право clients.edit). От забаненного бот не ведёт диалог.
+const toggleBan = (): void => {
+    if (props.client.banned) {
+        router.post(`/cabinet/clients/${props.client.id}/unban`, {}, { preserveScroll: true });
+    } else if (confirm('Заблокировать клиента? Бот перестанет вести с ним диалог.')) {
+        router.post(`/cabinet/clients/${props.client.id}/ban`, {}, { preserveScroll: true });
+    }
+};
+
 const can = useCan();
 </script>
 
@@ -57,6 +67,10 @@ const can = useCan();
     <AppLayout :title="client.name || 'Карточка клиента'">
         <div class="mb-4">
             <Link href="/cabinet/clients" class="text-sm text-[#2E74B5] hover:underline">← К базе клиентов</Link>
+        </div>
+
+        <div v-if="client.banned" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            Клиент заблокирован — бот не ведёт с ним диалог, отвечает фиксированным уведомлением.
         </div>
 
         <div class="grid gap-5 lg:grid-cols-3">
@@ -90,7 +104,18 @@ const can = useCan();
                 <div class="flex items-center justify-between">
                     <button v-if="can('clients.edit')" type="submit" :disabled="form.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">Сохранить</button>
                     <span v-else class="text-xs text-slate-400">Только просмотр</span>
-                    <button v-if="can('clients.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="remove">Удалить клиента</button>
+                    <div class="flex items-center gap-4">
+                        <button
+                            v-if="can('clients.edit')"
+                            type="button"
+                            class="text-sm hover:underline"
+                            :class="client.banned ? 'text-emerald-600' : 'text-amber-600'"
+                            @click="toggleBan"
+                        >
+                            {{ client.banned ? 'Разблокировать' : 'Заблокировать' }}
+                        </button>
+                        <button v-if="can('clients.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="remove">Удалить клиента</button>
+                    </div>
                 </div>
             </form>
 

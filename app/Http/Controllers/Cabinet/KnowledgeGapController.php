@@ -6,11 +6,13 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\DTO\KnowledgeEntryData;
 use App\Enums\KnowledgeGapStatus;
+use App\Enums\MemberPermission;
 use App\Http\Controllers\Controller;
 use App\Models\KnowledgeGap;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Services\KnowledgeBaseService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 /**
  * Действия над «пробелами бота» (вопросами без ответа) на вкладке «Развитие бота».
@@ -28,8 +30,10 @@ final class KnowledgeGapController extends Controller
      * «В базу знаний»: создаёт черновик записи (заголовок = вопрос клиента) и
      * закрывает пробел; владелец вписывает ответ и публикует.
      */
-    public function promote(string $gap): RedirectResponse
+    public function promote(Request $request, string $gap): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $model = $this->findOrFail($gap);
 
         $entry = $this->knowledge->create(new KnowledgeEntryData(
@@ -45,18 +49,27 @@ final class KnowledgeGapController extends Controller
             ->with('success', 'Создан черновик записи — впишите ответ и опубликуйте.');
     }
 
-    public function dismiss(string $gap): RedirectResponse
+    public function dismiss(Request $request, string $gap): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $this->gaps->updateStatus($this->findOrFail($gap), KnowledgeGapStatus::Dismissed);
 
         return back()->with('success', 'Вопрос скрыт.');
     }
 
-    public function destroy(string $gap): RedirectResponse
+    public function destroy(Request $request, string $gap): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $this->gaps->delete($this->findOrFail($gap));
 
         return back()->with('success', 'Вопрос удалён.');
+    }
+
+    private function authorizeEdit(Request $request): void
+    {
+        abort_unless($request->user()->allows(MemberPermission::KnowledgeEdit->value), 403);
     }
 
     private function findOrFail(string $id): KnowledgeGap

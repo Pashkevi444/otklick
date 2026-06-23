@@ -5,6 +5,11 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import ImageUploader from '@/Components/ImageUploader.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Toggle from '@/Components/Toggle.vue';
+import { useCan } from '@/composables/useCan';
+
+// Право-действие: менять базу знаний (создание/правка/публикация/импорт). Без
+// него раздел доступен только на просмотр — кнопки-мутации скрыты.
+const canEdit = computed(() => useCan()('knowledge.edit'));
 
 interface LinkItem {
     label: string;
@@ -243,7 +248,7 @@ onUnmounted(stopImportPolling);
                 К записи можно прикрепить ссылки (прайс, соцсети) и картинки — примеры работ.
             </p>
 
-        <div class="flex flex-wrap justify-end gap-2 mb-4">
+        <div v-if="canEdit" class="flex flex-wrap justify-end gap-2 mb-4">
             <button
                 type="button"
                 class="rounded-lg border border-[#2E74B5] px-4 py-2 text-sm font-medium text-[#2E74B5] hover:bg-[#EAF2FB] dark:hover:bg-white/10"
@@ -444,7 +449,7 @@ onUnmounted(stopImportPolling);
                             <img v-for="(img, i) in entry.images" :key="i" :src="img.url" class="h-14 w-14 object-cover rounded border border-slate-200" />
                         </div>
                     </div>
-                    <div class="flex items-center gap-3 shrink-0">
+                    <div v-if="canEdit" class="flex items-center gap-3 shrink-0">
                         <button
                             type="button"
                             class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
@@ -489,7 +494,7 @@ onUnmounted(stopImportPolling);
                                 <Link v-if="gap.conversation_id" :href="`/cabinet/conversations/${gap.conversation_id}`" class="text-[#2E74B5] hover:underline">Диалог →</Link>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 shrink-0">
+                        <div v-if="canEdit" class="flex items-center gap-3 shrink-0">
                             <button type="button" class="rounded-lg bg-[#2E74B5] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#255f96]" @click="promoteGap(gap.id)">В базу знаний</button>
                             <button type="button" class="text-sm text-slate-500 hover:underline" @click="dismissGap(gap.id)">Скрыть</button>
                             <button type="button" class="text-sm text-red-600 hover:underline" @click="removeGap(gap.id)">Удалить</button>

@@ -165,6 +165,8 @@ $onDomain(config('app.business_domain'), function (): void {
             Route::get('/clients/{client}', [ClientController::class, 'show'])->name('clients.show');
             Route::put('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::post('/clients/{client}/summary', [ClientController::class, 'refreshSummary'])->name('clients.summary');
+            Route::post('/clients/{client}/ban', [ClientController::class, 'ban'])->name('clients.ban');
+            Route::post('/clients/{client}/unban', [ClientController::class, 'unban'])->name('clients.unban');
             Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
         });
 

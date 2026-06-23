@@ -15,6 +15,7 @@ interface Row {
     conversations_count: number;
     has_summary: boolean;
     last_seen_at: string | null;
+    banned: boolean;
 }
 interface Pagination {
     current: number;
@@ -96,6 +97,16 @@ const remove = (id: string): void => {
         router.delete(`/cabinet/clients/${id}`, { preserveScroll: true });
     }
 };
+
+// Бан/разбан: от забаненного клиента бот не ведёт диалог (отвечает фиксированным
+// уведомлением без LLM). Право — «Редактирование клиентов» (clients.edit).
+const toggleBan = (row: Row): void => {
+    if (row.banned) {
+        router.post(`/cabinet/clients/${row.id}/unban`, {}, { preserveScroll: true });
+    } else if (confirm('Заблокировать клиента? Бот перестанет вести с ним диалог.')) {
+        router.post(`/cabinet/clients/${row.id}/ban`, {}, { preserveScroll: true });
+    }
+};
 </script>
 
 <template>
@@ -166,7 +177,7 @@ const remove = (id: string): void => {
                         <th class="px-4 py-3 font-medium">Откуда</th>
                         <th class="px-4 py-3 text-center font-medium">Диалогов</th>
                         <th class="px-4 py-3 font-medium">Активность</th>
-                        <th v-if="can('clients.delete')" class="px-4 py-3" />
+                        <th v-if="can('clients.edit') || can('clients.delete')" class="px-4 py-3" />
                     </tr>
                 </thead>
                 <tbody>
@@ -180,6 +191,7 @@ const remove = (id: string): void => {
                             <div class="font-medium text-slate-700">
                                 {{ c.name || 'Без имени' }}
                                 <span v-if="c.has_summary" title="Есть резюме" class="ml-1">📝</span>
+                                <span v-if="c.banned" class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">заблокирован</span>
                             </div>
                             <div v-if="c.phone" class="text-xs text-slate-400">{{ c.phone }}</div>
                         </td>
@@ -191,8 +203,19 @@ const remove = (id: string): void => {
                         <td class="px-4 py-3 text-slate-500">{{ c.channel || '—' }}</td>
                         <td class="px-4 py-3 text-center text-slate-500">{{ c.conversations_count }}</td>
                         <td class="px-4 py-3 text-slate-400">{{ c.last_seen_at || '—' }}</td>
-                        <td v-if="can('clients.delete')" class="px-4 py-3 text-right" @click.stop>
-                            <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>
+                        <td v-if="can('clients.edit') || can('clients.delete')" class="px-4 py-3 text-right" @click.stop>
+                            <div class="flex items-center justify-end gap-3">
+                                <button
+                                    v-if="can('clients.edit')"
+                                    type="button"
+                                    class="text-sm hover:underline"
+                                    :class="c.banned ? 'text-emerald-600' : 'text-amber-600'"
+                                    @click="toggleBan(c)"
+                                >
+                                    {{ c.banned ? 'Разбанить' : 'Забанить' }}
+                                </button>
+                                <button v-if="can('clients.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>

@@ -28,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $notes
  * @property bool $marketing_opt_out
  * @property bool $is_test
+ * @property Carbon|null $banned_at
  */
 class Client extends TenantOwnedModel
 {
@@ -50,6 +51,7 @@ class Client extends TenantOwnedModel
         'notes',
         'marketing_opt_out',
         'is_test',
+        'banned_at',
     ];
 
     protected function casts(): array
@@ -60,7 +62,14 @@ class Client extends TenantOwnedModel
             'summary_generated_at' => 'datetime',
             'marketing_opt_out' => 'boolean',
             'is_test' => 'boolean',
+            'banned_at' => 'datetime',
         ];
+    }
+
+    /** Заблокирован ли клиент бизнесом (бот ему не отвечает по существу). */
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
     }
 
     /**

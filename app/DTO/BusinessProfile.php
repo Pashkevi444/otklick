@@ -13,6 +13,7 @@ final readonly class BusinessProfile
 {
     public function __construct(
         public ?string $phone = null,
+        public ?string $email = null,
         public ?string $address = null,
         public ?string $workingHours = null,
         public ?string $escalationNote = null,
@@ -29,6 +30,7 @@ final readonly class BusinessProfile
     {
         return new self(
             phone: $data['phone'] ?? null,
+            email: $data['email'] ?? null,
             address: $data['address'] ?? null,
             workingHours: $data['working_hours'] ?? null,
             escalationNote: $data['escalation_note'] ?? null,
@@ -46,6 +48,7 @@ final readonly class BusinessProfile
     {
         return [
             'phone' => $this->phone,
+            'email' => $this->email,
             'address' => $this->address,
             'working_hours' => $this->workingHours,
             'escalation_note' => $this->escalationNote,

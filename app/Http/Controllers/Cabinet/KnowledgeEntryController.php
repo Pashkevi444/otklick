@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\DTO\KnowledgeEntryData;
 use App\Enums\ChannelType;
+use App\Enums\MemberPermission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\ImportSiteRequest;
 use App\Http\Requests\Cabinet\KnowledgeEntryRequest;
@@ -85,6 +86,8 @@ final class KnowledgeEntryController extends Controller
 
     public function store(KnowledgeEntryRequest $request): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $uploaded = $this->images->store($this->tenantId($request), $request->file('images', []));
 
         $this->knowledge->create($this->data($request, $uploaded));
@@ -105,6 +108,8 @@ final class KnowledgeEntryController extends Controller
 
     public function update(KnowledgeEntryRequest $request, string $entry): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $model = $this->findOrFail($entry);
 
         $kept = array_values(array_filter(
@@ -129,8 +134,10 @@ final class KnowledgeEntryController extends Controller
             ->with('success', 'Запись обновлена.');
     }
 
-    public function destroy(string $entry): RedirectResponse
+    public function destroy(Request $request, string $entry): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $model = $this->findOrFail($entry);
 
         $this->images->delete(array_column($model->images, 'path'));
@@ -150,6 +157,8 @@ final class KnowledgeEntryController extends Controller
      */
     public function importSite(ImportSiteRequest $request, SiteImportStatus $status): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $tenantId = $this->tenantId($request);
 
         $status->begin($tenantId);
@@ -173,8 +182,10 @@ final class KnowledgeEntryController extends Controller
      * удобно публиковать черновики, в т.ч. собранные импортом с сайта. Остальные
      * поля (ссылки/картинки) сохраняются как есть.
      */
-    public function togglePublish(string $entry): RedirectResponse
+    public function togglePublish(Request $request, string $entry): RedirectResponse
     {
+        $this->authorizeEdit($request);
+
         $model = $this->findOrFail($entry);
         $willPublish = ! $model->is_published;
 
@@ -189,6 +200,16 @@ final class KnowledgeEntryController extends Controller
         IndexKnowledge::dispatch((string) $model->tenant_id);
 
         return back()->with('success', $willPublish ? 'Запись опубликована.' : 'Запись снята с публикации.');
+    }
+
+    /**
+     * Любое изменение базы знаний (создание/правка/удаление/публикация/импорт)
+     * требует права-действия `knowledge.edit`. Доступ к разделу (просмотр) даёт
+     * `EnsureSectionAllowed`; владелец/СУ имеют все права.
+     */
+    private function authorizeEdit(Request $request): void
+    {
+        abort_unless($request->user()->allows(MemberPermission::KnowledgeEdit->value), 403);
     }
 
     private function findOrFail(string $id): KnowledgeEntry

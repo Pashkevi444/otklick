@@ -35,6 +35,8 @@ final class BusinessProfileController extends Controller
             'profile' => [
                 'name' => $tenant->name,
                 ...$profile->toArray(),
+                // Почта бизнеса по умолчанию — почта владельца (если своя не задана).
+                'email' => $profile->email ?: $tenant->ownerEmail(),
             ],
             // Тип бизнеса (ниша): плашка + смена. Влияет на подбор шаблонов и БЗ.
             'businessType' => $tenant->business_type,
@@ -68,6 +70,7 @@ final class BusinessProfileController extends Controller
             (string) $request->string('name'),
             new BusinessProfile(
                 phone: $request->input('phone'),
+                email: $request->input('email'),
                 address: $request->input('address'),
                 workingHours: $request->input('working_hours'),
                 escalationNote: $request->input('escalation_note'),
