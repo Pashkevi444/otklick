@@ -202,7 +202,11 @@ final class ClientController extends Controller
         return [
             'id' => $conversation->id,
             'channel' => $conversation->channel?->type->label() ?? '—',
-            'outcome' => $conversation->outcome()->label(),
+            'outcome' => match (true) {
+                $conversation->booked_at !== null => 'Запись',
+                $conversation->escalated_at !== null => 'На человека',
+                default => 'Диалог',
+            },
             'booked' => $conversation->booked_at !== null,
             'created_at' => $conversation->created_at?->toDateString(),
         ];

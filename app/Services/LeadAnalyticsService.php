@@ -11,10 +11,9 @@ use App\DTO\Analytics\Gap;
 use App\DTO\Analytics\LeadAnalytics;
 use App\DTO\Analytics\MetricCard;
 use App\Enums\ChannelType;
-use App\Enums\ConversationOutcome;
-use App\Enums\ConversationStatus;
 use App\Enums\LeadAnalyticsPeriod;
 use App\Models\Conversation;
+use App\Models\Deal;
 use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use Illuminate\Support\Collection;
 
@@ -37,14 +36,11 @@ final readonly class LeadAnalyticsService
         'whatsapp' => '#22c55e',
     ];
 
-    /** @var array<string, string> */
-    private const array OUTCOME_COLORS = [
-        'booked' => '#22c55e',
-        'open' => '#2E74B5',
-        'needs_human' => '#f59e0b',
-        'cancelled' => '#a855f7',
+    /** Цвет стадии воронки по её типу (DealStageKind). */
+    private const array STAGE_COLORS = [
+        'active' => '#2E74B5',
+        'won' => '#22c55e',
         'lost' => '#ef4444',
-        'spam' => '#94a3b8',
     ];
 
     /** Граница «нерабочего времени»: до 8:00 и с 20:00 — обращения «в нерабочее». */
@@ -59,6 +55,7 @@ final readonly class LeadAnalyticsService
     public function forPeriod(AnalyticsRange $range): LeadAnalytics
     {
         $leads = $this->repository->leadsForAnalytics($range->from, $range->to);
+        $deals = $this->repository->dealsForAnalytics($range->from, $range->to);
 
         $prev = $range->hasPrevious()
             ? $this->metrics($this->repository->leadsForAnalytics($range->previousFrom, $range->previousTo))
@@ -80,7 +77,7 @@ final readonly class LeadAnalyticsService
             kpis: $this->kpis($now, $prev),
             daily: $this->daily($leads, $range),
             byChannel: $this->byChannel($leads),
-            byOutcome: $this->byOutcome($leads),
+            byStage: $this->byStage($deals),
             byDaypart: $this->byDaypart($leads),
             funnel: $this->funnel($now),
             hourly: $this->hourly($leads),
@@ -90,6 +87,7 @@ final readonly class LeadAnalyticsService
             recent: $this->recent(),
             totals: [
                 'leads' => $now['leads'],
+                'deals' => $deals->count(),
                 'booked' => $now['booked'],
                 'needsHuman' => $now['needsHuman'],
                 'withPhone' => $now['withPhone'],
@@ -108,7 +106,7 @@ final readonly class LeadAnalyticsService
     {
         $count = $leads->count();
         $booked = $leads->filter(fn (Conversation $c): bool => $c->booked_at !== null)->count();
-        $needsHuman = $leads->filter(fn (Conversation $c): bool => $c->status === ConversationStatus::NeedsHuman)->count();
+        $needsHuman = $leads->filter(fn (Conversation $c): bool => $c->escalated_at !== null)->count();
         $withPhone = $leads->filter(fn (Conversation $c): bool => $this->filled($c->displayPhone()))->count();
         $withName = $leads->filter(fn (Conversation $c): bool => $this->hasRealName($c))->count();
         // Попал в клиентскую базу: оставил имя И способ связи (телефон или email).
@@ -238,30 +236,37 @@ final readonly class LeadAnalyticsService
     }
 
     /**
-     * @param  Collection<int, Conversation>  $leads
+     * Разбивка сделок по стадиям воронки (CRM-аналитика). Цвет — по типу стадии
+     * (рабочая / выиграно / проиграно).
+     *
+     * @param  Collection<int, Deal>  $deals
      * @return list<BreakdownSlice>
      */
-    private function byOutcome(Collection $leads): array
+    private function byStage(Collection $deals): array
     {
-        $total = $leads->count();
-        $grouped = $leads
-            ->groupBy(fn (Conversation $c): string => $c->outcome()->value)
-            ->map(fn (Collection $g): int => $g->count());
+        $total = $deals->count();
+        $grouped = $deals->groupBy(fn (Deal $d): string => (string) $d->stage_id);
 
         $slices = [];
-        foreach (ConversationOutcome::cases() as $outcome) {
-            $value = (int) ($grouped[$outcome->value] ?? 0);
-            if ($value === 0) {
+        foreach ($grouped as $group) {
+            /** @var Deal $first */
+            $first = $group->first();
+            $stage = $first->stage;
+            if ($stage === null) {
                 continue;
             }
+            $value = $group->count();
             $slices[] = new BreakdownSlice(
-                $outcome->value,
-                $outcome->label(),
+                (string) $stage->id,
+                $stage->name,
                 $value,
                 $this->rate($value, $total),
-                self::OUTCOME_COLORS[$outcome->value],
+                self::STAGE_COLORS[$stage->kind->value],
             );
         }
+
+        // По убыванию количества — крупные стадии сверху.
+        usort($slices, fn (BreakdownSlice $a, BreakdownSlice $b): int => $b->value <=> $a->value);
 
         return $slices;
     }
@@ -464,9 +469,8 @@ final readonly class LeadAnalyticsService
                 'contact' => $this->hasRealName($c) ? $c->displayName() : 'Гость',
                 'phone' => $c->displayPhone(),
                 'channel' => $c->channel?->type?->label() ?? '—',
-                'status' => $c->status->value,
-                'statusLabel' => $c->status->label(),
                 'booked' => $c->booked_at !== null,
+                'escalated' => $c->escalated_at !== null,
                 'messages' => (int) $c->getAttribute('messages_count'),
                 'createdAt' => $c->created_at?->format('d.m.Y H:i'),
             ])

@@ -9,7 +9,6 @@ use App\Channels\Contracts\ChannelGateway;
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
 use App\Enums\ChannelType;
-use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Jobs\DeliverBotReply;
@@ -129,7 +128,7 @@ final class IncomingMessageServiceTest extends TestCase
         (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->pipeline()))->handle($channel, $incoming);
     }
 
-    public function test_spam_is_silently_dropped_and_marked(): void
+    public function test_spam_is_silently_dropped_and_closes_session(): void
     {
         $channel = $this->channel();
         $conversation = new Conversation;
@@ -137,7 +136,7 @@ final class IncomingMessageServiceTest extends TestCase
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
-        $conversations->shouldReceive('setOutcome')->once()->with($conversation, ConversationOutcome::Spam);
+        $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::Closed);
         $conversations->shouldReceive('touchLastMessage')->once();
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
@@ -201,6 +200,7 @@ final class IncomingMessageServiceTest extends TestCase
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
         $conversations->shouldReceive('touchLastMessage')->once();
         $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::NeedsHuman);
+        $conversations->shouldReceive('markEscalated')->once()->with($conversation);
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
@@ -229,6 +229,7 @@ final class IncomingMessageServiceTest extends TestCase
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
         $conversations->shouldReceive('touchLastMessage')->once();
         $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::NeedsHuman);
+        $conversations->shouldReceive('markEscalated')->once()->with($conversation);
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);

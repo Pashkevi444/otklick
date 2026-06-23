@@ -48,8 +48,8 @@ enum MemberPermission: string implements HasLabel
     public function label(): string
     {
         return match ($this) {
-            self::ConversationsEdit => 'Редактирование лидов (статус)',
-            self::ConversationsDelete => 'Удаление лидов',
+            self::ConversationsEdit => 'Оператор: перехват и ответ в диалоге',
+            self::ConversationsDelete => 'Удаление диалогов',
             self::ClientsEdit => 'Редактирование клиентов',
             self::ClientsDelete => 'Удаление клиентов',
             self::KnowledgeEdit => 'Редактирование базы знаний',

@@ -6,7 +6,6 @@ namespace App\Services;
 
 use App\DTO\BotReply;
 use App\DTO\IncomingMessage;
-use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
@@ -97,9 +96,9 @@ final readonly class WebWidgetService
             return ['reply' => $reply, 'lastId' => (string) $outbound->id];
         }
 
-        // Явный спам — молчим (без LLM), помечаем диалог как спам.
+        // Явный спам — молчим (без LLM) и закрываем сессию.
         if ($this->spam->isSpam($conversation, $text)) {
-            $this->conversations->setOutcome($conversation, ConversationOutcome::Spam);
+            $this->conversations->updateStatus($conversation, ConversationStatus::Closed);
             $this->conversations->touchLastMessage($conversation);
 
             return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
@@ -112,6 +111,7 @@ final readonly class WebWidgetService
 
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+            $this->conversations->markEscalated($conversation);
             $this->pipeline->onEvent($conversation, PipelineEvent::NeedsHuman);
         } elseif ($reply->booked) {
             // Запись оформлена (лид «в работе» до визита) — фиксируем + обновляем

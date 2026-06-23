@@ -109,26 +109,29 @@ final class MemberPermissionTest extends TestCase
         $this->assertDatabaseMissing('conversations', ['id' => $lead->id]);
     }
 
-    public function test_member_without_edit_right_cannot_change_lead_status(): void
+    public function test_member_without_edit_right_cannot_take_over_dialog(): void
     {
+        // `conversations.edit` теперь гейтит операторский перехват/ответ (статусов
+        // у диалога больше нет — воронка в сделках).
         $tenant = Tenant::factory()->create();
         $member = $this->member($tenant, ['conversations']);
         $lead = $this->lead($tenant);
 
         $this->actingAs($member)
-            ->put("/cabinet/conversations/{$lead->id}/status", ['outcome' => 'spam'])
+            ->post("/cabinet/conversations/{$lead->id}/takeover")
             ->assertForbidden();
     }
 
-    public function test_member_with_edit_right_changes_lead_status(): void
+    public function test_member_with_edit_right_takes_over_dialog(): void
     {
         $tenant = Tenant::factory()->create();
         $member = $this->member($tenant, ['conversations', 'conversations.edit']);
         $lead = $this->lead($tenant);
 
         $this->actingAs($member)
-            ->put("/cabinet/conversations/{$lead->id}/status", ['outcome' => 'spam'])
-            ->assertRedirect();
+            ->post("/cabinet/conversations/{$lead->id}/takeover")
+            ->assertOk()
+            ->assertJson(['operatorActive' => true]);
     }
 
     public function test_clients_actions_gated_by_member_rights(): void

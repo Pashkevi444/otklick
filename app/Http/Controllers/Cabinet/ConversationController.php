@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cabinet;
 
 use App\Enums\ChannelType;
-use App\Enums\ConversationOutcome;
-use App\Enums\ConversationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -18,7 +16,6 @@ use App\Services\ConversationHandoffService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,12 +35,11 @@ final class ConversationController extends Controller
     public function index(Request $request): Response
     {
         $search = trim((string) $request->query('search', '')) ?: null;
-        $status = ConversationStatus::tryFrom((string) $request->query('status', ''));
         $channel = ChannelType::tryFrom((string) $request->query('channel', ''));
         $sort = in_array($request->query('sort'), ['last', 'contact', 'messages'], true) ? (string) $request->query('sort') : 'last';
         $dir = $request->query('dir') === 'asc' ? 'asc' : 'desc';
 
-        $page = $this->conversations->paginateForCurrentTenant($search, $status, $channel, $sort, $dir, 15);
+        $page = $this->conversations->paginateForCurrentTenant($search, null, $channel, $sort, $dir, 15);
 
         return Inertia::render('Cabinet/Conversations/Index', [
             'conversations' => array_map($this->present(...), $page->items()),
@@ -56,15 +52,10 @@ final class ConversationController extends Controller
             ],
             'filters' => [
                 'search' => $search ?? '',
-                'status' => $status instanceof ConversationStatus ? $status->value : '',
                 'channel' => $channel instanceof ChannelType ? $channel->value : '',
                 'sort' => $sort,
                 'dir' => $dir,
             ],
-            'statuses' => array_map(
-                fn (ConversationStatus $s): array => ['value' => $s->value, 'label' => $s->stageLabel()],
-                ConversationStatus::cases(),
-            ),
             'channels' => array_map(
                 fn (string $type): array => ['value' => $type, 'label' => ChannelType::tryFrom($type)?->label() ?? $type],
                 $this->conversations->channelTypesForCurrentTenant(),
@@ -86,10 +77,6 @@ final class ConversationController extends Controller
                 'channel' => $model->channel?->type->label() ?? '—',
                 'source' => $this->source($model->channel),
                 'contactRef' => $model->contact_ref,
-                'status' => $model->status->value,
-                'statusLabel' => $model->status->label(),
-                'outcome' => $model->outcome()->value,
-                'outcomeLabel' => $model->outcome()->label(),
                 'createdAt' => $model->created_at?->format('d.m.Y'),
                 // Связь лида с CRM-записью (id записи в CRM + какая CRM).
                 'crmRecordId' => $model->crm_record_id,
@@ -98,10 +85,6 @@ final class ConversationController extends Controller
                 'operatorActive' => $model->isOperatorHandling(),
                 'operatorName' => $model->isOperatorHandling() ? $model->operator?->name : null,
             ],
-            'outcomes' => array_map(
-                fn (ConversationOutcome $o): array => ['value' => $o->value, 'label' => $o->label()],
-                ConversationOutcome::cases(),
-            ),
             'messages' => $this->messages->allForConversation($model)->map($this->presentMessage(...))->all(),
             'canReply' => $request->user()->allows('conversations.edit'),
         ]);
@@ -122,8 +105,6 @@ final class ConversationController extends Controller
                 ->map($this->presentMessage(...))->values()->all(),
             'operatorActive' => $model->isOperatorHandling(),
             'operatorName' => $model->isOperatorHandling() ? $model->operator?->name : null,
-            'status' => $model->status->value,
-            'statusLabel' => $model->status->label(),
         ]);
     }
 
@@ -183,34 +164,6 @@ final class ConversationController extends Controller
         ];
     }
 
-    /**
-     * Админ вручную выставляет итог лида (любой из ConversationOutcome) — статус
-     * диалога синхронизируется автоматически.
-     */
-    public function setStatus(Request $request, string $conversation): RedirectResponse
-    {
-        // Право-действие: редактирование лидов (владелец — всегда).
-        abort_unless($request->user()->allows('conversations.edit'), 403);
-
-        $model = $this->conversations->findForCurrentTenant($conversation);
-
-        abort_if($model === null, 404);
-
-        $validated = $request->validate([
-            'outcome' => ['required', Rule::enum(ConversationOutcome::class)],
-        ]);
-
-        $outcome = ConversationOutcome::from((string) $validated['outcome']);
-        $this->conversations->setOutcome($model, $outcome);
-
-        // Статус «Отменён» — отменяем и запись в CRM (если у лида она есть).
-        if ($outcome === ConversationOutcome::Cancelled) {
-            $this->booking->cancelBookingForConversation($model);
-        }
-
-        return back()->with('success', "Лид: статус «{$outcome->label()}».");
-    }
-
     public function destroy(Request $request, string $conversation): RedirectResponse
     {
         // Право-действие: удаление лидов (владелец — всегда).
@@ -244,8 +197,6 @@ final class ConversationController extends Controller
             'phone' => $this->displayPhone($c),
             'channel' => $c->channel?->type->label() ?? '—',
             'source' => $this->source($c->channel),
-            'outcome' => $c->outcome()->value,
-            'outcomeLabel' => $c->outcome()->label(),
             'messagesCount' => (int) $c->getAttribute('messages_count'),
             'lastMessage' => $c->latestMessage?->text,
             'lastMessageAt' => $c->last_message_at?->format('d.m.Y H:i'),

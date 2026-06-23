@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Models\Concerns\MarksSandbox;
 use Database\Factories\ConversationFactory;
@@ -26,8 +25,8 @@ use Illuminate\Support\Carbon;
  * @property ConversationStatus $status
  * @property int $clarification_attempts
  * @property Carbon|null $booked_at
+ * @property Carbon|null $escalated_at
  * @property Carbon|null $cancelled_at
- * @property ConversationOutcome|null $outcome_override
  * @property array<string, mixed>|null $booking_state
  * @property array<string, mixed>|null $flow_state
  * @property string|null $crm_record_id
@@ -58,8 +57,8 @@ class Conversation extends TenantOwnedModel
         'status',
         'clarification_attempts',
         'booked_at',
+        'escalated_at',
         'cancelled_at',
-        'outcome_override',
         'booking_state',
         'flow_state',
         'crm_record_id',
@@ -89,8 +88,8 @@ class Conversation extends TenantOwnedModel
             'contacts_gate_done' => 'boolean',
             'clarification_attempts' => 'integer',
             'booked_at' => 'datetime',
+            'escalated_at' => 'datetime',
             'cancelled_at' => 'datetime',
-            'outcome_override' => ConversationOutcome::class,
             'booking_state' => 'array',
             'flow_state' => 'array',
             'booked_service_price' => 'integer',
@@ -109,39 +108,6 @@ class Conversation extends TenantOwnedModel
     {
         return $this->operator_active_at !== null
             && $this->operator_active_at->gt(now()->subMinutes(self::OPERATOR_IDLE_MINUTES));
-    }
-
-    /**
-     * Итог по лиду. Ручной итог админа (outcome_override) — в приоритете; иначе
-     * выводим автоматически: отмена → успешный (есть booked_at) → по статусу
-     * (закрыт = потерянный лид, иначе в работе / нужен человек).
-     */
-    public function outcome(): ConversationOutcome
-    {
-        if ($this->outcome_override !== null) {
-            return $this->outcome_override;
-        }
-
-        if ($this->cancelled_at !== null) {
-            return ConversationOutcome::Cancelled;
-        }
-
-        if ($this->booked_at !== null) {
-            // Запись оформлена. Пока время визита впереди — лид «в работе» (клиент
-            // может вернуться, перенести или отменить); «Успешный лид» проставляется,
-            // когда время визита уже прошло (услуга оказана) либо оно неизвестно.
-            if ($this->booked_for !== null && $this->booked_for->isFuture()) {
-                return ConversationOutcome::Open;
-            }
-
-            return ConversationOutcome::Booked;
-        }
-
-        return match ($this->status) {
-            ConversationStatus::Closed => ConversationOutcome::Lost,
-            ConversationStatus::NeedsHuman => ConversationOutcome::NeedsHuman,
-            ConversationStatus::Open => ConversationOutcome::Open,
-        };
     }
 
     /**

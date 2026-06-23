@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use App\Models\Conversation;
+use App\Models\Deal;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -21,6 +22,14 @@ interface LeadAnalyticsRepositoryInterface
      * @return Collection<int, Conversation>
      */
     public function leadsForAnalytics(Carbon $from, Carbon $to): Collection;
+
+    /**
+     * Сделки, созданные в окне [from, to], со стадией — для разбивки воронки по
+     * стадиям (CRM-аналитика).
+     *
+     * @return Collection<int, Deal>
+     */
+    public function dealsForAnalytics(Carbon $from, Carbon $to): Collection;
 
     /**
      * Типы подключённых (активных) каналов тенанта — для анализа пробелов.

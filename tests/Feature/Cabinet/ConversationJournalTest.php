@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Cabinet;
 
 use App\Enums\ChannelType;
-use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Models\Channel;
 use App\Models\Client;
@@ -132,18 +131,6 @@ final class ConversationJournalTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.contact', 'Guest One'));
     }
 
-    public function test_status_filter(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $owner = User::factory()->owner($tenant)->create();
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'status' => ConversationStatus::NeedsHuman]);
-        Conversation::factory()->create(['tenant_id' => $tenant->id, 'status' => ConversationStatus::Open]);
-
-        $this->actingAs($owner)
-            ->get('/cabinet/conversations?status=needs_human')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('conversations', 1)->where('conversations.0.outcome', 'needs_human'));
-    }
-
     public function test_grid_shows_and_searches_by_phone(): void
     {
         $tenant = Tenant::factory()->create();
@@ -172,58 +159,6 @@ final class ConversationJournalTest extends TestCase
                 ->has('conversations', 15)
                 ->where('pagination.total', 20)
                 ->where('pagination.last', 2));
-    }
-
-    public function test_owner_sets_lead_outcome_and_status_syncs(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $owner = User::factory()->owner($tenant)->create();
-        $conv = Conversation::factory()->create([
-            'tenant_id' => $tenant->id,
-            'status' => ConversationStatus::Open,
-        ]);
-
-        // Любой итог: «потерянный лид» → диалог закрывается.
-        $this->actingAs($owner)
-            ->put("/cabinet/conversations/{$conv->id}/status", ['outcome' => 'lost'])
-            ->assertRedirect();
-        $this->assertSame(ConversationStatus::Closed, $conv->fresh()->status);
-        $this->assertSame('lost', $conv->fresh()->outcome()->value);
-
-        // «Спам» — тоже закрыт.
-        $this->actingAs($owner)
-            ->put("/cabinet/conversations/{$conv->id}/status", ['outcome' => 'spam'])
-            ->assertRedirect();
-        $this->assertSame('spam', $conv->fresh()->outcome()->value);
-
-        // Вернуть «в работу» → статус снова open, итог open (даже если были отметки).
-        $this->actingAs($owner)
-            ->put("/cabinet/conversations/{$conv->id}/status", ['outcome' => 'open'])
-            ->assertRedirect();
-        $this->assertSame(ConversationStatus::Open, $conv->fresh()->status);
-        $this->assertSame('open', $conv->fresh()->outcome()->value);
-    }
-
-    public function test_set_outcome_rejects_unknown_value(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $owner = User::factory()->owner($tenant)->create();
-        $conv = Conversation::factory()->create(['tenant_id' => $tenant->id]);
-
-        $this->actingAs($owner)
-            ->put("/cabinet/conversations/{$conv->id}/status", ['outcome' => 'bogus'])
-            ->assertSessionHasErrors('outcome');
-    }
-
-    public function test_owner_cannot_change_status_of_other_tenant_conversation(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $owner = User::factory()->owner($tenant)->create();
-        $otherConv = Conversation::factory()->create(['tenant_id' => Tenant::factory()->create()->id]);
-
-        $this->actingAs($owner)
-            ->put("/cabinet/conversations/{$otherConv->id}/status", ['outcome' => 'lost'])
-            ->assertNotFound();
     }
 
     public function test_web_conversation_shows_site_as_source_and_guest_name(): void

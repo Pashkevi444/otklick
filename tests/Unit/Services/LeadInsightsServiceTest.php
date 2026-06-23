@@ -25,6 +25,7 @@ final class LeadInsightsServiceTest extends TestCase
     {
         $repo = Mockery::mock(LeadAnalyticsRepositoryInterface::class);
         $repo->shouldReceive('leadsForAnalytics')->andReturn(new Collection);
+        $repo->shouldReceive('dealsForAnalytics')->andReturn(new Collection);
         $repo->shouldReceive('recentLeads')->andReturn(new Collection);
         $repo->shouldReceive('connectedChannelTypes')->andReturn(['telegram', 'web']);
 
