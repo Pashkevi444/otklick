@@ -132,7 +132,6 @@ const updatedAt = '23 июня 2026 г.';
                     <table class="req-table">
                         <tbody>
                             <tr><td>Наименование</td><td>{{ r.legalName }}</td></tr>
-                            <tr><td>Адрес</td><td>{{ r.address }}</td></tr>
                             <tr><td>ИНН</td><td>{{ r.inn }}</td></tr>
                             <tr><td>ОГРНИП</td><td>{{ r.ogrnip }}</td></tr>
                             <tr><td>Расчётный счёт</td><td>{{ r.account }}</td></tr>
