@@ -40,7 +40,7 @@ defineProps<{ site: Site; loginUrl: string }>();
                     class="card-hover glass relative rounded-3xl p-7"
                     :class="p.highlight ? 'glow-edge' : ''"
                 >
-                    <div v-if="p.highlight" class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2E74B5] px-3 py-1 text-xs font-medium text-white shadow">Популярный</div>
+                    <div v-if="p.highlight" class="absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-[#2E74B5] px-3 py-1 text-xs font-medium text-white shadow-lg shadow-[#2E74B5]/40">Популярный</div>
                     <div class="text-lg font-bold text-[#1F4E79] dark:text-sky-200">{{ p.name }}</div>
                     <div class="mt-3 flex flex-wrap items-end gap-x-1.5">
                         <span class="font-extrabold leading-tight text-[#1F4E79] dark:text-sky-200" :class="/[0-9]/.test(p.price) ? 'text-3xl' : 'text-xl'">{{ p.price }}</span>
