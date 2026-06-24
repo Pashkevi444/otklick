@@ -61,6 +61,7 @@ class ReplyComposer
         // индекс пуст или эмбеддер недоступен — отдаём всю базу (фолбэк).
         $published = $this->knowledge->publishedForCurrentTenant();
         $crm = $this->crmKnowledge->forCurrentTenant();
+
         // Семантический поиск (RAG) — только если возможность включена тарифом/оверрайдом;
         // иначе в промпт идёт вся база (как и было).
         $retrieved = $tenant->features()->rag
