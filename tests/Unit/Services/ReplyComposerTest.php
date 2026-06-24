@@ -12,6 +12,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Repositories\Contracts\PromptTemplateRepositoryInterface;
 use App\Services\KnowledgeRetriever;
 use App\Services\PromptBuilder;
 use App\Services\ReplyComposer;
@@ -40,7 +41,16 @@ final class ReplyComposerTest extends TestCase
         $retriever = Mockery::mock(KnowledgeRetriever::class);
         $retriever->shouldReceive('retrieve')->andReturn(null)->byDefault();
 
-        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations(), $crmKnowledge, $retriever);
+        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
+    }
+
+    /** Репозиторий промптов: ниши нет → дефолтная «голова» (как раньше). */
+    private function promptTemplates(): PromptTemplateRepositoryInterface
+    {
+        $repo = Mockery::mock(PromptTemplateRepositoryInterface::class);
+        $repo->shouldReceive('behaviorFor')->andReturnNull();
+
+        return $repo;
     }
 
     /**
@@ -208,7 +218,7 @@ final class ReplyComposerTest extends TestCase
         $retriever = Mockery::mock(KnowledgeRetriever::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['e1'], 'crm' => []]);
 
-        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
     }
 
     public function test_photos_marker_attaches_real_image_urls_and_strips_marker(): void
@@ -251,7 +261,7 @@ final class ReplyComposerTest extends TestCase
         $retriever = Mockery::mock(KnowledgeRetriever::class);
         $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['k1'], 'crm' => []]);
 
-        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
 
         // RAG включаем оверрайдом, иначе ретривер не вызывается (фолбэк на всю базу).
         $tenant = new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]);
@@ -296,7 +306,7 @@ final class ReplyComposerTest extends TestCase
         // Порядок = релевантность: «Виды стрижек» сверху, «Барбер Никита» ниже.
         $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['top', 'barber'], 'crm' => []]);
 
-        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
 
         $tenant = new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]);
         $reply = $composer->compose($tenant, new Conversation);
@@ -333,7 +343,7 @@ final class ReplyComposerTest extends TestCase
         $retriever = Mockery::mock(KnowledgeRetriever::class);
         $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['top', 'other'], 'crm' => []]);
 
-        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
         $tenant = new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]);
         $reply = $composer->compose($tenant, new Conversation);
 
@@ -379,7 +389,7 @@ final class ReplyComposerTest extends TestCase
         $retriever = Mockery::mock(KnowledgeRetriever::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['mod'], 'crm' => []]);
 
-        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
         $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
 
         // Оба фото mod cut и НИ одного фото Crop.
@@ -417,7 +427,7 @@ final class ReplyComposerTest extends TestCase
         $retriever = Mockery::mock(KnowledgeRetriever::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['long', 'mod'], 'crm' => []]);
 
-        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
         $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
 
         // Фото mod cut (по имени из ответа), а не «Работа с длинными волосами» (топ RAG).
@@ -456,7 +466,7 @@ final class ReplyComposerTest extends TestCase
         $retriever = Mockery::mock(KnowledgeRetriever::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['crop'], 'crm' => []]);
 
-        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
         $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
 
         // Фото Warrior cut, а не Crop, и несмотря на отсутствие метки.

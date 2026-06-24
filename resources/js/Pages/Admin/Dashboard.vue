@@ -7,6 +7,7 @@ interface Counts {
     tenants: number;
     scenarioTemplates: number;
     knowledgeTemplates: number;
+    promptTemplates: number;
 }
 const props = defineProps<{ counts: Counts }>();
 
@@ -38,6 +39,7 @@ const cards = computed<Card[]>(() => [
     },
     { key: 'scenario_templates', icon: '🪄', label: 'Шаблоны сценариев', text: 'Готовые воронки для бизнесов', href: '/admin/scenario-templates', badge: `${props.counts.scenarioTemplates}` },
     { key: 'knowledge_templates', icon: '📚', label: 'Шаблоны базы знаний', text: 'Готовые элементы БЗ по нишам', href: '/admin/knowledge-templates', badge: `${props.counts.knowledgeTemplates}` },
+    { key: 'prompt_templates', icon: '🧠', label: 'Промпты бота', text: 'Промпт-инструкции под каждую нишу', href: '/admin/prompt-templates', badge: `${props.counts.promptTemplates}` },
     { key: 'cards', icon: '🧩', label: 'Плашки дашборда', text: 'Состояния разделов кабинета (новое/тех. работы)', href: '/admin/dashboard-cards' },
     { key: 'site', icon: '🌐', label: 'Сайт', text: 'Контент публичного лендинга', href: '/admin/site' },
     // Серая плашка на будущее — управление сотрудниками площадки (админ-роли).

@@ -23,6 +23,7 @@ use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
+use App\Repositories\Contracts\PromptTemplateRepositoryInterface;
 use App\Repositories\Contracts\SandboxRepositoryInterface;
 use App\Repositories\Contracts\SiteSettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
@@ -46,6 +47,7 @@ use App\Repositories\Eloquent\EloquentLeadAnalyticsRepository;
 use App\Repositories\Eloquent\EloquentMessageRepository;
 use App\Repositories\Eloquent\EloquentNotificationRecipientRepository;
 use App\Repositories\Eloquent\EloquentPasswordResetCodeRepository;
+use App\Repositories\Eloquent\EloquentPromptTemplateRepository;
 use App\Repositories\Eloquent\EloquentSandboxRepository;
 use App\Repositories\Eloquent\EloquentSiteSettingsRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
@@ -83,5 +85,6 @@ final class RepositoryServiceProvider extends ServiceProvider
         AnnouncementRepositoryInterface::class => EloquentAnnouncementRepository::class,
         DashboardCardStateRepositoryInterface::class => EloquentDashboardCardStateRepository::class,
         PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,
+        PromptTemplateRepositoryInterface::class => EloquentPromptTemplateRepository::class,
     ];
 }

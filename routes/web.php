@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\DashboardCardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\KnowledgeTemplateController as AdminKnowledgeTemplateController;
+use App\Http\Controllers\Admin\PromptTemplateController as AdminPromptTemplateController;
 use App\Http\Controllers\Admin\ScenarioTemplateController as AdminScenarioTemplateController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\TenantController;
@@ -106,6 +107,10 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::post('/knowledge-templates', [AdminKnowledgeTemplateController::class, 'store'])->name('knowledge-templates.store');
         Route::put('/knowledge-templates/{template}', [AdminKnowledgeTemplateController::class, 'update'])->name('knowledge-templates.update');
         Route::delete('/knowledge-templates/{template}', [AdminKnowledgeTemplateController::class, 'destroy'])->name('knowledge-templates.destroy');
+
+        // Промпты бота под ниши — СУ правит «голову» промпта (тело), хвост в коде.
+        Route::get('/prompt-templates', [AdminPromptTemplateController::class, 'index'])->name('prompt-templates.index');
+        Route::put('/prompt-templates/{template}', [AdminPromptTemplateController::class, 'update'])->name('prompt-templates.update');
 
         // Войти в кабинет бизнеса (impersonation).
         Route::post('/tenants/{tenant}/impersonate', [ImpersonationController::class, 'start'])->name('tenants.impersonate');
