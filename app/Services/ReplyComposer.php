@@ -59,7 +59,11 @@ class ReplyComposer
 
         // RAG: по вопросу клиента достаём только релевантные записи знаний; если
         // индекс пуст или эмбеддер недоступен — отдаём всю базу (фолбэк).
-        $published = $this->knowledge->publishedForCurrentTenant();
+        // $allPublished — ПОЛНАЯ опубликованная база (для подбора записи под медиа по
+        // ответу модели: фото могут просить в follow-up «не дошли примеры», где RAG
+        // нужную запись уже не отбирает). $published — то, что уходит в промпт.
+        $allPublished = $this->knowledge->publishedForCurrentTenant();
+        $published = $allPublished;
         $crm = $this->crmKnowledge->forCurrentTenant();
 
         // Семантический поиск (RAG) — только если возможность включена тарифом/оверрайдом;
@@ -159,18 +163,21 @@ class ReplyComposer
         $this->resetStreak($conversation);
 
         // Целевая запись для медиа — по заголовку, НАЗВАННОМУ в ОТВЕТЕ модели: она
-        // берёт каноничное имя записи из промпта («mod cut», «Crop»), что устойчивее
-        // к транслиту/опечаткам в вопросе («муд ката», «кроп») и к промахам ранжира
-        // RAG (верхний хит часто не та запись). Не назвала — берём кандидата RAG.
+        // берёт каноничное имя записи из промпта («Warrior cut», «mod cut»), что
+        // устойчивее к транслиту/опечаткам в вопросе и к промахам ранжира RAG. Ищем
+        // по ВСЕЙ базе ($allPublished): на follow-up «не дошли примеры» нужной записи
+        // в RAG-отборе уже нет, но модель её называет. Не назвала — кандидат RAG.
         // Фото и ссылки — ТОЛЬКО из неё, в полном объёме, без смешивания записей.
-        $mediaEntry = $this->bestTitleMatch($published, $answer) ?? $ragEntry;
+        $mediaEntry = $this->bestTitleMatch($allPublished, $answer) ?? $ragEntry;
         $availableImages = $mediaEntry !== null ? $this->imagesFrom(new Collection([$mediaEntry])) : [];
         $availableLinks = $mediaEntry !== null ? $this->linksFrom(new Collection([$mediaEntry])) : [];
 
-        // Фото примеров работ: по метке [[PHOTOS]] прикрепляем ТОЧНЫЕ URL из данных
-        // (а не то, что напечатала LLM). На всякий случай ловим и пастнутые ботом
-        // ссылки (fallback) и тоже выносим их из текста — канал отправит фото.
-        $wantsPhotos = str_contains($answer, PromptBuilder::PHOTOS);
+        // Прикрепляем фото, если бот поставил метку [[PHOTOS]] ИЛИ в ответе прямо
+        // предлагает примеры/работы (DeepSeek непостоянно ставит метку, но фразу
+        // «вот примеры наших работ» пишет надёжно) и у целевой записи есть фото.
+        // URL берём ТОЧНЫЕ из данных (LLM их искажает) + ловим пастнутые ботом.
+        $wantsPhotos = str_contains($answer, PromptBuilder::PHOTOS)
+            || ($availableImages !== [] && $this->answerOffersExamples($answer));
         [$text, $pasted] = ImageUrls::split($this->stripSentinels($answer));
         $images = array_values(array_unique(array_merge($wantsPhotos ? $availableImages : [], $pasted)));
         $finalText = $images === []
@@ -249,6 +256,24 @@ class ReplyComposer
         }
 
         return $best;
+    }
+
+    /**
+     * Ответ модели прямо предлагает показать примеры/работы (страховка на случай,
+     * когда DeepSeek забыл метку [[PHOTOS]], но фразу «вот примеры наших работ»
+     * написал). Срабатывает только если у целевой записи реально есть фото.
+     */
+    private function answerOffersExamples(string $answer): bool
+    {
+        $a = mb_strtolower($answer);
+
+        foreach (['вот примеры', 'примеры наших работ', 'примеры работ', 'наших работ', 'еще раз примеры', 'ещё раз примеры', 'вот фото', 'вот несколько работ'] as $needle) {
+            if (mb_strpos($a, $needle) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

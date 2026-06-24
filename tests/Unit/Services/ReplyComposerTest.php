@@ -426,4 +426,40 @@ final class ReplyComposerTest extends TestCase
             'https://otcl1ck.ru/storage/k/m2.jpg',
         ], $reply->images);
     }
+
+    public function test_followup_media_from_full_base_and_without_photos_marker(): void
+    {
+        // Прод-баг (скрины Warrior cut): на «не дошли примеры» RAG не отбирал нужную
+        // запись → фото из чужой; и модель забывала [[PHOTOS]]. Чиним обе беды:
+        // запись для медиа ищем по ответу во ВСЕЙ базе; фото шлём и по фразе
+        // «примеры наших работ» без метки.
+        $warrior = new KnowledgeEntry(['title' => 'Warrior cut', 'content' => 'брутальная', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/w1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/w1.jpg'],
+        ]]);
+        $warrior->id = 'war';
+        $crop = new KnowledgeEntry(['title' => 'Crop', 'content' => 'короткая', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/c1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/c1.jpg'],
+        ]]);
+        $crop->id = 'crop';
+
+        $llm = Mockery::mock(LlmClient::class);
+        // Без [[PHOTOS]], но с фразой «примеры наших работ» и именем записи.
+        $llm->shouldReceive('generate')->once()->andReturn('Вот ещё раз примеры наших работ по Warrior cut.');
+
+        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$warrior, $crop]));
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        // RAG на «не дошли примеры» отобрал ТОЛЬКО Crop (Warrior cut нет в хитах).
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['crop'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
+
+        // Фото Warrior cut, а не Crop, и несмотря на отсутствие метки.
+        $this->assertSame(['https://otcl1ck.ru/storage/k/w1.jpg'], $reply->images);
+    }
 }
