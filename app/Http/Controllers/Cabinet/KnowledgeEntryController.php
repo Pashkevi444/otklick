@@ -18,6 +18,7 @@ use App\Models\KnowledgeGap;
 use App\Models\KnowledgeTemplate;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
+use App\Services\GapDraftStatus;
 use App\Services\KnowledgeBaseService;
 use App\Services\SiteImportStatus;
 use App\Support\KnowledgeImageStorage;
@@ -99,10 +100,26 @@ final class KnowledgeEntryController extends Controller
             ->with('success', 'Запись добавлена.');
     }
 
-    public function edit(string $entry): Response
+    public function edit(string $entry, GapDraftStatus $draftStatus): Response
     {
         return Inertia::render('Cabinet/KnowledgeBase/Edit', [
             'entry' => $this->present($this->findOrFail($entry)),
+            // Идёт ли фоновая генерация AI-черновика ответа (из «пробела бота»).
+            'drafting' => $draftStatus->isDrafting($entry),
+        ]);
+    }
+
+    /**
+     * Статус фоновой генерации AI-черновика ответа + актуальный текст записи
+     * (кабинет поллит, пока «пишется», затем подставляет готовый черновик).
+     */
+    public function draftStatus(string $entry, GapDraftStatus $status): JsonResponse
+    {
+        $model = $this->findOrFail($entry);
+
+        return response()->json([
+            'state' => $status->state($entry),
+            'content' => (string) $model->content,
         ]);
     }
 

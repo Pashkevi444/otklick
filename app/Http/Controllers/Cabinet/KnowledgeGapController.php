@@ -8,8 +8,10 @@ use App\DTO\KnowledgeEntryData;
 use App\Enums\KnowledgeGapStatus;
 use App\Enums\MemberPermission;
 use App\Http\Controllers\Controller;
+use App\Jobs\DraftGapAnswer;
 use App\Models\KnowledgeGap;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
+use App\Services\GapDraftStatus;
 use App\Services\KnowledgeBaseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,11 +26,14 @@ final class KnowledgeGapController extends Controller
     public function __construct(
         private readonly KnowledgeGapRepositoryInterface $gaps,
         private readonly KnowledgeBaseService $knowledge,
+        private readonly GapDraftStatus $draftStatus,
     ) {}
 
     /**
-     * «В базу знаний»: создаёт черновик записи (заголовок = вопрос клиента) и
-     * закрывает пробел; владелец вписывает ответ и публикует.
+     * «В базу знаний»: создаёт черновик записи (заголовок = вопрос клиента),
+     * запускает ФОНОВУЮ генерацию AI-черновика ответа (на данных бизнеса + нишевом
+     * промпте) и закрывает пробел. Кабинет открывает запись и показывает индикатор
+     * «AI пишет черновик…», пока джоба не допишет текст; владелец правит и публикует.
      */
     public function promote(Request $request, string $gap): RedirectResponse
     {
@@ -42,11 +47,14 @@ final class KnowledgeGapController extends Controller
             isPublished: false,
         ));
 
+        $this->draftStatus->begin((string) $entry->id);
+        DraftGapAnswer::dispatch((string) $request->user()->tenant_id, (string) $entry->id, $model->question);
+
         $this->gaps->updateStatus($model, KnowledgeGapStatus::Resolved);
 
         return redirect()
             ->route('cabinet.knowledge.edit', $entry->id)
-            ->with('success', 'Создан черновик записи — впишите ответ и опубликуйте.');
+            ->with('success', 'Готовлю AI-черновик ответа — он появится через несколько секунд.');
     }
 
     public function dismiss(Request $request, string $gap): RedirectResponse

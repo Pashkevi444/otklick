@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ImageUploader from '@/Components/ImageUploader.vue';
@@ -22,7 +22,7 @@ interface Entry {
     images: ImageItem[];
 }
 
-const props = defineProps<{ entry: Entry }>();
+const props = defineProps<{ entry: Entry; drafting?: boolean }>();
 
 const existing = ref<ImageItem[]>([...props.entry.images]);
 
@@ -57,6 +57,39 @@ const removeExisting = (i: number): void => {
 const submit = (): void => {
     form.put(`/cabinet/knowledge/${props.entry.id}`, { forceFormData: true });
 };
+
+// Фоновая AI-генерация черновика ответа (запись создана из «пробела бота»):
+// показываем индикатор и поллим статус, пока текст не допишется.
+const drafting = ref<boolean>(props.drafting ?? false);
+let timer: ReturnType<typeof setInterval> | undefined;
+
+const pollDraft = async (): Promise<void> => {
+    try {
+        const res = await fetch(`/cabinet/knowledge/${props.entry.id}/draft-status`, {
+            headers: { Accept: 'application/json' },
+        });
+        const data: { state: string; content: string } = await res.json();
+        if (data.state !== 'drafting') {
+            if (typeof data.content === 'string' && data.content !== '') {
+                form.content = data.content;
+            }
+            drafting.value = false;
+            if (timer) clearInterval(timer);
+        }
+    } catch {
+        // сетевая ошибка — попробуем на следующем тике
+    }
+};
+
+onMounted(() => {
+    if (drafting.value) {
+        void pollDraft();
+        timer = setInterval(() => void pollDraft(), 1500);
+    }
+});
+onBeforeUnmount(() => {
+    if (timer) clearInterval(timer);
+});
 </script>
 
 <template>
@@ -74,7 +107,20 @@ const submit = (): void => {
 
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Текст</label>
-                <textarea v-model="form.content" rows="6" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                <div
+                    v-if="drafting"
+                    class="mb-2 flex items-center gap-2 rounded-lg bg-[#EAF2FB] px-3 py-2 text-sm text-[#1F4E79]"
+                >
+                    <span class="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#2E74B5] border-t-transparent"></span>
+                    🤖 AI пишет черновик ответа на основе данных вашего бизнеса… Обычно пара секунд.
+                </div>
+                <textarea
+                    v-model="form.content"
+                    rows="6"
+                    :disabled="drafting"
+                    :placeholder="drafting ? 'AI готовит черновик…' : ''"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-50 disabled:text-slate-400"
+                />
                 <p v-if="form.errors.content" class="mt-1 text-sm text-red-600">{{ form.errors.content }}</p>
             </div>
 
