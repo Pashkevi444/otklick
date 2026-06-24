@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
+use App\Jobs\DraftGapAnswer;
 use App\Jobs\ProcessTelegramUpdate;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -12,6 +13,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -80,8 +82,10 @@ final class KnowledgeGapTest extends TestCase
                 ->where('gaps.0.occurrences', 4));
     }
 
-    public function test_promote_creates_draft_entry_and_resolves_gap(): void
+    public function test_promote_creates_draft_dispatches_ai_drafter_and_resolves_gap(): void
     {
+        Queue::fake();
+
         $tenant = Tenant::factory()->create();
         $owner = User::factory()->owner($tenant)->create();
         $gap = KnowledgeGap::factory()->create(['tenant_id' => $tenant->id, 'question' => 'Есть ли парковка рядом?']);
@@ -90,12 +94,13 @@ final class KnowledgeGapTest extends TestCase
             ->post("/cabinet/knowledge-gaps/{$gap->id}/to-knowledge")
             ->assertRedirect();
 
-        // Создан черновик записи с вопросом в заголовке.
+        // Создан черновик-запись (текст допишет фоновая джоба AI-черновика).
         $this->assertDatabaseHas('knowledge_entries', [
             'tenant_id' => $tenant->id,
             'title' => 'Есть ли парковка рядом?',
             'is_published' => false,
         ]);
+        Queue::assertPushed(DraftGapAnswer::class);
         // Пробел закрыт.
         $this->assertDatabaseHas('knowledge_gaps', ['id' => $gap->id, 'status' => 'resolved']);
     }

@@ -206,6 +206,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::get('/knowledge/import-site/status', [KnowledgeEntryController::class, 'importStatus'])->name('knowledge.import-site.status');
         Route::patch('/knowledge/{entry}/publish', [KnowledgeEntryController::class, 'togglePublish'])->name('knowledge.publish');
         Route::get('/knowledge/{entry}/edit', [KnowledgeEntryController::class, 'edit'])->name('knowledge.edit');
+        Route::get('/knowledge/{entry}/draft-status', [KnowledgeEntryController::class, 'draftStatus'])->name('knowledge.draft-status');
         Route::put('/knowledge/{entry}', [KnowledgeEntryController::class, 'update'])->name('knowledge.update');
         Route::delete('/knowledge/{entry}', [KnowledgeEntryController::class, 'destroy'])->name('knowledge.destroy');
 
