@@ -58,7 +58,7 @@ const logout = (): void => {
 </script>
 
 <template>
-    <div class="relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200">
+    <div class="app-shell relative min-h-screen overflow-x-clip text-slate-800 dark:text-slate-200">
         <!-- Баннер режима «супер-админ вошёл в кабинет бизнеса» -->
         <div
             v-if="page.props.impersonating"
@@ -191,13 +191,13 @@ html.dark .glass {
     inset: 0;
     z-index: -2;
     pointer-events: none;
-    background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
-    background-size: 200% 200%;
-    animation: bgpan 24s ease infinite;
+    background: linear-gradient(125deg, #efe9ff 0%, #fdf2ff 42%, #e6f9ff 100%);
+    background-size: 220% 220%;
+    animation: bgpan 22s ease infinite;
 }
 html.dark .bg-base {
-    background: linear-gradient(125deg, #0b1220 0%, #0e1828 45%, #0a1a26 100%);
-    background-size: 200% 200%;
+    background: linear-gradient(125deg, #120a24 0%, #100a22 45%, #0a1226 100%);
+    background-size: 220% 220%;
 }
 
 .orbs {
@@ -211,31 +211,31 @@ html.dark .bg-base {
     position: absolute;
     border-radius: 9999px;
     filter: blur(80px);
-    opacity: 0.4;
+    opacity: 0.5;
 }
 html.dark .orb {
-    opacity: 0.25;
+    opacity: 0.32;
 }
 .orb-1 {
-    width: 420px;
-    height: 420px;
-    background: #7cc0ff;
+    width: 440px;
+    height: 440px;
+    background: #a855f7;
     top: -120px;
     left: -80px;
     animation: floaty 20s ease-in-out infinite;
 }
 .orb-2 {
-    width: 340px;
-    height: 340px;
-    background: #b9a8ff;
-    top: 20%;
+    width: 360px;
+    height: 360px;
+    background: #ec4899;
+    top: 18%;
     right: -90px;
     animation: floaty 26s ease-in-out infinite reverse;
 }
 .orb-3 {
-    width: 300px;
-    height: 300px;
-    background: #7df3e1;
+    width: 320px;
+    height: 320px;
+    background: #22d3ee;
     bottom: 5%;
     left: 10%;
     animation: floaty 22s ease-in-out infinite;

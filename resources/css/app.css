@@ -48,10 +48,10 @@ html.dark .ui-scope .text-slate-400 {
     color: #7c8aa0;
 }
 html.dark .ui-scope .text-\[\#1F4E79\] {
-    color: #9ec5ec;
+    color: #c4b5fd;
 }
 html.dark .ui-scope .text-\[\#2E74B5\] {
-    color: #7db4e6;
+    color: #b39bff;
 }
 html.dark .ui-scope .hover\:bg-slate-50:hover {
     background-color: rgba(255, 255, 255, 0.05);
@@ -102,6 +102,99 @@ html.dark .ui-scope .text-amber-700 {
 }
 html.dark .ui-scope .text-slate-300 {
     color: #5b6677;
+}
+
+/*
+ * РЕБРЕНД «сочно/ярко/молодёжно»: брендовый синий (#2E74B5 / #1F4E79) разом
+ * перекрашиваем в насыщенную фиолетово-фуксиевую палитру внутри .ui-scope —
+ * как тёмную тему, без правки 60+ страниц. CTA — градиентные, текст остаётся
+ * читаемым (заголовки — насыщенный фиолет, не градиент).
+ */
+.app-shell .text-\[\#1F4E79\] {
+    color: #6d28d9;
+}
+.app-shell .text-\[\#2E74B5\] {
+    color: #7c3aed;
+}
+/* Тёмная тема: брендовый текст — СВЕТЛЫЙ фиолет (тёмный нечитаем на тёмном фоне),
+   в т.ч. шапка (логотип, активный пункт) — она вне .ui-scope. */
+html.dark .app-shell .text-\[\#1F4E79\] {
+    color: #c4b5fd;
+}
+html.dark .app-shell .text-\[\#2E74B5\] {
+    color: #b39bff;
+}
+/* Сплошные брендовые заливки (кнопки/акценты) → сочный градиент индиго→фуксия */
+.app-shell .bg-\[\#2E74B5\] {
+    background-color: #7c3aed;
+    background-image: linear-gradient(135deg, #7c3aed 0%, #c026d3 100%);
+}
+.app-shell .hover\:bg-\[\#255f96\]:hover {
+    background-color: #6d28d9;
+    background-image: linear-gradient(135deg, #6d28d9 0%, #a21caf 100%);
+}
+/* Светлые брендовые плашки/чипы (#EAF2FB) → лавандовые */
+.app-shell .bg-\[\#EAF2FB\] {
+    background-color: #f3e8ff;
+}
+.app-shell .border-\[\#2E74B5\]\/40,
+.app-shell .hover\:border-\[\#2E74B5\]\/40:hover {
+    border-color: rgba(124, 58, 237, 0.45);
+}
+.app-shell .focus\:border-\[\#2E74B5\]:focus {
+    border-color: #7c3aed;
+}
+/* Тёмная тема: лавандовые плашки/чипы вместо голубых */
+html.dark .app-shell .bg-\[\#EAF2FB\] {
+    background-color: rgba(168, 85, 247, 0.16);
+}
+/* Остальные брендовые варианты: заливки с прозрачностью, рамки, кольца, градиенты */
+.app-shell .bg-\[\#1F4E79\] {
+    background-color: #6d28d9;
+    background-image: linear-gradient(135deg, #6d28d9 0%, #a21caf 100%);
+}
+.app-shell .bg-\[\#2E74B5\]\/10 {
+    background-color: rgba(124, 58, 237, 0.1);
+}
+.app-shell .bg-\[\#2E74B5\]\/12 {
+    background-color: rgba(124, 58, 237, 0.12);
+}
+.app-shell .bg-\[\#2E74B5\]\/5 {
+    background-color: rgba(124, 58, 237, 0.06);
+}
+.app-shell .border-\[\#2E74B5\] {
+    border-color: #7c3aed;
+}
+.app-shell .border-\[\#2E74B5\]\/30 {
+    border-color: rgba(124, 58, 237, 0.3);
+}
+.app-shell .border-\[\#2E74B5\]\/50 {
+    border-color: rgba(124, 58, 237, 0.5);
+}
+.app-shell .ring-\[\#2E74B5\] {
+    --tw-ring-color: #7c3aed;
+}
+.app-shell .ring-\[\#2E74B5\]\/15 {
+    --tw-ring-color: rgba(124, 58, 237, 0.15);
+}
+.app-shell .ring-\[\#2E74B5\]\/50 {
+    --tw-ring-color: rgba(124, 58, 237, 0.5);
+}
+.app-shell .from-\[\#2E74B5\] {
+    --tw-gradient-from: #7c3aed var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(124 58 237 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.app-shell .from-\[\#1F4E79\] {
+    --tw-gradient-from: #6d28d9 var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(109 40 217 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.app-shell .to-\[\#2E74B5\] {
+    --tw-gradient-to: #7c3aed var(--tw-gradient-to-position);
+}
+.app-shell .to-\[\#1F4E79\] {
+    --tw-gradient-to: #a21caf var(--tw-gradient-to-position);
 }
 
 /* Плавное появление контента (страницы кабинета/входа) */

@@ -34,6 +34,9 @@ services:
     volumes:
       # Загруженные файлы (картинки базы знаний) переживают пересборку образа.
       - storage_public:/var/www/html/storage/app/public
+      # DEV: свежие фронт-ассеты с хоста — после `npm run build` достаточно
+      # обновить страницу, без пересборки контейнера (быстрая итерация по дизайну).
+      - ./public/build:/var/www/html/public/build
     environment:
       APP_NAME: "Отклик"
       APP_ENV: local

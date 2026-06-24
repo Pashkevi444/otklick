@@ -55,8 +55,19 @@ const tag = (c: Card): typeof Link | 'a' | 'div' => (c.disabled || !c.href ? 'di
 <template>
     <Head title="Дашборд" />
 
-    <AppLayout title="Супер-админка">
-        <p class="mb-6 text-slate-600 dark:text-slate-300">Управление площадкой «Отклик» — выберите раздел.</p>
+    <AppLayout>
+        <!-- Живая hero-плашка супер-админки -->
+        <div class="dash-hero relative mb-7 overflow-hidden rounded-3xl px-6 py-7 sm:px-8 sm:py-9">
+            <span class="dash-orb dash-orb-1"></span>
+            <span class="dash-orb dash-orb-2"></span>
+            <span class="dash-orb dash-orb-3"></span>
+            <span class="dash-grid"></span>
+            <div class="relative">
+                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-white/65">Площадка «Отклик»</div>
+                <h1 class="mt-1.5 text-2xl font-extrabold text-white sm:text-3xl">Супер-админка</h1>
+                <p class="mt-1.5 text-sm text-white/85 sm:text-base">Управление площадкой — выберите раздел.</p>
+            </div>
+        </div>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <component
@@ -86,3 +97,43 @@ const tag = (c: Card): typeof Link | 'a' | 'div' => (c.disabled || !c.href ? 'di
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+/* Сочная hero-плашка: переливающийся фиолетово-фуксиевый градиент + свечения + сетка. */
+.dash-hero {
+    background: linear-gradient(120deg, #7c3aed 0%, #9333ea 38%, #c026d3 72%, #db2777 100%);
+    background-size: 240% 240%;
+    animation: dashPan 16s ease infinite;
+}
+.dash-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(30px);
+    opacity: 0.5;
+    pointer-events: none;
+    will-change: transform;
+}
+.dash-orb-1 { width: 190px; height: 190px; background: #a78bfa; top: -85px; left: 4%; animation: dashFloat 9s ease-in-out infinite; }
+.dash-orb-2 { width: 150px; height: 150px; background: #f0abfc; top: -45px; right: 13%; animation: dashFloat 12s ease-in-out infinite reverse; }
+.dash-orb-3 { width: 140px; height: 140px; background: #67e8f9; bottom: -75px; left: 42%; animation: dashFloat 10s ease-in-out infinite; }
+.dash-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1.4px);
+    background-size: 18px 18px;
+    mask-image: linear-gradient(180deg, #000, transparent);
+    -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+    pointer-events: none;
+}
+@keyframes dashPan {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+@keyframes dashFloat {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(22px, 16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dash-hero, .dash-orb { animation: none; }
+}
+</style>
