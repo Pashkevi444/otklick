@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 
@@ -9,11 +8,9 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
-            fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
-            ],
+            // Шрифт Instrument Sans вшит локально (resources/fonts/ + resources/css/fonts.css),
+            // НЕ через сетевой fonts-плагин: сервер в РФ не достучивается до bunny.net и
+            // сборка падает (read ETIMEDOUT). Кириллицы у шрифта нет — она и так фолбэк.
         }),
         vue(),
         tailwindcss(),
