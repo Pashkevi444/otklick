@@ -388,4 +388,42 @@ final class ReplyComposerTest extends TestCase
             'https://otcl1ck.ru/storage/k/m2.jpg',
         ], $reply->images);
     }
+
+    public function test_media_entry_from_answer_title_overrides_wrong_rag_rank(): void
+    {
+        // Прод-баг: RAG для «муд ката» ставил №1 не ту запись («Работа с длинными
+        // волосами»), а модель отвечала про mod cut. Запись для медиа берём по имени
+        // из ОТВЕТА модели → фото mod cut, а не топ-хита RAG.
+        $longhair = new KnowledgeEntry(['title' => 'Работа с длинными волосами', 'content' => 'длина', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/l1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/l1.jpg'],
+        ]]);
+        $longhair->id = 'long';
+        $modcut = new KnowledgeEntry(['title' => 'mod cut', 'content' => 'стрижка', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/m1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/m1.jpg'],
+            ['path' => 'k/m2.jpg', 'url' => 'https://otcl1ck.ru/storage/k/m2.jpg'],
+        ]]);
+        $modcut->id = 'mod';
+
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Вот примеры наших работ по mod cut! [[PHOTOS]]');
+
+        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$longhair, $modcut]));
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        // RAG ставит №1 неверную запись (long), mod cut только №2.
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['long', 'mod'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
+
+        // Фото mod cut (по имени из ответа), а не «Работа с длинными волосами» (топ RAG).
+        $this->assertSame([
+            'https://otcl1ck.ru/storage/k/m1.jpg',
+            'https://otcl1ck.ru/storage/k/m2.jpg',
+        ], $reply->images);
+    }
 }
