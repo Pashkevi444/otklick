@@ -33,6 +33,7 @@ use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
 use App\Http\Controllers\Cabinet\KnowledgeGapController;
 use App\Http\Controllers\Cabinet\NotificationController;
+use App\Http\Controllers\Cabinet\UserNotificationController;
 use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
 use App\Http\Controllers\Cabinet\TeamController;
@@ -130,6 +131,11 @@ $onDomain(config('app.business_domain'), function (): void {
     Route::middleware(['auth', 'tenant', EnsureSectionAllowed::class, EnsureCardAvailable::class])->prefix('cabinet')->name('cabinet.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('/overview', BusinessOverviewController::class)->name('overview');
+
+        // In-app уведомления (колокольчик/бейджи). Имя `bell.*` (не раздел) — доступно
+        // любому пользователю кабинета; выдача отфильтрована по правам в сервисе.
+        Route::get('/notifications/feed', [UserNotificationController::class, 'index'])->name('bell.feed');
+        Route::post('/notifications/read', [UserNotificationController::class, 'readAll'])->name('bell.read');
 
         // Тестирование бота (песочница): живой чат с ботом по своим настройкам без
         // записи лидов/клиентов и без реальной записи в CRM. Доступно на всех

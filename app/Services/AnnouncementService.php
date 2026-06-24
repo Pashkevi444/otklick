@@ -94,8 +94,9 @@ final readonly class AnnouncementService
      */
     public function cabinetPaginated(AnnouncementType $type, string $tenantId): array
     {
+        $userId = $this->userId();
         $page = $this->announcements->paginatePublishedOfType($type, self::PER_PAGE);
-        $readIds = $this->announcements->readIdsForCurrentTenant();
+        $readIds = $this->announcements->readIdsForUser($userId);
 
         $result = $this->paginate($page, fn (Announcement $a): array => [
             'id' => $a->id,
@@ -105,7 +106,7 @@ final readonly class AnnouncementService
             'is_new' => ! in_array($a->id, $readIds, true),
         ]);
 
-        $this->markRead($type, $tenantId);
+        $this->markRead($type, $tenantId, $userId);
 
         return $result;
     }
@@ -123,7 +124,7 @@ final readonly class AnnouncementService
             return null;
         }
 
-        $this->announcements->markReadForCurrentTenant([$announcement->id], $tenantId);
+        $this->announcements->markReadForUser([$announcement->id], $tenantId, $this->userId());
 
         return [
             'id' => $announcement->id,
@@ -140,14 +141,20 @@ final readonly class AnnouncementService
      */
     public function unreadCounts(): array
     {
-        return $this->announcements->unreadCountsForCurrentTenant();
+        return $this->announcements->unreadCountsForUser($this->userId());
     }
 
-    /** Пометить все опубликованные анонсы типа прочитанными тенантом. */
-    private function markRead(AnnouncementType $type, string $tenantId): void
+    /** Пометить все опубликованные анонсы типа прочитанными конкретным пользователем. */
+    private function markRead(AnnouncementType $type, string $tenantId, string $userId): void
     {
         $ids = $this->announcements->publishedOfType($type)->pluck('id')->all();
-        $this->announcements->markReadForCurrentTenant($ids, $tenantId);
+        $this->announcements->markReadForUser($ids, $tenantId, $userId);
+    }
+
+    /** Текущий пользователь (прочтения анонсов — пер-юзер). */
+    private function userId(): string
+    {
+        return (string) (auth()->id() ?? '');
     }
 
     /**

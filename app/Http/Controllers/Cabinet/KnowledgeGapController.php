@@ -10,9 +10,11 @@ use App\Enums\MemberPermission;
 use App\Http\Controllers\Controller;
 use App\Jobs\DraftGapAnswer;
 use App\Models\KnowledgeGap;
+use App\Models\User;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Services\GapDraftStatus;
 use App\Services\KnowledgeBaseService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -27,7 +29,16 @@ final class KnowledgeGapController extends Controller
         private readonly KnowledgeGapRepositoryInterface $gaps,
         private readonly KnowledgeBaseService $knowledge,
         private readonly GapDraftStatus $draftStatus,
+        private readonly UserNotificationService $notifications,
     ) {}
+
+    /** Обработал пробел (в БЗ/скрыл/удалил) → его уведомление у пользователя гаснет. */
+    private function markGapSeen(Request $request, KnowledgeGap $gap): void
+    {
+        if (($user = $request->user()) instanceof User) {
+            $this->notifications->markEntityRead($user, 'gap', (string) $gap->id);
+        }
+    }
 
     /**
      * «В базу знаний»: создаёт черновик записи (заголовок = вопрос клиента),
@@ -40,6 +51,7 @@ final class KnowledgeGapController extends Controller
         $this->authorizeEdit($request);
 
         $model = $this->findOrFail($gap);
+        $this->markGapSeen($request, $model);
 
         $entry = $this->knowledge->create(new KnowledgeEntryData(
             title: mb_substr(trim($model->question), 0, 200),
@@ -61,7 +73,9 @@ final class KnowledgeGapController extends Controller
     {
         $this->authorizeEdit($request);
 
-        $this->gaps->updateStatus($this->findOrFail($gap), KnowledgeGapStatus::Dismissed);
+        $model = $this->findOrFail($gap);
+        $this->markGapSeen($request, $model);
+        $this->gaps->updateStatus($model, KnowledgeGapStatus::Dismissed);
 
         return back()->with('success', 'Вопрос скрыт.');
     }

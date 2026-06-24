@@ -16,15 +16,20 @@ use App\Jobs\DeliverBotReply;
 use App\Models\Channel;
 use App\Models\Client;
 use App\Models\Conversation;
+use App\Models\KnowledgeGap;
 use App\Models\Message;
 use App\Models\Tenant;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Repositories\Contracts\UserNotificationRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\BotResponder;
 use App\Services\ContactCapture;
 use App\Services\IncomingMessageService;
 use App\Services\SpamDetector;
+use App\Services\UserNotificationService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -34,6 +39,15 @@ use Tests\TestCase;
 final class IncomingMessageServiceTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
+
+    /** Реальный сервис уведомлений без получателей (final — не мокается): notify = no-op. */
+    private function notifications(): UserNotificationService
+    {
+        $users = Mockery::mock(UserRepositoryInterface::class);
+        $users->shouldReceive('forCurrentTenant')->andReturn(new Collection)->byDefault();
+
+        return new UserNotificationService(Mockery::mock(UserNotificationRepositoryInterface::class), $users);
+    }
 
     public function test_sends_composed_answer_and_records_messages(): void
     {
@@ -63,7 +77,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'есть ли доставка?');
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_operator_handling_silences_bot(): void
@@ -93,7 +107,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldNotReceive('fromInbound');
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_banned_client_gets_ban_notice_without_llm(): void
@@ -125,7 +139,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_spam_is_silently_dropped_and_marked(): void
@@ -153,7 +167,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(true)))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(true), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_failed_send_queues_retry_and_does_not_lose_reply(): void
@@ -185,7 +199,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
 
         Bus::assertDispatched(DeliverBotReply::class, fn ($job): bool => $job->messageId === 'msg-1' && $job->text === 'Здравствуйте!');
     }
@@ -215,7 +229,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_knowledge_gap_escalation_records_question(): void
@@ -245,9 +259,9 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts->shouldReceive('fromInbound')->once();
 
         $gaps = Mockery::mock(KnowledgeGapRepositoryInterface::class);
-        $gaps->shouldReceive('record')->once()->with('а есть ли парковка?', Mockery::any(), 'telegram');
+        $gaps->shouldReceive('record')->once()->with('а есть ли парковка?', Mockery::any(), 'telegram')->andReturn(new KnowledgeGap);
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, $gaps, $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, $gaps, $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_booking_closes_conversation(): void
@@ -275,7 +289,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_cancellation_marks_conversation_cancelled(): void
@@ -304,7 +318,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     public function test_duplicate_inbound_does_nothing(): void
@@ -332,7 +346,7 @@ final class IncomingMessageServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldNotReceive('fromInbound');
 
-        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam()))->handle($channel, $incoming);
+        (new IncomingMessageService($conversations, $messages, new ChannelGatewayResolver([$gateway]), $responder, $contacts, Mockery::mock(KnowledgeGapRepositoryInterface::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
     private function spam(bool $isSpam = false): SpamDetector

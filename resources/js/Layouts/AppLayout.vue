@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import Logo from '@/Components/Logo.vue';
+import NotificationBell from '@/Components/NotificationBell.vue';
 
 defineProps<{ title?: string }>();
 
@@ -112,6 +113,7 @@ const logout = (): void => {
                             </nav>
                         </div>
                         <div class="flex flex-none items-center gap-2 text-sm sm:gap-3">
+                            <NotificationBell v-if="user && user.role !== 'super_admin'" />
                             <ThemeToggle />
                             <Link
                                 href="/account"
