@@ -101,7 +101,7 @@ const tag = (c: Card): typeof Link | 'a' | 'div' => (c.disabled || !c.href ? 'di
 <style scoped>
 /* Сочная hero-плашка: переливающийся фиолетово-фуксиевый градиент + свечения + сетка. */
 .dash-hero {
-    background: linear-gradient(120deg, #7c3aed 0%, #9333ea 38%, #c026d3 72%, #db2777 100%);
+    background: linear-gradient(120deg, #2563eb 0%, #2e74b5 38%, #4f46e5 72%, #18b6c9 100%);
     background-size: 240% 240%;
     animation: dashPan 16s ease infinite;
 }
@@ -113,9 +113,9 @@ const tag = (c: Card): typeof Link | 'a' | 'div' => (c.disabled || !c.href ? 'di
     pointer-events: none;
     will-change: transform;
 }
-.dash-orb-1 { width: 190px; height: 190px; background: #a78bfa; top: -85px; left: 4%; animation: dashFloat 9s ease-in-out infinite; }
-.dash-orb-2 { width: 150px; height: 150px; background: #f0abfc; top: -45px; right: 13%; animation: dashFloat 12s ease-in-out infinite reverse; }
-.dash-orb-3 { width: 140px; height: 140px; background: #67e8f9; bottom: -75px; left: 42%; animation: dashFloat 10s ease-in-out infinite; }
+.dash-orb-1 { width: 190px; height: 190px; background: #818cf8; top: -85px; left: 4%; animation: dashFloat 9s ease-in-out infinite; }
+.dash-orb-2 { width: 150px; height: 150px; background: #7cc0ff; top: -45px; right: 13%; animation: dashFloat 12s ease-in-out infinite reverse; }
+.dash-orb-3 { width: 140px; height: 140px; background: #6ee7ff; bottom: -75px; left: 42%; animation: dashFloat 10s ease-in-out infinite; }
 .dash-grid {
     position: absolute;
     inset: 0;

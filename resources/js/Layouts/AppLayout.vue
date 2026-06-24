@@ -191,12 +191,12 @@ html.dark .glass {
     inset: 0;
     z-index: -2;
     pointer-events: none;
-    background: linear-gradient(125deg, #efe9ff 0%, #fdf2ff 42%, #e6f9ff 100%);
+    background: linear-gradient(125deg, #eef2ff 0%, #f6faff 42%, #e6f9ff 100%);
     background-size: 220% 220%;
     animation: bgpan 22s ease infinite;
 }
 html.dark .bg-base {
-    background: linear-gradient(125deg, #120a24 0%, #100a22 45%, #0a1226 100%);
+    background: linear-gradient(125deg, #0b1220 0%, #0e1828 45%, #0a1226 100%);
     background-size: 220% 220%;
 }
 
@@ -219,7 +219,7 @@ html.dark .orb {
 .orb-1 {
     width: 440px;
     height: 440px;
-    background: #a855f7;
+    background: #7cc0ff;
     top: -120px;
     left: -80px;
     animation: floaty 20s ease-in-out infinite;
@@ -227,7 +227,7 @@ html.dark .orb {
 .orb-2 {
     width: 360px;
     height: 360px;
-    background: #ec4899;
+    background: #818cf8;
     top: 18%;
     right: -90px;
     animation: floaty 26s ease-in-out infinite reverse;
@@ -235,7 +235,7 @@ html.dark .orb {
 .orb-3 {
     width: 320px;
     height: 320px;
-    background: #22d3ee;
+    background: #6ee7ff;
     bottom: 5%;
     left: 10%;
     animation: floaty 22s ease-in-out infinite;
