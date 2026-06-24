@@ -73,23 +73,22 @@ class ReplyComposer
             $crm = $crm->filter(fn (CrmKnowledgeEntry $e): bool => in_array($e->id, $retrieved['crm'], true))->values();
         }
 
-        // Самая релевантная запись — верхний хит RAG ($retrieved['manual'][0]).
-        // И ссылки, и фото берём ТОЛЬКО из неё, а не из всех top-K: иначе к ответу
-        // примешиваются ссылки/картинки соседних, но не относящихся к вопросу
-        // записей (инстаграм мастера или чужие фото к вопросу про виды стрижек).
-        $topEntry = $retrieved !== null && $retrieved['manual'] !== []
-            ? $published->firstWhere('id', $retrieved['manual'][0])
-            : null;
+        // Медиа (фото примеров + ссылки) берём из ОДНОЙ записи — той, о которой
+        // спрашивает клиент, — и в полном объёме. Фото/ссылки РАЗНЫХ записей НЕ
+        // смешиваем. RAG активен → верхний хит ($retrieved['manual'][0]); RAG
+        // недоступен (эмбеддер моргнул / индекс пуст / вопрос без текста — голосовое,
+        // стикер) → запись по вхождению её заголовка в вопрос; не нашли уверенно →
+        // БЕЗ медиа. Раньше в фолбэке цеплялась вся база — и к «mod cut» примешивались
+        // фото других стрижек.
+        $topEntry = $retrieved !== null
+            ? ($retrieved['manual'] !== [] ? $published->firstWhere('id', $retrieved['manual'][0]) : null)
+            : $this->bestTitleMatch($published, $this->lastUserText($history));
 
         // Реальные (точные) URL фото — прикрепим, если бот поставит метку [[PHOTOS]].
-        // URL в текст НЕ отдаём боту (LLM их искажает). На RAG-пути — только из
-        // верхней записи; в фолбэке (вся база в промпте) — из всей базы, как было.
-        $availableImages = $retrieved !== null
-            ? ($topEntry !== null ? $this->imagesFrom(new Collection([$topEntry])) : [])
-            : $this->imagesFrom($published);
+        // URL в текст НЕ отдаём боту (LLM их искажает): только из целевой записи.
+        $availableImages = $topEntry !== null ? $this->imagesFrom(new Collection([$topEntry])) : [];
 
-        // Ссылки дописываем в конец ответа — тоже только из верхней записи; в
-        // фолбэке не дописываем вовсе. URL берём из данных, минуя LLM.
+        // Ссылки дописываем в конец ответа — тоже только из целевой записи.
         $availableLinks = $topEntry !== null ? $this->linksFrom(new Collection([$topEntry])) : [];
 
         // Если клиент уже известен (узнали по чату/телефону/нику и перенесли
@@ -200,8 +199,9 @@ class ReplyComposer
     }
 
     /**
-     * Точные URL фото примеров работ из записей знаний (не больше 6). Берём прямо
-     * из данных, минуя LLM (она искажает длинные ссылки).
+     * Точные URL фото примеров работ из записей знаний (до 10 — лимит альбома в
+     * мессенджерах). Берём прямо из данных, минуя LLM (она искажает длинные ссылки).
+     * Источник — одна целевая запись, поэтому отдаём её фото в полном объёме.
      *
      * @param  Collection<int, KnowledgeEntry>  $entries
      * @return list<string>
@@ -217,7 +217,39 @@ class ReplyComposer
             }
         }
 
-        return array_slice(array_values(array_unique($urls)), 0, 6);
+        return array_slice(array_values(array_unique($urls)), 0, 10);
+    }
+
+    /**
+     * Запись, к которой явно обращается клиент, — по вхождению её заголовка в вопрос
+     * (регистр и ё→е нормализованы). Нужна для медиа, когда RAG недоступен: лучше
+     * отдать фото одной названной записи, чем смешать всю базу. Берём запись с самым
+     * длинным совпавшим заголовком; не нашли — null (тогда медиа не прикладываем).
+     *
+     * @param  Collection<int, KnowledgeEntry>  $published
+     */
+    private function bestTitleMatch(Collection $published, string $question): ?KnowledgeEntry
+    {
+        $q = str_replace('ё', 'е', mb_strtolower(trim($question)));
+
+        if ($q === '') {
+            return null;
+        }
+
+        $best = null;
+        $bestLen = 0;
+
+        foreach ($published as $entry) {
+            $title = str_replace('ё', 'е', mb_strtolower(trim((string) $entry->title)));
+            $len = mb_strlen($title);
+
+            if ($len >= 3 && $len > $bestLen && mb_strpos($q, $title) !== false) {
+                $best = $entry;
+                $bestLen = $len;
+            }
+        }
+
+        return $best;
     }
 
     /**

@@ -196,6 +196,7 @@ final class ReplyComposerTest extends TestCase
     private function composerWithEntryImages(LlmClient $llm, array $images): ReplyComposer
     {
         $entry = new KnowledgeEntry(['title' => 'Стрижки', 'content' => 'Делаем фейды.', 'is_published' => true, 'links' => [], 'images' => $images]);
+        $entry->id = 'e1';
 
         $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$entry]));
@@ -203,8 +204,9 @@ final class ReplyComposerTest extends TestCase
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
         $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
         $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        // Запись — релевантный хит RAG: медиа берётся из неё (одна целевая запись).
         $retriever = Mockery::mock(KnowledgeRetriever::class);
-        $retriever->shouldReceive('retrieve')->andReturn(null);
+        $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['e1'], 'crm' => []]);
 
         return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
     }
@@ -217,7 +219,7 @@ final class ReplyComposerTest extends TestCase
         $llm->shouldReceive('generate')->once()->andReturn('Вот примеры наших работ! [[PHOTOS]]');
 
         $reply = $this->composerWithEntryImages($llm, [['path' => 'knowledge/x.jpg', 'url' => 'https://otcl1ck.ru/storage/knowledge/x.jpg']])
-            ->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+            ->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
 
         $this->assertSame(['https://otcl1ck.ru/storage/knowledge/x.jpg'], $reply->images);
         $this->assertStringNotContainsString('PHOTOS', $reply->text);
@@ -345,9 +347,45 @@ final class ReplyComposerTest extends TestCase
         $llm->shouldReceive('generate')->once()->andReturn('Мужская стрижка — 1500 ₽.');
 
         $reply = $this->composerWithEntryImages($llm, [['path' => 'knowledge/x.jpg', 'url' => 'https://otcl1ck.ru/storage/knowledge/x.jpg']])
-            ->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+            ->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
 
         $this->assertSame([], $reply->images);
         $this->assertSame('Мужская стрижка — 1500 ₽.', $reply->text);
+    }
+
+    public function test_attaches_only_target_entry_images_not_other_entries(): void
+    {
+        // Прод-баг: на вопрос про «mod cut» приходило 1 фото mod cut + чужие стрижки.
+        // Медиа — ТОЛЬКО из релевантной записи (в полном объёме), без примешивания.
+        $modcut = new KnowledgeEntry(['title' => 'mod cut', 'content' => 'стрижка', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/m1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/m1.jpg'],
+            ['path' => 'k/m2.jpg', 'url' => 'https://otcl1ck.ru/storage/k/m2.jpg'],
+        ]]);
+        $modcut->id = 'mod';
+        $crop = new KnowledgeEntry(['title' => 'Crop', 'content' => 'стрижка', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/c1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/c1.jpg'],
+        ]]);
+        $crop->id = 'crop';
+
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Вот примеры! [[PHOTOS]]');
+
+        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$modcut, $crop]));
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
+        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['mod'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever);
+        $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
+
+        // Оба фото mod cut и НИ одного фото Crop.
+        $this->assertSame([
+            'https://otcl1ck.ru/storage/k/m1.jpg',
+            'https://otcl1ck.ru/storage/k/m2.jpg',
+        ], $reply->images);
     }
 }
