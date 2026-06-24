@@ -6,7 +6,6 @@ namespace App\Services;
 
 use App\DTO\BotReply;
 use App\DTO\ReplyKeyboard;
-use App\Llm\Contracts\Embedder;
 use App\Models\Conversation;
 use App\Models\Flow;
 use App\Models\KnowledgeEntry;
@@ -17,9 +16,6 @@ use App\Repositories\Contracts\FlowRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Support\FlowExpr;
 use App\Support\KnowledgeLinks;
-use App\Support\RussianStem;
-use App\Support\Vectors;
-use Throwable;
 
 /**
  * Движок сценариев-воронок (no-code логика бота). Воронка — граф узлов
@@ -34,23 +30,10 @@ use Throwable;
  */
 final readonly class FlowEngine
 {
-    /**
-     * Служебные слова (предлоги/союзы/местоимения/частицы/вопросительные). Ключами
-     * триггера они бесполезны и ловят пол-словаря: предлог «к» как подстрока сидит
-     * в «стри[ж]ки», и триггер «как к вам попасть» матчил «удлиненные стрижки».
-     * Совпадение ведём только по СОДЕРЖАТЕЛЬНЫМ словам фразы-триггера.
-     */
-    private const array STOPWORDS = [
-        'в', 'во', 'на', 'к', 'ко', 'с', 'со', 'по', 'о', 'об', 'обо', 'от', 'до', 'за', 'из', 'у', 'под', 'над', 'при', 'про', 'без', 'для', 'через',
-        'и', 'а', 'но', 'или', 'да', 'что', 'чтобы', 'как', 'если', 'когда', 'где', 'куда', 'откуда', 'чем', 'то', 'же', 'ли', 'бы', 'не', 'ни', 'вот', 'уже', 'еще', 'там', 'тут',
-        'я', 'ты', 'он', 'она', 'оно', 'мы', 'вы', 'они', 'вас', 'вам', 'нас', 'нам', 'мне', 'меня', 'тебя', 'тебе', 'его', 'ее', 'их', 'им', 'мой', 'ваш', 'наш', 'это', 'эта', 'этот', 'тот', 'свой', 'весь',
-    ];
-
     public function __construct(
         private FlowRepositoryInterface $flows,
         private ConversationRepositoryInterface $conversations,
         private BookingFlow $booking,
-        private Embedder $embedder,
         private FlowAbRepositoryInterface $ab,
         private KnowledgeEntryRepositoryInterface $knowledge,
     ) {}
@@ -61,13 +44,12 @@ final readonly class FlowEngine
             return $this->advance($tenant, $conversation, $text);
         }
 
-        // $strict — точный интент (клик по кнопке меню): флоу запускаем ТОЛЬКО при
-        // точном совпадении триггера (подстрока/целое слово), без морфологии и
-        // семантики. Иначе кнопка «Типы стрижек» по стему «стрижк» цепляла бы флоу
-        // «Барберы» с триггером «стрижка». Свободный ввод — полный фаззи + семантика.
-        $flow = $strict
-            ? $this->matchLexical($text, true)
-            : ($this->matchLexical($text) ?? $this->matchSemantic($text));
+        // Сценарий запускаем ТОЛЬКО по ключевой фразе-триггеру. $strict (клик по
+        // кнопке меню) — точное вхождение фразы. Свободный ввод — то же плюс допуск
+        // на опечатки/регистр (Левенштейн), но БЕЗ семантики и морфологии: семантика
+        // на эмбеддингах ловила неродственные фразы (напр. «малет стрижка есть
+        // примеры?» запускала «как проходит визит»), поэтому убрана.
+        $flow = $this->matchLexical($text, $strict);
 
         return $flow !== null ? $this->start($tenant, $conversation, $flow) : null;
     }
@@ -80,17 +62,15 @@ final readonly class FlowEngine
             return null;
         }
 
-        // Слова сообщения (для матча коротких слов триггера целым словом) и их
-        // основы (морфология: триггер «акция» ловит «акции/акцию/акций»).
+        // Слова сообщения (нормализованные) — для скользящего окна при допуске на опечатки.
         $words = array_values(array_filter(
             preg_split('/[^\p{L}\p{N}]+/u', $needle) ?: [],
             static fn (string $w): bool => $w !== '',
         ));
-        $stems = array_values(array_filter(array_map(RussianStem::stem(...), $words), static fn (string $s): bool => $s !== ''));
 
         foreach ($this->flows->activeForCurrentTenant() as $flow) {
             foreach ($flow->triggers as $trigger) {
-                if ($this->triggerMatches((string) $trigger, $needle, $words, $stems, $strict)) {
+                if ($this->triggerMatches((string) $trigger, $needle, $words, $strict)) {
                     return $flow;
                 }
             }
@@ -100,22 +80,19 @@ final readonly class FlowEngine
     }
 
     /**
-     * Триггер совпадает, если он целиком — подстрока сообщения, ИЛИ совпала основа
-     * ХОТЯ БЫ ОДНОГО СОДЕРЖАТЕЛЬНОГО слова триггера с основой слова сообщения
-     * (морфология: «акция» ≈ «акции»). Многословный триггер — это набор ключевых
-     * слов, а не дословная фраза: «акции скидка» ловит «…какие нибудь акции есть…».
-     * Служебные слова ({@see self::STOPWORDS}) и совсем короткие слова из ключей
-     * исключаем — иначе предлог «к» матчит «стри[ж]ки».
+     * Триггер совпадает, если его фраза целиком встречается в сообщении (регистр и
+     * ё→е нормализованы), ИЛИ — в свободном вводе — близка к окну слов сообщения той
+     * же длины по расстоянию Левенштейна. Допуск ТОЛЬКО на опечатки/регистр: без
+     * морфологии и без семантики (эмбеддинги ловили неродственные фразы). Так
+     * «графек работы» поймает триггер «график», а «малет стрижка есть примеры?» не
+     * запустит «визит».
      *
-     * При $strict (точный интент — клик по кнопке меню) морфологию НЕ применяем:
-     * длинное слово триггера должно присутствовать в сообщении целиком (иначе
-     * «стрижка» по основе цепляла бы «типы стрижек»). Точная подстрока-фраза и
-     * короткие слова-целиком работают в обоих режимах.
+     * При $strict (клик по кнопке меню) допуск на опечатки выключен — только точное
+     * вхождение фразы (или короткий триггер как отдельное слово).
      *
-     * @param  list<string>  $words  слова сообщения (для матча коротких слов целиком)
-     * @param  list<string>  $stems  основы слов сообщения
+     * @param  list<string>  $words  нормализованные слова сообщения
      */
-    private function triggerMatches(string $trigger, string $needle, array $words, array $stems, bool $strict = false): bool
+    private function triggerMatches(string $trigger, string $needle, array $words, bool $strict = false): bool
     {
         $t = str_replace('ё', 'е', mb_strtolower(trim($trigger)));
 
@@ -123,45 +100,43 @@ final readonly class FlowEngine
             return false;
         }
 
-        // Точный матч: фраза-триггер целиком встречается в сообщении (для коротких
-        // фраз — только как отдельное слово, иначе «к» снова поймал бы «стрижки»).
-        if (mb_strlen($t) >= 4 ? mb_strpos($needle, $t) !== false : in_array($t, $words, true)) {
+        // Точное вхождение фразы-триггера. Короткий триггер (<3) — только как
+        // отдельное слово сообщения, иначе «о»/«к» поймают пол-словаря подстрокой.
+        if (mb_strlen($t) >= 3) {
+            if (mb_strpos($needle, $t) !== false) {
+                return true;
+            }
+        } elseif (in_array($t, $words, true)) {
             return true;
         }
 
-        // По каждому СОДЕРЖАТЕЛЬНОМУ слову триггера (запятая/пробел = ключевые слова).
-        foreach (preg_split('/\s+/u', $t) ?: [] as $word) {
-            if ($word === '' || in_array($word, self::STOPWORDS, true)) {
-                continue;
-            }
+        // Строгий режим (кнопка меню) — без допуска на опечатки.
+        if ($strict) {
+            return false;
+        }
 
-            // Короткое слово (нет надёжной основы) — матчим ТОЛЬКО как целое слово
-            // сообщения, не подстрокой («лак» не должен ловить «потолок»).
-            if (mb_strlen($word) < 4) {
-                if (in_array($word, $words, true)) {
-                    return true;
-                }
+        $triggerWords = array_values(array_filter(
+            preg_split('/\s+/u', $t) ?: [],
+            static fn (string $w): bool => $w !== '',
+        ));
+        $n = count($triggerWords);
 
-                continue;
-            }
+        if ($n === 0) {
+            return false;
+        }
 
-            // Строгий режим: длинное слово триггера должно встретиться в сообщении
-            // ЦЕЛИКОМ (без морфологии) — кнопка меню «Типы стрижек» не должна
-            // запускать «Барберы» из-за общей основы «стрижк».
-            if ($strict) {
-                if (in_array($word, $words, true)) {
-                    return true;
-                }
+        // Очень короткий однословный триггер (<4) не фаззим: одна опечатка ловит
+        // слишком много («лак» ↔ «бак»).
+        if ($n === 1 && mb_strlen($triggerWords[0]) < 4) {
+            return false;
+        }
 
-                continue;
-            }
-
-            $wStem = RussianStem::stem($word);
-            foreach ($stems as $stem) {
-                $min = min(mb_strlen($wStem), mb_strlen($stem));
-                if ($min >= 3 && (str_starts_with($stem, $wStem) || str_starts_with($wStem, $stem))) {
-                    return true;
-                }
+        // Допуск на опечатки: сравниваем фразу-триггер с каждым окном из $n слов
+        // сообщения по расстоянию Левенштейна.
+        $count = count($words);
+        for ($i = 0; $i + $n <= $count; $i++) {
+            if ($this->fuzzyEquals(implode(' ', array_slice($words, $i, $n)), $t)) {
+                return true;
             }
         }
 
@@ -169,47 +144,57 @@ final readonly class FlowEngine
     }
 
     /**
-     * Семантический матчинг: эмбеддим сообщение ОДИН раз и сравниваем с заранее
-     * посчитанными векторами фраз-триггеров (косинус). Запускаем сценарий с
-     * максимальной близостью выше порога. Эмбеддим только если есть активные
-     * сценарии с векторами — иначе ни одного вызова эмбеддера (экономим).
+     * Две строки «равны с точностью до опечаток»: близкая длина и расстояние
+     * Левенштейна в пределах ~1 правки на 5 символов.
      */
-    private function matchSemantic(string $text): ?Flow
+    private function fuzzyEquals(string $a, string $b): bool
     {
-        if (trim($text) === '') {
-            return null;
+        $la = mb_strlen($a);
+        $lb = mb_strlen($b);
+
+        if (abs($la - $lb) > 2) {
+            return false;
         }
 
-        $candidates = $this->flows->activeForCurrentTenant()
-            ->filter(static fn (Flow $f): bool => is_array($f->trigger_embeddings) && $f->trigger_embeddings !== []);
+        $len = max($la, $lb);
 
-        if ($candidates->isEmpty()) {
-            return null;
+        if ($len === 0) {
+            return false;
         }
 
-        try {
-            $vector = $this->embedder->embed($text);
-        } catch (Throwable $e) {
-            report($e);
+        return $this->levenshtein($a, $b) <= max(1, (int) round($len / 5));
+    }
 
-            return null;
+    /**
+     * Расстояние Левенштейна по символам (юникод-безопасно: встроенная levenshtein()
+     * считает по байтам и врёт на кириллице).
+     */
+    private function levenshtein(string $a, string $b): int
+    {
+        $aa = mb_str_split($a);
+        $bb = mb_str_split($b);
+        $la = count($aa);
+        $lb = count($bb);
+
+        if ($la === 0) {
+            return $lb;
+        }
+        if ($lb === 0) {
+            return $la;
         }
 
-        $threshold = (float) config('services.flows.semantic_threshold', 0.6);
-        $best = null;
-        $bestScore = -1.0;
+        $prev = range(0, $lb);
 
-        foreach ($candidates as $flow) {
-            foreach ($flow->trigger_embeddings ?? [] as $triggerVector) {
-                $score = Vectors::cosine($vector, $triggerVector);
-                if ($score > $bestScore) {
-                    $bestScore = $score;
-                    $best = $flow;
-                }
+        for ($i = 1; $i <= $la; $i++) {
+            $cur = [$i];
+            for ($j = 1; $j <= $lb; $j++) {
+                $cost = $aa[$i - 1] === $bb[$j - 1] ? 0 : 1;
+                $cur[$j] = min($prev[$j] + 1, $cur[$j - 1] + 1, $prev[$j - 1] + $cost);
             }
+            $prev = $cur;
         }
 
-        return $bestScore >= $threshold ? $best : null;
+        return $prev[$lb];
     }
 
     private function start(Tenant $tenant, Conversation $conversation, Flow $flow): ?BotReply

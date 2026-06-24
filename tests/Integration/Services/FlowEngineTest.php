@@ -72,11 +72,11 @@ final class FlowEngineTest extends TestCase
         $this->assertSame('Чем помочь?', $reply->text);
     }
 
-    public function test_multiword_trigger_matches_any_keyword_in_long_message(): void
+    public function test_multiword_trigger_requires_contiguous_phrase(): void
     {
-        // Прод-баг: триггер-фраза «акции скидка» не ловила «…какие нибудь акции
-        // есть типо отец и сын?» (фраза не встречается дословно). Многословный
-        // триггер = набор ключевых слов: совпало любое слово по основе → срабатываем.
+        // Многословный триггер = ОДНА ключевая фраза (а не набор слов): срабатывает,
+        // только если фраза встречается целиком (с допуском на опечатки/регистр).
+        // Одно случайное слово из фразы больше не запускает воронку.
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
         $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
@@ -90,10 +90,14 @@ final class FlowEngineTest extends TestCase
             ]],
         ]));
 
-        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'Хорошо классно а у вас какие нибудь акции есть типо отец и сын?'));
+        // Только одно слово «акции» в неродственной фразе → НЕ запускает.
+        $miss = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'а у вас какие нибудь акции есть типо отец и сын?'));
+        $this->assertNull($miss);
 
-        $this->assertNotNull($reply);
-        $this->assertSame('Вот наши акции', $reply->text);
+        // Фраза целиком → запускает.
+        $hit = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'а есть акции скидка сейчас?'));
+        $this->assertNotNull($hit);
+        $this->assertSame('Вот наши акции', $hit->text);
     }
 
     public function test_short_function_word_in_trigger_does_not_match_unrelated_message(): void
@@ -181,41 +185,35 @@ final class FlowEngineTest extends TestCase
         });
     }
 
-    public function test_semantic_match_when_no_keyword_overlap(): void
+    public function test_only_key_phrase_fires_typo_and_case_ok_unrelated_ignored(): void
     {
-        // Семантика ловит перефразирование без общих слов. Эмбеддер-заглушка
-        // даёт одинаковый вектор → косинус 1.0 (изолируем именно семантику).
-        $this->app->bind(Embedder::class, fn (): Embedder => new class implements Embedder
-        {
-            public function embed(string $text): array
-            {
-                return array_fill(0, 8, 1.0);
-            }
-
-            public function dimension(): int
-            {
-                return 8;
-            }
-        });
-
+        // Сценарии запускаются ТОЛЬКО по ключевой фразе (допуск — опечатка/регистр),
+        // без семантики. Прод-баг (скрин): «малет стрижка есть примеры?» запускал
+        // «визит» через эмбеддинги — теперь не запускает.
         $tenant = Tenant::factory()->create();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
         $conversation = Conversation::factory()->create(['tenant_id' => $tenant->id, 'channel_id' => $channel->id]);
 
         app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowService::class)->create($tenant->id, [
-            'name' => 'Распродажа',
+            'name' => 'Визит',
             'is_active' => true,
-            'triggers' => ['распродажа'],
+            'triggers' => ['посещение', 'визит', 'как проходит'],
             'definition' => ['start' => 'n1', 'nodes' => [
-                'n1' => ['type' => 'message', 'text' => 'Есть выгодные предложения', 'action' => 'end', 'options' => []],
+                'n1' => ['type' => 'message', 'text' => 'Визит проходит так…', 'action' => 'end', 'options' => []],
             ]],
         ]));
 
-        // Ни одного общего слова с триггером → лексика мимо, срабатывает семантика.
-        $reply = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'хочу что-нибудь подешевле'));
+        // Семантически близко, но фразы-триггера нет → НЕ запускаем.
+        $miss = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'а малет стрижка есть примеры?'));
+        $this->assertNull($miss);
 
-        $this->assertNotNull($reply);
-        $this->assertSame('Есть выгодные предложения', $reply->text);
+        // Опечатка в ключевом слове «посещение» → ловим (action=end сразу очищает state).
+        $typo = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'расскажите про посещенние салона'));
+        $this->assertNotNull($typo);
+
+        // Регистр не важен.
+        $caps = app(TenantInitializer::class)->run($tenant->id, fn () => app(FlowEngine::class)->handle($tenant, $conversation, 'ВИЗИТ'));
+        $this->assertNotNull($caps);
     }
 
     public function test_input_stores_variable_condition_branches_and_interpolates(): void
