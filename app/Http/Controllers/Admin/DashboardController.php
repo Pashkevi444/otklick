@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\KnowledgeTemplate;
+use App\Models\PromptTemplate;
 use App\Models\ScenarioTemplate;
 use App\Models\Tenant;
 use Inertia\Inertia;
@@ -25,6 +26,7 @@ final class DashboardController extends Controller
                 'tenants' => Tenant::query()->count(),
                 'scenarioTemplates' => ScenarioTemplate::query()->count(),
                 'knowledgeTemplates' => KnowledgeTemplate::query()->count(),
+                'promptTemplates' => PromptTemplate::query()->count(),
             ],
         ]);
     }

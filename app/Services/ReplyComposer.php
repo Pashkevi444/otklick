@@ -17,6 +17,7 @@ use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Repositories\Contracts\PromptTemplateRepositoryInterface;
 use App\Support\ImageUrls;
 use App\Support\KnowledgeLinks;
 use Illuminate\Support\Collection;
@@ -49,6 +50,7 @@ class ReplyComposer
         private readonly ConversationRepositoryInterface $conversations,
         private readonly CrmKnowledgeRepositoryInterface $crmKnowledge,
         private readonly KnowledgeRetriever $retriever,
+        private readonly PromptTemplateRepositoryInterface $promptTemplates,
     ) {}
 
     public function compose(Tenant $tenant, Conversation $conversation, bool $bookingEnabled = false): BotReply
@@ -95,7 +97,10 @@ class ReplyComposer
         // ассистента) — тогда промпт запретит здороваться в каждом сообщении.
         $conversationStarted = in_array('assistant', array_column($history, 'role'), true);
 
-        $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm, $knownName, $phoneKnown, $conversationStarted);
+        // «Голова» промпта под нишу тенанта (prompt_templates) — иначе дефолт.
+        $behavior = $this->promptTemplates->behaviorFor($tenant->business_type);
+
+        $systemPrompt = $this->prompt->build($tenant->name, $profile, $published, $bookingEnabled, $crm, $knownName, $phoneKnown, $conversationStarted, $behavior);
 
         $answer = trim($this->llm->generate($systemPrompt, $history));
 
