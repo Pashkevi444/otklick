@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Channels\Vk;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\Channels\Contracts\ReceivesImage;
 use App\Channels\Contracts\ReceivesVoice;
+use App\Channels\Data\IncomingImage;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use App\Support\ImageBytes;
+use App\Support\ImageMime;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +26,7 @@ use Throwable;
  *
  * Креды канала: access_token (токен сообщества) и group_id.
  */
-final readonly class VkGateway implements ChannelGateway, ReceivesVoice
+final readonly class VkGateway implements ChannelGateway, ReceivesImage, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
@@ -237,6 +240,80 @@ final readonly class VkGateway implements ChannelGateway, ReceivesVoice
         }
 
         return null;
+    }
+
+    /**
+     * Скачивает фото из апдейта VK. Вложение `type=photo` несёт массив размеров —
+     * берём самый крупный (по ширине). Подпись — текст сообщения. Тип — по байтам.
+     *
+     * @param  array<string, mixed>  $update
+     */
+    public function downloadImage(Channel $channel, array $update): ?IncomingImage
+    {
+        $message = $update['object']['message'] ?? $update['object'] ?? null;
+        $attachments = is_array($message) ? ($message['attachments'] ?? []) : [];
+
+        if (! is_array($attachments)) {
+            return null;
+        }
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment) || ($attachment['type'] ?? null) !== 'photo') {
+                continue;
+            }
+
+            $url = $this->largestPhotoUrl($attachment['photo']['sizes'] ?? null);
+            if ($url === null) {
+                continue;
+            }
+
+            try {
+                $bytes = Http::connectTimeout(5)->timeout(20)->get($url)->throw()->body();
+
+                if ($bytes === '') {
+                    return null;
+                }
+
+                $caption = is_string($message['text'] ?? null) ? trim($message['text']) : '';
+
+                return new IncomingImage($bytes, ImageMime::sniff($bytes), $caption);
+            } catch (Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * URL самого крупного размера фото VK (`sizes[].url`, максимум по `width`).
+     *
+     * @param  mixed  $sizes
+     */
+    private function largestPhotoUrl($sizes): ?string
+    {
+        if (! is_array($sizes) || $sizes === []) {
+            return null;
+        }
+
+        $best = null;
+        $bestWidth = -1;
+
+        foreach ($sizes as $size) {
+            if (! is_array($size) || ! is_string($size['url'] ?? null) || $size['url'] === '') {
+                continue;
+            }
+
+            $width = (int) ($size['width'] ?? 0);
+            if ($width >= $bestWidth) {
+                $bestWidth = $width;
+                $best = $size['url'];
+            }
+        }
+
+        return $best;
     }
 
     /**

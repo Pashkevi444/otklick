@@ -13,6 +13,8 @@ use App\Models\Tenant;
 use App\Services\ChannelService;
 use App\Services\ConversationHandoffService;
 use App\Tenancy\TenantInitializer;
+use App\Vision\Contracts\ImageToText;
+use App\Vision\FakeImageToText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -182,6 +184,53 @@ final class WidgetChatTest extends TestCase
 
             // Диалог передан администратору (бот фото не «видит»).
             $this->assertSame(ConversationStatus::NeedsHuman, $conv->fresh()->status);
+        });
+    }
+
+    public function test_recognized_photo_with_caption_gets_bot_answer_no_handoff(): void
+    {
+        Storage::fake('public');
+        // Vision «видит» фото — возвращаем описание (вместо реальной модели).
+        $this->app->instance(ImageToText::class, new FakeImageToText('каре с чёлкой'));
+
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        $res = $this->post($this->url($channel, 'upload'), [
+            'token' => $token,
+            'image' => UploadedFile::fake()->image('hairstyle.jpg', 600, 400),
+            'caption' => 'хочу такую стрижку',
+        ], ['Accept' => 'application/json']);
+
+        // Бот ответил, диалог НЕ ушёл администратору (раньше всегда уходил).
+        $res->assertOk()->assertJsonPath('needsHuman', false);
+        $this->assertNotEmpty($res->json('reply'));
+
+        $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
+        $this->assertNotSame(ConversationStatus::NeedsHuman, $conv->fresh()->status);
+    }
+
+    public function test_two_photos_each_processed_with_bot_reply(): void
+    {
+        Storage::fake('public');
+        $this->app->instance(ImageToText::class, new FakeImageToText('пример стрижки'));
+
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        // В виджете фото уходят последовательными запросами (по одному).
+        foreach (['cut1.jpg', 'cut2.jpg'] as $name) {
+            $this->post($this->url($channel, 'upload'), [
+                'token' => $token,
+                'image' => UploadedFile::fake()->image($name, 500, 500),
+            ], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('needsHuman', false);
+        }
+
+        $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
+        app(TenantInitializer::class)->run((string) $channel->tenant_id, function () use ($conv): void {
+            // Оба фото записаны как отдельные входящие, на каждое — ответ бота.
+            $this->assertSame(2, Message::where('conversation_id', $conv->id)->where('direction', MessageDirection::Inbound)->count());
+            $this->assertSame(2, Message::where('conversation_id', $conv->id)->where('direction', MessageDirection::Outbound)->count());
         });
     }
 

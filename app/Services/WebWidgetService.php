@@ -18,8 +18,11 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Support\ImageMime;
+use App\Vision\Contracts\ImageToText;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -38,6 +41,7 @@ final readonly class WebWidgetService
         private BotResponder $responder,
         private ContactCapture $contacts,
         private SpamDetector $spam,
+        private ImageToText $vision,
     ) {}
 
     /**
@@ -129,9 +133,10 @@ final readonly class WebWidgetService
     }
 
     /**
-     * Клиент прислал фото в виджете. Бот изображения не распознаёт, поэтому фото
-     * сохраняется к диалогу и передаётся администратору (диалог → needs_human):
-     * оператор увидит картинку в кабинете и ответит лично.
+     * Клиент прислал фото в виджете. Бот распознаёт картинку через vision-модель
+     * (описание подставляется как «сообщение клиента» — бот отвечает по базе
+     * знаний, как на текст). Если распознавание выключено/не удалось — фолбэк на
+     * прежнее поведение: фото уходит администратору (диалог → needs_human).
      *
      * @param  list<array{path: string, url: string}>  $images  уже сохранённые на диск файлы
      * @return array{reply: BotReply, lastId: string, images: list<string>, operatorActive: bool}
@@ -162,7 +167,34 @@ final readonly class WebWidgetService
             return ['reply' => new BotReply('', escalate: false), 'lastId' => $inboundId, 'images' => $urls, 'operatorActive' => true];
         }
 
-        // Бот не «видит» картинки — честно передаём администратору.
+        // Пытаемся «увидеть» фото: описание становится вводом клиента, бот отвечает
+        // как на обычный текст. Не распозналось — передаём администратору (фолбэк).
+        $recognized = $this->describeImages($images, $caption);
+
+        if ($recognized !== null) {
+            $reply = $this->responder->respond($channel->tenant, $conversation, $recognized);
+
+            $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
+            $this->conversations->touchLastMessage($conversation);
+
+            if ($reply->escalate) {
+                $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+            } elseif ($reply->booked) {
+                $this->conversations->markBooked($conversation);
+                if ($conversation->client_id !== null) {
+                    RefreshClientSummary::dispatch((string) $channel->tenant_id, (string) $conversation->client_id);
+                }
+            } elseif ($reply->cancelled) {
+                $this->responder->cancelBookingInCrm($conversation);
+                $this->conversations->markCancelled($conversation);
+            }
+
+            $this->notifyOwner($channel, $conversation, $caption !== '' ? $caption : '📷 Фото от клиента', $reply);
+
+            return ['reply' => $reply, 'lastId' => (string) $outbound->id, 'images' => $urls, 'operatorActive' => false];
+        }
+
+        // Бот не «увидел» картинку — честно передаём администратору.
         $ack = 'Спасибо! Получили ваше фото и передали администратору — он скоро ответит.';
         $reply = new BotReply($ack, escalate: true);
         $outbound = $this->messages->recordOutbound($conversation, $ack, MessageStatus::Sent);
@@ -172,6 +204,39 @@ final readonly class WebWidgetService
         $this->notifyOwner($channel, $conversation, $caption !== '' ? $caption : '📷 Фото от клиента', $reply);
 
         return ['reply' => $reply, 'lastId' => (string) $outbound->id, 'images' => $urls, 'operatorActive' => false];
+    }
+
+    /**
+     * Прогоняет сохранённые фото через vision-порт и складывает ввод клиента
+     * (подпись + описание). null — vision выключен/не распознал ни одной картинки.
+     *
+     * @param  list<array{path: string, url: string}>  $images
+     */
+    private function describeImages(array $images, string $caption): ?string
+    {
+        $descriptions = [];
+
+        foreach ($images as $image) {
+            if (! Storage::disk('public')->exists($image['path'])) {
+                continue;
+            }
+
+            $bytes = (string) Storage::disk('public')->get($image['path']);
+            if ($bytes === '') {
+                continue;
+            }
+
+            $description = $this->vision->describe($bytes, ImageMime::sniff($bytes), $caption);
+            if ($description !== null && trim($description) !== '') {
+                $descriptions[] = trim($description);
+            }
+        }
+
+        if ($descriptions === []) {
+            return null;
+        }
+
+        return ImageRecognitionService::compose($caption, implode('; ', $descriptions));
     }
 
     /**

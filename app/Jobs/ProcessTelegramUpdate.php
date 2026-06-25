@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\DTO\IncomingMessage;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
+use App\Services\ImageRecognitionService;
 use App\Services\IncomingMessageService;
 use App\Services\TelegramLinkService;
 use App\Services\TelegramRelayService;
@@ -44,8 +45,9 @@ final class ProcessTelegramUpdate implements ShouldQueue
         TelegramLinkService $linker,
         TelegramRelayService $relay,
         VoiceTranscriptionService $voice,
+        ImageRecognitionService $image,
     ): void {
-        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker, $relay, $voice): void {
+        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker, $relay, $voice, $image): void {
             $channel = $channels->find($this->channelId);
 
             if ($channel === null || ! $channel->is_active) {
@@ -73,7 +75,7 @@ final class ProcessTelegramUpdate implements ShouldQueue
                 return;
             }
 
-            $incoming = $this->parse($voice, $channel);
+            $incoming = $this->parse($voice, $image, $channel);
 
             if ($incoming === null) {
                 return;
@@ -95,7 +97,7 @@ final class ProcessTelegramUpdate implements ShouldQueue
      * Извлекает текстовое сообщение из апдейта. Возвращает null для не-текстовых
      * и служебных апдейтов (Фаза 1 отвечает только на текст).
      */
-    private function parse(VoiceTranscriptionService $voice, Channel $channel): ?IncomingMessage
+    private function parse(VoiceTranscriptionService $voice, ImageRecognitionService $image, Channel $channel): ?IncomingMessage
     {
         $message = $this->update['message'] ?? null;
 
@@ -112,9 +114,11 @@ final class ProcessTelegramUpdate implements ShouldQueue
 
         $text = $message['text'] ?? null;
 
-        // Нет текста — возможно голосовое: скачиваем и распознаём (STT).
+        // Нет текста — возможно голосовое (STT) или фото (vision): скачиваем и
+        // распознаём, подставляем расшифровку/описание как ввод клиента.
         if (! is_string($text) || $text === '') {
-            $text = $voice->transcribe($channel, $this->update);
+            $text = $voice->transcribe($channel, $this->update)
+                ?? $image->recognize($channel, $this->update);
 
             if ($text === null || $text === '') {
                 return null;

@@ -520,8 +520,8 @@
         if (emojiPanel.classList.contains('otk-on')) body.scrollTop = body.scrollHeight;
     });
 
-    // Прикрепить фото: клиент отправляет картинку — её увидит администратор, диалог
-    // уходит к человеку (бот изображения не распознаёт).
+    // Прикрепить фото: бот распознаёт картинку (vision) и отвечает; если не вышло —
+    // картинку увидит администратор, диалог уходит к человеку.
     attachBtn.addEventListener('click', function () { if (!sending) fileInput.click(); });
     fileInput.addEventListener('change', function () {
         var file = fileInput.files && fileInput.files[0];

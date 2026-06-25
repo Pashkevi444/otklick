@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Channels\Max;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\Channels\Contracts\ReceivesImage;
 use App\Channels\Contracts\ReceivesVoice;
+use App\Channels\Data\IncomingImage;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use App\Support\ImageBytes;
+use App\Support\ImageMime;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -22,7 +25,7 @@ use Throwable;
  * Токен бота передаётся в заголовке `Authorization` (query-параметр в MAX
  * больше не поддерживается). Кред канала — access_token.
  */
-final readonly class MaxGateway implements ChannelGateway, ReceivesVoice
+final readonly class MaxGateway implements ChannelGateway, ReceivesImage, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
@@ -282,6 +285,52 @@ final readonly class MaxGateway implements ChannelGateway, ReceivesVoice
                 $body = Http::connectTimeout(5)->timeout(20)->get($url)->throw()->body();
 
                 return $body !== '' ? $body : null;
+            } catch (Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Скачивает фото из апдейта MAX. Вложение `type=image` несёт ссылку в
+     * `payload.url`. Подпись — текст сообщения. Тип уточняем по байтам.
+     *
+     * @param  array<string, mixed>  $update
+     */
+    public function downloadImage(Channel $channel, array $update): ?IncomingImage
+    {
+        $attachments = $update['message']['body']['attachments'] ?? null;
+
+        if (! is_array($attachments)) {
+            return null;
+        }
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment) || ($attachment['type'] ?? null) !== 'image') {
+                continue;
+            }
+
+            $url = $attachment['payload']['url'] ?? $attachment['url'] ?? null;
+            if (! is_string($url) || $url === '') {
+                continue;
+            }
+
+            try {
+                $bytes = Http::connectTimeout(5)->timeout(20)->get($url)->throw()->body();
+
+                if ($bytes === '') {
+                    return null;
+                }
+
+                $caption = is_string($update['message']['body']['text'] ?? null)
+                    ? trim($update['message']['body']['text'])
+                    : '';
+
+                return new IncomingImage($bytes, ImageMime::sniff($bytes), $caption);
             } catch (Throwable $e) {
                 report($e);
 

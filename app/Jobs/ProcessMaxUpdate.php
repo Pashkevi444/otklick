@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Channels\Max\MaxGateway;
 use App\DTO\IncomingMessage;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
+use App\Services\ImageRecognitionService;
 use App\Services\IncomingMessageService;
 use App\Services\TelegramRelayService;
 use App\Services\VoiceTranscriptionService;
@@ -43,8 +44,9 @@ final class ProcessMaxUpdate implements ShouldQueue
         IncomingMessageService $messages,
         MaxGateway $max,
         VoiceTranscriptionService $voice,
+        ImageRecognitionService $image,
     ): void {
-        $tenancy->run($this->tenantId, function () use ($channels, $messages, $max, $voice): void {
+        $tenancy->run($this->tenantId, function () use ($channels, $messages, $max, $voice, $image): void {
             $channel = $channels->find($this->channelId);
 
             if ($channel === null || ! $channel->is_active) {
@@ -82,9 +84,11 @@ final class ProcessMaxUpdate implements ShouldQueue
 
             $text = $parsed['text'];
 
-            // Пустой текст — возможно голосовое: распознаём (STT) и подставляем.
+            // Пустой текст — возможно голосовое (STT) или фото (vision): распознаём
+            // и подставляем расшифровку/описание как ввод клиента.
             if ($text === '') {
-                $text = $voice->transcribe($channel, $this->update);
+                $text = $voice->transcribe($channel, $this->update)
+                    ?? $image->recognize($channel, $this->update);
 
                 if ($text === null || $text === '') {
                     return;

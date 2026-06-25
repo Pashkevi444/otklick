@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Channels\WhatsApp;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\Channels\Contracts\ReceivesImage;
 use App\Channels\Contracts\ReceivesVoice;
+use App\Channels\Data\IncomingImage;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use App\Support\ImageBytes;
+use App\Support\ImageMime;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -22,7 +25,7 @@ use Throwable;
  *
  * URL Green API: {api_url}/waInstance{idInstance}/{method}/{apiToken}.
  */
-final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
+final readonly class WhatsAppGateway implements ChannelGateway, ReceivesImage, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
@@ -198,6 +201,43 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesVoice
             $audio = $this->http()->timeout(20)->get($url)->throw()->body();
 
             return $audio !== '' ? $audio : null;
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    /**
+     * Скачивает фото из уведомления Green API (`imageMessage`). Картинка лежит по
+     * `fileMessageData.downloadUrl`, подпись — в `caption`. Тип уточняем по байтам.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    public function downloadImage(Channel $channel, array $body): ?IncomingImage
+    {
+        $messageData = $body['messageData'] ?? [];
+
+        if (($messageData['typeMessage'] ?? null) !== 'imageMessage') {
+            return null;
+        }
+
+        $fileData = $messageData['fileMessageData'] ?? [];
+        $url = $fileData['downloadUrl'] ?? null;
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+
+        try {
+            $bytes = $this->http()->timeout(20)->get($url)->throw()->body();
+
+            if ($bytes === '') {
+                return null;
+            }
+
+            $caption = is_string($fileData['caption'] ?? null) ? trim($fileData['caption']) : '';
+
+            return new IncomingImage($bytes, ImageMime::sniff($bytes), $caption);
         } catch (Throwable $e) {
             report($e);
 
