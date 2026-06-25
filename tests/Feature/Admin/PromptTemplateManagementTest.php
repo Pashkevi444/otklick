@@ -85,7 +85,7 @@ final class PromptTemplateManagementTest extends TestCase
 
     public function test_prompt_builder_substitutes_variables_in_custom_behavior(): void
     {
-        $prompt = app(PromptBuilder::class)->build(
+        $prompt = (new PromptBuilder)->build(
             'Барбер Никита',
             BusinessProfile::fromArray([]),
             collect(),
