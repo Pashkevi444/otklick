@@ -11,6 +11,7 @@ use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Enums\UserNotificationType;
 use App\Events\ClientTyping;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
@@ -44,6 +45,7 @@ final readonly class WebWidgetService
         private ContactCapture $contacts,
         private SpamDetector $spam,
         private ImageToText $vision,
+        private UserNotificationService $notifications,
     ) {}
 
     /**
@@ -66,7 +68,7 @@ final readonly class WebWidgetService
      *
      * @return array{reply: BotReply, lastId: string}
      */
-    public function reply(Channel $channel, string $token, string $text, ?string $clientIp = null): array
+    public function reply(Channel $channel, string $token, string $text, ?string $clientIp = null, bool $consent = false): array
     {
         $sessionId = $this->sessionFromToken($channel, $token);
 
@@ -74,6 +76,12 @@ final readonly class WebWidgetService
         // вернувшегося посетителя оно перенесётся из прошлого диалога (раньше
         // жёсткое «Гость сайта» затирало перенесённое имя).
         $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null, $clientIp);
+
+        // Согласие на обработку ПД виджет даёт галочкой — фиксируем его (152-ФЗ),
+        // тогда ConsentGate в боте пропускает диалог дальше без формы Да/Нет.
+        if ($consent) {
+            $this->conversations->markConsentGiven($conversation);
+        }
 
         $inbound = $this->messages->recordInbound($conversation, new IncomingMessage(
             externalChatId: $sessionId,
@@ -129,6 +137,7 @@ final readonly class WebWidgetService
             $this->conversations->markCancelled($conversation);
         }
 
+        $this->notifyCabinet($conversation, $reply, $text);
         $this->notifyOwner($channel, $conversation, $text, $reply);
 
         return ['reply' => $reply, 'lastId' => (string) $outbound->id];
@@ -143,10 +152,14 @@ final readonly class WebWidgetService
      * @param  list<array{path: string, url: string}>  $images  уже сохранённые на диск файлы
      * @return array{reply: BotReply, lastId: string, images: list<string>, operatorActive: bool}
      */
-    public function receiveImage(Channel $channel, string $token, array $images, string $caption, ?string $clientIp = null): array
+    public function receiveImage(Channel $channel, string $token, array $images, string $caption, ?string $clientIp = null, bool $consent = false): array
     {
         $sessionId = $this->sessionFromToken($channel, $token);
         $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null, $clientIp);
+
+        if ($consent) {
+            $this->conversations->markConsentGiven($conversation);
+        }
 
         $urls = array_map(static fn (array $i): string => $i['url'], $images);
 
@@ -191,6 +204,7 @@ final readonly class WebWidgetService
                 $this->conversations->markCancelled($conversation);
             }
 
+            $this->notifyCabinet($conversation, $reply, $caption !== '' ? $caption : '📷 Фото от клиента');
             $this->notifyOwner($channel, $conversation, $caption !== '' ? $caption : '📷 Фото от клиента', $reply);
 
             return ['reply' => $reply, 'lastId' => (string) $outbound->id, 'images' => $urls, 'operatorActive' => false];
@@ -203,6 +217,7 @@ final readonly class WebWidgetService
         $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
         $this->conversations->touchLastMessage($conversation);
 
+        $this->notifyCabinet($conversation, $reply, $caption !== '' ? $caption : '📷 Фото от клиента');
         $this->notifyOwner($channel, $conversation, $caption !== '' ? $caption : '📷 Фото от клиента', $reply);
 
         return ['reply' => $reply, 'lastId' => (string) $outbound->id, 'images' => $urls, 'operatorActive' => false];
@@ -258,12 +273,40 @@ final readonly class WebWidgetService
         }
 
         $messages = $this->messages->sinceForConversation($conversation, $afterId)
-            ->filter(fn (Message $m): bool => $m->direction === MessageDirection::Outbound && trim((string) $m->text) !== '')
-            ->map(fn (Message $m): array => ['id' => (string) $m->id, 'text' => (string) $m->text])
+            ->filter(fn (Message $m): bool => $m->direction === MessageDirection::Outbound
+                && (trim((string) $m->text) !== '' || $this->messageImages($m) !== []))
+            ->map(fn (Message $m): array => [
+                'id' => (string) $m->id,
+                'text' => (string) $m->text,
+                // Картинки ответа оператора (виджет рисует их как <img>).
+                'images' => $this->messageImages($m),
+            ])
             ->values()
             ->all();
 
         return ['messages' => $messages, 'operatorActive' => $conversation->isOperatorHandling()];
+    }
+
+    /**
+     * URL картинок сообщения из `payload.images` ({path, url} или строки). Пусто —
+     * текстовое сообщение.
+     *
+     * @return list<string>
+     */
+    private function messageImages(Message $m): array
+    {
+        $images = $m->payload['images'] ?? null;
+
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            static fn ($img): ?string => is_array($img)
+                ? (is_string($img['url'] ?? null) ? $img['url'] : null)
+                : (is_string($img) ? $img : null),
+            $images,
+        )));
     }
 
     /**
@@ -293,6 +336,34 @@ final readonly class WebWidgetService
         if (is_string($tenantId) && $tenantId !== '') {
             ClientTyping::dispatch($tenantId, (string) $conversation->id);
         }
+    }
+
+    /**
+     * In-app уведомление в кабинет (колокольчик + бейджи) — как у мессенджеров в
+     * {@see IncomingMessageService}. Раньше веб-виджет его НЕ создавал, поэтому
+     * эскалации/лиды с сайта не попадали в колокол. Тип события — по исходу ответа.
+     */
+    private function notifyCabinet(Conversation $conversation, BotReply $reply, string $text): void
+    {
+        [$type, $title, $body] = match (true) {
+            $reply->escalate => [UserNotificationType::Escalation, 'Диалог требует администратора', $this->snippet($text)],
+            $reply->booked => [UserNotificationType::Booked, 'Запись оформлена', $conversation->displayName() ?? 'Гость сайта'],
+            $conversation->wasRecentlyCreated => [UserNotificationType::NewLead, 'Новый лид', $conversation->displayName() ?? $this->snippet($text)],
+            default => [null, '', ''],
+        };
+
+        if ($type === null) {
+            return;
+        }
+
+        $url = route('cabinet.conversations.show', $conversation->id, false);
+        $this->notifications->notify($type, $title, $body, $url, 'conversation', (string) $conversation->id);
+    }
+
+    /** Короткая выжимка текста клиента для тела уведомления. */
+    private function snippet(string $text): string
+    {
+        return mb_substr(trim($text), 0, 160);
     }
 
     /**

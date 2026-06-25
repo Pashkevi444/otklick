@@ -27,10 +27,19 @@ class BotResponder
         private readonly BookingFlow $booking,
         private readonly ContactGate $contacts,
         private readonly FlowEngine $flows,
+        private readonly ConsentGate $consent,
     ) {}
 
     public function respond(Tenant $tenant, Conversation $conversation, string $text): BotReply
     {
+        // Согласие на обработку ПД (152-ФЗ) — самый первый рубеж: пока клиент не
+        // подтвердил согласие, бот ничего больше не делает (показывает форму Да/Нет).
+        $consent = $this->consent->handle($tenant, $conversation, $text);
+
+        if ($consent !== null) {
+            return $consent;
+        }
+
         // Мета-намерение «отменить»/«перенести» запись перебивает всё: работает и
         // во время активного мастера записи, и вне его — чтобы клиент не застревал
         // на текущем шаге (раньше «отмени запись» в середине сценария игнорилось).

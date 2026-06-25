@@ -8,15 +8,20 @@ use App\DTO\BotReply;
 use App\Enums\ChannelType;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
+use App\Enums\UserNotificationType;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Repositories\Contracts\UserNotificationRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\BotResponder;
 use App\Services\ContactCapture;
 use App\Services\SpamDetector;
+use App\Services\UserNotificationService;
 use App\Services\WebWidgetService;
 use App\Vision\FakeImageToText;
 use Illuminate\Support\Facades\Crypt;
@@ -30,6 +35,15 @@ final class WebWidgetServiceTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
 
+    /** Реальный сервис уведомлений без получателей (final — не мокается): notify = no-op. */
+    private function notifications(): UserNotificationService
+    {
+        $users = Mockery::mock(UserRepositoryInterface::class);
+        $users->shouldReceive('forCurrentTenant')->andReturn(collect())->byDefault();
+
+        return new UserNotificationService(Mockery::mock(UserNotificationRepositoryInterface::class), $users);
+    }
+
     public function test_booking_closes_conversation(): void
     {
         $channel = new Channel;
@@ -38,6 +52,7 @@ final class WebWidgetServiceTest extends TestCase
 
         $token = Crypt::encryptString('web-1|sess-1');
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')
@@ -57,7 +72,7 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'да, записывайте');
 
-        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), new FakeImageToText))
+        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), new FakeImageToText, $this->notifications()))
             ->reply($channel, $token, 'да, записывайте');
 
         $this->assertTrue($reply->booked);
@@ -73,6 +88,7 @@ final class WebWidgetServiceTest extends TestCase
 
         $token = Crypt::encryptString('web-1|sess-1');
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $conversation->operator_active_at = now(); // активный перехват
 
         $inbound = new Message;
@@ -92,11 +108,69 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), new FakeImageToText))
+        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), new FakeImageToText, $this->notifications()))
             ->reply($channel, $token, 'есть кто живой?');
 
         $this->assertSame('', $reply->text);
         $this->assertSame('m-in-1', $lastId);
+    }
+
+    public function test_escalation_creates_cabinet_bell_notification(): void
+    {
+        // Регресс: веб-виджет НЕ слал in-app уведомление в кабинет — клиент звал
+        // админа, а в колоколе пусто. Теперь на эскалацию создаётся уведомление.
+        Queue::fake();
+
+        $channel = new Channel;
+        $channel->id = 'web-1';
+        $channel->type = ChannelType::Web;
+        $channel->tenant_id = 't-1';
+        $channel->setRelation('tenant', new Tenant(['name' => 'Барбершоп']));
+
+        $token = Crypt::encryptString('web-1|sess-1');
+        $conversation = new Conversation;
+        $conversation->id = 'conv-1';
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+        $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::NeedsHuman);
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $messages->shouldReceive('recordOutbound')->once()->andReturn(new Message);
+
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Передаю администратору.', escalate: true));
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        // Реальный сервис с одним сотрудником-получателем → проверяем, что строка
+        // уведомления реально вставляется (раньше веб-виджет её не создавал).
+        $user = Mockery::mock(User::class)->makePartial();
+        $user->shouldReceive('allows')->andReturn(true);
+        $user->forceFill(['id' => 'u-1', 'tenant_id' => 't-1']);
+        $userRepo = Mockery::mock(UserRepositoryInterface::class);
+        $userRepo->shouldReceive('forCurrentTenant')->andReturn(collect([$user]));
+        $notifyRepo = Mockery::mock(UserNotificationRepositoryInterface::class);
+        $notifyRepo->shouldReceive('insertMany')->once()
+            ->with(Mockery::on(fn (array $rows): bool => count($rows) === 1 && $rows[0]['type'] === UserNotificationType::Escalation->value));
+        $notifications = new UserNotificationService($notifyRepo, $userRepo);
+
+        $service = new WebWidgetService(
+            $conversations,
+            $messages,
+            $responder,
+            $contacts,
+            Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(),
+            new FakeImageToText,
+            $notifications,
+        );
+
+        ['reply' => $reply] = $service->reply($channel, $token, 'позовите администратора');
+
+        $this->assertTrue($reply->escalate);
     }
 
     public function test_recognized_image_gets_bot_answer_instead_of_escalation(): void
@@ -113,6 +187,7 @@ final class WebWidgetServiceTest extends TestCase
 
         $token = Crypt::encryptString('web-1|sess-1');
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
@@ -141,6 +216,7 @@ final class WebWidgetServiceTest extends TestCase
             $contacts,
             Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(),
             new FakeImageToText('Мужская стрижка андеркат.'),
+            $this->notifications(),
         );
 
         ['reply' => $reply, 'lastId' => $lastId, 'operatorActive' => $operatorActive] = $service->receiveImage(
@@ -171,6 +247,7 @@ final class WebWidgetServiceTest extends TestCase
 
         $token = Crypt::encryptString('web-1|sess-1');
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
@@ -191,6 +268,7 @@ final class WebWidgetServiceTest extends TestCase
             Mockery::mock(ContactCapture::class),
             Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(),
             new FakeImageToText, // null описание
+            $this->notifications(),
         );
 
         ['reply' => $reply] = $service->receiveImage(

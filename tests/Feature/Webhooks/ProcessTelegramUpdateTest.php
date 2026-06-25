@@ -54,6 +54,7 @@ final class ProcessTelegramUpdateTest extends TestCase
             'channel_id' => $channel->id,
             'external_chat_id' => $chatId,
             'contacts_gate_done' => true,
+            'consent_agreed' => true,
             'status' => 'open',
         ]);
     }
@@ -224,6 +225,35 @@ final class ProcessTelegramUpdateTest extends TestCase
         // Оба фото обработаны: 2 входящих, бот ответил на каждое.
         $this->assertSame(2, Message::query()->where('direction', 'inbound')->count());
         $this->assertSame(2, Message::query()->where('direction', 'outbound')->count());
+    }
+
+    public function test_new_conversation_asks_for_consent_first(): void
+    {
+        // 152-ФЗ: первым сообщением бот просит согласие на обработку ПД (без seed).
+        Http::fake(['*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]])]);
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->process($tenant, $channel, $this->update(['text' => 'привет']));
+
+        Http::assertSent(fn ($r): bool => str_contains($r->url(), '/sendMessage')
+            && str_contains((string) $r['text'], 'персональных данных'));
+
+        // Согласие ещё не дано — диалог помечен соответствующе.
+        $this->assertDatabaseHas('conversations', ['tenant_id' => $tenant->id, 'consent_agreed' => false]);
+    }
+
+    public function test_yes_records_consent_and_lets_bot_proceed(): void
+    {
+        Http::fake(['*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]])]);
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        // Первое сообщение — бот спросил согласие; клиент отвечает «Да».
+        $this->process($tenant, $channel, $this->update(['message_id' => 10, 'text' => 'привет']));
+        $this->process($tenant, $channel, $this->update(['message_id' => 11, 'text' => 'Да']));
+
+        $this->assertDatabaseHas('conversations', ['tenant_id' => $tenant->id, 'consent_agreed' => true]);
     }
 
     public function test_bot_answers_from_published_knowledge(): void

@@ -11,6 +11,7 @@ use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\ChannelService;
 use App\Services\ConversationHandoffService;
 use App\Tenancy\TenantInitializer;
@@ -95,10 +96,11 @@ final class WidgetChatTest extends TestCase
         // просит представиться. Уже СЛЕДУЮЩЕЕ сообщение с именем+телефоном
         // завершает форму и отдаёт кнопки-варианты — виджет рендерит их
         // кликабельными чипами (как в мессенджерах).
-        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'Здравствуйте, есть доставка?'])
+        // consent=true — посетитель отметил галочку согласия (152-ФЗ).
+        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'Здравствуйте, есть доставка?', 'consent' => true])
             ->assertOk();
 
-        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'Иван, +7 999 123-45-67'])
+        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'Иван, +7 999 123-45-67', 'consent' => true])
             ->assertOk()
             ->assertJsonPath('options', fn (array $o): bool => in_array('Записаться', $o, true));
     }
@@ -273,6 +275,53 @@ final class WidgetChatTest extends TestCase
             ->assertOk()
             ->assertJsonPath('reverb', null)
             ->assertJsonStructure(['token', 'greeting', 'channel']);
+    }
+
+    public function test_widget_escalation_creates_bell_notification_for_owner(): void
+    {
+        // Регресс прода: клиент звал админа с сайта, а в колоколе кабинета пусто —
+        // веб-виджет не создавал in-app уведомление. Фото без vision → эскалация.
+        Storage::fake('public');
+        $channel = $this->webChannel();
+        $tenant = Tenant::query()->findOrFail($channel->tenant_id);
+        $owner = User::factory()->owner($tenant)->create();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        $this->post($this->url($channel, 'upload'), [
+            'token' => $token,
+            'image' => UploadedFile::fake()->image('hairstyle.jpg', 600, 400),
+        ], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('needsHuman', true);
+
+        $this->assertDatabaseHas('user_notifications', [
+            'tenant_id' => $tenant->id,
+            'user_id' => $owner->id,
+            'type' => 'escalation',
+        ]);
+    }
+
+    public function test_widget_consent_flag_is_recorded(): void
+    {
+        // Галочка согласия в виджете → consent=true в первом сообщении → фиксируем
+        // согласие на диалоге (152-ФЗ), бот отвечает без формы Да/Нет.
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'есть доставка?', 'consent' => true])
+            ->assertOk();
+
+        $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
+        $this->assertTrue((bool) $conv->consent_agreed);
+        $this->assertNotNull($conv->consent_agreed_at);
+    }
+
+    public function test_session_returns_legal_links(): void
+    {
+        $channel = $this->webChannel();
+
+        $this->postJson($this->url($channel, 'session'))
+            ->assertOk()
+            ->assertJsonPath('legal.consent', fn (string $u): bool => str_ends_with($u, '/consent'))
+            ->assertJsonPath('legal.privacy', fn (string $u): bool => str_ends_with($u, '/privacy'));
     }
 
     public function test_upload_rejects_non_image_file(): void

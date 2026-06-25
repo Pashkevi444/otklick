@@ -53,6 +53,7 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'есть ли доставка?', 'Иван', 'https://t.me/ivan');
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
@@ -86,6 +87,7 @@ final class IncomingMessageServiceTest extends TestCase
         // исходящее не пишем и в канал не шлём (только фиксируем входящее).
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $conversation->operator_active_at = now();
         $incoming = new IncomingMessage('555', '42', 'оператор тут?', 'Иван', null);
 
@@ -117,6 +119,7 @@ final class IncomingMessageServiceTest extends TestCase
         $expected = $channel->tenant->banNotice();
 
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $conversation->setRelation('client', new Client(['banned_at' => now()]));
         $incoming = new IncomingMessage('555', '42', 'привет', 'Иван', null);
 
@@ -146,6 +149,7 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'купи крипту t.me/+abcdefgh', 'Иван', null);
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
@@ -176,6 +180,7 @@ final class IncomingMessageServiceTest extends TestCase
 
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'привет', null);
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
@@ -208,6 +213,7 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'хочу пожаловаться', null);
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
@@ -236,6 +242,7 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'а есть ли парковка?', null);
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
@@ -268,6 +275,7 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'да, записывайте', null);
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
@@ -296,6 +304,7 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'отмените мою запись', null);
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
@@ -325,6 +334,7 @@ final class IncomingMessageServiceTest extends TestCase
     {
         $channel = $this->channel();
         $conversation = new Conversation;
+        $conversation->id = 'conv-1';
         $incoming = new IncomingMessage('555', '42', 'привет', null);
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);

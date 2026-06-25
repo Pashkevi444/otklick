@@ -148,6 +148,37 @@ const sendReply = async (): Promise<void> => {
     }
 };
 
+// Оператор прикрепил фото — уходит клиенту (FormData, текст необязателен).
+const fileInput = ref<HTMLInputElement | null>(null);
+const sendImage = async (e: Event): Promise<void> => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || busy.value) return;
+    busy.value = true;
+    try {
+        const fd = new FormData();
+        fd.append('image', file);
+        if (replyText.value.trim()) fd.append('text', replyText.value.trim());
+        const res = await fetch(`${base}/reply`, {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'X-XSRF-TOKEN': xsrf() },
+            credentials: 'same-origin',
+            body: fd,
+        });
+        if (!res.ok) throw res;
+        const d = await res.json();
+        if (d.message) {
+            const m = d.message as Msg;
+            messages.value.push(m);
+            lastId = m.id;
+        }
+        replyText.value = '';
+    } finally {
+        busy.value = false;
+    }
+};
+
 let timer: number | undefined;
 onMounted(() => {
     timer = window.setInterval(poll, 3000);
@@ -362,6 +393,16 @@ const removeLead = (): void => {
                 @keydown.enter.exact.prevent="sendReply"
                 @input="notifyTyping"
             ></textarea>
+            <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="sendImage" />
+            <button
+                type="button"
+                :disabled="busy"
+                title="Прикрепить фото"
+                class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-500 transition hover:text-[#2E74B5] disabled:opacity-50 dark:border-white/10"
+                @click="fileInput?.click()"
+            >
+                📎
+            </button>
             <button
                 type="button"
                 :disabled="busy || !replyText.trim()"

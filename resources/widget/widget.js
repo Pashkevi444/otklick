@@ -107,6 +107,10 @@
         '.otk-typing{align-self:flex-start;background:#fff;border-radius:17px;border-bottom-left-radius:5px;padding:13px 15px;display:flex;gap:5px;box-shadow:0 3px 12px rgba(16,42,73,.08);animation:otk-in .3s ease both}',
         '.otk-typing span{width:7px;height:7px;border-radius:50%;background:#9fb2c9;animation:otk-bounce 1.2s infinite}',
         '.otk-typing span:nth-child(2){animation-delay:.2s}.otk-typing span:nth-child(3){animation-delay:.4s}',
+        '.otk-consent{display:none;gap:8px;padding:10px 13px;border-top:1px solid rgba(16,42,73,.06);background:rgba(255,255,255,.92);font-size:12px;line-height:1.4;color:#5b6b7f;cursor:pointer;align-items:flex-start}',
+        '.otk-consent.otk-on{display:flex}',
+        '.otk-consent input{margin-top:2px;flex:0 0 auto;width:16px;height:16px;accent-color:var(--otk-a);cursor:pointer}',
+        '.otk-consent a{color:var(--otk-a);text-decoration:underline}',
         '.otk-foot{display:flex;gap:9px;padding:11px;border-top:1px solid rgba(16,42,73,.06);background:rgba(255,255,255,.85);backdrop-filter:blur(6px);align-items:flex-end}',
         '.otk-in{flex:1;border:1.5px solid #dde5ef;border-radius:14px;padding:10px 13px;font-size:14px;outline:none;resize:none;max-height:96px;font-family:inherit;transition:border-color .2s,box-shadow .2s}',
         '.otk-in:focus{border-color:var(--otk-a);box-shadow:0 0 0 3px rgba(46,116,181,.12)}',
@@ -189,6 +193,12 @@
         '</div>' +
         '<div class="otk-body"></div>' +
         '<div class="otk-emoji"></div>' +
+        // Согласие на обработку ПД (152-ФЗ): пока галочка не стоит — поле ввода
+        // заблокировано. Ссылки на ПД/Политику подставляются из конфига.
+        '<label class="otk-consent"><input type="checkbox" class="otk-consent-cb" />' +
+        '<span class="otk-consent-txt">Я даю согласие на обработку моих ' +
+        '<a class="otk-consent-pd" href="#" target="_blank" rel="noopener">персональных данных</a> в соответствии с ' +
+        '<a class="otk-consent-pp" href="#" target="_blank" rel="noopener">Политикой конфиденциальности</a>.</span></label>' +
         '<div class="otk-foot">' +
         '<button class="otk-tool otk-emoji-btn" type="button" aria-label="Эмодзи">😊</button>' +
         '<button class="otk-tool otk-attach-btn" type="button" aria-label="Прикрепить фото">' + clipIcon + '</button>' +
@@ -211,7 +221,23 @@
     var emojiBtn = panel.querySelector('.otk-emoji-btn');
     var attachBtn = panel.querySelector('.otk-attach-btn');
     var fileInput = panel.querySelector('.otk-file');
+    var consentBar = panel.querySelector('.otk-consent');
+    var consentCb = panel.querySelector('.otk-consent-cb');
     var typingEl = null;
+
+    // Согласие на обработку ПД (152-ФЗ): пока не дано — поле ввода заблокировано,
+    // показывается галочка. Решение клиента переживает перезагрузку (localStorage).
+    var CONSENT_KEY = 'otklik-consent:' + tenant + ':' + channel;
+    var consentGiven = false;
+    try { consentGiven = localStorage.getItem(CONSENT_KEY) === '1'; } catch (e) {}
+
+    function applyConsent() {
+        consentBar.classList.toggle('otk-on', !consentGiven);
+        input.disabled = !consentGiven;
+        sendBtn.disabled = !consentGiven;
+        attachBtn.disabled = !consentGiven;
+        input.placeholder = consentGiven ? 'Напишите сообщение…' : 'Отметьте согласие, чтобы написать…';
+    }
     // Дата последнего отрисованного сообщения — чтобы вставлять разделитель «день».
     var lastDayKey = '';
 
@@ -454,7 +480,7 @@
         sending = true;
         sendBtn.disabled = true;
         showTyping();
-        post('/message', { token: token, text: text })
+        post('/message', { token: token, text: text, consent: consentGiven })
             .then(function (data) {
                 hideTyping();
                 // Курсор поллинга двигаем за уже показанный ответ, чтобы не задвоить.
@@ -532,8 +558,27 @@
     // ещё до открытия чата. Сбой/таймаут — остаёмся на брендовом цвете «Отклик».
     fetch(api + '/config', { headers: { Accept: 'application/json' } })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (data) { if (data && data.color) applyTheme(data.color); })
-        .catch(function () { /* нет конфига — дефолтная тема */ });
+        .then(function (data) {
+            if (!data) return;
+            if (data.color) applyTheme(data.color);
+            if (data.legal) {
+                var pd = panel.querySelector('.otk-consent-pd');
+                var pp = panel.querySelector('.otk-consent-pp');
+                if (pd && data.legal.consent) pd.href = data.legal.consent;
+                if (pp && data.legal.privacy) pp.href = data.legal.privacy;
+            }
+        })
+        .catch(function () { /* нет конфига — дефолтная тема/ссылки */ });
+
+    // Галочка согласия (152-ФЗ): отметили → запоминаем и разблокируем поле ввода.
+    consentCb.checked = consentGiven;
+    consentCb.addEventListener('change', function () {
+        consentGiven = consentCb.checked;
+        try { localStorage.setItem(CONSENT_KEY, consentGiven ? '1' : '0'); } catch (e) {}
+        applyConsent();
+        if (consentGiven) input.focus();
+    });
+    applyConsent();
 
     // Восстанавливаем прошлую переписку (если страницу перезагрузили) — вместе с
     // временем и картинками каждого сообщения.
@@ -588,7 +633,7 @@
         if (file) uploadImage(file);
     });
     function uploadImage(file) {
-        if (sending) return;
+        if (sending || !consentGiven) return;
         if (!file.type || file.type.indexOf('image/') !== 0) return;
         if (file.size > 5 * 1024 * 1024) { addBotOnce('Файл больше 5 МБ — выберите фото поменьше.'); return; }
         emojiPanel.classList.remove('otk-on');
@@ -602,6 +647,7 @@
             var fd = new FormData();
             fd.append('token', token);
             fd.append('image', file);
+            fd.append('consent', '1');
             if (caption) fd.append('caption', caption);
             showTyping();
             fetch(api + '/upload', { method: 'POST', headers: { Accept: 'application/json' }, body: fd })

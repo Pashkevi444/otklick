@@ -108,7 +108,9 @@ final readonly class IncomingMessageService
 
         $this->conversations->touchLastMessage($conversation);
 
-        $convUrl = '/cabinet/conversations/'.$conversation->id;
+        // Ссылка на диалог в кабинете — лениво (нужна только при отправке уведомления;
+        // строим из имени роута, не хардкодом — поменяется URI, ссылка не протухнет).
+        $convUrl = fn (): string => route('cabinet.conversations.show', $conversation->id, false);
 
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
@@ -117,7 +119,7 @@ final readonly class IncomingMessageService
                 UserNotificationType::Escalation,
                 'Диалог требует администратора',
                 $this->snippet($incoming->text),
-                $convUrl,
+                $convUrl(),
                 'conversation',
                 (string) $conversation->id,
             );
@@ -131,7 +133,7 @@ final readonly class IncomingMessageService
                     UserNotificationType::KnowledgeGap,
                     'Вопрос без ответа',
                     $this->snippet($incoming->text),
-                    '/cabinet/knowledge',
+                    route('cabinet.knowledge.index', absolute: false),
                     'gap',
                     (string) $gap->id,
                 );
@@ -144,7 +146,7 @@ final readonly class IncomingMessageService
                 UserNotificationType::Booked,
                 'Запись оформлена',
                 $conversation->displayName() ?? 'Гость',
-                $convUrl,
+                $convUrl(),
                 'conversation',
                 (string) $conversation->id,
             );
@@ -163,7 +165,7 @@ final readonly class IncomingMessageService
                 UserNotificationType::NewLead,
                 'Новый лид',
                 $conversation->displayName() ?? $this->snippet($incoming->text),
-                $convUrl,
+                $convUrl(),
                 'conversation',
                 (string) $conversation->id,
             );

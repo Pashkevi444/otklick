@@ -258,6 +258,15 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
         $conversation->forceFill(['contacts_gate_done' => true])->save();
     }
 
+    public function markConsentGiven(Conversation $conversation): void
+    {
+        if ($conversation->consent_agreed) {
+            return;
+        }
+
+        $conversation->forceFill(['consent_agreed' => true, 'consent_agreed_at' => now()])->save();
+    }
+
     public function setClientId(Conversation $conversation, string $clientId): void
     {
         $conversation->forceFill(['client_id' => $clientId])->save();

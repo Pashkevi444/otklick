@@ -43,12 +43,17 @@ final readonly class ConversationHandoffService
         $this->announce($conversation, '🤖 Снова на связи бот-администратор. Спрашивайте!');
     }
 
-    /** Ответ оператора клиенту (и продление перехвата — сдвиг авто-возврата). */
-    public function reply(Conversation $conversation, string $text): Message
+    /**
+     * Ответ оператора клиенту (и продление перехвата — сдвиг авто-возврата).
+     * $images — список URL картинок (оператор может приложить фото к ответу).
+     *
+     * @param  list<string>  $images
+     */
+    public function reply(Conversation $conversation, string $text, array $images = []): Message
     {
         $this->conversations->touchOperator($conversation);
 
-        return $this->send($conversation, $text);
+        return $this->send($conversation, $text, $images);
     }
 
     /**
@@ -70,15 +75,18 @@ final readonly class ConversationHandoffService
      * шлюз, в веб-виджет — только запись (виджет заберёт поллингом). Сбой пуша не
      * роняет действие оператора.
      */
-    private function send(Conversation $conversation, string $text): Message
+    /**
+     * @param  list<string>  $images
+     */
+    private function send(Conversation $conversation, string $text, array $images = []): Message
     {
-        $message = $this->messages->recordOutbound($conversation, $text, MessageStatus::Sent);
+        $message = $this->messages->recordOutbound($conversation, $text, MessageStatus::Sent, $images);
         $this->conversations->touchLastMessage($conversation);
 
         $channel = $conversation->channel;
         if ($channel !== null && $this->gateways->has($channel->type)) {
             try {
-                $this->gateways->for($channel->type)->send($channel, (string) $conversation->external_chat_id, $text);
+                $this->gateways->for($channel->type)->send($channel, (string) $conversation->external_chat_id, $text, null, $images);
             } catch (Throwable $e) {
                 report($e);
             }
