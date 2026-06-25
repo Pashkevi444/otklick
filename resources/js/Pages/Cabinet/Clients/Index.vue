@@ -48,6 +48,13 @@ const state = reactive<Filters>({ ...props.filters });
 // Клиенты с непрочитанным уведомлением — подсвечиваем «Новый» при заходе в базу.
 const newIds = new Set(props.newClientIds ?? []);
 const isNew = (id: string): boolean => newIds.has(id);
+const newCount = newIds.size;
+
+// «Прочитать всё» — гасит подсветку «Новый» у всех клиентов (и бейдж секции).
+// POST без preserveState → страница перерисуется со свежим (пустым) newClientIds.
+const markAllRead = (): void => {
+    router.post('/cabinet/clients/read-all', {}, { preserveScroll: true });
+};
 
 const sorts = [
     { value: 'last', label: 'Последняя активность' },
@@ -167,6 +174,12 @@ const toggleBan = (row: Row): void => {
                     {{ c.label }}
                 </button>
             </div>
+        </div>
+
+        <!-- Есть новые клиенты — кнопка массово погасить подсветку «Новый». -->
+        <div v-if="newCount > 0" class="mb-3 flex items-center justify-between rounded-xl border border-[#2E74B5]/20 bg-[#2E74B5]/5 px-4 py-2.5">
+            <span class="text-sm text-slate-600"><span class="font-semibold text-[#2E74B5]">{{ newCount }}</span> новых</span>
+            <button type="button" class="text-sm font-medium text-[#2E74B5] hover:underline" @click="markAllRead">Прочитать всё</button>
         </div>
 
         <div v-if="clients.length === 0" class="rounded-xl border border-slate-200 bg-white py-12 text-center text-slate-400">

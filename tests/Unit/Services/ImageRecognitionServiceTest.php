@@ -83,6 +83,48 @@ final class ImageRecognitionServiceTest extends TestCase
         $this->assertNull($service->recognize($this->channel(), []));
     }
 
+    public function test_augment_processes_caption_text_together_with_photo(): void
+    {
+        // Фото с подписью: каналы (VK/MAX/WhatsApp) кладут подпись в text — она НЕ
+        // должна теряться, текст клиента обрабатывается ВМЕСТЕ с описанием фото.
+        $gateway = $this->imageGateway();
+        $gateway->shouldReceive('downloadImages')->once()
+            ->andReturn([new IncomingImage('JPEG', 'image/jpeg', 'сколько стоит?')]);
+
+        $service = new ImageRecognitionService(new ChannelGatewayResolver([$gateway]), new FakeImageToText('Татуировка дракона.'));
+
+        $text = $service->augment($this->channel(), [], 'сколько стоит?');
+
+        // Подпись из text — один раз (без дублирования с image->caption) + описание.
+        $this->assertSame("сколько стоит?\n[Клиент прислал фото. На фото: Татуировка дракона.]", $text);
+    }
+
+    public function test_augment_skips_image_step_and_keeps_text_when_no_photo(): void
+    {
+        // Нет фото в апдейте — шаг с картинками пропускается, vision не дёргаем,
+        // текст клиента возвращается как есть.
+        $gateway = $this->imageGateway();
+        $gateway->shouldReceive('downloadImages')->once()->andReturn([]);
+
+        $vision = Mockery::mock(ImageToText::class);
+        $vision->shouldNotReceive('describe');
+
+        $service = new ImageRecognitionService(new ChannelGatewayResolver([$gateway]), $vision);
+
+        $this->assertSame('просто текст', $service->augment($this->channel(), [], 'просто текст'));
+    }
+
+    public function test_augment_keeps_text_when_vision_fails_on_photo(): void
+    {
+        // Фото есть, но vision не распознал — не роняем сообщение, оставляем подпись.
+        $gateway = $this->imageGateway();
+        $gateway->shouldReceive('downloadImages')->once()->andReturn([new IncomingImage('JPEG')]);
+
+        $service = new ImageRecognitionService(new ChannelGatewayResolver([$gateway]), new FakeImageToText);
+
+        $this->assertSame('есть фейд?', $service->augment($this->channel(), [], 'есть фейд?'));
+    }
+
     public function test_returns_null_when_gateway_does_not_receive_images(): void
     {
         // Гейтвей без ReceivesImage — распознавание невозможно.

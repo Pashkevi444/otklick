@@ -14,8 +14,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * Распознавание изображения в текст: резолвит гейтвей канала, просит его скачать
  * фото из апдейта и прогоняет через vision-порт. Провайдер-агностично — джобы
- * каналов зовут это при пустом тексте (после голоса) и подставляют описание как
- * ввод клиента. Зеркало {@see VoiceTranscriptionService} для картинок.
+ * каналов зовут {@see augment} после голоса: описание фото приклеивается к тексту
+ * /подписи клиента (текст обрабатывается ВСЕГДА, даже вместе с фото). Нет фото в
+ * апдейте — шаг пропускается, vision не дёргаем. Зеркало {@see VoiceTranscriptionService}.
  */
 final readonly class ImageRecognitionService
 {
@@ -25,23 +26,51 @@ final readonly class ImageRecognitionService
     ) {}
 
     /**
+     * Фото-ввод без уже распознанного текста (фото-only). Тонкая обёртка над
+     * {@see augment} с пустым текстом — null, если фото нет или vision не распознал.
+     *
      * @param  array<string, mixed>  $update  сырой апдейт канала
-     * @return string|null готовый текст-ввод (подпись + описание фото) или null
-     *                     (не фото / не распозналось)
      */
     public function recognize(Channel $channel, array $update): ?string
     {
+        $text = $this->augment($channel, $update, '');
+
+        return $text === '' ? null : $text;
+    }
+
+    /**
+     * Приклеивает описание фото из апдейта к уже распознанному тексту/подписи
+     * клиента. Нет фото в апдейте — возвращает $text как есть (шаг с картинками
+     * пропускается, vision не дёргаем). Есть фото — текст клиента обрабатывается
+     * ВМЕСТЕ с описанием: подпись (слова клиента) + маркер «[На фото: …]».
+     *
+     * @param  array<string, mixed>  $update  сырой апдейт канала
+     */
+    public function augment(Channel $channel, array $update, string $text): string
+    {
         if (! $this->gateways->has($channel->type)) {
-            return null;
+            return $text;
         }
 
         $gateway = $this->gateways->for($channel->type);
 
         if (! $gateway instanceof ReceivesImage) {
-            return null;
+            return $text;
         }
 
-        return $this->describeAll($channel, $gateway->downloadImages($channel, $update));
+        $images = $gateway->downloadImages($channel, $update);
+
+        if ($images === []) {
+            return $text;
+        }
+
+        // Подпись клиента: уже распознанный текст апдейта (VK/MAX/WhatsApp кладут
+        // подпись в text), иначе — подпись из самой картинки (Telegram отдаёт её
+        // отдельным полем caption). Vision не теряет слова клиента → описать не
+        // удалось: оставляем исходный текст, а не роняем сообщение в null.
+        $caption = $text !== '' ? $text : $this->captionOf($images);
+
+        return $this->describeImages($channel, $images, $caption) ?? $text;
     }
 
     /**
@@ -57,15 +86,23 @@ final readonly class ImageRecognitionService
             return null;
         }
 
-        $caption = '';
+        return $this->describeImages($channel, $images, $this->captionOf($images));
+    }
+
+    /**
+     * Прогоняет картинки через vision и складывает ввод клиента (подпись + описания).
+     * null — ни одну распознать не удалось (vision выключен/ошибка).
+     *
+     * @param  list<IncomingImage>  $images
+     */
+    private function describeImages(Channel $channel, array $images, string $caption): ?string
+    {
         $descriptions = [];
 
         foreach ($images as $image) {
-            if ($caption === '' && trim($image->caption) !== '') {
-                $caption = trim($image->caption);
-            }
+            $hint = $caption !== '' ? $caption : $image->caption;
 
-            $description = $this->vision->describe($image->bytes, $image->mimeType, $image->caption);
+            $description = $this->vision->describe($image->bytes, $image->mimeType, $hint);
             if ($description !== null && trim($description) !== '') {
                 $descriptions[] = trim($description);
             }
@@ -83,6 +120,22 @@ final readonly class ImageRecognitionService
         }
 
         return self::compose($caption, $descriptions);
+    }
+
+    /**
+     * Первая непустая подпись среди картинок (Telegram/WhatsApp кладут её к фото).
+     *
+     * @param  list<IncomingImage>  $images
+     */
+    private function captionOf(array $images): string
+    {
+        foreach ($images as $image) {
+            if (trim($image->caption) !== '') {
+                return trim($image->caption);
+            }
+        }
+
+        return '';
     }
 
     /**

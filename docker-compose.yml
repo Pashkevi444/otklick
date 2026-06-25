@@ -57,7 +57,6 @@ services:
       YANDEX_API_KEY: ${YANDEX_API_KEY:-}
       YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}
       YANDEX_GPT_MODEL: ${YANDEX_GPT_MODEL:-yandexgpt-lite}
-      TELEGRAM_WEBHOOK_BASE_URL: ${TELEGRAM_WEBHOOK_BASE_URL:-http://localhost:8000}
       RUN_MIGRATIONS: "true"
     depends_on:
       pgsql:
@@ -89,7 +88,6 @@ services:
       YANDEX_API_KEY: ${YANDEX_API_KEY:-}
       YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}
       YANDEX_GPT_MODEL: ${YANDEX_GPT_MODEL:-yandexgpt-lite}
-      TELEGRAM_WEBHOOK_BASE_URL: ${TELEGRAM_WEBHOOK_BASE_URL:-http://localhost:8000}
       RUN_MIGRATIONS: "false"
     depends_on:
       app:
