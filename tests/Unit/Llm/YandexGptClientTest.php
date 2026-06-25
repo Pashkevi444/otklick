@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Llm;
 
-use App\Llm\YandexGptClient;
-use App\Services\PromptBuilder;
+use App\Modules\Bot\Services\PromptBuilder;
+use App\Shared\Llm\YandexGptClient;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 

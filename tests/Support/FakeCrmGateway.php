@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
-use App\Crm\Contracts\CrmGateway;
-use App\Crm\Data\BookingRequest;
-use App\Crm\Data\BookingResult;
-use App\Crm\Data\CredentialField;
-use App\Crm\Data\CrmCompany;
-use App\Crm\Data\CrmService;
-use App\Crm\Data\CrmStaff;
-use App\Crm\Data\SlotQuery;
-use App\Crm\Data\TimeSlot;
-use App\Enums\CrmProvider;
-use App\Models\CrmConnection;
+use App\Modules\Booking\Crm\Contracts\CrmGateway;
+use App\Modules\Booking\Crm\Data\BookingRequest;
+use App\Modules\Booking\Crm\Data\BookingResult;
+use App\Modules\Booking\Crm\Data\CredentialField;
+use App\Modules\Booking\Crm\Data\CrmCompany;
+use App\Modules\Booking\Crm\Data\CrmService;
+use App\Modules\Booking\Crm\Data\CrmStaff;
+use App\Modules\Booking\Crm\Data\SlotQuery;
+use App\Modules\Booking\Crm\Data\TimeSlot;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Shared\Enums\CrmProvider;
 use RuntimeException;
 
 /**

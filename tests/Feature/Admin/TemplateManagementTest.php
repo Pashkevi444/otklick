@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
-use App\Models\KnowledgeTemplate;
-use App\Models\ScenarioTemplate;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Flows\Models\ScenarioTemplate;
+use App\Modules\Knowledge\Models\KnowledgeTemplate;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;

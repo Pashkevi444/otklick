@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\DTO\Analytics\AnalyticsRange;
-use App\DTO\Analytics\MetricCard;
-use App\DTO\Analytics\ValueReport;
-use App\Models\Conversation;
-use App\Models\CrmConnection;
-use App\Models\Tenant;
-use App\Services\ValueReportService;
-use App\Tenancy\TenantContext;
+use App\Modules\Analytics\DTO\AnalyticsRange;
+use App\Modules\Analytics\DTO\MetricCard;
+use App\Modules\Analytics\DTO\ValueReport;
+use App\Modules\Analytics\Services\ValueReportService;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Conversations\Models\Conversation;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

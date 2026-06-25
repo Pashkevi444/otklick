@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\DTO\BusinessProfile;
-use App\Models\CrmKnowledgeEntry;
-use App\Models\KnowledgeEntry;
-use App\Services\PromptBuilder;
+use App\Modules\Bot\Services\PromptBuilder;
+use App\Modules\Identity\DTO\BusinessProfile;
+use App\Modules\Knowledge\Models\CrmKnowledgeEntry;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
 use Illuminate\Support\Collection;
 use PHPUnit\Framework\TestCase;
 

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Channels\ChannelGatewayResolver;
-use App\Channels\Contracts\ChannelGateway;
-use App\Channels\Contracts\ReceivesImage;
-use App\Channels\Data\IncomingImage;
-use App\Enums\ChannelType;
-use App\Models\Channel;
-use App\Services\ImageRecognitionService;
-use App\Vision\Contracts\ImageToText;
-use App\Vision\FakeImageToText;
+use App\Modules\Channels\ChannelGatewayResolver;
+use App\Modules\Channels\Contracts\ChannelGateway;
+use App\Modules\Channels\Contracts\ReceivesImage;
+use App\Modules\Channels\Data\IncomingImage;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Channels\Services\ImageRecognitionService;
+use App\Shared\Enums\ChannelType;
+use App\Shared\Vision\Contracts\ImageToText;
+use App\Shared\Vision\FakeImageToText;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;

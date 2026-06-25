@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\SentryScrubber;
+use App\Shared\Support\SentryScrubber;
 
 /**
  * Sentry Laravel SDK configuration file.

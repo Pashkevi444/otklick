@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Jobs\DraftGapAnswer;
-use App\Jobs\ProcessTelegramUpdate;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\KnowledgeGap;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Channels\Jobs\ProcessTelegramUpdate;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Knowledge\Jobs\DraftGapAnswer;
+use App\Modules\Knowledge\Models\KnowledgeGap;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;

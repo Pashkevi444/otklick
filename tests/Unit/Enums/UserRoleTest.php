@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Enums;
 
-use App\Enums\UserRole;
+use App\Shared\Enums\UserRole;
 use PHPUnit\Framework\TestCase;
 
 final class UserRoleTest extends TestCase

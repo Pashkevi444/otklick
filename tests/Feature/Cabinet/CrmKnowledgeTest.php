@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Jobs\SyncCrmKnowledge;
-use App\Models\CrmConnection;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Knowledge\Jobs\SyncCrmKnowledge;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\SentryScrubber;
+use App\Shared\Support\SentryScrubber;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Sentry\Event;

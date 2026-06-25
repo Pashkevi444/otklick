@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Realtime;
 
-use App\Enums\ChannelType;
-use App\Enums\MessageStatus;
-use App\Events\ConversationActivity;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\Tenant;
-use App\Repositories\Contracts\MessageRepositoryInterface;
-use App\Tenancy\TenantContext;
-use App\Tenancy\TestContext;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Events\ConversationActivity;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
+use App\Shared\Enums\ChannelType;
+use App\Shared\Enums\MessageStatus;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
+use App\Shared\Tenancy\TestContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;

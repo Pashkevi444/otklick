@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Models\KnowledgeEntry;
-use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
-use App\Services\FlowSimulator;
+use App\Modules\Flows\Services\FlowSimulator;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\TestCase;

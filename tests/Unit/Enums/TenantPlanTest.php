@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Enums;
 
-use App\Enums\TenantPlan;
+use App\Shared\Enums\TenantPlan;
 use PHPUnit\Framework\TestCase;
 
 final class TenantPlanTest extends TestCase

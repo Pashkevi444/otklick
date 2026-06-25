@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Identity\DTO;
+
+use App\Shared\Enums\TenantPlan;
+
+/**
+ * Данные для создания нового тенанта. Переносятся между сервисом и репозиторием.
+ */
+final readonly class NewTenantData
+{
+    public function __construct(
+        public string $name,
+        public string $slug,
+        public TenantPlan $plan,
+        public ?string $accessExpiresAt = null,
+        /** @var array<string, mixed> */
+        public array $settings = [],
+    ) {}
+}

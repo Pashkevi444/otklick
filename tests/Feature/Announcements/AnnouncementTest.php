@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Announcements;
 
-use App\Enums\AnnouncementType;
-use App\Models\Announcement;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Platform\Models\Announcement;
+use App\Shared\Enums\AnnouncementType;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;

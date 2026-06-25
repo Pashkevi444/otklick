@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Models\Conversation;
-use App\Models\CrmConnection;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Conversations\Models\Conversation;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;

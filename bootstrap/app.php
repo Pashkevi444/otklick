@@ -6,7 +6,7 @@ use App\Http\Middleware\EnsurePlanFeature;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureTenantUser;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Support\HomeRedirect;
+use App\Shared\Support\HomeRedirect;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;

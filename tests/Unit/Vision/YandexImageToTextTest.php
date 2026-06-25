@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Vision;
 
-use App\Vision\YandexImageToText;
+use App\Shared\Vision\YandexImageToText;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 

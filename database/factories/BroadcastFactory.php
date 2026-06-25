@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\BroadcastRecurrence;
-use App\Enums\BroadcastStatus;
-use App\Models\Broadcast;
-use App\Models\Tenant;
+use App\Modules\Broadcasts\Models\Broadcast;
+use App\Shared\Enums\BroadcastRecurrence;
+use App\Shared\Enums\BroadcastStatus;
+use App\Shared\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

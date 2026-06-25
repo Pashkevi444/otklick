@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Enums\OwnerEvent;
-use App\Mail\OwnerEventMail;
-use App\Models\NotificationRecipient;
-use App\Models\Tenant;
-use App\Services\NotificationService;
-use App\Tenancy\TenantInitializer;
+use App\Modules\Notifications\Mail\OwnerEventMail;
+use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Modules\Notifications\Services\NotificationService;
+use App\Shared\Enums\OwnerEvent;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;

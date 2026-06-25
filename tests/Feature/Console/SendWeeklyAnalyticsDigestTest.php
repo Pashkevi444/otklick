@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Mail\OwnerEventMail;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\NotificationRecipient;
-use App\Models\Tenant;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Notifications\Mail\OwnerEventMail;
+use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;

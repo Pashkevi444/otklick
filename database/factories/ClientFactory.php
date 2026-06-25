@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\Client;
-use App\Models\Tenant;
+use App\Modules\Clients\Models\Client;
+use App\Shared\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

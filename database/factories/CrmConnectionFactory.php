@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\CrmProvider;
-use App\Models\CrmConnection;
-use App\Models\Tenant;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Shared\Enums\CrmProvider;
+use App\Shared\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 

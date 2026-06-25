@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  * 2026_06_13_000003_enable_row_level_security.php.
  *
  * Применяется только на PostgreSQL. Политика фильтрует строки по сессионной
- * переменной app.current_tenant, которую выставляет App\Tenancy\TenantInitializer.
+ * переменной app.current_tenant, которую выставляет App\Shared\Tenancy\TenantInitializer.
  * На sqlite (тесты) пропускается; там изоляцию держит глобальный TenantScope.
  */
 return new class extends Migration

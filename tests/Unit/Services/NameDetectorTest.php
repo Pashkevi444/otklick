@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Llm\Contracts\LlmClient;
-use App\Services\NameDetector;
+use App\Modules\Conversations\Services\NameDetector;
+use App\Shared\Llm\Contracts\LlmClient;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;

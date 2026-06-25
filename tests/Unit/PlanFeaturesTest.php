@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\DTO\PlanFeatures;
-use App\Enums\TenantPlan;
-use App\Models\Tenant;
+use App\Modules\Billing\DTO\PlanFeatures;
+use App\Shared\Enums\TenantPlan;
+use App\Shared\Models\Tenant;
 use Tests\TestCase;
 
 final class PlanFeaturesTest extends TestCase

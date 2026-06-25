@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\TenantPlan;
-use App\Models\Tenant;
+use App\Shared\Enums\TenantPlan;
+use App\Shared\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 

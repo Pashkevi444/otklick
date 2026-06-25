@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Max;
 
-use App\Jobs\ProcessMaxUpdate;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\KnowledgeEntry;
-use App\Models\Message;
-use App\Models\Tenant;
+use App\Modules\Channels\Jobs\ProcessMaxUpdate;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Models\Message;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

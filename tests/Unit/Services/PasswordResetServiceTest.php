@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\DTO\PasswordResetCodeData;
-use App\Mail\PasswordResetCodeMail;
-use App\Models\User;
-use App\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
-use App\Repositories\Contracts\UserRepositoryInterface;
-use App\Services\PasswordResetService;
+use App\Modules\Identity\DTO\PasswordResetCodeData;
+use App\Modules\Identity\Mail\PasswordResetCodeMail;
+use App\Modules\Identity\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
+use App\Modules\Identity\Repositories\Contracts\UserRepositoryInterface;
+use App\Modules\Identity\Services\PasswordResetService;
+use App\Shared\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;

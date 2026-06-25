@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * Строгая полиси (tenant_id = current_setting('app.current_tenant')) сделала бы
  * аутентификацию невозможной под FORCE RLS.
  *
- * Новая полиси совпадает по семантике с App\Tenancy\TenantScope: контекст не
+ * Новая полиси совпадает по семантике с App\Shared\Tenancy\TenantScope: контекст не
  * задан → строки видны (бутстрап/консоль/супер-админ); контекст задан → жёсткая
  * изоляция по tenant_id (обычные запросы тенант-пользователей). Бизнес-таблицы
  * (channels/conversations/messages/knowledge_entries) остаются строгими — к ним

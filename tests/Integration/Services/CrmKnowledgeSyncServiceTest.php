@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Crm\CrmGatewayResolver;
-use App\Crm\Data\CrmCompany;
-use App\Crm\Data\CrmService;
-use App\Crm\Data\CrmStaff;
-use App\Models\CrmConnection;
-use App\Models\CrmKnowledgeEntry;
-use App\Models\KnowledgeEntry;
-use App\Models\Tenant;
-use App\Services\CrmKnowledgeSyncService;
-use App\Tenancy\TenantContext;
+use App\Modules\Booking\Crm\CrmGatewayResolver;
+use App\Modules\Booking\Crm\Data\CrmCompany;
+use App\Modules\Booking\Crm\Data\CrmService;
+use App\Modules\Booking\Crm\Data\CrmStaff;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Knowledge\Models\CrmKnowledgeEntry;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Modules\Knowledge\Services\CrmKnowledgeSyncService;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\FakeCrmGateway;
 use Tests\TestCase;

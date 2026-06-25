@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Models\KnowledgeEntry;
-use App\Models\Tenant;
-use App\Services\KnowledgeIndexer;
-use App\Services\KnowledgeRetriever;
-use App\Tenancy\TenantContext;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Modules\Knowledge\Services\KnowledgeIndexer;
+use App\Modules\Knowledge\Services\KnowledgeRetriever;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;

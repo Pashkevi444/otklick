@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\Flow;
-use App\Models\FlowAbAssignment;
-use App\Models\Tenant;
-use App\Services\FlowService;
-use App\Tenancy\TenantInitializer;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Flows\Models\Flow;
+use App\Modules\Flows\Models\FlowAbAssignment;
+use App\Modules\Flows\Services\FlowService;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

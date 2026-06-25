@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\KnowledgeGapStatus;
-use App\Models\KnowledgeGap;
-use App\Models\Tenant;
+use App\Modules\Knowledge\Models\KnowledgeGap;
+use App\Shared\Enums\KnowledgeGapStatus;
+use App\Shared\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Crm;
 
-use App\Crm\CrmGatewayResolver;
-use App\Crm\Yclients\YclientsGateway;
-use App\Enums\CrmProvider;
+use App\Modules\Booking\Crm\CrmGatewayResolver;
+use App\Modules\Booking\Crm\Yclients\YclientsGateway;
+use App\Shared\Enums\CrmProvider;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 

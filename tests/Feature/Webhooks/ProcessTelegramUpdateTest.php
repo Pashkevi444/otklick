@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Webhooks;
 
-use App\Jobs\ProcessTelegramAlbum;
-use App\Jobs\ProcessTelegramUpdate;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\KnowledgeEntry;
-use App\Models\Message;
-use App\Models\Tenant;
-use App\Speech\Contracts\SpeechToText;
-use App\Speech\FakeSpeechToText;
-use App\Vision\Contracts\ImageToText;
-use App\Vision\FakeImageToText;
+use App\Modules\Channels\Jobs\ProcessTelegramAlbum;
+use App\Modules\Channels\Jobs\ProcessTelegramUpdate;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Models\Message;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Shared\Models\Tenant;
+use App\Shared\Speech\Contracts\SpeechToText;
+use App\Shared\Speech\FakeSpeechToText;
+use App\Shared\Vision\Contracts\ImageToText;
+use App\Shared\Vision\FakeImageToText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;

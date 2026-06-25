@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\Vectors;
+use App\Shared\Support\Vectors;
 use PHPUnit\Framework\TestCase;
 
 final class VectorsTest extends TestCase

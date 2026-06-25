@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\RussianDateParser;
+use App\Shared\Support\RussianDateParser;
 use Illuminate\Support\Carbon;
 use PHPUnit\Framework\TestCase;
 

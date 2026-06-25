@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Enums\UserRole;
-use App\Models\Tenant;
-use App\Services\UserService;
+use App\Modules\Identity\Services\UserService;
+use App\Shared\Enums\UserRole;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

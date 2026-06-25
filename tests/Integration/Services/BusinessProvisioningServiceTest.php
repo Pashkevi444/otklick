@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Enums\TenantPlan;
-use App\Models\User;
-use App\Services\BusinessProvisioningService;
+use App\Modules\Identity\Services\BusinessProvisioningService;
+use App\Shared\Enums\TenantPlan;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Throwable;

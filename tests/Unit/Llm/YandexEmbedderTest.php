@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Llm;
 
-use App\Llm\YandexEmbedder;
+use App\Shared\Llm\YandexEmbedder;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Enums\BroadcastStatus;
-use App\Jobs\SendBroadcast;
-use App\Models\Broadcast;
-use App\Models\Tenant;
+use App\Modules\Broadcasts\Jobs\SendBroadcast;
+use App\Modules\Broadcasts\Models\Broadcast;
+use App\Shared\Enums\BroadcastStatus;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;

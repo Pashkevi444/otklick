@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
-use App\DTO\BusinessProfile;
-use App\Models\PromptTemplate;
-use App\Models\Tenant;
-use App\Models\User;
-use App\Repositories\Contracts\PromptTemplateRepositoryInterface;
-use App\Services\PromptBuilder;
+use App\Modules\Bot\Models\PromptTemplate;
+use App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface;
+use App\Modules\Bot\Services\PromptBuilder;
+use App\Modules\Identity\DTO\BusinessProfile;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;

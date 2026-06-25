@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Jobs\ImportKnowledgeFromSite;
-use App\Models\Tenant;
-use App\Models\User;
-use App\Services\SiteImportStatus;
+use App\Modules\Knowledge\Jobs\ImportKnowledgeFromSite;
+use App\Modules\Knowledge\Services\SiteImportStatus;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;

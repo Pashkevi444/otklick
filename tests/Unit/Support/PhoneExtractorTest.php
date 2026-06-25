@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\PhoneExtractor;
+use App\Shared\Support\PhoneExtractor;
 use PHPUnit\Framework\TestCase;
 
 final class PhoneExtractorTest extends TestCase

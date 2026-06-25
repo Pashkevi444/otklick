@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Enums\NotificationChannelType;
-use App\Enums\TenantPlan;
-use App\Models\Channel;
-use App\Models\CrmConnection;
-use App\Models\NotificationRecipient;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Shared\Enums\NotificationChannelType;
+use App\Shared\Enums\TenantPlan;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;

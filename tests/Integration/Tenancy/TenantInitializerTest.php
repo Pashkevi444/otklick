@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Tenancy;
 
-use App\Tenancy\TenantContext;
-use App\Tenancy\TenantInitializer;
+use App\Shared\Tenancy\TenantContext;
+use App\Shared\Tenancy\TenantInitializer;
 use RuntimeException;
 use Tests\TestCase;
 

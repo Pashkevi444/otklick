@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Tenancy\TenantContext;
-use App\Tenancy\TestContext;
+use App\Shared\Tenancy\TenantContext;
+use App\Shared\Tenancy\TestContext;
 use Illuminate\Support\ServiceProvider;
 
 final class TenancyServiceProvider extends ServiceProvider

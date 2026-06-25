@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Llm\Contracts\LlmClient;
-use App\Models\KnowledgeEntry;
-use App\Models\Tenant;
-use App\Services\WebsiteKnowledgeImportService;
-use App\Tenancy\TenantContext;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Modules\Knowledge\Services\WebsiteKnowledgeImportService;
+use App\Shared\Llm\Contracts\LlmClient;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

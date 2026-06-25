@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Channels\Contracts;
+
+use App\Modules\Channels\Models\Channel;
+use App\Shared\DTO\ReplyKeyboard;
+
+/**
+ * Порт отправки сообщения клиенту через канал. Реализация зависит от типа
+ * канала (Telegram, далее WhatsApp). Бизнес-логика работает с портом, не зная
+ * деталей конкретного мессенджера.
+ *
+ * $keyboard — необязательная клавиатура-подсказка (кликабельные варианты в
+ * мастере записи). Каждый канал рендерит её в свой формат (Telegram/VK —
+ * reply-кнопки, MAX — inline-кнопки с callback); null — обычный текст.
+ */
+interface MessengerGateway
+{
+    /**
+     * @param  list<string>  $images  URL картинок — канал отправляет их настоящими
+     *                                фото (где поддерживается) либо ссылкой в тексте.
+     */
+    public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void;
+}

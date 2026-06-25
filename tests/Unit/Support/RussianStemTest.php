@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\RussianStem;
+use App\Shared\Support\RussianStem;
 use PHPUnit\Framework\TestCase;
 
 final class RussianStemTest extends TestCase

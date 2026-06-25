@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\DTO\Analytics\AnalyticsRange;
-use App\Enums\LeadAnalyticsPeriod;
-use App\Llm\Contracts\LlmClient;
-use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
-use App\Services\LeadAnalyticsService;
-use App\Services\LeadInsightsService;
-use App\Tenancy\TenantContext;
+use App\Modules\Analytics\DTO\AnalyticsRange;
+use App\Modules\Analytics\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
+use App\Modules\Analytics\Services\LeadAnalyticsService;
+use App\Modules\Analytics\Services\LeadInsightsService;
+use App\Shared\Enums\LeadAnalyticsPeriod;
+use App\Shared\Llm\Contracts\LlmClient;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Collection;
 use Mockery;

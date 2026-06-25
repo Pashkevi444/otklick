@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Channels;
 
-use App\Channels\Data\IncomingImage;
-use App\Channels\Telegram\TelegramGateway;
-use App\DTO\ReplyKeyboard;
-use App\Enums\ChannelType;
-use App\Models\Channel;
+use App\Modules\Channels\Data\IncomingImage;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Channels\Telegram\TelegramGateway;
+use App\Shared\DTO\ReplyKeyboard;
+use App\Shared\Enums\ChannelType;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
-use App\Channels\Contracts\ChannelGateway;
-use App\DTO\ReplyKeyboard;
-use App\Enums\ChannelType;
-use App\Models\Channel;
+use App\Modules\Channels\Contracts\ChannelGateway;
+use App\Modules\Channels\Models\Channel;
+use App\Shared\DTO\ReplyKeyboard;
+use App\Shared\Enums\ChannelType;
 use RuntimeException;
 
 /**

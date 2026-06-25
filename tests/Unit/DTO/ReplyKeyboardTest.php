@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\DTO;
 
-use App\DTO\ReplyKeyboard;
+use App\Shared\DTO\ReplyKeyboard;
 use PHPUnit\Framework\TestCase;
 
 final class ReplyKeyboardTest extends TestCase

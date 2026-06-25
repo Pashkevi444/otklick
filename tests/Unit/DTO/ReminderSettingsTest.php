@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\DTO;
 
-use App\DTO\ReminderSettings;
+use App\Modules\Booking\DTO\ReminderSettings;
 use PHPUnit\Framework\TestCase;
 
 final class ReminderSettingsTest extends TestCase

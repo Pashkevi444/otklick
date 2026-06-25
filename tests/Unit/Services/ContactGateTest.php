@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Models\Client;
-use App\Models\Conversation;
-use App\Models\CrmConnection;
-use App\Models\Tenant;
-use App\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
-use App\Repositories\Contracts\MessageRepositoryInterface;
-use App\Services\ClientService;
-use App\Services\ContactGate;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Modules\Clients\Models\Client;
+use App\Modules\Clients\Services\ClientService;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
+use App\Modules\Conversations\Services\ContactGate;
+use App\Shared\Models\Tenant;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;

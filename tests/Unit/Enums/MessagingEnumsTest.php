@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Enums;
 
-use App\Enums\ChannelType;
-use App\Enums\ConversationStatus;
-use App\Enums\MessageDirection;
-use App\Enums\MessageStatus;
+use App\Shared\Enums\ChannelType;
+use App\Shared\Enums\ConversationStatus;
+use App\Shared\Enums\MessageDirection;
+use App\Shared\Enums\MessageStatus;
 use PHPUnit\Framework\TestCase;
 
 final class MessagingEnumsTest extends TestCase

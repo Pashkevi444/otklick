@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\NotificationChannelType;
-use App\Models\NotificationRecipient;
-use App\Models\Tenant;
+use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Shared\Enums\NotificationChannelType;
+use App\Shared\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

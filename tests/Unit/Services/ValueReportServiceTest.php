@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\DTO\Analytics\AnalyticsRange;
-use App\DTO\Analytics\MetricCard;
-use App\DTO\Analytics\ValueReport;
-use App\Enums\CrmProvider;
-use App\Models\Conversation;
-use App\Models\CrmConnection;
-use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
-use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
-use App\Services\ValueReportService;
+use App\Modules\Analytics\DTO\AnalyticsRange;
+use App\Modules\Analytics\DTO\MetricCard;
+use App\Modules\Analytics\DTO\ValueReport;
+use App\Modules\Analytics\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
+use App\Modules\Analytics\Services\ValueReportService;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Modules\Conversations\Models\Conversation;
+use App\Shared\Enums\CrmProvider;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;

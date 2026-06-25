@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Llm;
 
-use App\Llm\FakeEmbedder;
+use App\Shared\Llm\FakeEmbedder;
 use PHPUnit\Framework\TestCase;
 
 final class FakeEmbedderTest extends TestCase

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Enums\CrmProvider;
-use App\Models\CrmConnection;
-use App\Models\Tenant;
-use App\Models\YclientsLink;
-use App\Services\YclientsMarketplaceService;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Booking\Models\YclientsLink;
+use App\Modules\Booking\Services\YclientsMarketplaceService;
+use App\Shared\Enums\CrmProvider;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

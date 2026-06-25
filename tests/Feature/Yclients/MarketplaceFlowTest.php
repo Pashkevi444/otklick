@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Yclients;
 
-use App\Enums\CrmProvider;
-use App\Models\Tenant;
-use App\Models\User;
-use App\Models\YclientsLink;
+use App\Modules\Booking\Models\YclientsLink;
+use App\Shared\Enums\CrmProvider;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

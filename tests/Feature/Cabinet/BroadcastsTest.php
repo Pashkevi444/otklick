@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Enums\BroadcastStatus;
-use App\Jobs\SendBroadcast;
-use App\Models\Broadcast;
-use App\Models\BroadcastDelivery;
-use App\Models\Client;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Broadcasts\Jobs\SendBroadcast;
+use App\Modules\Broadcasts\Models\Broadcast;
+use App\Modules\Broadcasts\Models\BroadcastDelivery;
+use App\Modules\Clients\Models\Client;
+use App\Shared\Enums\BroadcastStatus;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;

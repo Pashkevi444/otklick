@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\User;
-use App\Services\AnnouncementService;
-use App\Services\DashboardCardService;
-use App\Services\UserNotificationService;
-use App\Support\RealtimeConfig;
+use App\Modules\Notifications\Services\UserNotificationService;
+use App\Modules\Platform\Services\AnnouncementService;
+use App\Modules\Platform\Services\DashboardCardService;
+use App\Shared\Models\User;
+use App\Shared\Support\RealtimeConfig;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 

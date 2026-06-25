@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Enums\ChannelType;
-use App\Models\Tenant;
-use App\Services\ChannelService;
-use App\Tenancy\TenantContext;
+use App\Modules\Channels\Services\ChannelService;
+use App\Shared\Enums\ChannelType;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

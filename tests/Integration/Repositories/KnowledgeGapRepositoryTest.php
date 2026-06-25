@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Repositories;
 
-use App\Enums\KnowledgeGapStatus;
-use App\Models\Tenant;
-use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
-use App\Tenancy\TenantContext;
+use App\Modules\Knowledge\Repositories\Contracts\KnowledgeGapRepositoryInterface;
+use App\Shared\Enums\KnowledgeGapStatus;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Tenancy;
 
-use App\Models\Tenant;
-use App\Models\User;
-use App\Tenancy\TenantContext;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Enums\UserRole;
-use App\Models\Client;
-use App\Models\Conversation;
-use App\Models\Tenant;
-use App\Models\User;
-use App\Services\BotResponder;
-use App\Tenancy\TenantInitializer;
-use App\Tenancy\TestContext;
-use App\Vision\Contracts\ImageToText;
-use App\Vision\FakeImageToText;
+use App\Modules\Bot\Services\BotResponder;
+use App\Modules\Clients\Models\Client;
+use App\Modules\Conversations\Models\Conversation;
+use App\Shared\Enums\UserRole;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
+use App\Shared\Tenancy\TenantInitializer;
+use App\Shared\Tenancy\TestContext;
+use App\Shared\Vision\Contracts\ImageToText;
+use App\Shared\Vision\FakeImageToText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;

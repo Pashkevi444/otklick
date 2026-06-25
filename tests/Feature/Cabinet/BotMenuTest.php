@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Enums\UserRole;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Shared\Enums\UserRole;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

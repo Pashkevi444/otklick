@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\BusinessType;
+use App\Shared\Enums\BusinessType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;

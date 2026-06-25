@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Enums;
 
-use App\Enums\CabinetSection;
-use App\Enums\MemberPermission;
-use App\Enums\TenantPlan;
+use App\Shared\Enums\CabinetSection;
+use App\Shared\Enums\MemberPermission;
+use App\Shared\Enums\TenantPlan;
 use Tests\TestCase;
 
 final class MemberPermissionTest extends TestCase

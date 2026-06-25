@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\PasswordResetController;
-use App\Http\Controllers\Auth\TwoFactorChallengeController;
+use App\Modules\Identity\Http\Controllers\AuthenticatedSessionController;
+use App\Modules\Identity\Http\Controllers\PasswordResetController;
+use App\Modules\Identity\Http\Controllers\TwoFactorChallengeController;
 use Illuminate\Support\Facades\Route;
 
 /*

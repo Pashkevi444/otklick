@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Repositories;
 
-use App\DTO\NewTenantData;
-use App\Enums\TenantPlan;
-use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Modules\Identity\DTO\NewTenantData;
+use App\Modules\Identity\Repositories\Contracts\TenantRepositoryInterface;
+use App\Shared\Enums\TenantPlan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

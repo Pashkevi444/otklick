@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\NameValidator;
+use App\Shared\Support\NameValidator;
 use PHPUnit\Framework\TestCase;
 
 final class NameValidatorTest extends TestCase

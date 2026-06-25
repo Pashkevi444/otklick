@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Models\Channel;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Channels\Models\Channel;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;

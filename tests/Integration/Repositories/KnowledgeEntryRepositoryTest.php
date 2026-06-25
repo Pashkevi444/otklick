@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Repositories;
 
-use App\DTO\KnowledgeEntryData;
-use App\Models\Tenant;
-use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
-use App\Tenancy\TenantContext;
+use App\Modules\Knowledge\DTO\KnowledgeEntryData;
+use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

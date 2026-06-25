@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Notifications;
 
-use App\DTO\OwnerNotification;
-use App\Enums\NotificationChannelType;
-use App\Models\NotificationRecipient;
-use App\Models\Tenant;
-use App\Notifications\Contracts\Notifier;
-use App\Notifications\NotifierResolver;
+use App\Modules\Notifications\Delivery\Contracts\Notifier;
+use App\Modules\Notifications\Delivery\NotifierResolver;
+use App\Modules\Notifications\DTO\OwnerNotification;
+use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Shared\Enums\NotificationChannelType;
+use App\Shared\Models\Tenant;
 use PHPUnit\Framework\TestCase;
 
 final class NotifierResolverTest extends TestCase

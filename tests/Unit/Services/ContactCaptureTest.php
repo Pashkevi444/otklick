@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Llm\Contracts\LlmClient;
-use App\Models\Client;
-use App\Models\Conversation;
-use App\Repositories\Contracts\MessageRepositoryInterface;
-use App\Services\ClientService;
-use App\Services\ContactCapture;
-use App\Services\NameDetector;
+use App\Modules\Clients\Models\Client;
+use App\Modules\Clients\Services\ClientService;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
+use App\Modules\Conversations\Services\ContactCapture;
+use App\Modules\Conversations\Services\NameDetector;
+use App\Shared\Llm\Contracts\LlmClient;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;

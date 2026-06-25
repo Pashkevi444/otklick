@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Crm;
 
-use App\Crm\Data\BookingRequest;
-use App\Crm\Data\SlotQuery;
-use App\Crm\Yclients\YclientsGateway;
-use App\Enums\CrmProvider;
-use App\Models\CrmConnection;
+use App\Modules\Booking\Crm\Data\BookingRequest;
+use App\Modules\Booking\Crm\Data\SlotQuery;
+use App\Modules\Booking\Crm\Yclients\YclientsGateway;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Shared\Enums\CrmProvider;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 

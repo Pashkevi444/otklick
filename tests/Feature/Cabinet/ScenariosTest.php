@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Models\BusinessType;
-use App\Models\Flow;
-use App\Models\KnowledgeEntry;
-use App\Models\ScenarioTemplate;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Flows\Models\Flow;
+use App\Modules\Flows\Models\ScenarioTemplate;
+use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Shared\Models\BusinessType;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;

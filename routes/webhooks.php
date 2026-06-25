@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Widget\WidgetChatController;
-use App\Http\Controllers\Yclients\MarketplaceController;
+use App\Modules\Booking\Http\Controllers\MarketplaceController;
+use App\Modules\Conversations\Http\Controllers\WidgetChatController;
 use Illuminate\Support\Facades\Route;
 
 // Каналы (Telegram/VK/MAX/WhatsApp) работают через long polling (poll-команды),

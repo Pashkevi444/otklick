@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Account;
 
-use App\Mail\EmailChangeCodeMail;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Identity\Mail\EmailChangeCodeMail;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;

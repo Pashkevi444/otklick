@@ -2,30 +2,20 @@
 
 namespace App\Providers;
 
-use App\Channels\ChannelGatewayResolver;
-use App\Channels\Contracts\MessengerGateway;
-use App\Channels\Max\MaxGateway;
-use App\Channels\Telegram\TelegramGateway;
-use App\Channels\Vk\VkGateway;
-use App\Channels\WhatsApp\WhatsAppGateway;
-use App\Crm\CrmGatewayResolver;
-use App\Crm\Yclients\YclientsGateway;
-use App\Llm\Contracts\Embedder;
-use App\Llm\Contracts\LlmClient;
-use App\Llm\FakeEmbedder;
-use App\Llm\FakeLlmClient;
-use App\Llm\YandexEmbedder;
-use App\Llm\YandexGptClient;
-use App\Notifications\EmailNotifier;
-use App\Notifications\NotifierResolver;
-use App\Notifications\TelegramNotifier;
-use App\Services\SiteSettingsService;
-use App\Speech\Contracts\SpeechToText;
-use App\Speech\FakeSpeechToText;
-use App\Speech\YandexSpeechToText;
-use App\Vision\Contracts\ImageToText;
-use App\Vision\FakeImageToText;
-use App\Vision\YandexImageToText;
+use App\Modules\Platform\Services\SiteSettingsService;
+use App\Shared\Llm\Contracts\Embedder;
+use App\Shared\Llm\Contracts\LlmClient;
+use App\Shared\Llm\FakeEmbedder;
+use App\Shared\Llm\FakeLlmClient;
+use App\Shared\Llm\YandexEmbedder;
+use App\Shared\Llm\YandexGptClient;
+use App\Shared\Speech\Contracts\SpeechToText;
+use App\Shared\Speech\FakeSpeechToText;
+use App\Shared\Speech\YandexSpeechToText;
+use App\Shared\Vision\Contracts\ImageToText;
+use App\Shared\Vision\FakeImageToText;
+use App\Shared\Vision\YandexImageToText;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -37,57 +27,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(TelegramGateway::class, fn (): TelegramGateway => new TelegramGateway(
-            (string) config('services.telegram.api_url'),
-            (bool) config('services.telegram.force_ipv6'),
-            config('services.telegram.proxy'),
-        ));
-
-        $this->app->singleton(VkGateway::class, fn (): VkGateway => new VkGateway(
-            (string) config('services.vk.api_url'),
-            (string) config('services.vk.version'),
-        ));
-
-        $this->app->singleton(MaxGateway::class, fn (): MaxGateway => new MaxGateway(
-            (string) config('services.max.api_url'),
-        ));
-
-        $this->app->singleton(WhatsAppGateway::class, fn (): WhatsAppGateway => new WhatsAppGateway(
-            (string) config('services.whatsapp.api_url'),
-            config('services.whatsapp.proxy'),
-        ));
-
-        $this->app->singleton(YclientsGateway::class, fn (): YclientsGateway => new YclientsGateway(
-            (string) config('services.yclients.api_url'),
-            config('services.yclients.partner_token'),
-        ));
-
-        // Реестр CRM-стратегий: новый CRM добавляется в этот тег.
-        $this->app->tag([YclientsGateway::class], 'crm.gateways');
-        $this->app->singleton(
-            CrmGatewayResolver::class,
-            fn ($app): CrmGatewayResolver => new CrmGatewayResolver($app->tagged('crm.gateways')),
-        );
-
-        // Стратегии каналов выбираются по ChannelType. Новый канал = новый
-        // ChannelGateway в этом теге.
-        $this->app->tag([TelegramGateway::class, VkGateway::class, MaxGateway::class, WhatsAppGateway::class], 'channel.gateways');
-        $this->app->singleton(
-            ChannelGatewayResolver::class,
-            fn ($app): ChannelGatewayResolver => new ChannelGatewayResolver($app->tagged('channel.gateways')),
-        );
-
-        // Обратная совместимость: точечный MessengerGateway = Telegram (где ещё
-        // не перешли на резолвер).
-        $this->app->bind(MessengerGateway::class, TelegramGateway::class);
-
-        // Реестр нотификаторов: новый канал уведомлений добавляется в этот тег.
-        $this->app->tag([EmailNotifier::class, TelegramNotifier::class], 'notifiers');
-        $this->app->singleton(
-            NotifierResolver::class,
-            fn ($app): NotifierResolver => new NotifierResolver($app->tagged('notifiers')),
-        );
-
         $this->app->singleton(LlmClient::class, function (): LlmClient {
             $driver = (string) config('services.llm.driver');
 
@@ -208,6 +147,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Модели живут в модулях (App\Modules\X\Models\*), а не только в App\Models —
+        // дефолтный резолвер фабрик Laravel их не находит. Маппим модель→фабрику по
+        // имени класса: любой неймспейс → Database\Factories\<Имя>Factory (фабрики
+        // лежат плоско). Так Model::factory() работает независимо от модуля.
+        Factory::guessFactoryNamesUsing(
+            static fn (string $modelName): string => 'Database\\Factories\\'.class_basename($modelName).'Factory',
+        );
+
         // SEO: Schema.org-разметка (@graph) в корневом шаблоне — Organization +
         // WebSite + SoftwareApplication, чтобы поисковики понимали бренд и продукт.
         View::composer('app', function ($view): void {

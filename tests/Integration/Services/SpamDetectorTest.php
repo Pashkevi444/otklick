@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Enums\MessageDirection;
-use App\Models\Conversation;
-use App\Models\Message;
-use App\Models\Tenant;
-use App\Services\SpamDetector;
-use App\Tenancy\TenantContext;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Models\Message;
+use App\Modules\Conversations\Services\SpamDetector;
+use App\Shared\Enums\MessageDirection;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

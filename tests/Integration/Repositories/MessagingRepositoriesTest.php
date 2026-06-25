@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Repositories;
 
-use App\DTO\IncomingMessage;
-use App\DTO\NewChannelData;
-use App\Enums\ChannelType;
-use App\Enums\ConversationOutcome;
-use App\Enums\ConversationStatus;
-use App\Enums\MessageDirection;
-use App\Enums\MessageStatus;
-use App\Models\Client;
-use App\Models\Conversation;
-use App\Models\Tenant;
-use App\Repositories\Contracts\ChannelRepositoryInterface;
-use App\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Repositories\Contracts\MessageRepositoryInterface;
-use App\Tenancy\TenantContext;
+use App\Modules\Channels\DTO\NewChannelData;
+use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
+use App\Modules\Clients\Models\Client;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
+use App\Shared\DTO\IncomingMessage;
+use App\Shared\Enums\ChannelType;
+use App\Shared\Enums\ConversationOutcome;
+use App\Shared\Enums\ConversationStatus;
+use App\Shared\Enums\MessageDirection;
+use App\Shared\Enums\MessageStatus;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

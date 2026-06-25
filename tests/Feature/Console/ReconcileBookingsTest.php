@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Enums\ConversationOutcome;
-use App\Enums\ConversationStatus;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\CrmConnection;
-use App\Models\Tenant;
+use App\Modules\Booking\Models\CrmConnection;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Shared\Enums\ConversationOutcome;
+use App\Shared\Enums\ConversationStatus;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Llm;
 
-use App\Llm\FakeLlmClient;
-use App\Services\PromptBuilder;
+use App\Modules\Bot\Services\PromptBuilder;
+use App\Shared\Llm\FakeLlmClient;
 use PHPUnit\Framework\TestCase;
 
 final class FakeLlmClientTest extends TestCase

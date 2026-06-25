@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\UserRole;
+use App\Shared\Enums\UserRole;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 

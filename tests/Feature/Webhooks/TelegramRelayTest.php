@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Webhooks;
 
-use App\Enums\ConversationStatus;
-use App\Jobs\ProcessTelegramUpdate;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\NotificationRecipient;
-use App\Models\Tenant;
+use App\Modules\Channels\Jobs\ProcessTelegramUpdate;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Shared\Enums\ConversationStatus;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

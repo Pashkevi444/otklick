@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Enums\UserRole;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Shared\Enums\UserRole;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -14,6 +14,14 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
+    /**
+     * Модель живёт в общем ядре (App\Shared\Models), а не в App\Models — задаём
+     * явно, иначе обратный резолвер фабрик Laravel ищет App\User и падает.
+     *
+     * @var class-string<User>
+     */
+    protected $model = User::class;
+
     /**
      * The current password being used by the factory.
      */

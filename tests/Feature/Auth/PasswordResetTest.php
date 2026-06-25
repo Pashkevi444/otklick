@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
-use App\Mail\PasswordResetCodeMail;
-use App\Models\Tenant;
-use App\Models\User;
+use App\Modules\Identity\Mail\PasswordResetCodeMail;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;

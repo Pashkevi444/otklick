@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Llm\Contracts\LlmClient;
-use App\Models\Tenant;
-use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
-use App\Repositories\Contracts\PromptTemplateRepositoryInterface;
-use App\Services\KnowledgeGapDrafter;
+use App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface;
+use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Modules\Knowledge\Services\KnowledgeGapDrafter;
+use App\Shared\Llm\Contracts\LlmClient;
+use App\Shared\Models\Tenant;
 use Illuminate\Support\Collection;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;

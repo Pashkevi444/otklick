@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Max;
 
-use App\Jobs\ProcessMaxUpdate;
-use App\Models\Channel;
-use App\Models\Tenant;
+use App\Modules\Channels\Jobs\ProcessMaxUpdate;
+use App\Modules\Channels\Models\Channel;
+use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;

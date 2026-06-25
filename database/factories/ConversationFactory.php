@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\ConversationStatus;
-use App\Models\Channel;
-use App\Models\Client;
-use App\Models\Conversation;
-use App\Models\Tenant;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Clients\Models\Client;
+use App\Modules\Conversations\Models\Conversation;
+use App\Shared\Enums\ConversationStatus;
+use App\Shared\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Jobs;
 
-use App\DTO\KnowledgeEntryData;
-use App\Jobs\DraftGapAnswer;
-use App\Llm\Contracts\LlmClient;
-use App\Models\Tenant;
-use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
-use App\Services\GapDraftStatus;
-use App\Tenancy\TenantInitializer;
+use App\Modules\Knowledge\DTO\KnowledgeEntryData;
+use App\Modules\Knowledge\Jobs\DraftGapAnswer;
+use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Modules\Knowledge\Services\GapDraftStatus;
+use App\Shared\Llm\Contracts\LlmClient;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

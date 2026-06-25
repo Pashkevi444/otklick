@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Enums\UserNotificationType;
-use App\Models\Tenant;
-use App\Models\User;
-use App\Models\UserNotification;
-use App\Services\UserNotificationService;
-use App\Tenancy\TenantInitializer;
+use App\Modules\Notifications\Models\UserNotification;
+use App\Modules\Notifications\Services\UserNotificationService;
+use App\Shared\Enums\UserNotificationType;
+use App\Shared\Models\Tenant;
+use App\Shared\Models\User;
+use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\DTO\NewTenantData;
-use App\Enums\TenantPlan;
-use App\Events\TenantRegistered;
-use App\Models\Tenant;
-use App\Repositories\Contracts\TenantRepositoryInterface;
-use App\Services\TenantService;
+use App\Modules\Identity\DTO\NewTenantData;
+use App\Modules\Identity\Events\TenantRegistered;
+use App\Modules\Identity\Repositories\Contracts\TenantRepositoryInterface;
+use App\Modules\Identity\Services\TenantService;
+use App\Shared\Enums\TenantPlan;
+use App\Shared\Models\Tenant;
 use Illuminate\Support\Facades\Event;
 use Mockery;
 use Tests\TestCase;

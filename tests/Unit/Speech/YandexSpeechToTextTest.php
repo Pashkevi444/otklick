@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Speech;
 
-use App\Speech\YandexSpeechToText;
+use App\Shared\Speech\YandexSpeechToText;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 

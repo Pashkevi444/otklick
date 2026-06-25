@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Models\Conversation;
-use App\Models\Tenant;
-use App\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Services\ConsentGate;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Modules\Conversations\Services\ConsentGate;
+use App\Shared\Models\Tenant;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;

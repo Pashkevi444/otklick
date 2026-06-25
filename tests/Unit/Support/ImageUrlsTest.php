@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\ImageUrls;
+use App\Shared\Support\ImageUrls;
 use PHPUnit\Framework\TestCase;
 
 final class ImageUrlsTest extends TestCase

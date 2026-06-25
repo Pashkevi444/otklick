@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Support\WidgetRealtimeChannel;
+use App\Shared\Support\WidgetRealtimeChannel;
 use Tests\TestCase;
 
 final class WidgetRealtimeChannelTest extends TestCase

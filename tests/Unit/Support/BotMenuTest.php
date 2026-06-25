@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Models\Tenant;
-use App\Support\BotMenu;
+use App\Shared\Models\Tenant;
+use App\Shared\Support\BotMenu;
 use PHPUnit\Framework\TestCase;
 
 final class BotMenuTest extends TestCase

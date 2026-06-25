@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Repositories;
 
-use App\Enums\ChannelType;
-use App\Enums\MessageDirection;
-use App\Models\Channel;
-use App\Models\Conversation;
-use App\Models\Message;
-use App\Models\Tenant;
-use App\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
-use App\Tenancy\TenantContext;
+use App\Modules\Analytics\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
+use App\Modules\Channels\Models\Channel;
+use App\Modules\Conversations\Models\Conversation;
+use App\Modules\Conversations\Models\Message;
+use App\Shared\Enums\ChannelType;
+use App\Shared\Enums\MessageDirection;
+use App\Shared\Models\Tenant;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
