@@ -33,10 +33,10 @@ use App\Http\Controllers\Cabinet\IntegrationController;
 use App\Http\Controllers\Cabinet\KnowledgeEntryController;
 use App\Http\Controllers\Cabinet\KnowledgeGapController;
 use App\Http\Controllers\Cabinet\NotificationController;
-use App\Http\Controllers\Cabinet\UserNotificationController;
 use App\Http\Controllers\Cabinet\SubscriptionController;
 use App\Http\Controllers\Cabinet\SuspendedController;
 use App\Http\Controllers\Cabinet\TeamController;
+use App\Http\Controllers\Cabinet\UserNotificationController;
 use App\Http\Controllers\Cabinet\WidgetController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\SitemapController;
@@ -136,6 +136,7 @@ $onDomain(config('app.business_domain'), function (): void {
         // любому пользователю кабинета; выдача отфильтрована по правам в сервисе.
         Route::get('/notifications/feed', [UserNotificationController::class, 'index'])->name('bell.feed');
         Route::post('/notifications/read', [UserNotificationController::class, 'readAll'])->name('bell.read');
+        Route::get('/notifications/history', [UserNotificationController::class, 'history'])->name('bell.history');
 
         // Тестирование бота (песочница): живой чат с ботом по своим настройкам без
         // записи лидов/клиентов и без реальной записи в CRM. Доступно на всех

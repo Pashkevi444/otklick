@@ -5,10 +5,21 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use App\Models\UserNotification;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface UserNotificationRepositoryInterface
 {
+    /**
+     * Журнал уведомлений пользователя (история, новые сверху) с пагинацией.
+     * `$types` — фильтр по типам события (null = все); словарь типов остаётся в
+     * домене (сервис разворачивает раздел в типы), репозиторий лишь фильтрует.
+     *
+     * @param  list<string>|null  $types
+     * @return LengthAwarePaginator<int, UserNotification>
+     */
+    public function paginatedForUser(string $userId, int $perPage, ?array $types): LengthAwarePaginator;
+
     /**
      * Массовая вставка строк-уведомлений (фан-аут на получателей). Каждая строка —
      * полный набор атрибутов (id, tenant_id, user_id, type, …, created_at).

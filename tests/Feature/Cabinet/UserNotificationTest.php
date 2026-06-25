@@ -12,6 +12,7 @@ use App\Services\UserNotificationService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 final class UserNotificationTest extends TestCase
@@ -121,5 +122,67 @@ final class UserNotificationTest extends TestCase
         );
 
         $this->assertSame(0, $data['total']);
+    }
+
+    public function test_history_page_renders_with_pagination(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        // 25 уведомлений → две страницы по 20.
+        for ($i = 0; $i < 25; $i++) {
+            $this->notify($tenant, UserNotificationType::NewLead, "Лид {$i}");
+        }
+
+        $this->actingAs($owner)
+            ->get('/cabinet/notifications/history')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Cabinet/Notifications/History')
+                ->has('notifications', 20)
+                ->where('pagination.total', 25)
+                ->where('pagination.last', 2)
+            );
+    }
+
+    public function test_history_filters_by_section(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $this->notify($tenant, UserNotificationType::NewLead, 'Лид');        // conversations
+        $this->notify($tenant, UserNotificationType::KnowledgeGap, 'Вопрос'); // knowledge
+        $this->notify($tenant, UserNotificationType::NewClient, 'Клиент');    // clients
+
+        $this->actingAs($owner)
+            ->get('/cabinet/notifications/history?section=knowledge')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('notifications', 1)
+                ->where('notifications.0.type', UserNotificationType::KnowledgeGap->value)
+                ->where('filters.section', 'knowledge')
+            );
+    }
+
+    public function test_history_is_isolated_per_user(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $other = User::factory()->owner($tenant)->create();
+
+        // Фан-аут создаёт строки обоим владельцам; но видит каждый только свои.
+        $this->notify($tenant, UserNotificationType::NewLead, 'Лид');
+
+        UserNotification::withoutGlobalScopes()
+            ->where('user_id', $other->id)
+            ->update(['title' => 'ЧУЖОЕ']);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/notifications/history')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('notifications', 1)
+                ->where('notifications.0.title', 'Лид')
+            );
     }
 }

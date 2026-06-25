@@ -106,17 +106,59 @@ final readonly class UserNotificationService
             'total' => $total,
             'sections' => $sections,
             'items' => $this->notifications->recentForUser((string) $user->id, 20)
-                ->map(fn (UserNotification $n): array => [
-                    'id' => $n->id,
-                    'type' => $n->type->value,
-                    'icon' => $n->type->icon(),
-                    'title' => $n->title,
-                    'body' => $n->body,
-                    'url' => $n->url,
-                    'read' => $n->read_at !== null,
-                    'at' => $n->created_at->toIso8601String(),
-                ])
+                ->map($this->present(...))
                 ->all(),
+        ];
+    }
+
+    /**
+     * Журнал «все мои уведомления» (отдельная страница): пагинированная история с
+     * необязательным фильтром по разделу. Раздел → типы разворачивается здесь
+     * (доменный словарь), репозиторий лишь фильтрует и пагинирует. Просмотр журнала
+     * НЕ гасит уведомления — гаснут пер-элемент (открыл сущность) или «прочитать всё».
+     *
+     * @return array{notifications: list<array<string, mixed>>, pagination: array{current: int, last: int, total: int, from: int|null, to: int|null}}
+     */
+    public function historyForUser(User $user, ?string $section, int $perPage = 20): array
+    {
+        $types = $section === null ? null : array_values(array_map(
+            fn (UserNotificationType $t): string => $t->value,
+            array_filter(
+                UserNotificationType::cases(),
+                fn (UserNotificationType $t): bool => $t->section() === $section,
+            ),
+        ));
+
+        $page = $this->notifications->paginatedForUser((string) $user->id, $perPage, $types);
+
+        return [
+            'notifications' => array_map($this->present(...), $page->items()),
+            'pagination' => [
+                'current' => $page->currentPage(),
+                'last' => $page->lastPage(),
+                'total' => $page->total(),
+                'from' => $page->firstItem(),
+                'to' => $page->lastItem(),
+            ],
+        ];
+    }
+
+    /**
+     * Единый формат элемента уведомления для фронта (колокольчик + журнал).
+     *
+     * @return array<string, mixed>
+     */
+    private function present(UserNotification $n): array
+    {
+        return [
+            'id' => $n->id,
+            'type' => $n->type->value,
+            'icon' => $n->type->icon(),
+            'title' => $n->title,
+            'body' => $n->body,
+            'url' => $n->url,
+            'read' => $n->read_at !== null,
+            'at' => $n->created_at->toIso8601String(),
         ];
     }
 

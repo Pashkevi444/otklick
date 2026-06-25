@@ -19,7 +19,7 @@ return new class extends Migration
         Schema::create('user_notifications', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('tenant_id');
-            $table->uuid('user_id'); // получатель
+            $table->unsignedBigInteger('user_id'); // получатель (users.id — bigint)
             $table->string('type');
             // Сущность-источник: открытие/просмотр именно ЕЁ гасит уведомление
             // (пер-элемент, а не «весь раздел при заходе» — у нас пагинация).

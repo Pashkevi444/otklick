@@ -63,6 +63,11 @@ const go = (item: NItem): void => {
     if (item.url) router.visit(item.url);
 };
 
+const showAll = (): void => {
+    open.value = false;
+    router.visit('/cabinet/notifications/history');
+};
+
 const when = (iso: string): string => {
     const d = new Date(iso);
     const mins = Math.round((Date.now() - d.getTime()) / 60000);
@@ -160,6 +165,12 @@ onBeforeUnmount(() => {
                     <span v-if="!item.read" class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-rose-500"></span>
                 </component>
             </div>
+
+            <button
+                type="button"
+                class="block w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-[#2E74B5] transition hover:bg-slate-50 dark:border-white/10 dark:text-sky-300 dark:hover:bg-white/5"
+                @click="showAll"
+            >Показать все</button>
         </div>
     </div>
 </template>
