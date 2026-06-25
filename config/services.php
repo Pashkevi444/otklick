@@ -97,7 +97,7 @@ return [
             'api_url' => env('YANDEX_API_URL', 'https://ai.api.cloud.yandex.net/v1/chat/completions'),
             'api_key' => env('YANDEX_API_KEY'),
             'folder_id' => env('YANDEX_FOLDER_ID'),
-            'model' => env('VISION_MODEL', 'qwen2.5-vl-7b-instruct'),
+            'model' => env('VISION_MODEL', 'qwen3.6-35b-a3b'),
         ],
     ],
 

@@ -51,11 +51,14 @@ final readonly class YandexImageToText implements ImageToText
         try {
             $response = Http::withHeaders(['Authorization' => "Api-Key {$this->apiKey}"])
                 ->asJson()
-                ->timeout(30)
+                ->timeout(60)
                 ->post($this->apiUrl, [
                     'model' => "gpt://{$this->folderId}/{$this->model}/latest",
                     'temperature' => 0.3,
-                    'max_tokens' => 500,
+                    // Vision-модели Yandex Cloud — reasoning-типа: токены тратятся на
+                    // «размышления» (reasoning_content) И на ответ. Низкий лимит → ответ
+                    // (content) не успевает сгенерироваться (null). Даём запас.
+                    'max_tokens' => 2500,
                     'messages' => [
                         ['role' => 'system', 'content' => self::INSTRUCTION],
                         ['role' => 'user', 'content' => $content],
