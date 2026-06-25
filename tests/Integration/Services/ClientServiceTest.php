@@ -78,19 +78,34 @@ final class ClientServiceTest extends TestCase
         $this->assertSame($client->id, $identity->client_id);
     }
 
-    public function test_creates_client_even_without_phone(): void
+    public function test_does_not_create_client_without_any_contact(): void
     {
         $tenant = $this->tenant();
         $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
 
-        // Нормализация: каждый лид имеет карточку клиента, даже без телефона.
+        // Зашёл и ничего не оставил (ни телефона, ни имени) — карточку «Без имени»
+        // НЕ заводим; она появится, только когда клиент заполнит контакт.
         $conversation = $this->conversation($tenant, $channel, 'tg-2', ref: null);
         $this->ingest($conversation, null, null);
 
+        $this->assertSame(0, Client::query()->count());
+        $this->assertNull($conversation->fresh()->client_id);
+    }
+
+    public function test_creates_client_once_contact_provided(): void
+    {
+        $tenant = $this->tenant();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+
+        // Сначала пустое «здравствуйте» — карточки нет; потом оставил имя+телефон —
+        // карточка заводится.
+        $conversation = $this->conversation($tenant, $channel, 'tg-2b', ref: null);
+        $this->ingest($conversation, null, null);
+        $this->assertSame(0, Client::query()->count());
+
+        $this->ingest($conversation, '+79991112233', 'Иван');
         $this->assertSame(1, Client::query()->count());
-        $conversation->refresh();
-        $this->assertNotNull($conversation->client_id);
-        $this->assertNull(Client::query()->findOrFail($conversation->client_id)->phone);
+        $this->assertNotNull($conversation->fresh()->client_id);
     }
 
     public function test_attach_matches_existing_client_by_telegram_username(): void
@@ -173,15 +188,16 @@ final class ClientServiceTest extends TestCase
         $this->assertSame(0, ClientIdentity::query()->count());
         $this->assertNull($conv->fresh()->client_id);
 
-        // Тот же чат пишет снова — НЕ узнан, заводится НОВАЯ карточка (бот забыл).
+        // Тот же чат пишет снова и ОСТАВЛЯЕТ контакт — НЕ узнан, заводится НОВАЯ
+        // карточка (бот забыл). Без контакта карточка вообще не создавалась бы.
         $fresh = Conversation::factory()->create([
             'tenant_id' => $tenant->id, 'channel_id' => $channel->id, 'external_chat_id' => 'tg-9', 'client_id' => null,
         ]);
-        $this->service()->attachClient($fresh);
+        $this->ingest($fresh, '+79991112233', 'Пётр');
 
         $newClientId = $fresh->fresh()->client_id;
         $this->assertNotNull($newClientId);
         $this->assertNotSame($client->id, $newClientId);
-        $this->assertNull(Client::query()->findOrFail($newClientId)->name);
+        $this->assertSame('Пётр', Client::query()->findOrFail($newClientId)->name);
     }
 }

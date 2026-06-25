@@ -48,4 +48,15 @@ interface UserNotificationRepositoryInterface
      * (открыл диалог/клиента/обработал пробел → его уведомления гаснут).
      */
     public function markEntityReadForUser(string $userId, string $entityType, string $entityId): void;
+
+    /**
+     * Id сущностей с НЕпрочитанными уведомлениями данного entity_type (для подсветки
+     * новых строк в списке, напр. новых клиентов).
+     *
+     * @return list<string>
+     */
+    public function unreadEntityIdsForUser(string $userId, string $entityType): array;
+
+    /** Помечает прочитанными все непрочитанные уведомления данного entity_type. */
+    public function markEntityTypeReadForUser(string $userId, string $entityType): void;
 }

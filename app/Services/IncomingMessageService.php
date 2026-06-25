@@ -66,6 +66,15 @@ final readonly class IncomingMessageService
             return;
         }
 
+        // Диалог уже эскалирован (ждёт оператора) — бот молчит, чтобы не повторять
+        // «передал администратору» на каждое сообщение (даже смайлик); клиента
+        // подхватит оператор. (В Telegram это делает мост; здесь — для VK/MAX/WhatsApp.)
+        if ($conversation->status === ConversationStatus::NeedsHuman) {
+            $this->conversations->touchLastMessage($conversation);
+
+            return;
+        }
+
         // Контакты клиента (телефон, имя) — до генерации ответа. Здесь же
         // резолвится карточка клиента по нативной идентичности канала.
         $this->contacts->fromInbound($conversation, $incoming->text);

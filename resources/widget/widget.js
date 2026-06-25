@@ -111,6 +111,8 @@
         '.otk-consent.otk-on{display:flex}',
         '.otk-consent input{margin-top:2px;flex:0 0 auto;width:16px;height:16px;accent-color:var(--otk-a);cursor:pointer}',
         '.otk-consent a{color:var(--otk-a);text-decoration:underline}',
+        '.otk-bot .otk-link{color:var(--otk-a);text-decoration:underline;word-break:break-word}',
+        '.otk-me .otk-link{color:#fff;text-decoration:underline;word-break:break-word}',
         '.otk-foot{display:flex;gap:9px;padding:11px;border-top:1px solid rgba(16,42,73,.06);background:rgba(255,255,255,.85);backdrop-filter:blur(6px);align-items:flex-end}',
         '.otk-in{flex:1;border:1.5px solid #dde5ef;border-radius:14px;padding:10px 13px;font-size:14px;outline:none;resize:none;max-height:96px;font-family:inherit;transition:border-color .2s,box-shadow .2s}',
         '.otk-in:focus{border-color:var(--otk-a);box-shadow:0 0 0 3px rgba(46,116,181,.12)}',
@@ -315,6 +317,25 @@
 
     var IMG_RE = /(https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp)(?:\?[^\s<>"']*)?)/gi;
 
+    // Превращает URL в тексте в кликабельные ссылки (открываются в новой вкладке,
+    // не закрывая чат). Через DOM-узлы — без вставки HTML (безопасно от инъекций).
+    function appendLinkified(container, text) {
+        var re = /(https?:\/\/[^\s<>"'»)]+)/g;
+        var last = 0, m;
+        while ((m = re.exec(text)) !== null) {
+            if (m.index > last) container.appendChild(document.createTextNode(text.slice(last, m.index)));
+            var a = document.createElement('a');
+            a.className = 'otk-link';
+            a.href = m[0];
+            a.textContent = m[0];
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            container.appendChild(a);
+            last = m.index + m[0].length;
+        }
+        if (last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
+    }
+
     function openLightbox(url) {
         var ov = document.createElement('div');
         ov.className = 'otk-lightbox';
@@ -362,7 +383,7 @@
 
         if (clean) {
             var t = document.createElement('div');
-            t.textContent = clean;
+            appendLinkified(t, clean);
             el.appendChild(t);
         }
         images.forEach(function (url) {

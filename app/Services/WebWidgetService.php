@@ -100,6 +100,14 @@ final readonly class WebWidgetService
             return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
         }
 
+        // Диалог уже эскалирован (ждёт оператора) — бот молчит, чтобы не повторять
+        // «передал администратору» на каждое сообщение; клиента подхватит оператор.
+        if ($conversation->status === ConversationStatus::NeedsHuman) {
+            $this->conversations->touchLastMessage($conversation);
+
+            return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
+        }
+
         // Забаненный посетитель — фиксированное уведомление без LLM.
         if ($conversation->client?->isBanned()) {
             $reply = new BotReply($channel->tenant->banNotice(), escalate: false);
@@ -175,11 +183,12 @@ final readonly class WebWidgetService
             $this->contacts->fromInbound($conversation, $caption);
         }
 
-        // Оператор уже ведёт диалог — просто сохраняем фото, он его увидит.
-        if ($conversation->isOperatorHandling()) {
+        // Оператор уже ведёт диалог ИЛИ диалог уже эскалирован (ждёт оператора) —
+        // просто сохраняем фото без повторного «передали администратору».
+        if ($conversation->isOperatorHandling() || $conversation->status === ConversationStatus::NeedsHuman) {
             $this->conversations->touchLastMessage($conversation);
 
-            return ['reply' => new BotReply('', escalate: false), 'lastId' => $inboundId, 'images' => $urls, 'operatorActive' => true];
+            return ['reply' => new BotReply('', escalate: false), 'lastId' => $inboundId, 'images' => $urls, 'operatorActive' => $conversation->isOperatorHandling()];
         }
 
         // Пытаемся «увидеть» фото: описание становится вводом клиента, бот отвечает

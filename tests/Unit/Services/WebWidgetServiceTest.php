@@ -173,6 +173,52 @@ final class WebWidgetServiceTest extends TestCase
         $this->assertTrue($reply->escalate);
     }
 
+    public function test_silent_when_conversation_already_needs_human(): void
+    {
+        // Диалог уже эскалирован (ждёт оператора) — бот молчит, не дублирует
+        // «передал администратору» и не зовёт LLM.
+        $channel = new Channel;
+        $channel->id = 'web-1';
+        $channel->setRelation('tenant', new Tenant(['name' => 'Бизнес']));
+
+        $token = Crypt::encryptString('web-1|sess-1');
+        $conversation = new Conversation;
+        $conversation->id = 'conv-1';
+        $conversation->status = ConversationStatus::NeedsHuman;
+
+        $inbound = new Message;
+        $inbound->id = 'm-in-1';
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn($inbound);
+        $messages->shouldNotReceive('recordOutbound');
+
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldNotReceive('respond');
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once();
+
+        $service = new WebWidgetService(
+            $conversations,
+            $messages,
+            $responder,
+            $contacts,
+            Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(),
+            new FakeImageToText,
+            $this->notifications(),
+        );
+
+        ['reply' => $reply, 'lastId' => $lastId] = $service->reply($channel, $token, 'привет ещё раз');
+
+        $this->assertSame('', $reply->text);
+        $this->assertSame('m-in-1', $lastId);
+    }
+
     public function test_recognized_image_gets_bot_answer_instead_of_escalation(): void
     {
         // Vision распознал фото → бот отвечает по базе знаний, диалог НЕ уходит

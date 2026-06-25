@@ -11,6 +11,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -125,5 +126,29 @@ final class ClientBaseTest extends TestCase
             ->assertRedirect('/cabinet/clients'); // из грида — назад в грид
 
         $this->assertDatabaseMissing('clients', ['id' => $client->id]);
+    }
+
+    public function test_opening_base_highlights_new_clients_and_clears_badge(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $client = Client::factory()->create(['tenant_id' => $tenant->id, 'name' => 'Новенький']);
+
+        $notification = UserNotification::create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $owner->id,
+            'type' => 'new_client',
+            'entity_type' => 'client',
+            'entity_id' => $client->id,
+            'title' => 'Новый клиент',
+        ]);
+
+        // Заход в базу: новый клиент подсвечен (newClientIds), уведомление гаснет → бейдж спадает.
+        $this->actingAs($owner)
+            ->get('/cabinet/clients')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('newClientIds', [$client->id]));
+
+        $this->assertNotNull($notification->fresh()->read_at);
     }
 }

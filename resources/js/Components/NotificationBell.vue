@@ -77,6 +77,37 @@ const when = (iso: string): string => {
     return d.toLocaleDateString('ru-RU');
 };
 
+// Звук при приходе нового уведомления (синтез через Web Audio — без аудио-файла).
+let audioCtx: AudioContext | null = null;
+const playDing = (): void => {
+    try {
+        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = audioCtx ?? new Ctx();
+        if (audioCtx.state === 'suspended') void audioCtx.resume();
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(880, t);
+        o.frequency.setValueAtTime(1320, t + 0.09);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+        o.start(t);
+        o.stop(t + 0.34);
+    } catch {
+        // звук не критичен — тихо игнорируем
+    }
+};
+
+// Счётчик непрочитанных вырос (пришло новое) → дзинь. На первичной загрузке не звучит.
+watch(total, (now, prev) => {
+    if (now > prev) playDing();
+});
+
 // Подхватываем свежую выдачу при навигации (shared-prop пересчитывается с учётом прав).
 watch(
     () => page.props.notifications as Feed | null,
