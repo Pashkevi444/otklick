@@ -67,4 +67,27 @@ final class EloquentUserNotificationRepository implements UserNotificationReposi
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
     }
+
+    public function unreadEntityIdsForUser(string $userId, string $entityType): array
+    {
+        return UserNotification::query()
+            ->where('user_id', $userId)
+            ->where('entity_type', $entityType)
+            ->whereNull('read_at')
+            ->whereNotNull('entity_id')
+            ->pluck('entity_id')
+            ->map(static fn ($id): string => (string) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function markEntityTypeReadForUser(string $userId, string $entityType): void
+    {
+        UserNotification::query()
+            ->where('user_id', $userId)
+            ->where('entity_type', $entityType)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+    }
 }

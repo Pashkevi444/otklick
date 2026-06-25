@@ -41,7 +41,16 @@ final class ClientController extends Controller
 
         $page = $this->clients->paginateForCurrentTenant($search, $channel, $sort, $dir, 15);
 
+        // Новые клиенты (с непрочитанным уведомлением) — подсветим в списке, а затем
+        // гасим их уведомления: открыл базу → бейдж на плашке спадает.
+        $newIds = [];
+        if (($user = $request->user()) instanceof User) {
+            $newIds = $this->notifications->unreadEntityIds($user, 'client');
+            $this->notifications->markEntityTypeRead($user, 'client');
+        }
+
         return Inertia::render('Cabinet/Clients/Index', [
+            'newClientIds' => $newIds,
             'clients' => array_map($this->present(...), $page->items()),
             'pagination' => [
                 'current' => $page->currentPage(),

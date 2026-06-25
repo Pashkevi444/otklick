@@ -40,9 +40,14 @@ const props = defineProps<{
     pagination: Pagination;
     filters: Filters;
     channels: ChannelOption[];
+    newClientIds?: string[];
 }>();
 
 const state = reactive<Filters>({ ...props.filters });
+
+// Клиенты с непрочитанным уведомлением — подсвечиваем «Новый» при заходе в базу.
+const newIds = new Set(props.newClientIds ?? []);
+const isNew = (id: string): boolean => newIds.has(id);
 
 const sorts = [
     { value: 'last', label: 'Последняя активность' },
@@ -185,11 +190,14 @@ const toggleBan = (row: Row): void => {
                         v-for="c in clients"
                         :key="c.id"
                         class="cursor-pointer border-t border-slate-100 transition hover:bg-slate-50"
+                        :class="isNew(c.id) ? 'bg-[#2E74B5]/5' : ''"
                         @click="open(c.id)"
                     >
                         <td class="px-4 py-3">
                             <div class="font-medium text-slate-700">
+                                <span v-if="isNew(c.id)" title="Новый клиент" class="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#2E74B5] align-middle"></span>
                                 {{ c.name || 'Без имени' }}
+                                <span v-if="isNew(c.id)" class="ml-1 rounded-full bg-[#2E74B5]/10 px-2 py-0.5 text-xs font-medium text-[#2E74B5]">Новый</span>
                                 <span v-if="c.has_summary" title="Есть резюме" class="ml-1">📝</span>
                                 <span v-if="c.banned" class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">заблокирован</span>
                             </div>
