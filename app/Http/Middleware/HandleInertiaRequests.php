@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\AnnouncementService;
 use App\Services\DashboardCardService;
 use App\Services\UserNotificationService;
+use App\Support\RealtimeConfig;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -90,36 +91,7 @@ class HandleInertiaRequests extends Middleware
                 : null,
             // Публичный конфиг Reverb для Echo на фронте (ключ публичный). null —
             // если WS не настроен (BROADCAST != reverb): фронт работает на поллинге.
-            'reverb' => $this->reverbConfig($request),
-        ];
-    }
-
-    /**
-     * Конфиг Reverb-клиента: ключ из config + ПУБЛИЧНЫЙ host из запроса (тот же
-     * домен, с которого загрузились — Caddy проксирует /app/* на reverb). App→Reverb
-     * пушит отдельно по внутреннему REVERB_HOST=reverb:8080 (см. broadcasting.php).
-     *
-     * @return array{key: string, host: string, port: int, scheme: string}|null
-     */
-    private function reverbConfig(Request $request): ?array
-    {
-        if (config('broadcasting.default') !== 'reverb') {
-            return null;
-        }
-
-        $key = config('broadcasting.connections.reverb.key');
-
-        if (! is_string($key) || $key === '') {
-            return null;
-        }
-
-        $secure = $request->isSecure();
-
-        return [
-            'key' => $key,
-            'host' => $request->getHost(),
-            'port' => $secure ? 443 : ((int) $request->getPort() ?: 80),
-            'scheme' => $secure ? 'https' : 'http',
+            'reverb' => RealtimeConfig::fromRequest($request),
         ];
     }
 }

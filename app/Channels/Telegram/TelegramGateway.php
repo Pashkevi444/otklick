@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Channels\Telegram;
 
 use App\Channels\Contracts\ChannelGateway;
+use App\Channels\Contracts\ReceivesImage;
 use App\Channels\Contracts\ReceivesVoice;
+use App\Channels\Data\IncomingImage;
 use App\DTO\ReplyKeyboard;
 use App\Enums\ChannelType;
 use App\Models\Channel;
 use App\Support\ImageBytes;
+use App\Support\ImageMime;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -22,7 +25,7 @@ use Throwable;
  * IPv6 для вебхука Telegram не принимает), поэтому апдейты тянем long polling'ом
  * (getUpdates) — это исходящий запрос, который ходит по IPv6.
  */
-final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
+final readonly class TelegramGateway implements ChannelGateway, ReceivesImage, ReceivesVoice
 {
     public function __construct(
         private string $apiUrl,
@@ -226,6 +229,69 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesVoice
             return null;
         }
 
+        $token = $channel->botToken();
+
+        try {
+            $filePath = $this->request()
+                ->connectTimeout(5)->timeout(8)
+                ->get("{$this->apiUrl}/bot{$token}/getFile", ['file_id' => $fileId])
+                ->throw()
+                ->json('result.file_path');
+
+            if (! is_string($filePath) || $filePath === '') {
+                return null;
+            }
+
+            $body = $this->request()
+                ->connectTimeout(5)->timeout(20)
+                ->get("{$this->apiUrl}/file/bot{$token}/{$filePath}")
+                ->throw()
+                ->body();
+
+            return $body !== '' ? $body : null;
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    /**
+     * Скачивает фото из апдейта Telegram (getFile → download). Одно сообщение несёт
+     * одно фото массивом размеров `message.photo` — берём самый крупный (альбом
+     * приходит ОТДЕЛЬНЫМИ апдейтами, склейку делает дебаунс по media_group_id).
+     * Подпись — из `message.caption`. Тип уточняем по байтам.
+     *
+     * @param  array<string, mixed>  $update
+     * @return list<IncomingImage>
+     */
+    public function downloadImages(Channel $channel, array $update): array
+    {
+        $message = $update['message'] ?? null;
+        $photo = is_array($message) ? ($message['photo'] ?? null) : null;
+
+        if (! is_array($photo) || $photo === []) {
+            return [];
+        }
+
+        $largest = end($photo);
+        $fileId = is_array($largest) ? ($largest['file_id'] ?? null) : null;
+
+        if (! is_string($fileId) || $fileId === '') {
+            return [];
+        }
+
+        $caption = is_string($message['caption'] ?? null) ? trim($message['caption']) : '';
+        $bytes = $this->downloadFile($channel, $fileId);
+
+        return $bytes !== null ? [new IncomingImage($bytes, ImageMime::sniff($bytes), $caption)] : [];
+    }
+
+    /**
+     * Скачивает файл Telegram по file_id (getFile → download). null — ошибка.
+     */
+    public function downloadFile(Channel $channel, string $fileId): ?string
+    {
         $token = $channel->botToken();
 
         try {

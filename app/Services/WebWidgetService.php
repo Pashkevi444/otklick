@@ -11,6 +11,7 @@ use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Events\ClientTyping;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
@@ -18,8 +19,12 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
+use App\Support\ImageMime;
+use App\Support\WidgetRealtimeChannel;
+use App\Vision\Contracts\ImageToText;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -38,6 +43,7 @@ final readonly class WebWidgetService
         private BotResponder $responder,
         private ContactCapture $contacts,
         private SpamDetector $spam,
+        private ImageToText $vision,
     ) {}
 
     /**
@@ -129,6 +135,113 @@ final readonly class WebWidgetService
     }
 
     /**
+     * Клиент прислал фото в виджете. Бот распознаёт картинку через vision-модель
+     * (описание подставляется как «сообщение клиента» — бот отвечает по базе
+     * знаний, как на текст). Если распознавание выключено/не удалось — фолбэк на
+     * прежнее поведение: фото уходит администратору (диалог → needs_human).
+     *
+     * @param  list<array{path: string, url: string}>  $images  уже сохранённые на диск файлы
+     * @return array{reply: BotReply, lastId: string, images: list<string>, operatorActive: bool}
+     */
+    public function receiveImage(Channel $channel, string $token, array $images, string $caption, ?string $clientIp = null): array
+    {
+        $sessionId = $this->sessionFromToken($channel, $token);
+        $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null, $clientIp);
+
+        $urls = array_map(static fn (array $i): string => $i['url'], $images);
+
+        $inbound = $this->messages->recordInbound($conversation, new IncomingMessage(
+            externalChatId: $sessionId,
+            externalMessageId: (string) Str::uuid(),
+            text: $caption,
+            raw: ['images' => $images],
+        ));
+        $inboundId = $inbound !== null ? (string) $inbound->id : '';
+
+        if ($caption !== '') {
+            $this->contacts->fromInbound($conversation, $caption);
+        }
+
+        // Оператор уже ведёт диалог — просто сохраняем фото, он его увидит.
+        if ($conversation->isOperatorHandling()) {
+            $this->conversations->touchLastMessage($conversation);
+
+            return ['reply' => new BotReply('', escalate: false), 'lastId' => $inboundId, 'images' => $urls, 'operatorActive' => true];
+        }
+
+        // Пытаемся «увидеть» фото: описание становится вводом клиента, бот отвечает
+        // как на обычный текст. Не распозналось — передаём администратору (фолбэк).
+        $recognized = $this->describeImages($images, $caption);
+
+        if ($recognized !== null) {
+            $reply = $this->responder->respond($channel->tenant, $conversation, $recognized);
+
+            $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
+            $this->conversations->touchLastMessage($conversation);
+
+            if ($reply->escalate) {
+                $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+            } elseif ($reply->booked) {
+                $this->conversations->markBooked($conversation);
+                if ($conversation->client_id !== null) {
+                    RefreshClientSummary::dispatch((string) $channel->tenant_id, (string) $conversation->client_id);
+                }
+            } elseif ($reply->cancelled) {
+                $this->responder->cancelBookingInCrm($conversation);
+                $this->conversations->markCancelled($conversation);
+            }
+
+            $this->notifyOwner($channel, $conversation, $caption !== '' ? $caption : '📷 Фото от клиента', $reply);
+
+            return ['reply' => $reply, 'lastId' => (string) $outbound->id, 'images' => $urls, 'operatorActive' => false];
+        }
+
+        // Бот не «увидел» картинку — честно передаём администратору.
+        $ack = 'Спасибо! Получили ваше фото и передали администратору — он скоро ответит.';
+        $reply = new BotReply($ack, escalate: true);
+        $outbound = $this->messages->recordOutbound($conversation, $ack, MessageStatus::Sent);
+        $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+        $this->conversations->touchLastMessage($conversation);
+
+        $this->notifyOwner($channel, $conversation, $caption !== '' ? $caption : '📷 Фото от клиента', $reply);
+
+        return ['reply' => $reply, 'lastId' => (string) $outbound->id, 'images' => $urls, 'operatorActive' => false];
+    }
+
+    /**
+     * Прогоняет сохранённые фото через vision-порт и складывает ввод клиента
+     * (подпись + описание). null — vision выключен/не распознал ни одной картинки.
+     *
+     * @param  list<array{path: string, url: string}>  $images
+     */
+    private function describeImages(array $images, string $caption): ?string
+    {
+        $descriptions = [];
+
+        foreach ($images as $image) {
+            if (! Storage::disk('public')->exists($image['path'])) {
+                continue;
+            }
+
+            $bytes = (string) Storage::disk('public')->get($image['path']);
+            if ($bytes === '') {
+                continue;
+            }
+
+            $description = $this->vision->describe($bytes, ImageMime::sniff($bytes), $caption);
+            if ($description !== null && trim($description) !== '') {
+                $descriptions[] = trim($description);
+            }
+        }
+
+        if ($descriptions === []) {
+            return null;
+        }
+
+        return ImageRecognitionService::compose($caption, $descriptions);
+    }
+
+    /**
      * Лайв-поллинг виджета: исходящие сообщения диалога (ответы бота И оператора),
      * появившиеся после $afterId, + признак того, что сейчас на связи оператор
      * (виджет покажет баннер). Диалога ещё нет (сессия без переписки) → пусто.
@@ -151,6 +264,35 @@ final readonly class WebWidgetService
             ->all();
 
         return ['messages' => $messages, 'operatorActive' => $conversation->isOperatorHandling()];
+    }
+
+    /**
+     * Имя публичного реалтайм-канала сессии (виджет подписывается на него, чтобы
+     * показать «оператор печатает»). Выводится из канала и id сессии.
+     */
+    public function realtimeChannel(Channel $channel, string $token): string
+    {
+        return WidgetRealtimeChannel::name($channel->id, $this->sessionFromToken($channel, $token));
+    }
+
+    /**
+     * Посетитель печатает в виджете — шлём эфемерный сигнал в кабинет (на приватный
+     * канал тенанта), чтобы открытый диалог показал «клиент печатает». Диалога ещё
+     * нет (сессия без переписки) — тихо выходим.
+     */
+    public function markClientTyping(Channel $channel, string $token): void
+    {
+        $sessionId = $this->sessionFromToken($channel, $token);
+        $conversation = $this->conversations->findActiveForChat($channel->id, $sessionId);
+
+        if ($conversation === null) {
+            return;
+        }
+
+        $tenantId = $channel->getAttribute('tenant_id');
+        if (is_string($tenantId) && $tenantId !== '') {
+            ClientTyping::dispatch($tenantId, (string) $conversation->id);
+        }
     }
 
     /**

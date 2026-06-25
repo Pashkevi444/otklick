@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\DTO\BotReply;
+use App\Enums\ChannelType;
+use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -16,7 +18,10 @@ use App\Services\BotResponder;
 use App\Services\ContactCapture;
 use App\Services\SpamDetector;
 use App\Services\WebWidgetService;
+use App\Vision\FakeImageToText;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;
@@ -52,7 +57,7 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'да, записывайте');
 
-        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock()))
+        ['reply' => $reply] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), new FakeImageToText))
             ->reply($channel, $token, 'да, записывайте');
 
         $this->assertTrue($reply->booked);
@@ -87,10 +92,114 @@ final class WebWidgetServiceTest extends TestCase
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
 
-        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock()))
+        ['reply' => $reply, 'lastId' => $lastId] = (new WebWidgetService($conversations, $messages, $responder, $contacts, Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(), new FakeImageToText))
             ->reply($channel, $token, 'есть кто живой?');
 
         $this->assertSame('', $reply->text);
         $this->assertSame('m-in-1', $lastId);
+    }
+
+    public function test_recognized_image_gets_bot_answer_instead_of_escalation(): void
+    {
+        // Vision распознал фото → бот отвечает по базе знаний, диалог НЕ уходит
+        // администратору (статус needs_human не ставится).
+        Storage::fake('public');
+        Storage::disk('public')->put('widget/t-1/cut.jpg', 'JPEG-BYTES');
+
+        $channel = new Channel;
+        $channel->id = 'web-1';
+        $channel->tenant_id = 't-1';
+        $channel->setRelation('tenant', new Tenant(['name' => 'Барбершоп']));
+
+        $token = Crypt::encryptString('web-1|sess-1');
+        $conversation = new Conversation;
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+        $conversations->shouldNotReceive('updateStatus');
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $outbound = new Message;
+        $outbound->id = 'm-out-1';
+        $messages->shouldReceive('recordOutbound')
+            ->once()->with($conversation, 'Делаем такие стрижки, записать вас?', MessageStatus::Sent)->andReturn($outbound);
+
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldReceive('respond')
+            ->once()
+            ->with(Mockery::any(), $conversation, '[Клиент прислал фото. На фото: Мужская стрижка андеркат.]')
+            ->andReturn(new BotReply('Делаем такие стрижки, записать вас?', escalate: false));
+
+        $contacts = Mockery::mock(ContactCapture::class);
+
+        $service = new WebWidgetService(
+            $conversations,
+            $messages,
+            $responder,
+            $contacts,
+            Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(),
+            new FakeImageToText('Мужская стрижка андеркат.'),
+        );
+
+        ['reply' => $reply, 'lastId' => $lastId, 'operatorActive' => $operatorActive] = $service->receiveImage(
+            $channel,
+            $token,
+            [['path' => 'widget/t-1/cut.jpg', 'url' => 'https://x/storage/widget/t-1/cut.jpg']],
+            '',
+        );
+
+        $this->assertSame('Делаем такие стрижки, записать вас?', $reply->text);
+        $this->assertFalse($reply->escalate);
+        $this->assertFalse($operatorActive);
+        $this->assertSame('m-out-1', $lastId);
+    }
+
+    public function test_unrecognized_image_escalates_to_admin(): void
+    {
+        // Vision выключен/не распознал → прежнее поведение: фото уходит админу.
+        Queue::fake();
+        Storage::fake('public');
+        Storage::disk('public')->put('widget/t-1/blur.jpg', 'JPEG-BYTES');
+
+        $channel = new Channel;
+        $channel->id = 'web-1';
+        $channel->type = ChannelType::Web;
+        $channel->tenant_id = 't-1';
+        $channel->setRelation('tenant', new Tenant(['name' => 'Барбершоп']));
+
+        $token = Crypt::encryptString('web-1|sess-1');
+        $conversation = new Conversation;
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+        $conversations->shouldReceive('updateStatus')->once()->with($conversation, ConversationStatus::NeedsHuman);
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $messages->shouldReceive('recordOutbound')->once()->andReturn(new Message);
+
+        $responder = Mockery::mock(BotResponder::class);
+        $responder->shouldNotReceive('respond');
+
+        $service = new WebWidgetService(
+            $conversations,
+            $messages,
+            $responder,
+            Mockery::mock(ContactCapture::class),
+            Mockery::mock(SpamDetector::class)->allows('isSpam')->andReturn(false)->getMock(),
+            new FakeImageToText, // null описание
+        );
+
+        ['reply' => $reply] = $service->receiveImage(
+            $channel,
+            $token,
+            [['path' => 'widget/t-1/blur.jpg', 'url' => 'https://x/storage/widget/t-1/blur.jpg']],
+            '',
+        );
+
+        $this->assertTrue($reply->escalate);
     }
 }

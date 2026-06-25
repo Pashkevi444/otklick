@@ -42,6 +42,40 @@ class ReplyComposer
     /** Сколько релевантных записей знаний подмешивать в промпт (RAG). */
     private const int RAG_TOP_K = 6;
 
+    /**
+     * Фразы-маркеры «бот фактически не ответил»: явный отказ помочь или
+     * переадресация к человеку. Если такой текст пришёл от LLM БЕЗ служебного
+     * сентинела ([[ESCALATE]]/[[CLARIFY]]/…), это всё равно провал — клиент остался
+     * без ответа. Список высокоточный: каждая фраза однозначно означает, что вопрос
+     * не закрыт. Регистр и ё→е нормализуются перед сравнением.
+     *
+     * @var list<string>
+     */
+    private const array NON_ANSWER_MARKERS = [
+        'не могу помочь',
+        'не могу вам помочь',
+        'ничем не могу помочь',
+        'не могу ответить на этот вопрос',
+        'не могу ответить на ваш вопрос',
+        'не могу дать ответ',
+        'не могу предоставить такую информацию',
+        'не могу предоставить эту информацию',
+        'не располагаю информацией',
+        'не располагаю такой информацией',
+        'не владею информацией',
+        'у меня нет информации',
+        'у меня нет данных',
+        'нет такой информации',
+        'затрудняюсь ответить',
+        'я не знаю ответа',
+        'этого я не знаю',
+        'обратитесь к администратору',
+        'обратитесь к нашему администратору',
+        'обратитесь к менеджеру',
+        'уточните у администратора',
+        'свяжитесь с администратором',
+    ];
+
     public function __construct(
         private readonly LlmClient $llm,
         private readonly PromptBuilder $prompt,
@@ -164,6 +198,16 @@ class ReplyComposer
             return new BotReply($question !== '' ? $question : $this->defaultClarification(), escalate: false);
         }
 
+        // Контроль качества: LLM выдала отказ/переадресацию к человеку, но БЕЗ
+        // сентинела (DeepSeek/gpt-oss так бывает). Клиент остался без ответа —
+        // передаём администратору и фиксируем пробел, иначе такие промахи модели не
+        // попадали в «развитие бота». Высокоточный список фраз (NON_ANSWER_MARKERS).
+        if ($this->looksLikeNonAnswer($answer)) {
+            $this->resetStreak($conversation);
+
+            return new BotReply($this->fallback($profile), escalate: true, knowledgeGap: true);
+        }
+
         // Бот ответил по делу — обнуляем серию непоняток.
         $this->resetStreak($conversation);
 
@@ -193,6 +237,24 @@ class ReplyComposer
         $finalText = KnowledgeLinks::append($finalText, $availableLinks);
 
         return new BotReply($finalText, escalate: false, images: $images);
+    }
+
+    /**
+     * Ответ модели — фактический «не ответ»: явный отказ помочь или переадресация к
+     * человеку без служебного сентинела (см. {@see self::NON_ANSWER_MARKERS}).
+     * Регистр и ё→е нормализуются.
+     */
+    private function looksLikeNonAnswer(string $answer): bool
+    {
+        $a = str_replace('ё', 'е', mb_strtolower($answer));
+
+        foreach (self::NON_ANSWER_MARKERS as $marker) {
+            if (mb_strpos($a, $marker) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

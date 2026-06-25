@@ -87,6 +87,20 @@ return [
         ],
     ],
 
+    'vision' => [
+        // fake — без распознавания (по умолчанию, без ключей): бот «не видит» фото
+        // и передаёт администратору. yandex — vision-модель Yandex Cloud AI
+        // (OpenAI-совместимый эндпоинт, как у LLM). Модель должна быть vision-способной.
+        'driver' => env('VISION_DRIVER', 'fake'),
+
+        'yandex' => [
+            'api_url' => env('YANDEX_API_URL', 'https://ai.api.cloud.yandex.net/v1/chat/completions'),
+            'api_key' => env('YANDEX_API_KEY'),
+            'folder_id' => env('YANDEX_FOLDER_ID'),
+            'model' => env('VISION_MODEL', 'qwen2.5-vl-7b-instruct'),
+        ],
+    ],
+
     'vk' => [
         'api_url' => env('VK_API_URL', 'https://api.vk.com/method'),
         'version' => env('VK_API_VERSION', '5.199'),

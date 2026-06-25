@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Webhooks;
 
+use App\Jobs\ProcessTelegramAlbum;
 use App\Jobs\ProcessTelegramUpdate;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -12,8 +13,11 @@ use App\Models\Message;
 use App\Models\Tenant;
 use App\Speech\Contracts\SpeechToText;
 use App\Speech\FakeSpeechToText;
+use App\Vision\Contracts\ImageToText;
+use App\Vision\FakeImageToText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 final class ProcessTelegramUpdateTest extends TestCase
@@ -107,6 +111,119 @@ final class ProcessTelegramUpdateTest extends TestCase
         ]);
 
         $this->assertDatabaseMissing('messages', ['tenant_id' => $tenant->id, 'direction' => 'inbound']);
+    }
+
+    public function test_photo_with_caption_is_recognized_and_answered(): void
+    {
+        Http::fake([
+            '*/getFile*' => Http::response(['result' => ['file_path' => 'photos/p1.jpg']]),
+            '*/file/bot*' => Http::response("\xFF\xD8\xFF\xE0JPEG"),
+            '*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]]),
+        ]);
+        // Vision «видит» фото — возвращаем описание (вместо реальной модели).
+        $this->app->instance(ImageToText::class, new FakeImageToText('мужская стрижка андеркат'));
+
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $this->seedGateDone($tenant, $channel);
+
+        // Фото с подписью: текста нет, есть photo[] и caption.
+        $this->process($tenant, $channel, [
+            'update_id' => 201,
+            'message' => [
+                'message_id' => 21,
+                'chat' => ['id' => 555],
+                'from' => ['username' => 'ivan'],
+                'caption' => 'хочу такую же',
+                'photo' => [
+                    ['file_id' => 'small', 'width' => 90],
+                    ['file_id' => 'big', 'width' => 1280],
+                ],
+            ],
+        ]);
+
+        // Входящее записано: подпись + описание фото → бот ответил (не молчит).
+        $inbound = Message::query()->where('direction', 'inbound')->firstOrFail();
+        $this->assertStringContainsString('хочу такую же', (string) $inbound->text);
+        $this->assertStringContainsString('фото', (string) $inbound->text);
+        $this->assertSame(1, Message::query()->where('direction', 'outbound')->count());
+        Http::assertSent(fn ($r): bool => str_contains($r->url(), '/sendMessage'));
+    }
+
+    public function test_album_buffered_and_answered_once(): void
+    {
+        // Альбом → один ответ: фото копятся в буфере, склейка планируется один раз,
+        // отложенный джоб отдаёт боту одно объединённое сообщение.
+        Queue::fake();
+        Http::fake([
+            '*/getFile*' => Http::response(['result' => ['file_path' => 'photos/p.jpg']]),
+            '*/file/bot*' => Http::response("\xFF\xD8\xFF\xE0JPEG"),
+            '*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]]),
+        ]);
+        $this->app->instance(ImageToText::class, new FakeImageToText('пример работы'));
+
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $this->seedGateDone($tenant, $channel);
+
+        // Два фото одного альбома приходят ОТДЕЛЬНЫМИ апдейтами (общий media_group_id).
+        foreach ([41, 42] as $i => $messageId) {
+            $this->process($tenant, $channel, [
+                'update_id' => 400 + $i,
+                'message' => [
+                    'message_id' => $messageId,
+                    'media_group_id' => 'GROUP1',
+                    'chat' => ['id' => 555],
+                    'from' => ['username' => 'ivan'],
+                    'caption' => $i === 0 ? 'оба нравятся' : null,
+                    'photo' => [['file_id' => "f{$messageId}", 'width' => 1000]],
+                ],
+            ]);
+        }
+
+        // Пока ничего не обработано — фото в буфере; склейка запланирована РОВНО раз.
+        $this->assertSame(0, Message::query()->where('direction', 'inbound')->count());
+        Queue::assertPushed(ProcessTelegramAlbum::class, 1);
+
+        // Запускаем склейку (в проде — отложенный воркер через ~2с).
+        $this->app->call([new ProcessTelegramAlbum($tenant->id, $channel->id, 'GROUP1'), 'handle']);
+
+        // Один объединённый ввод (с подписью альбома) и один ответ бота на весь альбом.
+        $inbound = Message::query()->where('direction', 'inbound')->get();
+        $this->assertCount(1, $inbound);
+        $this->assertStringContainsString('оба нравятся', (string) $inbound->first()->text);
+        $this->assertSame(1, Message::query()->where('direction', 'outbound')->count());
+    }
+
+    public function test_separate_photos_without_group_each_processed(): void
+    {
+        // Отдельные фото (БЕЗ media_group_id) — каждое обрабатывается само по себе.
+        Http::fake([
+            '*/getFile*' => Http::response(['result' => ['file_path' => 'photos/p.jpg']]),
+            '*/file/bot*' => Http::response("\xFF\xD8\xFF\xE0JPEG"),
+            '*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]]),
+        ]);
+        $this->app->instance(ImageToText::class, new FakeImageToText('пример работы'));
+
+        $tenant = Tenant::factory()->create();
+        $channel = Channel::factory()->create(['tenant_id' => $tenant->id]);
+        $this->seedGateDone($tenant, $channel);
+
+        foreach ([31, 32] as $i => $messageId) {
+            $this->process($tenant, $channel, [
+                'update_id' => 300 + $i,
+                'message' => [
+                    'message_id' => $messageId,
+                    'chat' => ['id' => 555],
+                    'from' => ['username' => 'ivan'],
+                    'photo' => [['file_id' => "f{$messageId}", 'width' => 1000]],
+                ],
+            ]);
+        }
+
+        // Оба фото обработаны: 2 входящих, бот ответил на каждое.
+        $this->assertSame(2, Message::query()->where('direction', 'inbound')->count());
+        $this->assertSame(2, Message::query()->where('direction', 'outbound')->count());
     }
 
     public function test_bot_answers_from_published_knowledge(): void

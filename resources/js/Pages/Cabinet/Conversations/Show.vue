@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { useCan } from '@/composables/useCan';
+import { realtime, type ReverbConfig } from '@/echo';
 
 interface Msg {
     id: string;
     direction: string;
     text: string;
+    images?: string[];
     time: string | null;
     date: string | null;
 }
@@ -44,6 +46,17 @@ const operatorName = ref<string | null>(props.conversation.operatorName);
 const replyText = ref('');
 const busy = ref(false);
 let lastId = messages.value.length ? messages.value[messages.value.length - 1].id : '';
+
+// --- «Печатает…» обе стороны (реалтайм через Reverb) ---
+const page = usePage();
+const reverbConfig = computed<ReverbConfig | null>(() => (page.props.reverb as ReverbConfig | null) ?? null);
+const tenantId = computed<string | null>(
+    () => ((page.props.auth as { user?: { tenant?: { id?: string } } } | undefined)?.user?.tenant?.id) ?? null,
+);
+const clientTyping = ref(false);
+let clientTypingTimer: number | undefined;
+let lastTypingSent = 0;
+let typingChannel: string | null = null;
 
 const base = `/cabinet/conversations/${props.conversation.id}`;
 const xsrf = (): string =>
@@ -109,6 +122,15 @@ const release = async (): Promise<void> => {
     void poll();
 };
 
+// Оператор печатает → троттленый сигнал в виджет («оператор печатает»).
+const notifyTyping = (): void => {
+    if (!operatorActive.value) return;
+    const now = Date.now();
+    if (now - lastTypingSent < 2500) return;
+    lastTypingSent = now;
+    void action('typing').catch(() => {});
+};
+
 const sendReply = async (): Promise<void> => {
     const text = replyText.value.trim();
     if (!text || busy.value) return;
@@ -129,9 +151,25 @@ const sendReply = async (): Promise<void> => {
 let timer: number | undefined;
 onMounted(() => {
     timer = window.setInterval(poll, 3000);
+
+    // Реалтайм «клиент печатает»: пинг по приватному каналу тенанта → показываем
+    // индикатор только для ЭТОГО диалога (фильтр по conversationId), гасим по таймауту.
+    const echo = realtime(reverbConfig.value);
+    if (echo && tenantId.value) {
+        typingChannel = `tenant.${tenantId.value}`;
+        echo.private(typingChannel).listen('.client.typing', (e: { conversationId?: string }) => {
+            if (e?.conversationId !== props.conversation.id) return;
+            clientTyping.value = true;
+            if (clientTypingTimer) window.clearTimeout(clientTypingTimer);
+            clientTypingTimer = window.setTimeout(() => (clientTyping.value = false), 4000);
+        });
+    }
 });
 onUnmounted(() => {
     if (timer) window.clearInterval(timer);
+    if (clientTypingTimer) window.clearTimeout(clientTypingTimer);
+    const echo = realtime(reverbConfig.value);
+    if (echo && typingChannel) echo.leave(typingChannel);
 });
 
 const IMG_RE = /(https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp)(?:\?[^\s<>"']*)?)/gi;
@@ -162,7 +200,9 @@ const groups = computed(() => {
     const out: { date: string | null; items: ParsedMsg[] }[] = [];
     for (const m of messages.value) {
         const p = parse(m.text);
-        const item: ParsedMsg = { id: m.id, direction: m.direction, time: m.time, date: m.date, text: p.text, images: p.images };
+        // Картинки из текста + присланные отдельным полем (фото клиента из виджета).
+        const images = [...p.images, ...(m.images ?? []).filter((u) => !p.images.includes(u))];
+        const item: ParsedMsg = { id: m.id, direction: m.direction, time: m.time, date: m.date, text: p.text, images };
         const last = out[out.length - 1];
         if (last && last.date === m.date) last.items.push(item);
         else out.push({ date: m.date, items: [item] });
@@ -297,6 +337,16 @@ const removeLead = (): void => {
                     </div>
                 </div>
             </template>
+
+            <!-- «Клиент печатает…» — реалтайм-индикатор (как в мессенджере) -->
+            <div v-if="clientTyping" class="mt-2.5 flex justify-start">
+                <div class="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 dark:border-white/10 dark:bg-white/5">
+                    <span class="text-xs text-slate-400">Клиент печатает</span>
+                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" style="animation-delay: 0.2s"></span>
+                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" style="animation-delay: 0.4s"></span>
+                </div>
+            </div>
         </div>
 
         <!-- Ответ оператора (живой чат): доступен, пока диалог перехвачен -->
@@ -310,6 +360,7 @@ const removeLead = (): void => {
                 placeholder="Ответьте клиенту…"
                 class="max-h-32 flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#2E74B5] dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
                 @keydown.enter.exact.prevent="sendReply"
+                @input="notifyTyping"
             ></textarea>
             <button
                 type="button"
@@ -347,5 +398,25 @@ const removeLead = (): void => {
 .lb-enter-from,
 .lb-leave-to {
     opacity: 0;
+}
+.otk-typing-dot {
+    animation: otk-typing-bounce 1.2s infinite;
+}
+@keyframes otk-typing-bounce {
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+    30% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .otk-typing-dot {
+        animation: none;
+    }
 }
 </style>

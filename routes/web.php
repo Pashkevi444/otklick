@@ -171,6 +171,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::post('/conversations/{conversation}/takeover', [ConversationController::class, 'takeover'])->name('conversations.takeover');
         Route::post('/conversations/{conversation}/release', [ConversationController::class, 'release'])->name('conversations.release');
         Route::post('/conversations/{conversation}/reply', [ConversationController::class, 'reply'])->name('conversations.reply');
+        Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])->name('conversations.typing');
         Route::put('/conversations/{conversation}/status', [ConversationController::class, 'setStatus'])->name('conversations.status');
         Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->name('conversations.destroy');
 

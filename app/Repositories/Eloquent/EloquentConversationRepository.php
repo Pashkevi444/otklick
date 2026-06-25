@@ -127,6 +127,8 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             $query->orderBy(Client::select('name')->whereColumn('clients.id', 'conversations.client_id'), $dir);
         } elseif ($sort === 'messages') {
             $query->orderBy('messages_count', $dir);
+        } elseif ($sort === 'created') {
+            $query->orderBy('created_at', $dir);
         } else {
             $query->orderBy('last_message_at', $dir);
         }

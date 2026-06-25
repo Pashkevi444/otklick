@@ -9,6 +9,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\WebWidgetService;
+use App\Support\KnowledgeImageStorage;
+use App\Support\RealtimeConfig;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +29,7 @@ final class WidgetChatController extends Controller
         private readonly TenantInitializer $tenancy,
         private readonly ChannelRepositoryInterface $channels,
         private readonly WebWidgetService $widget,
+        private readonly KnowledgeImageStorage $images,
     ) {}
 
     /**
@@ -68,10 +71,34 @@ final class WidgetChatController extends Controller
             $model = $this->resolve($channel);
             $origin = $this->guardOrigin($request, $model);
 
+            $token = $this->widget->startSession($model);
+
             return $this->cors(response()->json([
-                'token' => $this->widget->startSession($model),
+                'token' => $token,
                 'greeting' => 'Здравствуйте! Я виртуальный администратор. Чем могу помочь?',
+                // Реалтайм «оператор печатает»: конфиг Reverb + публичный канал сессии.
+                // null reverb — WS выключен, виджет работает без индикатора (поллинг).
+                'reverb' => RealtimeConfig::fromRequest($request),
+                'channel' => $this->widget->realtimeChannel($model, $token),
             ]), $origin);
+        });
+    }
+
+    /**
+     * Посетитель печатает в виджете — эфемерный сигнал в кабинет («клиент печатает»).
+     * Без тела ответа по сути; шлётся троттленно с фронта.
+     */
+    public function typing(Request $request, string $tenant, string $channel): JsonResponse
+    {
+        $validated = $request->validate(['token' => ['required', 'string']]);
+
+        return $this->tenancy->run($tenant, function () use ($request, $channel, $validated): JsonResponse {
+            $model = $this->resolve($channel);
+            $origin = $this->guardOrigin($request, $model);
+
+            $this->widget->markClientTyping($model, (string) $validated['token']);
+
+            return $this->cors(response()->json(['ok' => true]), $origin);
         });
     }
 
@@ -103,6 +130,42 @@ final class WidgetChatController extends Controller
     }
 
     /**
+     * Клиент прикрепил фото в виджете. Сохраняем картинку, фиксируем её в диалоге и
+     * прогоняем через vision: бот «видит» фото и отвечает по базе знаний. Не
+     * распозналось — передаём администратору. Возвращаем URL фото + ответ бота.
+     */
+    public function upload(Request $request, string $tenant, string $channel): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:5120'],
+            'caption' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        return $this->tenancy->run($tenant, function () use ($request, $channel, $validated): JsonResponse {
+            $model = $this->resolve($channel);
+            $origin = $this->guardOrigin($request, $model);
+
+            $stored = $this->images->store((string) $model->getAttribute('tenant_id'), [$request->file('image')], 'widget');
+
+            [
+                'reply' => $reply,
+                'lastId' => $lastId,
+                'images' => $images,
+                'operatorActive' => $operatorActive,
+            ] = $this->widget->receiveImage($model, (string) $validated['token'], $stored, (string) ($validated['caption'] ?? ''), $request->ip());
+
+            return $this->cors(response()->json([
+                'reply' => $reply->text,
+                'needsHuman' => $reply->escalate,
+                'images' => $images,
+                'lastId' => $lastId,
+                'operatorActive' => $operatorActive,
+            ]), $origin);
+        });
+    }
+
+    /**
      * Лайв-поллинг виджета: новые сообщения (ответы оператора) после `after` +
      * признак, что на связи оператор. Виджет опрашивает раз в ~3 сек.
      */
@@ -118,6 +181,11 @@ final class WidgetChatController extends Controller
             $origin = $this->guardOrigin($request, $model);
 
             $data = $this->widget->poll($model, (string) $validated['token'], $validated['after'] ?? null);
+
+            // Дублируем реалтайм-конфиг (как в /session): восстановленная сессия не
+            // зовёт /session, а WS-подключение нужно — виджет поднимет его из /poll.
+            $data['reverb'] = RealtimeConfig::fromRequest($request);
+            $data['channel'] = $this->widget->realtimeChannel($model, (string) $validated['token']);
 
             return $this->cors(response()->json($data), $origin);
         });

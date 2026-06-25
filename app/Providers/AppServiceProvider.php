@@ -23,6 +23,9 @@ use App\Services\SiteSettingsService;
 use App\Speech\Contracts\SpeechToText;
 use App\Speech\FakeSpeechToText;
 use App\Speech\YandexSpeechToText;
+use App\Vision\Contracts\ImageToText;
+use App\Vision\FakeImageToText;
+use App\Vision\YandexImageToText;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -118,6 +121,33 @@ class AppServiceProvider extends ServiceProvider
                 default => throw new RuntimeException("Распознавание речи «{$driver}» не настроено. Доступны fake и yandex."),
             };
         });
+
+        $this->app->singleton(ImageToText::class, function (): ImageToText {
+            $driver = (string) config('services.vision.driver');
+
+            return match ($driver) {
+                'fake' => new FakeImageToText,
+                'yandex' => $this->makeYandexImageToText(),
+                default => throw new RuntimeException("Распознавание изображений «{$driver}» не настроено. Доступны fake и yandex."),
+            };
+        });
+    }
+
+    private function makeYandexImageToText(): YandexImageToText
+    {
+        $apiKey = (string) config('services.vision.yandex.api_key');
+        $folderId = (string) config('services.vision.yandex.folder_id');
+
+        if ($apiKey === '' || $folderId === '') {
+            throw new RuntimeException('Yandex vision не настроен: задайте YANDEX_API_KEY и YANDEX_FOLDER_ID.');
+        }
+
+        return new YandexImageToText(
+            apiUrl: (string) config('services.vision.yandex.api_url'),
+            apiKey: $apiKey,
+            folderId: $folderId,
+            model: (string) config('services.vision.yandex.model'),
+        );
     }
 
     private function makeYandexSpeechToText(): YandexSpeechToText

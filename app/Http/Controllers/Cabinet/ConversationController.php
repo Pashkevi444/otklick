@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Cabinet;
 use App\Enums\ChannelType;
 use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
+use App\Events\OperatorTyping;
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -17,6 +18,7 @@ use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BookingFlow;
 use App\Services\ConversationHandoffService;
 use App\Services\UserNotificationService;
+use App\Support\WidgetRealtimeChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +45,7 @@ final class ConversationController extends Controller
         $search = trim((string) $request->query('search', '')) ?: null;
         $status = ConversationStatus::tryFrom((string) $request->query('status', ''));
         $channel = ChannelType::tryFrom((string) $request->query('channel', ''));
-        $sort = in_array($request->query('sort'), ['last', 'contact', 'messages'], true) ? (string) $request->query('sort') : 'last';
+        $sort = in_array($request->query('sort'), ['last', 'contact', 'messages', 'created'], true) ? (string) $request->query('sort') : 'last';
         $dir = $request->query('dir') === 'asc' ? 'asc' : 'desc';
 
         $page = $this->conversations->paginateForCurrentTenant($search, $status, $channel, $sort, $dir, 15);
@@ -161,6 +163,26 @@ final class ConversationController extends Controller
         return response()->json(['operatorActive' => false]);
     }
 
+    /**
+     * Оператор печатает ответ — эфемерный сигнал в виджет («оператор печатает»).
+     * Только при активном перехвате (иначе индикатор бессмыслен). Без тела ответа.
+     */
+    public function typing(Request $request, string $conversation): JsonResponse
+    {
+        abort_unless($request->user()->allows('conversations.edit'), 403);
+
+        $model = $this->conversations->findForCurrentTenant($conversation);
+        abort_if($model === null, 404);
+
+        // Печатает оператор → видит только клиент веб-виджета: канал выводим из
+        // диалога (channel_id + id сессии посетителя = external_chat_id).
+        if ($model->isOperatorHandling() && $model->channel?->type === ChannelType::Web && $model->external_chat_id !== '') {
+            OperatorTyping::dispatch(WidgetRealtimeChannel::name((string) $model->channel_id, $model->external_chat_id));
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
     /** Ответ оператора клиенту (только при активном перехвате). */
     public function reply(Request $request, string $conversation): JsonResponse
     {
@@ -186,9 +208,30 @@ final class ConversationController extends Controller
             'id' => $m->id,
             'direction' => $m->direction->value,
             'text' => (string) $m->text,
+            'images' => $this->messageImages($m),
             'time' => $m->created_at?->format('H:i'),
             'date' => $m->created_at?->format('d.m.Y'),
         ];
+    }
+
+    /**
+     * URL картинок сообщения (клиент прислал фото через веб-виджет — лежат в
+     * `payload.images` как {path, url}). Для текстовых сообщений — пустой список.
+     *
+     * @return list<string>
+     */
+    private function messageImages(Message $m): array
+    {
+        $images = $m->payload['images'] ?? null;
+
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            static fn ($img): ?string => is_array($img) && isset($img['url']) && is_string($img['url']) ? $img['url'] : null,
+            $images,
+        )));
     }
 
     /**
@@ -257,6 +300,7 @@ final class ConversationController extends Controller
             'messagesCount' => (int) $c->getAttribute('messages_count'),
             'lastMessage' => $c->latestMessage?->text,
             'lastMessageAt' => $c->last_message_at?->format('d.m.Y H:i'),
+            'createdAt' => $c->created_at?->format('d.m.Y H:i'),
         ];
     }
 
