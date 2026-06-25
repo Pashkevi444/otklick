@@ -22,6 +22,8 @@ use Illuminate\Support\Carbon;
  * @property string $channel_id
  * @property string $external_chat_id
  * @property bool $contacts_gate_done
+ * @property bool $consent_agreed
+ * @property Carbon|null $consent_agreed_at
  * @property string|null $contact_ref
  * @property ConversationStatus $status
  * @property int $clarification_attempts
@@ -54,6 +56,8 @@ class Conversation extends TenantOwnedModel
         'channel_id',
         'external_chat_id',
         'contacts_gate_done',
+        'consent_agreed',
+        'consent_agreed_at',
         'contact_ref',
         'status',
         'clarification_attempts',
@@ -87,6 +91,8 @@ class Conversation extends TenantOwnedModel
         return [
             'status' => ConversationStatus::class,
             'contacts_gate_done' => 'boolean',
+            'consent_agreed' => 'boolean',
+            'consent_agreed_at' => 'datetime',
             'clarification_attempts' => 'integer',
             'booked_at' => 'datetime',
             'cancelled_at' => 'datetime',

@@ -57,6 +57,7 @@ final class ProcessVkUpdateTest extends TestCase
             'channel_id' => $channel->id,
             'external_chat_id' => '555',
             'contacts_gate_done' => true,
+            'consent_agreed' => true,
             'status' => 'open',
         ]);
 

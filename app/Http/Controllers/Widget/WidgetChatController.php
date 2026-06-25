@@ -61,6 +61,11 @@ final class WidgetChatController extends Controller
 
             return $this->cors(response()->json([
                 'color' => $model->settings['widget_color'] ?? null,
+                // Юр-ссылки для галочки согласия (152-ФЗ) — нужны ещё до сессии.
+                'legal' => [
+                    'consent' => route('site.consent', absolute: true),
+                    'privacy' => route('site.privacy', absolute: true),
+                ],
             ]), $origin);
         });
     }
@@ -80,6 +85,11 @@ final class WidgetChatController extends Controller
                 // null reverb — WS выключен, виджет работает без индикатора (поллинг).
                 'reverb' => RealtimeConfig::fromRequest($request),
                 'channel' => $this->widget->realtimeChannel($model, $token),
+                // Юр-ссылки для галочки согласия (152-ФЗ) при первом открытии виджета.
+                'legal' => [
+                    'consent' => route('site.consent', absolute: true),
+                    'privacy' => route('site.privacy', absolute: true),
+                ],
             ]), $origin);
         });
     }
@@ -107,13 +117,20 @@ final class WidgetChatController extends Controller
         $validated = $request->validate([
             'token' => ['required', 'string'],
             'text' => ['required', 'string', 'max:2000'],
+            'consent' => ['nullable', 'boolean'],
         ]);
 
         return $this->tenancy->run($tenant, function () use ($request, $channel, $validated): JsonResponse {
             $model = $this->resolve($channel);
             $origin = $this->guardOrigin($request, $model);
 
-            ['reply' => $reply, 'lastId' => $lastId] = $this->widget->reply($model, (string) $validated['token'], (string) $validated['text'], $request->ip());
+            ['reply' => $reply, 'lastId' => $lastId] = $this->widget->reply(
+                $model,
+                (string) $validated['token'],
+                (string) $validated['text'],
+                $request->ip(),
+                (bool) ($validated['consent'] ?? false),
+            );
 
             return $this->cors(response()->json([
                 'reply' => $reply->text,
@@ -140,6 +157,7 @@ final class WidgetChatController extends Controller
             'token' => ['required', 'string'],
             'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:5120'],
             'caption' => ['nullable', 'string', 'max:2000'],
+            'consent' => ['nullable', 'boolean'],
         ]);
 
         return $this->tenancy->run($tenant, function () use ($request, $channel, $validated): JsonResponse {
@@ -153,7 +171,7 @@ final class WidgetChatController extends Controller
                 'lastId' => $lastId,
                 'images' => $images,
                 'operatorActive' => $operatorActive,
-            ] = $this->widget->receiveImage($model, (string) $validated['token'], $stored, (string) ($validated['caption'] ?? ''), $request->ip());
+            ] = $this->widget->receiveImage($model, (string) $validated['token'], $stored, (string) ($validated['caption'] ?? ''), $request->ip(), (bool) ($validated['consent'] ?? false));
 
             return $this->cors(response()->json([
                 'reply' => $reply->text,

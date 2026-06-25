@@ -18,6 +18,7 @@ use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BookingFlow;
 use App\Services\ConversationHandoffService;
 use App\Services\UserNotificationService;
+use App\Support\KnowledgeImageStorage;
 use App\Support\WidgetRealtimeChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -38,6 +39,7 @@ final class ConversationController extends Controller
         private readonly BookingFlow $booking,
         private readonly ConversationHandoffService $handoff,
         private readonly UserNotificationService $notifications,
+        private readonly KnowledgeImageStorage $images,
     ) {}
 
     public function index(Request $request): Response
@@ -183,7 +185,11 @@ final class ConversationController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** Ответ оператора клиенту (только при активном перехвате). */
+    /**
+     * Ответ оператора клиенту (только при активном перехвате). Можно приложить фото
+     * (`image`) — тогда текст необязателен; картинка уходит в канал и сохраняется
+     * к диалогу (в мессенджеры — загрузкой через шлюз, в веб-виджет — поллингом).
+     */
     public function reply(Request $request, string $conversation): JsonResponse
     {
         abort_unless($request->user()->allows('conversations.edit'), 403);
@@ -193,8 +199,18 @@ final class ConversationController extends Controller
 
         abort_unless($model->isOperatorHandling(), 422, 'Сначала перехватите диалог.');
 
-        $data = $request->validate(['text' => ['required', 'string', 'max:2000']]);
-        $message = $this->handoff->reply($model, (string) $data['text']);
+        $data = $request->validate([
+            'text' => ['required_without:image', 'nullable', 'string', 'max:2000'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:5120'],
+        ]);
+
+        $images = [];
+        if ($request->hasFile('image')) {
+            $stored = $this->images->store((string) $model->getAttribute('tenant_id'), [$request->file('image')], 'operator');
+            $images = array_map(static fn (array $i): string => $i['url'], $stored);
+        }
+
+        $message = $this->handoff->reply($model, (string) ($data['text'] ?? ''), $images);
 
         return response()->json(['message' => $this->presentMessage($message)]);
     }
@@ -215,8 +231,8 @@ final class ConversationController extends Controller
     }
 
     /**
-     * URL картинок сообщения (клиент прислал фото через веб-виджет — лежат в
-     * `payload.images` как {path, url}). Для текстовых сообщений — пустой список.
+     * URL картинок сообщения из `payload.images`. Фото клиента из веб-виджета лежат
+     * как {path, url}, ответ оператора — как строки-URL. Поддерживаем оба формата.
      *
      * @return list<string>
      */
@@ -229,7 +245,9 @@ final class ConversationController extends Controller
         }
 
         return array_values(array_filter(array_map(
-            static fn ($img): ?string => is_array($img) && isset($img['url']) && is_string($img['url']) ? $img['url'] : null,
+            static fn ($img): ?string => is_array($img)
+                ? (is_string($img['url'] ?? null) ? $img['url'] : null)
+                : (is_string($img) ? $img : null),
             $images,
         )));
     }
@@ -277,7 +295,7 @@ final class ConversationController extends Controller
 
         // Со страницы самого диалога back() вернул бы на удалённую страницу
         // (ошибка) — уходим в журнал; из грида back() сохраняет фильтры/страницу.
-        $fromDetail = str_contains((string) $request->headers->get('referer', ''), "/cabinet/conversations/{$model->id}");
+        $fromDetail = str_contains((string) $request->headers->get('referer', ''), route('cabinet.conversations.show', $model->id, false));
 
         return $fromDetail
             ? redirect()->route('cabinet.conversations.index')->with('success', 'Лид удалён.')

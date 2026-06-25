@@ -14,8 +14,10 @@ use App\Models\Message;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -68,6 +70,36 @@ final class ConversationHandoffTest extends TestCase
             'direction' => MessageDirection::Outbound->value,
             'text' => 'Здравствуйте, я оператор!',
         ]);
+    }
+
+    public function test_operator_can_send_image_to_client(): void
+    {
+        Storage::fake('public');
+        [$tenant, $owner, $conv] = $this->setup3();
+        $this->actingAs($owner)->postJson("/cabinet/conversations/{$conv->id}/takeover")->assertOk();
+
+        $res = $this->actingAs($owner)->post("/cabinet/conversations/{$conv->id}/reply", [
+            'image' => UploadedFile::fake()->image('work.jpg', 500, 500),
+        ], ['Accept' => 'application/json']);
+
+        // Фото-ответ принят без текста; в сообщении есть URL картинки.
+        $res->assertOk();
+        $this->assertNotEmpty($res->json('message.images'));
+
+        $msg = Message::withoutGlobalScopes()->where('conversation_id', $conv->id)
+            ->where('direction', MessageDirection::Outbound)->firstOrFail();
+        $this->assertNotEmpty($msg->payload['images'] ?? []);
+    }
+
+    public function test_operator_reply_requires_text_or_image(): void
+    {
+        [, $owner, $conv] = $this->setup3();
+        $this->actingAs($owner)->postJson("/cabinet/conversations/{$conv->id}/takeover")->assertOk();
+
+        // Пустой ответ (ни текста, ни фото) — валидация отклоняет. Кабинет на Inertia,
+        // поэтому ошибка валидации приходит редиректом с ошибками в сессии, не 422.
+        $this->actingAs($owner)->post("/cabinet/conversations/{$conv->id}/reply", [])
+            ->assertSessionHasErrors('text');
     }
 
     public function test_reply_requires_takeover_first(): void

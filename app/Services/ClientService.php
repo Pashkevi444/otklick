@@ -71,7 +71,7 @@ class ClientService
                 UserNotificationType::NewClient,
                 'Новый клиент',
                 null,
-                '/cabinet/clients/'.$client->id,
+                route('cabinet.clients.show', $client->id, false),
                 'client',
                 (string) $client->id,
             );

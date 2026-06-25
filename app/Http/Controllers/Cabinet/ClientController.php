@@ -142,7 +142,7 @@ final class ClientController extends Controller
 
         // Из карточки клиента back() вёл бы на удалённую страницу — уходим в грид;
         // из грида back() сохраняет фильтры/страницу.
-        $fromDetail = str_contains((string) $request->headers->get('referer', ''), "/cabinet/clients/{$model->id}");
+        $fromDetail = str_contains((string) $request->headers->get('referer', ''), route('cabinet.clients.show', $model->id, false));
 
         return $fromDetail
             ? redirect()->route('cabinet.clients.index')->with('success', 'Клиент удалён.')

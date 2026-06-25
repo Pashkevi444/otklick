@@ -79,13 +79,16 @@ final class EloquentMessageRepository implements MessageRepositoryInterface
         ]);
     }
 
-    public function recordOutbound(Conversation $conversation, string $text, MessageStatus $status): Message
+    public function recordOutbound(Conversation $conversation, string $text, MessageStatus $status, array $images = []): Message
     {
         return Message::create([
             'conversation_id' => $conversation->id,
             'direction' => MessageDirection::Outbound,
             'external_message_id' => null,
             'text' => $text,
+            // URL картинок — в payload.images (как у входящих фото клиента), чтобы
+            // кабинет и веб-виджет их отрисовали.
+            'payload' => $images !== [] ? ['images' => $images] : null,
             'status' => $status,
         ]);
     }

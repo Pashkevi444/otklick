@@ -97,6 +97,9 @@ interface ConversationRepositoryInterface
     /** Отмечает, что контактная форма отработала (имя+телефон собраны/узнаны). */
     public function markContactsGateDone(Conversation $conversation): void;
 
+    /** Фиксирует согласие клиента на обработку ПД (152-ФЗ) + момент получения. */
+    public function markConsentGiven(Conversation $conversation): void;
+
     /** Привязывает диалог к карточке клиента (база клиентов). */
     public function setClientId(Conversation $conversation, string $clientId): void;
 

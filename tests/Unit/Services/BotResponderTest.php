@@ -13,6 +13,7 @@ use App\Repositories\Contracts\FlowRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Services\BookingFlow;
 use App\Services\BotResponder;
+use App\Services\ConsentGate;
 use App\Services\ContactGate;
 use App\Services\FlowEngine;
 use App\Services\ReplyComposer;
@@ -39,6 +40,12 @@ final class BotResponderTest extends TestCase
         return $gate;
     }
 
+    /** Согласие на ПД уже дано (consent_agreed=true в диалогах) — рубеж «пропускает». */
+    private function consent(): ConsentGate
+    {
+        return new ConsentGate(Mockery::mock(ConversationRepositoryInterface::class));
+    }
+
     /** Воронок нет — движок сценариев «пропускает» (handle → null). */
     private function flows(): FlowEngine
     {
@@ -51,6 +58,7 @@ final class BotResponderTest extends TestCase
     public function test_active_booking_state_routes_to_flow(): void
     {
         $conversation = new Conversation;
+        $conversation->consent_agreed = true;
         $conversation->booking_state = ['step' => 'service'];
 
         $booking = Mockery::mock(BookingFlow::class);
@@ -62,7 +70,7 @@ final class BotResponderTest extends TestCase
         $composer = Mockery::mock(ReplyComposer::class);
         $composer->shouldNotReceive('compose');
 
-        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows()))->respond($this->tenant(), $conversation, 'хочу 1');
+        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows(), $this->consent()))->respond($this->tenant(), $conversation, 'хочу 1');
 
         $this->assertSame('шаг записи', $reply->text);
     }
@@ -70,6 +78,7 @@ final class BotResponderTest extends TestCase
     public function test_start_booking_signal_launches_flow(): void
     {
         $conversation = new Conversation;
+        $conversation->consent_agreed = true;
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
@@ -82,7 +91,7 @@ final class BotResponderTest extends TestCase
         $composer->shouldReceive('compose')->once()->with(Mockery::any(), $conversation, true)
             ->andReturn(new BotReply('Секунду…', escalate: false, startBooking: true));
 
-        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows()))->respond($this->tenant(), $conversation, 'хочу записаться');
+        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows(), $this->consent()))->respond($this->tenant(), $conversation, 'хочу записаться');
 
         $this->assertSame('Какую услугу?', $reply->text);
         $this->assertFalse($reply->startBooking);
@@ -91,6 +100,7 @@ final class BotResponderTest extends TestCase
     public function test_start_returning_null_falls_back_to_escalation(): void
     {
         $conversation = new Conversation;
+        $conversation->consent_agreed = true;
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
@@ -102,7 +112,7 @@ final class BotResponderTest extends TestCase
         $composer->shouldReceive('compose')->once()
             ->andReturn(new BotReply('Подбираю время…', escalate: false, startBooking: true));
 
-        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows()))->respond($this->tenant(), $conversation, 'запишите меня');
+        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows(), $this->consent()))->respond($this->tenant(), $conversation, 'запишите меня');
 
         $this->assertTrue($reply->escalate);
     }
@@ -110,6 +120,7 @@ final class BotResponderTest extends TestCase
     public function test_existing_booking_offers_choice_menu_instead_of_second_booking(): void
     {
         $conversation = new Conversation;
+        $conversation->consent_agreed = true;
         $menu = new BotReply('У вас уже есть запись: Стрижка — 20.06 в 15:00…', escalate: false);
 
         $booking = Mockery::mock(BookingFlow::class);
@@ -122,7 +133,7 @@ final class BotResponderTest extends TestCase
         $composer = Mockery::mock(ReplyComposer::class);
         $composer->shouldReceive('compose')->once()->andReturn(new BotReply('Секунду…', escalate: false, startBooking: true));
 
-        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows()))->respond($this->tenant(), $conversation, 'хочу записаться');
+        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows(), $this->consent()))->respond($this->tenant(), $conversation, 'хочу записаться');
 
         $this->assertStringContainsString('уже есть запись', $reply->text);
     }
@@ -130,6 +141,7 @@ final class BotResponderTest extends TestCase
     public function test_new_booking_choice_starts_fresh_wizard_bypassing_llm(): void
     {
         $conversation = new Conversation;
+        $conversation->consent_agreed = true;
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull();
@@ -140,7 +152,7 @@ final class BotResponderTest extends TestCase
         $composer = Mockery::mock(ReplyComposer::class);
         $composer->shouldNotReceive('compose'); // «Новая запись» минует LLM и меню
 
-        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows()))->respond($this->tenant(), $conversation, 'Новая запись');
+        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows(), $this->consent()))->respond($this->tenant(), $conversation, 'Новая запись');
 
         $this->assertSame('Какую услугу?', $reply->text);
     }
@@ -148,6 +160,7 @@ final class BotResponderTest extends TestCase
     public function test_normal_reply_passes_through(): void
     {
         $conversation = new Conversation;
+        $conversation->consent_agreed = true;
 
         $booking = Mockery::mock(BookingFlow::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
@@ -159,7 +172,7 @@ final class BotResponderTest extends TestCase
         $composer->shouldReceive('compose')->once()->with(Mockery::any(), $conversation, false)
             ->andReturn(new BotReply('Работаем с 9 до 21.', escalate: false));
 
-        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows()))->respond($this->tenant(), $conversation, 'часы работы?');
+        $reply = (new BotResponder($composer, $booking, $this->gate(), $this->flows(), $this->consent()))->respond($this->tenant(), $conversation, 'часы работы?');
 
         $this->assertSame('Работаем с 9 до 21.', $reply->text);
     }

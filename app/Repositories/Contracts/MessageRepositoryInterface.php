@@ -53,7 +53,13 @@ interface MessageRepositoryInterface
      */
     public function recordInbound(Conversation $conversation, IncomingMessage $incoming): ?Message;
 
-    public function recordOutbound(Conversation $conversation, string $text, MessageStatus $status): Message;
+    /**
+     * Сохраняет исходящее сообщение. $images — список URL картинок (ответ оператора
+     * с фото), кладётся в `payload.images` — как у входящих фото клиента.
+     *
+     * @param  list<string>  $images
+     */
+    public function recordOutbound(Conversation $conversation, string $text, MessageStatus $status, array $images = []): Message;
 
     /**
      * Обновляет статус доставки сообщения по id (для фоновой повторной отправки:
