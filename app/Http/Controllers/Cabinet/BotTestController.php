@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\Http\Controllers\Controller;
 use App\Services\BotSandbox;
+use App\Support\KnowledgeImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,10 @@ use Inertia\Response;
  */
 final class BotTestController extends Controller
 {
-    public function __construct(private readonly BotSandbox $sandbox) {}
+    public function __construct(
+        private readonly BotSandbox $sandbox,
+        private readonly KnowledgeImageStorage $images,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -41,6 +45,26 @@ final class BotTestController extends Controller
             $request->user()->tenant,
             $this->chatId($request),
             (string) $validated['text'],
+        );
+
+        return response()->json($reply->toArray());
+    }
+
+    /** Прикрепить фото в тесте — проверить ответ бота по картинке (через vision). */
+    public function image(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:5120'],
+            'caption' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $stored = $this->images->store((string) $request->user()->tenant_id, [$request->file('image')], 'sandbox');
+
+        $reply = $this->sandbox->sendImage(
+            $request->user()->tenant,
+            $this->chatId($request),
+            $stored,
+            (string) ($validated['caption'] ?? ''),
         );
 
         return response()->json($reply->toArray());

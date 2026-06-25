@@ -143,6 +143,7 @@ $onDomain(config('app.business_domain'), function (): void {
         // тарифах; владелец может выдать право `testing` сотрудникам («Команда»).
         Route::get('/testing', [BotTestController::class, 'index'])->name('testing.index');
         Route::post('/testing/message', [BotTestController::class, 'message'])->name('testing.message');
+        Route::post('/testing/image', [BotTestController::class, 'image'])->name('testing.image');
         Route::post('/testing/reset', [BotTestController::class, 'reset'])->name('testing.reset');
 
         // Аналитика — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).

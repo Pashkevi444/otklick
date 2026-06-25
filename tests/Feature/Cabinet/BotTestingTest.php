@@ -12,7 +12,11 @@ use App\Models\User;
 use App\Services\BotResponder;
 use App\Tenancy\TenantInitializer;
 use App\Tenancy\TestContext;
+use App\Vision\Contracts\ImageToText;
+use App\Vision\FakeImageToText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -114,5 +118,40 @@ final class BotTestingTest extends TestCase
 
         $this->assertSame(0, Conversation::query()->withTest()->count());
         $this->assertDatabaseCount('sandbox_records', 0);
+    }
+
+    public function test_image_attachment_runs_in_sandbox_without_pollution(): void
+    {
+        Storage::fake('public');
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        // Vision выключен (fake) → фото «ушло бы администратору» + пояснение тестеру.
+        $this->actingAs($owner)
+            ->post('/cabinet/testing/image', ['image' => UploadedFile::fake()->image('cut.jpg', 400, 400)], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonStructure(['text', 'buttons', 'escalate', 'booked', 'cancelled', 'note', 'images'])
+            ->assertJsonPath('escalate', true);
+
+        // Тестовый прогон не пишет в реальные лиды/клиенты.
+        $this->assertSame(0, Conversation::query()->count());
+        $this->assertSame(1, Conversation::query()->withTest()->count());
+    }
+
+    public function test_recognized_image_is_fed_to_bot_in_sandbox(): void
+    {
+        Storage::fake('public');
+        $this->app->instance(ImageToText::class, new FakeImageToText('каре с чёлкой'));
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        // Сначала проходим согласие на ПД ответом «Да» (ConsentGate — первый рубеж).
+        $this->actingAs($owner)->postJson('/cabinet/testing/message', ['text' => 'Да'])->assertOk();
+
+        // Фото распознано (vision) → бот отвечает по описанию, НЕ шлёт администратору.
+        $this->actingAs($owner)
+            ->post('/cabinet/testing/image', ['image' => UploadedFile::fake()->image('cut.jpg', 400, 400)], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('escalate', false);
     }
 }

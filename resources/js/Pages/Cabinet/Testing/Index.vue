@@ -79,6 +79,49 @@ const send = async (text?: string): Promise<void> => {
     }
 };
 
+// Прикрепить фото в тесте — бот ответит по картинке (через vision), как в реале.
+const fileInput = ref<HTMLInputElement | null>(null);
+const sendImage = async (e: Event): Promise<void> => {
+    const el = e.target as HTMLInputElement;
+    const file = el.files?.[0];
+    el.value = '';
+    if (!file || busy.value) return;
+
+    busy.value = true;
+    const caption = input.value.trim();
+    input.value = '';
+    messages.value.push({ from: 'client', text: caption, images: [URL.createObjectURL(file)] });
+    void scrollToEnd();
+
+    try {
+        const fd = new FormData();
+        fd.append('image', file);
+        if (caption) fd.append('caption', caption);
+        const res = await fetch('/cabinet/testing/image', {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'X-XSRF-TOKEN': xsrf() },
+            credentials: 'same-origin',
+            body: fd,
+        });
+        const d: BotReplyResponse = await res.json();
+        messages.value.push({
+            from: 'bot',
+            text: d.text,
+            buttons: d.buttons,
+            images: d.images,
+            note: d.note,
+            escalate: d.escalate,
+            booked: d.booked,
+            cancelled: d.cancelled,
+        });
+    } catch {
+        messages.value.push({ from: 'bot', text: 'Не удалось отправить фото. Попробуйте ещё раз.', note: null });
+    } finally {
+        busy.value = false;
+        void scrollToEnd();
+    }
+};
+
 const reset = (): void => {
     router.post('/cabinet/testing/reset', {}, {
         preserveScroll: true,
@@ -154,6 +197,16 @@ onMounted(scrollToEnd);
             </div>
 
             <form class="flex items-center gap-2 border-t border-slate-200 p-3 dark:border-white/10" @submit.prevent="send()">
+                <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="sendImage" />
+                <button
+                    type="button"
+                    title="Прикрепить фото (проверить ответ бота по картинке)"
+                    class="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 transition hover:text-[#2E74B5] disabled:opacity-50 dark:border-white/15"
+                    :disabled="busy"
+                    @click="fileInput?.click()"
+                >
+                    📎
+                </button>
                 <input
                     v-model="input"
                     type="text"
