@@ -33,8 +33,8 @@ final class ImageRecognitionServiceTest extends TestCase
     public function test_composes_caption_and_description_as_client_input(): void
     {
         $gateway = $this->imageGateway();
-        $gateway->shouldReceive('downloadImage')->once()
-            ->andReturn(new IncomingImage('JPEG', 'image/jpeg', 'хочу такую стрижку'));
+        $gateway->shouldReceive('downloadImages')->once()
+            ->andReturn([new IncomingImage('JPEG', 'image/jpeg', 'хочу такую стрижку')]);
 
         $service = new ImageRecognitionService(
             new ChannelGatewayResolver([$gateway]),
@@ -46,10 +46,26 @@ final class ImageRecognitionServiceTest extends TestCase
         $this->assertSame("хочу такую стрижку\n[Клиент прислал фото. На фото: Мужская стрижка андеркат.]", $text);
     }
 
+    public function test_combines_several_photos_into_one_input(): void
+    {
+        // VK/MAX кладут несколько фото в одно сообщение → одно описание, один ответ.
+        $gateway = $this->imageGateway();
+        $gateway->shouldReceive('downloadImages')->once()->andReturn([
+            new IncomingImage('JPEG1', 'image/jpeg', 'примеры'),
+            new IncomingImage('JPEG2'),
+        ]);
+
+        $service = new ImageRecognitionService(new ChannelGatewayResolver([$gateway]), new FakeImageToText('стрижка'));
+
+        $text = $service->recognize($this->channel(), []);
+
+        $this->assertSame("примеры\n[Клиент прислал фото. На фото: стрижка; стрижка]", $text);
+    }
+
     public function test_returns_null_when_gateway_has_no_image(): void
     {
         $gateway = $this->imageGateway();
-        $gateway->shouldReceive('downloadImage')->once()->andReturn(null);
+        $gateway->shouldReceive('downloadImages')->once()->andReturn([]);
 
         $service = new ImageRecognitionService(new ChannelGatewayResolver([$gateway]), new FakeImageToText('что-то'));
 
@@ -59,7 +75,7 @@ final class ImageRecognitionServiceTest extends TestCase
     public function test_returns_null_when_vision_cannot_describe(): void
     {
         $gateway = $this->imageGateway();
-        $gateway->shouldReceive('downloadImage')->once()->andReturn(new IncomingImage('JPEG'));
+        $gateway->shouldReceive('downloadImages')->once()->andReturn([new IncomingImage('JPEG')]);
 
         // FakeImageToText без описания возвращает null — фолбэк на администратора.
         $service = new ImageRecognitionService(new ChannelGatewayResolver([$gateway]), new FakeImageToText);

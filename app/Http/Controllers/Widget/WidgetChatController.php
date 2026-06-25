@@ -10,6 +10,7 @@ use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\WebWidgetService;
 use App\Support\KnowledgeImageStorage;
+use App\Support\RealtimeConfig;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,10 +71,34 @@ final class WidgetChatController extends Controller
             $model = $this->resolve($channel);
             $origin = $this->guardOrigin($request, $model);
 
+            $token = $this->widget->startSession($model);
+
             return $this->cors(response()->json([
-                'token' => $this->widget->startSession($model),
+                'token' => $token,
                 'greeting' => 'Здравствуйте! Я виртуальный администратор. Чем могу помочь?',
+                // Реалтайм «оператор печатает»: конфиг Reverb + публичный канал сессии.
+                // null reverb — WS выключен, виджет работает без индикатора (поллинг).
+                'reverb' => RealtimeConfig::fromRequest($request),
+                'channel' => $this->widget->realtimeChannel($model, $token),
             ]), $origin);
+        });
+    }
+
+    /**
+     * Посетитель печатает в виджете — эфемерный сигнал в кабинет («клиент печатает»).
+     * Без тела ответа по сути; шлётся троттленно с фронта.
+     */
+    public function typing(Request $request, string $tenant, string $channel): JsonResponse
+    {
+        $validated = $request->validate(['token' => ['required', 'string']]);
+
+        return $this->tenancy->run($tenant, function () use ($request, $channel, $validated): JsonResponse {
+            $model = $this->resolve($channel);
+            $origin = $this->guardOrigin($request, $model);
+
+            $this->widget->markClientTyping($model, (string) $validated['token']);
+
+            return $this->cors(response()->json(['ok' => true]), $origin);
         });
     }
 
@@ -156,6 +181,11 @@ final class WidgetChatController extends Controller
             $origin = $this->guardOrigin($request, $model);
 
             $data = $this->widget->poll($model, (string) $validated['token'], $validated['after'] ?? null);
+
+            // Дублируем реалтайм-конфиг (как в /session): восстановленная сессия не
+            // зовёт /session, а WS-подключение нужно — виджет поднимет его из /poll.
+            $data['reverb'] = RealtimeConfig::fromRequest($request);
+            $data['channel'] = $this->widget->realtimeChannel($model, (string) $validated['token']);
 
             return $this->cors(response()->json($data), $origin);
         });

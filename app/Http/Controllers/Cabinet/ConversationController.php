@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Cabinet;
 use App\Enums\ChannelType;
 use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
+use App\Events\OperatorTyping;
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\Conversation;
@@ -17,6 +18,7 @@ use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BookingFlow;
 use App\Services\ConversationHandoffService;
 use App\Services\UserNotificationService;
+use App\Support\WidgetRealtimeChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -159,6 +161,26 @@ final class ConversationController extends Controller
         $this->handoff->release($model);
 
         return response()->json(['operatorActive' => false]);
+    }
+
+    /**
+     * Оператор печатает ответ — эфемерный сигнал в виджет («оператор печатает»).
+     * Только при активном перехвате (иначе индикатор бессмыслен). Без тела ответа.
+     */
+    public function typing(Request $request, string $conversation): JsonResponse
+    {
+        abort_unless($request->user()->allows('conversations.edit'), 403);
+
+        $model = $this->conversations->findForCurrentTenant($conversation);
+        abort_if($model === null, 404);
+
+        // Печатает оператор → видит только клиент веб-виджета: канал выводим из
+        // диалога (channel_id + id сессии посетителя = external_chat_id).
+        if ($model->isOperatorHandling() && $model->channel?->type === ChannelType::Web && $model->external_chat_id !== '') {
+            OperatorTyping::dispatch(WidgetRealtimeChannel::name((string) $model->channel_id, $model->external_chat_id));
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     /** Ответ оператора клиенту (только при активном перехвате). */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Channels\Telegram\TelegramAlbumBuffer;
 use App\DTO\IncomingMessage;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
@@ -29,6 +30,9 @@ final class ProcessTelegramUpdate implements ShouldQueue
 {
     use Dispatchable, Queueable;
 
+    /** Окно ожидания остальных фото альбома перед склейкой (сек). */
+    private const int ALBUM_DELAY_SECONDS = 2;
+
     /**
      * @param  array<string, mixed>  $update
      */
@@ -46,8 +50,9 @@ final class ProcessTelegramUpdate implements ShouldQueue
         TelegramRelayService $relay,
         VoiceTranscriptionService $voice,
         ImageRecognitionService $image,
+        TelegramAlbumBuffer $albums,
     ): void {
-        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker, $relay, $voice, $image): void {
+        $tenancy->run($this->tenantId, function () use ($channels, $messages, $linker, $relay, $voice, $image, $albums): void {
             $channel = $channels->find($this->channelId);
 
             if ($channel === null || ! $channel->is_active) {
@@ -75,6 +80,13 @@ final class ProcessTelegramUpdate implements ShouldQueue
                 return;
             }
 
+            // Фото-альбом (несколько фото общим media_group_id) приходит отдельными
+            // апдейтами — буферизуем и отдаём одним сообщением (дебаунс), чтобы бот
+            // ответил на альбом один раз.
+            if (is_array($message) && $this->bufferAlbumPhoto($message, $albums)) {
+                return;
+            }
+
             $incoming = $this->parse($voice, $image, $channel);
 
             if ($incoming === null) {
@@ -91,6 +103,38 @@ final class ProcessTelegramUpdate implements ShouldQueue
             // Если этим сообщением диалог эскалировался — перешлём его операторам.
             $relay->forwardEscalation($channel, $incoming);
         });
+    }
+
+    /**
+     * Фото в составе альбома (есть `media_group_id`) — кладём в буфер и один раз
+     * планируем отложенную склейку. Возвращает true, если это фото альбома (и оно
+     * забуферизовано — обычный разбор пропускаем). false — не альбомное фото.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    private function bufferAlbumPhoto(array $message, TelegramAlbumBuffer $albums): bool
+    {
+        $groupId = $message['media_group_id'] ?? null;
+        $photo = $message['photo'] ?? null;
+
+        if (! is_string($groupId) || $groupId === '' || ! is_array($photo) || $photo === []) {
+            return false;
+        }
+
+        $albums->add($this->channelId, $groupId, [
+            'photo' => $photo,
+            'caption' => is_string($message['caption'] ?? null) ? $message['caption'] : '',
+            'message_id' => $message['message_id'] ?? null,
+            'chat_id' => $message['chat']['id'] ?? null,
+            'from' => is_array($message['from'] ?? null) ? $message['from'] : [],
+        ]);
+
+        if ($albums->shouldSchedule($this->channelId, $groupId)) {
+            ProcessTelegramAlbum::dispatch($this->tenantId, $this->channelId, $groupId)
+                ->delay(now()->addSeconds(self::ALBUM_DELAY_SECONDS));
+        }
+
+        return true;
     }
 
     /**

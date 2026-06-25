@@ -27,6 +27,7 @@ Route::options('/widget/v1/{tenant}/{channel}/session', [WidgetChatController::c
 Route::options('/widget/v1/{tenant}/{channel}/message', [WidgetChatController::class, 'preflight']);
 Route::options('/widget/v1/{tenant}/{channel}/upload', [WidgetChatController::class, 'preflight']);
 Route::options('/widget/v1/{tenant}/{channel}/poll', [WidgetChatController::class, 'preflight']);
+Route::options('/widget/v1/{tenant}/{channel}/typing', [WidgetChatController::class, 'preflight']);
 Route::post('/widget/v1/{tenant}/{channel}/session', [WidgetChatController::class, 'session'])
     ->middleware('throttle:20,1')->name('widget.session');
 Route::post('/widget/v1/{tenant}/{channel}/message', [WidgetChatController::class, 'message'])
@@ -38,6 +39,9 @@ Route::post('/widget/v1/{tenant}/{channel}/upload', [WidgetChatController::class
 // Лайв-поллинг (раз в ~3 сек): ответы оператора + статус «оператор на связи».
 Route::post('/widget/v1/{tenant}/{channel}/poll', [WidgetChatController::class, 'poll'])
     ->middleware('throttle:120,1')->name('widget.poll');
+// «Клиент печатает» → кабинет (эфемерный WS-сигнал, троттлится на фронте).
+Route::post('/widget/v1/{tenant}/{channel}/typing', [WidgetChatController::class, 'typing'])
+    ->middleware('throttle:120,1')->name('widget.typing');
 
 /*
  * YClients Marketplace: server-to-server вебхуки. Stateless (без сессий/CSRF).

@@ -296,18 +296,25 @@ final readonly class MaxGateway implements ChannelGateway, ReceivesImage, Receiv
     }
 
     /**
-     * Скачивает фото из апдейта MAX. Вложение `type=image` несёт ссылку в
-     * `payload.url`. Подпись — текст сообщения. Тип уточняем по байтам.
+     * Скачивает ВСЕ фото из апдейта MAX. Одно сообщение может нести несколько
+     * вложений `type=image` (ссылка в `payload.url`). Подпись — текст сообщения
+     * (кладём к первому фото). Тип уточняем по байтам.
      *
      * @param  array<string, mixed>  $update
+     * @return list<IncomingImage>
      */
-    public function downloadImage(Channel $channel, array $update): ?IncomingImage
+    public function downloadImages(Channel $channel, array $update): array
     {
         $attachments = $update['message']['body']['attachments'] ?? null;
 
         if (! is_array($attachments)) {
-            return null;
+            return [];
         }
+
+        $caption = is_string($update['message']['body']['text'] ?? null)
+            ? trim($update['message']['body']['text'])
+            : '';
+        $images = [];
 
         foreach ($attachments as $attachment) {
             if (! is_array($attachment) || ($attachment['type'] ?? null) !== 'image') {
@@ -321,24 +328,20 @@ final readonly class MaxGateway implements ChannelGateway, ReceivesImage, Receiv
 
             try {
                 $bytes = Http::connectTimeout(5)->timeout(20)->get($url)->throw()->body();
-
-                if ($bytes === '') {
-                    return null;
-                }
-
-                $caption = is_string($update['message']['body']['text'] ?? null)
-                    ? trim($update['message']['body']['text'])
-                    : '';
-
-                return new IncomingImage($bytes, ImageMime::sniff($bytes), $caption);
             } catch (Throwable $e) {
                 report($e);
 
-                return null;
+                continue;
             }
+
+            if ($bytes === '') {
+                continue;
+            }
+
+            $images[] = new IncomingImage($bytes, ImageMime::sniff($bytes), $images === [] ? $caption : '');
         }
 
-        return null;
+        return $images;
     }
 
     /**

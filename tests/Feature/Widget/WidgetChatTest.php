@@ -6,6 +6,7 @@ namespace Tests\Feature\Widget;
 
 use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
+use App\Events\ClientTyping;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -17,6 +18,7 @@ use App\Vision\Contracts\ImageToText;
 use App\Vision\FakeImageToText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -232,6 +234,45 @@ final class WidgetChatTest extends TestCase
             $this->assertSame(2, Message::where('conversation_id', $conv->id)->where('direction', MessageDirection::Inbound)->count());
             $this->assertSame(2, Message::where('conversation_id', $conv->id)->where('direction', MessageDirection::Outbound)->count());
         });
+    }
+
+    public function test_client_typing_broadcasts_to_cabinet(): void
+    {
+        Event::fake([ClientTyping::class]);
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        // Диалог появляется только после первого сообщения — создаём его.
+        $this->postJson($this->url($channel, 'message'), ['token' => $token, 'text' => 'привет'])->assertOk();
+
+        $this->postJson($this->url($channel, 'typing'), ['token' => $token])
+            ->assertOk()->assertJsonPath('ok', true);
+
+        Event::assertDispatched(ClientTyping::class);
+    }
+
+    public function test_client_typing_is_silent_without_conversation(): void
+    {
+        // Сессия открыта, но переписки ещё нет → диалога нет → событие не шлём.
+        Event::fake([ClientTyping::class]);
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        $this->postJson($this->url($channel, 'typing'), ['token' => $token])->assertOk();
+
+        Event::assertNotDispatched(ClientTyping::class);
+    }
+
+    public function test_session_exposes_realtime_channel(): void
+    {
+        $channel = $this->webChannel();
+
+        // reverb=null в тестах (BROADCAST != reverb), но имя канала всегда есть —
+        // виджет подпишется на него, когда WS включён.
+        $this->postJson($this->url($channel, 'session'))
+            ->assertOk()
+            ->assertJsonPath('reverb', null)
+            ->assertJsonStructure(['token', 'greeting', 'channel']);
     }
 
     public function test_upload_rejects_non_image_file(): void

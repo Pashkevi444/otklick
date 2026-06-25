@@ -27,6 +27,15 @@
     var starting = false;
     var sending = false;
 
+    // Реалтайм «оператор печатает» (WebSocket к Reverb по pusher-протоколу, только
+    // приём на публичном канале сессии). Конфиг приходит с /session и /poll; если
+    // WS выключен/недоступен — индикатора просто нет, чат работает на поллинге.
+    var ws = null;
+    var wsConf = null;
+    var wsChannel = null;
+    var operTypingTimer = null;
+    var lastTypingSent = 0;
+
     // Память диалога: токен сессии + история сообщений переживают перезагрузку
     // страницы (ключ привязан к конкретному виджету tenant/channel).
     var SKEY = 'otklik:' + tenant + ':' + channel;
@@ -234,6 +243,50 @@
         operEl.classList.toggle('otk-on', !!active);
     }
 
+    // «Оператор печатает»: показываем те же точки и гасим по таймауту (событий
+    // больше нет) — как в мессенджере. Приход сообщения оператора гасит явно.
+    function showOperatorTyping() {
+        showTyping();
+        if (operTypingTimer) clearTimeout(operTypingTimer);
+        operTypingTimer = setTimeout(function () { hideTyping(); operTypingTimer = null; }, 4000);
+    }
+    function stopOperatorTyping() {
+        if (operTypingTimer) { clearTimeout(operTypingTimer); operTypingTimer = null; hideTyping(); }
+    }
+
+    // Подключение к Reverb: открываем WS, подписываемся на публичный канал сессии,
+    // слушаем operator.typing. Идемпотентно; при обрыве — переподключение.
+    function connectRealtime(conf, ch) {
+        if (ws || !conf || !conf.key || !ch) return;
+        wsConf = conf; wsChannel = ch;
+        var scheme = conf.scheme === 'https' ? 'wss' : 'ws';
+        var url = scheme + '://' + conf.host + ':' + conf.port + '/app/' + conf.key + '?protocol=7&client=js&version=8.4.0&flash=false';
+        try { ws = new WebSocket(url); } catch (e) { ws = null; return; }
+        ws.onmessage = function (ev) {
+            var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+            if (msg.event === 'pusher:connection_established') {
+                ws.send(JSON.stringify({ event: 'pusher:subscribe', data: { channel: wsChannel } }));
+            } else if (msg.event === 'operator.typing') {
+                showOperatorTyping();
+            }
+        };
+        ws.onclose = function () {
+            ws = null;
+            // переподключаемся, пока виджет открыт и сессия жива
+            setTimeout(function () { if (token && !document.hidden) connectRealtime(wsConf, wsChannel); }, 4000);
+        };
+        ws.onerror = function () { try { ws.close(); } catch (e) {} };
+    }
+
+    // Клиент печатает → троттленый сигнал в кабинет («клиент печатает»).
+    function notifyTyping() {
+        if (!token) return;
+        var now = Date.now();
+        if (now - lastTypingSent < 2500) return;
+        lastTypingSent = now;
+        post('/typing', { token: token }).catch(function () {});
+    }
+
     var IMG_RE = /(https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp)(?:\?[^\s<>"']*)?)/gi;
 
     function openLightbox(url) {
@@ -347,6 +400,7 @@
                 token = data.token;
                 persist();
                 hideTyping();
+                connectRealtime(data.reverb, data.channel);
                 if (data.greeting) addMsg(data.greeting, 'bot');
             })
             .catch(function () {
@@ -446,7 +500,11 @@
         if (!token || sending || starting || document.hidden) return;
         post('/poll', { token: token, after: lastId })
             .then(function (data) {
+                // Реалтайм мог не подняться на /session (восстановленная сессия) —
+                // конфиг дублируется в /poll, подключаемся лениво (идемпотентно).
+                connectRealtime(data.reverb, data.channel);
                 if (data.messages && data.messages.length) {
+                    stopOperatorTyping(); // пришёл ответ оператора — гасим «печатает»
                     if (!primed && !lastId && history.length) {
                         // Восстановили старую сессию без курсора (диалог создан до
                         // появления поллинга): бэклог уже показан из history — не
@@ -492,6 +550,7 @@
     input.addEventListener('input', function () {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 96) + 'px';
+        if (input.value.trim() !== '') notifyTyping();
     });
 
     // Эмодзи-пикер: вставляет смайл в позицию курсора.

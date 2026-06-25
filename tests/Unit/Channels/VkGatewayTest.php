@@ -157,4 +157,29 @@ final class VkGatewayTest extends TestCase
 
         $this->assertSame(['peerId' => '555', 'text' => '', 'id' => '9'], $parsed);
     }
+
+    public function test_download_images_collects_all_photo_attachments(): void
+    {
+        // VK кладёт несколько фото в ОДНО сообщение — забираем все, подпись к первому.
+        Http::fake([
+            '*photo-a*' => Http::response("\xFF\xD8\xFF\xE0A"),
+            '*photo-b*' => Http::response("\x89PNG\x0D\x0A\x1A\x0AB"),
+        ]);
+
+        $photo = fn (string $url): array => ['type' => 'photo', 'photo' => ['sizes' => [
+            ['url' => 'https://vk/small', 'width' => 100],
+            ['url' => $url, 'width' => 1200],
+        ]]];
+
+        $images = $this->gateway()->downloadImages($this->channel(), ['object' => ['message' => [
+            'text' => 'какой лучше?',
+            'attachments' => [$photo('https://vk/photo-a'), $photo('https://vk/photo-b')],
+        ]]]);
+
+        $this->assertCount(2, $images);
+        $this->assertSame('image/jpeg', $images[0]->mimeType);
+        $this->assertSame('какой лучше?', $images[0]->caption);
+        $this->assertSame('image/png', $images[1]->mimeType);
+        $this->assertSame('', $images[1]->caption);
+    }
 }

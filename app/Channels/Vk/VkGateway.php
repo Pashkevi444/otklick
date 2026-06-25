@@ -243,19 +243,24 @@ final readonly class VkGateway implements ChannelGateway, ReceivesImage, Receive
     }
 
     /**
-     * Скачивает фото из апдейта VK. Вложение `type=photo` несёт массив размеров —
-     * берём самый крупный (по ширине). Подпись — текст сообщения. Тип — по байтам.
+     * Скачивает ВСЕ фото из апдейта VK. Одно сообщение может нести несколько
+     * вложений `type=photo` (каждое — массив размеров, берём самый крупный по
+     * ширине). Подпись — текст сообщения (кладём к первому фото). Тип — по байтам.
      *
      * @param  array<string, mixed>  $update
+     * @return list<IncomingImage>
      */
-    public function downloadImage(Channel $channel, array $update): ?IncomingImage
+    public function downloadImages(Channel $channel, array $update): array
     {
         $message = $update['object']['message'] ?? $update['object'] ?? null;
         $attachments = is_array($message) ? ($message['attachments'] ?? []) : [];
 
         if (! is_array($attachments)) {
-            return null;
+            return [];
         }
+
+        $caption = is_string($message['text'] ?? null) ? trim($message['text']) : '';
+        $images = [];
 
         foreach ($attachments as $attachment) {
             if (! is_array($attachment) || ($attachment['type'] ?? null) !== 'photo') {
@@ -269,22 +274,21 @@ final readonly class VkGateway implements ChannelGateway, ReceivesImage, Receive
 
             try {
                 $bytes = Http::connectTimeout(5)->timeout(20)->get($url)->throw()->body();
-
-                if ($bytes === '') {
-                    return null;
-                }
-
-                $caption = is_string($message['text'] ?? null) ? trim($message['text']) : '';
-
-                return new IncomingImage($bytes, ImageMime::sniff($bytes), $caption);
             } catch (Throwable $e) {
                 report($e);
 
-                return null;
+                continue;
             }
+
+            if ($bytes === '') {
+                continue;
+            }
+
+            // Подпись — только к первому фото, чтобы не дублировать в описании.
+            $images[] = new IncomingImage($bytes, ImageMime::sniff($bytes), $images === [] ? $caption : '');
         }
 
-        return null;
+        return $images;
     }
 
     /**

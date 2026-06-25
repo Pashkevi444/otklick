@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Channels\ChannelGatewayResolver;
 use App\Channels\Contracts\ReceivesImage;
+use App\Channels\Data\IncomingImage;
 use App\Models\Channel;
 use App\Vision\Contracts\ImageToText;
 use Illuminate\Support\Facades\Log;
@@ -40,32 +41,58 @@ final readonly class ImageRecognitionService
             return null;
         }
 
-        $image = $gateway->downloadImage($channel, $update);
+        return $this->describeAll($channel, $gateway->downloadImages($channel, $update));
+    }
 
-        if ($image === null) {
+    /**
+     * Описывает все скачанные картинки и складывает их в ОДИН ввод клиента (подпись
+     * + объединённое описание). Несколько фото из одного сообщения (VK/MAX) или
+     * собранный альбом (Telegram) → один ответ бота. null — описать не удалось.
+     *
+     * @param  list<IncomingImage>  $images
+     */
+    public function describeAll(Channel $channel, array $images): ?string
+    {
+        if ($images === []) {
             return null;
         }
 
-        $description = $this->vision->describe($image->bytes, $image->mimeType, $image->caption);
+        $caption = '';
+        $descriptions = [];
+
+        foreach ($images as $image) {
+            if ($caption === '' && trim($image->caption) !== '') {
+                $caption = trim($image->caption);
+            }
+
+            $description = $this->vision->describe($image->bytes, $image->mimeType, $image->caption);
+            if ($description !== null && trim($description) !== '') {
+                $descriptions[] = trim($description);
+            }
+        }
 
         Log::info('vision.image', [
             'channel' => $channel->type->value,
             'tenant_id' => $channel->tenant_id,
-            'recognized' => $description !== null && trim($description) !== '',
+            'photos' => count($images),
+            'recognized' => count($descriptions),
         ]);
 
-        if ($description === null || trim($description) === '') {
+        if ($descriptions === []) {
             return null;
         }
 
-        return self::compose($image->caption, trim($description));
+        return self::compose($caption, $descriptions);
     }
 
     /**
-     * Складывает ввод клиента из подписи к фото и распознанного описания: подпись
-     * (слова клиента) + маркер с описанием, чтобы бот «понимал», что прислали фото.
+     * Складывает ввод клиента из подписи к фото и распознанных описаний: подпись
+     * (слова клиента) + маркер с описанием(ями), чтобы бот «понимал», что прислали
+     * фото. Несколько описаний объединяются через «; ».
+     *
+     * @param  list<string>  $descriptions
      */
-    public static function compose(string $caption, string $description): string
+    public static function compose(string $caption, array $descriptions): string
     {
         $parts = [];
 
@@ -73,7 +100,7 @@ final readonly class ImageRecognitionService
             $parts[] = trim($caption);
         }
 
-        $parts[] = "[Клиент прислал фото. На фото: {$description}]";
+        $parts[] = '[Клиент прислал фото. На фото: '.implode('; ', $descriptions).']';
 
         return implode("\n", $parts);
     }

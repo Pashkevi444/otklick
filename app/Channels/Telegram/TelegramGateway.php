@@ -257,28 +257,41 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesImage, R
     }
 
     /**
-     * Скачивает фото из апдейта Telegram (getFile → download). Фото приходит как
-     * массив размеров `message.photo` — берём самый крупный (последний). Подпись —
-     * из `message.caption`. Telegram отдаёт фото в JPEG, тип уточняем по байтам.
+     * Скачивает фото из апдейта Telegram (getFile → download). Одно сообщение несёт
+     * одно фото массивом размеров `message.photo` — берём самый крупный (альбом
+     * приходит ОТДЕЛЬНЫМИ апдейтами, склейку делает дебаунс по media_group_id).
+     * Подпись — из `message.caption`. Тип уточняем по байтам.
      *
      * @param  array<string, mixed>  $update
+     * @return list<IncomingImage>
      */
-    public function downloadImage(Channel $channel, array $update): ?IncomingImage
+    public function downloadImages(Channel $channel, array $update): array
     {
         $message = $update['message'] ?? null;
         $photo = is_array($message) ? ($message['photo'] ?? null) : null;
 
         if (! is_array($photo) || $photo === []) {
-            return null;
+            return [];
         }
 
         $largest = end($photo);
         $fileId = is_array($largest) ? ($largest['file_id'] ?? null) : null;
 
         if (! is_string($fileId) || $fileId === '') {
-            return null;
+            return [];
         }
 
+        $caption = is_string($message['caption'] ?? null) ? trim($message['caption']) : '';
+        $bytes = $this->downloadFile($channel, $fileId);
+
+        return $bytes !== null ? [new IncomingImage($bytes, ImageMime::sniff($bytes), $caption)] : [];
+    }
+
+    /**
+     * Скачивает файл Telegram по file_id (getFile → download). null — ошибка.
+     */
+    public function downloadFile(Channel $channel, string $fileId): ?string
+    {
         $token = $channel->botToken();
 
         try {
@@ -298,13 +311,7 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesImage, R
                 ->throw()
                 ->body();
 
-            if ($body === '') {
-                return null;
-            }
-
-            $caption = is_string($message['caption'] ?? null) ? trim($message['caption']) : '';
-
-            return new IncomingImage($body, ImageMime::sniff($body), $caption);
+            return $body !== '' ? $body : null;
         } catch (Throwable $e) {
             report($e);
 

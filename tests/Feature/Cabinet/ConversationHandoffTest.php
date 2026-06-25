@@ -7,6 +7,7 @@ namespace Tests\Feature\Cabinet;
 use App\Enums\ChannelType;
 use App\Enums\MessageDirection;
 use App\Enums\UserRole;
+use App\Events\OperatorTyping;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -14,6 +15,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 /**
@@ -101,6 +103,37 @@ final class ConversationHandoffTest extends TestCase
         $fresh = Conversation::withoutGlobalScopes()->findOrFail($conv->id);
         $this->assertNull($fresh->operator_active_at);
         $this->assertFalse($fresh->isOperatorHandling());
+    }
+
+    public function test_operator_typing_broadcasts_when_handling(): void
+    {
+        Event::fake([OperatorTyping::class]);
+        [, $owner, $conv] = $this->setup3();
+        $this->actingAs($owner)->postJson("/cabinet/conversations/{$conv->id}/takeover")->assertOk();
+
+        $this->actingAs($owner)->postJson("/cabinet/conversations/{$conv->id}/typing")
+            ->assertOk()->assertJsonPath('ok', true);
+
+        Event::assertDispatched(OperatorTyping::class);
+    }
+
+    public function test_operator_typing_is_silent_without_takeover(): void
+    {
+        // Перехвата нет → индикатор «оператор печатает» бессмыслен, событие не шлём.
+        Event::fake([OperatorTyping::class]);
+        [, $owner, $conv] = $this->setup3();
+
+        $this->actingAs($owner)->postJson("/cabinet/conversations/{$conv->id}/typing")->assertOk();
+
+        Event::assertNotDispatched(OperatorTyping::class);
+    }
+
+    public function test_member_without_edit_permission_cannot_signal_typing(): void
+    {
+        [$tenant, , $conv] = $this->setup3();
+        $member = User::factory()->create(['tenant_id' => $tenant->id, 'role' => UserRole::Member->value, 'permissions' => []]);
+
+        $this->actingAs($member)->postJson("/cabinet/conversations/{$conv->id}/typing")->assertForbidden();
     }
 
     public function test_member_without_edit_permission_cannot_take_over(): void

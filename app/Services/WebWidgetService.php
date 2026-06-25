@@ -11,6 +11,7 @@ use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Events\ClientTyping;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
 use App\Models\Channel;
@@ -19,6 +20,7 @@ use App\Models\Message;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Support\ImageMime;
+use App\Support\WidgetRealtimeChannel;
 use App\Vision\Contracts\ImageToText;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
@@ -236,7 +238,7 @@ final readonly class WebWidgetService
             return null;
         }
 
-        return ImageRecognitionService::compose($caption, implode('; ', $descriptions));
+        return ImageRecognitionService::compose($caption, $descriptions);
     }
 
     /**
@@ -262,6 +264,35 @@ final readonly class WebWidgetService
             ->all();
 
         return ['messages' => $messages, 'operatorActive' => $conversation->isOperatorHandling()];
+    }
+
+    /**
+     * Имя публичного реалтайм-канала сессии (виджет подписывается на него, чтобы
+     * показать «оператор печатает»). Выводится из канала и id сессии.
+     */
+    public function realtimeChannel(Channel $channel, string $token): string
+    {
+        return WidgetRealtimeChannel::name($channel->id, $this->sessionFromToken($channel, $token));
+    }
+
+    /**
+     * Посетитель печатает в виджете — шлём эфемерный сигнал в кабинет (на приватный
+     * канал тенанта), чтобы открытый диалог показал «клиент печатает». Диалога ещё
+     * нет (сессия без переписки) — тихо выходим.
+     */
+    public function markClientTyping(Channel $channel, string $token): void
+    {
+        $sessionId = $this->sessionFromToken($channel, $token);
+        $conversation = $this->conversations->findActiveForChat($channel->id, $sessionId);
+
+        if ($conversation === null) {
+            return;
+        }
+
+        $tenantId = $channel->getAttribute('tenant_id');
+        if (is_string($tenantId) && $tenantId !== '') {
+            ClientTyping::dispatch($tenantId, (string) $conversation->id);
+        }
     }
 
     /**

@@ -209,39 +209,41 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesImage, R
     }
 
     /**
-     * Скачивает фото из уведомления Green API (`imageMessage`). Картинка лежит по
-     * `fileMessageData.downloadUrl`, подпись — в `caption`. Тип уточняем по байтам.
+     * Скачивает фото из уведомления Green API (`imageMessage`). Одно уведомление =
+     * одна картинка (`fileMessageData.downloadUrl`, подпись — `caption`); группировки
+     * нескольких фото в Green API нет. Тип уточняем по байтам.
      *
      * @param  array<string, mixed>  $body
+     * @return list<IncomingImage>
      */
-    public function downloadImage(Channel $channel, array $body): ?IncomingImage
+    public function downloadImages(Channel $channel, array $body): array
     {
         $messageData = $body['messageData'] ?? [];
 
         if (($messageData['typeMessage'] ?? null) !== 'imageMessage') {
-            return null;
+            return [];
         }
 
         $fileData = $messageData['fileMessageData'] ?? [];
         $url = $fileData['downloadUrl'] ?? null;
         if (! is_string($url) || $url === '') {
-            return null;
+            return [];
         }
 
         try {
             $bytes = $this->http()->timeout(20)->get($url)->throw()->body();
 
             if ($bytes === '') {
-                return null;
+                return [];
             }
 
             $caption = is_string($fileData['caption'] ?? null) ? trim($fileData['caption']) : '';
 
-            return new IncomingImage($bytes, ImageMime::sniff($bytes), $caption);
+            return [new IncomingImage($bytes, ImageMime::sniff($bytes), $caption)];
         } catch (Throwable $e) {
             report($e);
 
-            return null;
+            return [];
         }
     }
 
