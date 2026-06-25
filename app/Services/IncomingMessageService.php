@@ -11,6 +11,7 @@ use App\Enums\ConversationOutcome;
 use App\Enums\ConversationStatus;
 use App\Enums\MessageStatus;
 use App\Enums\OwnerEvent;
+use App\Enums\UserNotificationType;
 use App\Jobs\DeliverBotReply;
 use App\Jobs\RefreshClientSummary;
 use App\Jobs\SendOwnerNotification;
@@ -38,6 +39,7 @@ final readonly class IncomingMessageService
         private ContactCapture $contacts,
         private KnowledgeGapRepositoryInterface $gaps,
         private SpamDetector $spam,
+        private UserNotificationService $notifications,
     ) {}
 
     public function handle(Channel $channel, IncomingMessage $incoming): void
@@ -106,17 +108,46 @@ final readonly class IncomingMessageService
 
         $this->conversations->touchLastMessage($conversation);
 
+        $convUrl = '/cabinet/conversations/'.$conversation->id;
+
         if ($reply->escalate) {
             $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+
+            $this->notifications->notify(
+                UserNotificationType::Escalation,
+                'Диалог требует администратора',
+                $this->snippet($incoming->text),
+                $convUrl,
+                'conversation',
+                (string) $conversation->id,
+            );
 
             // Бот не нашёл ответа в базе знаний — фиксируем вопрос в «пробелах
             // бота», чтобы бизнес дополнил базу (рост доверия → удержание).
             if ($reply->knowledgeGap) {
-                $this->gaps->record($incoming->text, (string) $conversation->id, $channel->type->value);
+                $gap = $this->gaps->record($incoming->text, (string) $conversation->id, $channel->type->value);
+
+                $this->notifications->notify(
+                    UserNotificationType::KnowledgeGap,
+                    'Вопрос без ответа',
+                    $this->snippet($incoming->text),
+                    '/cabinet/knowledge',
+                    'gap',
+                    (string) $gap->id,
+                );
             }
         } elseif ($reply->booked) {
             // Запись оформлена — закрываем диалог и фиксируем конверсию.
             $this->conversations->markBooked($conversation);
+
+            $this->notifications->notify(
+                UserNotificationType::Booked,
+                'Запись оформлена',
+                $conversation->displayName() ?? 'Гость',
+                $convUrl,
+                'conversation',
+                (string) $conversation->id,
+            );
 
             // Обновляем резюме клиента по итогам записи (в фоне), если привязан.
             if ($conversation->client_id !== null) {
@@ -126,9 +157,25 @@ final readonly class IncomingMessageService
             // Клиент отменил запись — отменяем в CRM и закрываем диалог.
             $this->responder->cancelBookingInCrm($conversation);
             $this->conversations->markCancelled($conversation);
+        } elseif ($conversation->wasRecentlyCreated) {
+            // Новый диалог без записи/эскалации — это новый лид.
+            $this->notifications->notify(
+                UserNotificationType::NewLead,
+                'Новый лид',
+                $conversation->displayName() ?? $this->snippet($incoming->text),
+                $convUrl,
+                'conversation',
+                (string) $conversation->id,
+            );
         }
 
         $this->notifyOwner($channel, $conversation, $incoming->text, $reply);
+    }
+
+    /** Короткая выжимка текста клиента для тела уведомления. */
+    private function snippet(string $text): string
+    {
+        return mb_substr(trim($text), 0, 160);
     }
 
     /**

@@ -82,25 +82,25 @@ final class EloquentAnnouncementRepository implements AnnouncementRepositoryInte
         $announcement->delete();
     }
 
-    public function readIdsForCurrentTenant(): array
+    public function readIdsForUser(string $userId): array
     {
-        // AnnouncementRead скоупится текущим тенантом (TenantScope + RLS).
-        return AnnouncementRead::query()->pluck('announcement_id')->all();
+        // AnnouncementRead скоупится текущим тенантом (TenantScope + RLS) + пер-юзер.
+        return AnnouncementRead::query()->where('user_id', $userId)->pluck('announcement_id')->all();
     }
 
-    public function markReadForCurrentTenant(array $announcementIds, string $tenantId): void
+    public function markReadForUser(array $announcementIds, string $tenantId, string $userId): void
     {
         foreach ($announcementIds as $id) {
             AnnouncementRead::query()->firstOrCreate(
-                ['announcement_id' => $id, 'tenant_id' => $tenantId],
-                ['read_at' => Carbon::now()],
+                ['announcement_id' => $id, 'user_id' => $userId],
+                ['tenant_id' => $tenantId, 'read_at' => Carbon::now()],
             );
         }
     }
 
-    public function unreadCountsForCurrentTenant(): array
+    public function unreadCountsForUser(string $userId): array
     {
-        $readIds = $this->readIdsForCurrentTenant();
+        $readIds = $this->readIdsForUser($userId);
 
         return [
             'news' => Announcement::query()

@@ -153,6 +153,26 @@ services:
     volumes:
       - ./singbox/config.json:/etc/sing-box/config.json:ro
 
+  # WebSocket-сервер реалтайма (Laravel Reverb): колокольчик/бейджи/лайв-чат.
+  # Caddy проксирует wss на тот же домен (/app/* WS-хендшейк, /apps/* серверный
+  # API событий) → reverb:8080. App пушит события ВНУТРЕННЕ (REVERB_HOST=reverb).
+  reverb:
+    build:
+      context: .
+      target: app
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    expose:
+      - "8080"
+    depends_on:
+      app:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
   pgsql:
     build:
       context: ./docker/postgres

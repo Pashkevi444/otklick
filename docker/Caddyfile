@@ -18,7 +18,15 @@ otcl1ck.ru, www.otcl1ck.ru {
 # Приложение: бизнес-кабинет, супер-админка, вход, вебхуки Telegram
 business.otcl1ck.ru {
 	encode zstd gzip
-	reverse_proxy app:8000
+	# Реалтайм (Laravel Reverb): WS-хендшейк (/app/*) и серверный API событий
+	# (/apps/*) — на reverb:8080; апгрейд соединения Caddy делает сам. Остальное — app.
+	@reverb path /app/* /apps/*
+	handle @reverb {
+		reverse_proxy reverb:8080
+	}
+	handle {
+		reverse_proxy app:8000
+	}
 	import offline
 }
 

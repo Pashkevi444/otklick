@@ -9,9 +9,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Cabinet\UpdateClientRequest;
 use App\Models\Client;
 use App\Models\Conversation;
+use App\Models\User;
 use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Services\ClientService;
 use App\Services\ClientSummaryService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,6 +29,7 @@ final class ClientController extends Controller
         private readonly ClientRepositoryInterface $clients,
         private readonly ClientSummaryService $summaries,
         private readonly ClientService $service,
+        private readonly UserNotificationService $notifications,
     ) {}
 
     public function index(Request $request): Response
@@ -60,10 +63,15 @@ final class ClientController extends Controller
         ]);
     }
 
-    public function show(string $client): Response
+    public function show(Request $request, string $client): Response
     {
         $model = $this->findOrFail($client);
         $model->load(['conversations' => fn ($q) => $q->with('channel')->latest()]);
+
+        // Открыл карточку клиента → уведомление «новый клиент» по нему гаснет.
+        if (($user = $request->user()) instanceof User) {
+            $this->notifications->markEntityRead($user, 'client', (string) $model->id);
+        }
 
         return Inertia::render('Cabinet/Clients/Show', [
             'client' => $this->presentFull($model),

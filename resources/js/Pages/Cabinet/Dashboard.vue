@@ -18,6 +18,10 @@ const features = computed(() => page.props.auth.user?.tenant?.features);
 const isOwner = computed(() => page.props.auth.user?.isOwner ?? false);
 const allowed = computed<string[]>(() => page.props.auth.user?.allowedSections ?? []);
 const cardStates = computed<Record<string, string>>(() => (page.props.cardStates as Record<string, string>) ?? {});
+// Непрочитанные уведомления по разделам-плашкам (диалоги/база знаний/клиенты).
+const notifySections = computed<Record<string, number>>(
+    () => (page.props.notifications as { sections?: Record<string, number> } | null)?.sections ?? {},
+);
 
 type GroupKey = 'sales' | 'bot' | 'connect' | 'business';
 
@@ -37,6 +41,7 @@ interface DecoratedCard extends Card {
     planLocked: boolean;
     statusLabel: string | null;
     badge: string | null;
+    notifyCount: number;
     to: string | null;
 }
 
@@ -80,6 +85,7 @@ const decorate = (c: Card): DecoratedCard => {
         planLocked,
         statusLabel: maintenance ? 'Тех. работы' : planLocked ? 'Не в тарифе' : null,
         badge: !disabled && state === 'new' ? 'Новое' : !disabled && state === 'updated' ? 'Обновлено' : null,
+        notifyCount: disabled ? 0 : (notifySections.value[c.key] ?? 0),
         to: maintenance ? null : planLocked ? '/cabinet/subscription' : c.href,
     };
 };
@@ -198,8 +204,12 @@ const badgeClass = (label: string): string => {
                             {{ c.statusLabel ?? c.badge }}
                         </span>
 
-                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl transition" :class="[accentTile[c.group], !c.disabled && 'group-hover:scale-110']">
+                        <div class="relative flex h-11 w-11 items-center justify-center rounded-2xl transition" :class="[accentTile[c.group], !c.disabled && 'group-hover:scale-110']">
                             <Icon :name="c.icon" class="h-6 w-6" />
+                            <span
+                                v-if="c.notifyCount > 0"
+                                class="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-bold text-white shadow"
+                            >{{ c.notifyCount > 99 ? '99+' : c.notifyCount }}</span>
                         </div>
                         <div class="mt-3.5 font-semibold text-[#1F4E79] dark:text-sky-200">{{ c.label }}</div>
                         <div class="mt-1 text-sm leading-snug text-slate-500 dark:text-slate-400">{{ c.text }}</div>

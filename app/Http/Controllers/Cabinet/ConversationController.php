@@ -11,10 +11,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BookingFlow;
 use App\Services\ConversationHandoffService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +35,7 @@ final class ConversationController extends Controller
         private readonly MessageRepositoryInterface $messages,
         private readonly BookingFlow $booking,
         private readonly ConversationHandoffService $handoff,
+        private readonly UserNotificationService $notifications,
     ) {}
 
     public function index(Request $request): Response
@@ -77,6 +80,11 @@ final class ConversationController extends Controller
         $model = $this->conversations->findForCurrentTenant($conversation);
 
         abort_if($model === null, 404);
+
+        // Открыл конкретный диалог → его уведомления (лид/эскалация/запись) гаснут.
+        if (($user = $request->user()) instanceof User) {
+            $this->notifications->markEntityRead($user, 'conversation', (string) $model->id);
+        }
 
         return Inertia::render('Cabinet/Conversations/Show', [
             'conversation' => [

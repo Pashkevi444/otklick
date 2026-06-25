@@ -51,23 +51,23 @@ interface AnnouncementRepositoryInterface
     public function delete(Announcement $announcement): void;
 
     /**
-     * Id анонсов, уже прочитанных текущим тенантом.
+     * Id анонсов, уже прочитанных КОНКРЕТНЫМ пользователем.
      *
      * @return list<string>
      */
-    public function readIdsForCurrentTenant(): array;
+    public function readIdsForUser(string $userId): array;
 
     /**
-     * Пометить анонсы прочитанными текущим тенантом (идемпотентно).
+     * Пометить анонсы прочитанными конкретным пользователем (идемпотентно).
      *
      * @param  list<string>  $announcementIds
      */
-    public function markReadForCurrentTenant(array $announcementIds, string $tenantId): void;
+    public function markReadForUser(array $announcementIds, string $tenantId, string $userId): void;
 
     /**
-     * Кол-во непрочитанных новостей для текущего тенанта.
+     * Кол-во непрочитанных новостей для конкретного пользователя.
      *
      * @return array{news: int}
      */
-    public function unreadCountsForCurrentTenant(): array;
+    public function unreadCountsForUser(string $userId): array;
 }

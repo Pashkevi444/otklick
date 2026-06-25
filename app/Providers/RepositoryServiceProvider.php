@@ -27,6 +27,7 @@ use App\Repositories\Contracts\PromptTemplateRepositoryInterface;
 use App\Repositories\Contracts\SandboxRepositoryInterface;
 use App\Repositories\Contracts\SiteSettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Repositories\Contracts\UserNotificationRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentAnnouncementRepository;
 use App\Repositories\Eloquent\EloquentBroadcastRepository;
@@ -51,6 +52,7 @@ use App\Repositories\Eloquent\EloquentPromptTemplateRepository;
 use App\Repositories\Eloquent\EloquentSandboxRepository;
 use App\Repositories\Eloquent\EloquentSiteSettingsRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
+use App\Repositories\Eloquent\EloquentUserNotificationRepository;
 use App\Repositories\Eloquent\EloquentUserRepository;
 use Illuminate\Support\ServiceProvider;
 
@@ -86,5 +88,6 @@ final class RepositoryServiceProvider extends ServiceProvider
         DashboardCardStateRepositoryInterface::class => EloquentDashboardCardStateRepository::class,
         PasswordResetCodeRepositoryInterface::class => EloquentPasswordResetCodeRepository::class,
         PromptTemplateRepositoryInterface::class => EloquentPromptTemplateRepository::class,
+        UserNotificationRepositoryInterface::class => EloquentUserNotificationRepository::class,
     ];
 }

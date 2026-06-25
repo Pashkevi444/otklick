@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\ChannelType;
+use App\Enums\UserNotificationType;
 use App\Models\Client;
 use App\Models\Conversation;
 use App\Repositories\Contracts\ClientIdentityRepositoryInterface;
@@ -30,6 +31,7 @@ class ClientService
         private ClientRepositoryInterface $clients,
         private ConversationRepositoryInterface $conversations,
         private ClientIdentityRepositoryInterface $identities,
+        private UserNotificationService $notifications,
     ) {}
 
     /**
@@ -63,6 +65,16 @@ class ClientService
                 'first_seen_at' => now(),
                 'last_seen_at' => now(),
             ]);
+
+            // Новый контакт — уведомляем сотрудников с доступом к базе клиентов.
+            $this->notifications->notify(
+                UserNotificationType::NewClient,
+                'Новый клиент',
+                null,
+                '/cabinet/clients/'.$client->id,
+                'client',
+                (string) $client->id,
+            );
         }
 
         if ($conversation->client_id !== $client->id) {
