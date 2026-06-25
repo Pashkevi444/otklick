@@ -17,10 +17,9 @@ final readonly class NewChannelData
         public ChannelType $type,
         public ?string $externalId,
         public ?string $botToken = null,
-        public ?string $secretToken = null,
         /**
          * Произвольные креды канала (provider-специфика: например VK
-         * access_token/group_id). Сливаются с bot_token/secret_token.
+         * access_token/group_id). Сливаются с bot_token.
          *
          * @var array<string, string|null>
          */

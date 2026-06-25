@@ -121,7 +121,6 @@ final class ChannelController extends Controller
             default => $this->channelService->connectTelegram(
                 $tenantId,
                 (string) $request->string('bot_token'),
-                (string) config('services.telegram.webhook_base_url'),
             ),
         };
     }
@@ -132,8 +131,7 @@ final class ChannelController extends Controller
             ChannelType::Vk => 'ВКонтакте не подтвердил сообщество. Проверьте токен сообщества (с правами на сообщения) и его id.',
             ChannelType::Max => 'MAX отклонил токен. Проверьте токен бота, выданный @MasterBot.',
             ChannelType::WhatsApp => 'Green API отклонил подключение или аккаунт не привязан. Проверьте idInstance/apiTokenInstance и что вы отсканировали QR (статус «authorized»).',
-            default => 'Telegram отклонил запрос. Проверьте токен бота и публичный HTTPS-адрес '.
-                '(TELEGRAM_WEBHOOK_BASE_URL); localhost Telegram не принимает.',
+            default => 'Telegram отклонил токен. Проверьте токен бота, выданный @BotFather.',
         };
     }
 
@@ -165,23 +163,14 @@ final class ChannelController extends Controller
         ];
     }
 
-    /** Подпись под каналом: VK — id сообщества, MAX — бот, Telegram — URL вебхука. */
+    /** Подпись под каналом: VK — id сообщества, MAX/Telegram/WhatsApp — способ связи. */
     private function detail(Channel $channel): string
     {
-        if ($channel->type === ChannelType::Vk) {
-            return 'Сообщество #'.$channel->external_id;
-        }
-
-        if ($channel->type === ChannelType::Max) {
-            return 'Бот MAX (long polling)';
-        }
-
-        if ($channel->type === ChannelType::WhatsApp) {
-            return 'WhatsApp · Green API #'.$channel->external_id;
-        }
-
-        $baseUrl = rtrim((string) config('services.telegram.webhook_base_url'), '/');
-
-        return "{$baseUrl}/webhooks/telegram/{$channel->tenant_id}/{$channel->id}";
+        return match ($channel->type) {
+            ChannelType::Vk => 'Сообщество #'.$channel->external_id,
+            ChannelType::Max => 'Бот MAX (long polling)',
+            ChannelType::WhatsApp => 'WhatsApp · Green API #'.$channel->external_id,
+            default => 'Бот Telegram (long polling)',
+        };
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\AnnouncementType;
+use App\Events\AnnouncementPublished;
 use App\Models\Announcement;
 use App\Repositories\Contracts\AnnouncementRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -44,13 +45,20 @@ final readonly class AnnouncementService
 
     public function create(AnnouncementType $type, string $title, string $body, bool $publish): Announcement
     {
-        return $this->announcements->create([
+        $announcement = $this->announcements->create([
             'type' => $type,
             'title' => $title,
             'body' => $this->sanitize($body),
             'is_published' => $publish,
             'published_at' => $publish ? Carbon::now() : null,
         ]);
+
+        // Опубликована сразу → у всех тенантов новый непрочитанный: пингуем кабинеты.
+        if ($publish) {
+            AnnouncementPublished::dispatch();
+        }
+
+        return $announcement;
     }
 
     public function update(string $id, string $title, string $body, bool $publish): ?Announcement
@@ -61,6 +69,8 @@ final readonly class AnnouncementService
             return null;
         }
 
+        $wasPublished = (bool) $announcement->is_published;
+
         $this->announcements->update($announcement, [
             'title' => $title,
             'body' => $this->sanitize($body),
@@ -68,6 +78,11 @@ final readonly class AnnouncementService
             // Дата публикации проставляется при первой публикации и не сбрасывается.
             'published_at' => $publish ? ($announcement->published_at ?? Carbon::now()) : null,
         ]);
+
+        // Черновик впервые опубликован → у тенантов новый непрочитанный: пингуем кабинеты.
+        if ($publish && ! $wasPublished) {
+            AnnouncementPublished::dispatch();
+        }
 
         return $announcement;
     }

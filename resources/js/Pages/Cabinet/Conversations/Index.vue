@@ -43,9 +43,21 @@ const props = defineProps<{
     filters: Filters;
     statuses: Option[];
     channels: Option[];
+    newConversationIds?: string[];
 }>();
 
 const state = reactive<Filters>({ ...props.filters });
+
+// Новые лиды (с непрочитанным уведомлением) — подсветка «Новый», пока не открыли диалог.
+const newIds = new Set(props.newConversationIds ?? []);
+const isNew = (id: string): boolean => newIds.has(id);
+const newCount = newIds.size;
+
+// «Прочитать всё» — гасит подсветку «Новый» у всех лидов (и бейдж секции).
+// POST без preserveState → страница перерисуется со свежим (пустым) newConversationIds.
+const markAllRead = (): void => {
+    router.post('/cabinet/conversations/read-all', {}, { preserveScroll: true });
+};
 
 const go = (page = 1): void => {
     router.get(
@@ -189,6 +201,12 @@ const remove = (id: string): void => {
             </button>
         </div>
 
+        <!-- Есть новые лиды — кнопка массово погасить подсветку «Новый». -->
+        <div v-if="newCount > 0" class="mb-3 flex items-center justify-between rounded-xl border border-[#2E74B5]/20 bg-[#2E74B5]/5 px-4 py-2.5">
+            <span class="text-sm text-slate-600"><span class="font-semibold text-[#2E74B5]">{{ newCount }}</span> новых</span>
+            <button type="button" class="text-sm font-medium text-[#2E74B5] hover:underline" @click="markAllRead">Прочитать всё</button>
+        </div>
+
         <div v-if="conversations.length === 0" class="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400">
             {{ state.search || state.status ? 'Ничего не найдено. Измените поиск или фильтр.' : 'Пока нет лидов. Как только клиент напишет боту — обращение появится здесь.' }}
         </div>
@@ -201,9 +219,13 @@ const remove = (id: string): void => {
                     :key="c.id"
                     :href="`/cabinet/conversations/${c.id}`"
                     class="block rounded-xl border border-slate-200 bg-white p-4"
+                    :class="isNew(c.id) ? 'ring-1 ring-[#2E74B5]/40 bg-[#2E74B5]/5' : ''"
                 >
                     <div class="flex items-center justify-between gap-2">
-                        <span class="font-medium text-slate-800">{{ c.contact }}</span>
+                        <span class="font-medium text-slate-800">
+                            <span v-if="isNew(c.id)" class="mr-1 rounded-full bg-[#2E74B5]/10 px-2 py-0.5 text-xs font-medium text-[#2E74B5]">Новый</span>
+                            {{ c.contact }}
+                        </span>
                         <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                     </div>
                     <p v-if="c.phone" class="mt-1 text-sm font-medium text-[#2E74B5]">📞 {{ c.phone }}</p>
@@ -234,11 +256,13 @@ const remove = (id: string): void => {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        <tr v-for="c in conversations" :key="c.id" class="cursor-pointer transition hover:bg-slate-50" @click="open(c.id)">
+                        <tr v-for="c in conversations" :key="c.id" class="cursor-pointer transition hover:bg-slate-50" :class="isNew(c.id) ? 'bg-[#2E74B5]/5' : ''" @click="open(c.id)">
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
+                                    <span v-if="isNew(c.id)" title="Новый лид" class="h-2 w-2 flex-none rounded-full bg-[#2E74B5]"></span>
                                     <span class="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#EAF2FB] text-xs font-semibold text-[#1F4E79]">{{ initials(c.contact) }}</span>
                                     <span class="font-medium text-slate-800">{{ c.contact }}</span>
+                                    <span v-if="isNew(c.id)" class="rounded-full bg-[#2E74B5]/10 px-2 py-0.5 text-xs font-medium text-[#2E74B5]">Новый</span>
                                 </div>
                             </td>
                             <td class="whitespace-nowrap px-5 py-3 font-medium" :class="c.phone ? 'text-[#2E74B5]' : 'text-slate-300'">{{ c.phone ?? '—' }}</td>

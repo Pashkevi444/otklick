@@ -35,24 +35,20 @@ final readonly class ChannelService
      * Бот работает через long polling (`telegram:poll`), поэтому вебхук не
      * ставится, а снимается (иначе getUpdates вернёт 409). deleteWebhook заодно
      * валидирует токен — битый отклонится с 401.
-     *
-     * $webhookBaseUrl сохранён в сигнатуре для совместимости (не-РФ окружения).
      */
-    public function connectTelegram(string $tenantId, string $botToken, string $webhookBaseUrl = ''): Channel
+    public function connectTelegram(string $tenantId, string $botToken): Channel
     {
-        $secretToken = Str::random(40);
-
         // Транзакция: если запрос к Telegram упадёт (битый токен/сеть), канал не
         // останется полу-подключённым.
-        return DB::transaction(function () use ($tenantId, $botToken, $secretToken): Channel {
+        return DB::transaction(function () use ($tenantId, $botToken): Channel {
             $channel = $this->channels->create(new NewChannelData(
                 tenantId: $tenantId,
                 type: ChannelType::Telegram,
                 externalId: $this->botId($botToken),
                 botToken: $botToken,
-                secretToken: $secretToken,
             ));
 
+            // Снимаем вебхук — Telegram работает через long polling (telegram:poll).
             $this->telegram->deleteWebhook($channel);
 
             return $channel;

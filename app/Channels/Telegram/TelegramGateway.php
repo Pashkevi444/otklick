@@ -132,18 +132,6 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesImage, R
     }
 
     /**
-     * Регистрирует URL вебхука у Telegram с secret_token. На РФ-хостинге не
-     * используется (вебхуки недоступны) — оставлено для не-РФ окружений.
-     */
-    public function setWebhook(Channel $channel, string $url, string $secretToken): void
-    {
-        $this->call($channel->botToken(), 'setWebhook', [
-            'url' => $url,
-            'secret_token' => $secretToken,
-        ]);
-    }
-
-    /**
      * Снимает вебхук — обязательно перед long polling (иначе getUpdates вернёт
      * 409 Conflict). Заодно валидирует токен (битый → 401).
      */

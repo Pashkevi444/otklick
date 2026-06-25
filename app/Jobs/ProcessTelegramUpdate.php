@@ -156,17 +156,19 @@ final class ProcessTelegramUpdate implements ShouldQueue
             return null;
         }
 
-        $text = $message['text'] ?? null;
+        $text = is_string($message['text'] ?? null) ? $message['text'] : '';
 
-        // Нет текста — возможно голосовое (STT) или фото (vision): скачиваем и
-        // распознаём, подставляем расшифровку/описание как ввод клиента.
-        if (! is_string($text) || $text === '') {
-            $text = $voice->transcribe($channel, $this->update)
-                ?? $image->recognize($channel, $this->update);
+        // Нет текста — возможно голосовое: расшифровываем в текст (STT).
+        if ($text === '') {
+            $text = $voice->transcribe($channel, $this->update) ?? '';
+        }
 
-            if ($text === null || $text === '') {
-                return null;
-            }
+        // Фото в сообщении — распознаём (vision) и приклеиваем к тексту/подписи:
+        // подпись клиента обрабатывается ВМЕСТЕ с фото. Нет фото — шаг пропускаем.
+        $text = $image->augment($channel, $this->update, $text);
+
+        if ($text === '') {
+            return null;
         }
 
         return new IncomingMessage(

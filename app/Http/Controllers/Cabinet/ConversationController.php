@@ -18,7 +18,7 @@ use App\Repositories\Contracts\MessageRepositoryInterface;
 use App\Services\BookingFlow;
 use App\Services\ConversationHandoffService;
 use App\Services\UserNotificationService;
-use App\Support\KnowledgeImageStorage;
+use App\Support\TenantImageStorage;
 use App\Support\WidgetRealtimeChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +39,7 @@ final class ConversationController extends Controller
         private readonly BookingFlow $booking,
         private readonly ConversationHandoffService $handoff,
         private readonly UserNotificationService $notifications,
-        private readonly KnowledgeImageStorage $images,
+        private readonly TenantImageStorage $images,
     ) {}
 
     public function index(Request $request): Response
@@ -52,7 +52,14 @@ final class ConversationController extends Controller
 
         $page = $this->conversations->paginateForCurrentTenant($search, $status, $channel, $sort, $dir, 15);
 
+        // Новые лиды (с непрочитанным уведомлением: новый лид/эскалация/запись) —
+        // подсвечиваем «Новый». Метка держится, пока не откроют диалог (`show()`
+        // пометит прочитанным) — как у уведомлений/контактов. Per-user.
+        $user = $request->user();
+        $newIds = $user instanceof User ? $this->notifications->unreadEntityIds($user, 'conversation') : [];
+
         return Inertia::render('Cabinet/Conversations/Index', [
+            'newConversationIds' => $newIds,
             'conversations' => array_map($this->present(...), $page->items()),
             'pagination' => [
                 'current' => $page->currentPage(),
@@ -77,6 +84,16 @@ final class ConversationController extends Controller
                 $this->conversations->channelTypesForCurrentTenant(),
             ),
         ]);
+    }
+
+    /** «Прочитать всё»: гасит подсветку «Новый» у всех лидов (per-user). */
+    public function readAll(Request $request): RedirectResponse
+    {
+        if (($user = $request->user()) instanceof User) {
+            $this->notifications->markEntityTypeRead($user, 'conversation');
+        }
+
+        return back();
     }
 
     public function show(Request $request, string $conversation): Response

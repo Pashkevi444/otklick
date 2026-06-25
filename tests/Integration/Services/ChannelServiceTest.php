@@ -32,9 +32,8 @@ final class ChannelServiceTest extends TestCase
         $this->assertSame('123456:ABC-token', $channel->botToken());
         $this->assertDatabaseHas('channels', ['id' => $channel->id, 'type' => 'telegram']);
 
-        // Бот работает через long polling: вебхук снимается, а не ставится.
+        // Бот работает через long polling: вебхук снимается (deleteWebhook) перед getUpdates.
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/deleteWebhook'));
-        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/setWebhook'));
     }
 
     public function test_connect_vk_creates_channel_and_validates_group(): void

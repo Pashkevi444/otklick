@@ -65,15 +65,17 @@ final class ProcessWhatsAppUpdate implements ShouldQueue
 
             $text = $parsed['text'];
 
-            // Пустой текст — возможно голосовое (STT) или фото (vision): распознаём
-            // и подставляем расшифровку/описание как ввод клиента.
+            // Пустой текст — возможно голосовое: расшифровываем в текст (STT).
             if ($text === '') {
-                $text = $voice->transcribe($channel, $this->update)
-                    ?? $image->recognize($channel, $this->update);
+                $text = $voice->transcribe($channel, $this->update) ?? '';
+            }
 
-                if ($text === null || $text === '') {
-                    return;
-                }
+            // Фото в апдейте — распознаём (vision) и приклеиваем к тексту/подписи:
+            // подпись клиента обрабатывается ВМЕСТЕ с фото. Нет фото — шаг пропускаем.
+            $text = $image->augment($channel, $this->update, $text);
+
+            if ($text === '') {
+                return;
             }
 
             $messages->handle($channel, new IncomingMessage(

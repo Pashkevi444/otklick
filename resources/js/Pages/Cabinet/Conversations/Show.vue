@@ -180,19 +180,47 @@ const sendImage = async (e: Event): Promise<void> => {
 };
 
 let timer: number | undefined;
+const FAST_POLL = 3000;
+const SLOW_POLL = 15000;
+const setPoll = (ms: number): void => {
+    if (timer) window.clearInterval(timer);
+    timer = window.setInterval(poll, ms);
+};
 onMounted(() => {
-    timer = window.setInterval(poll, 3000);
-
-    // Реалтайм «клиент печатает»: пинг по приватному каналу тенанта → показываем
-    // индикатор только для ЭТОГО диалога (фильтр по conversationId), гасим по таймауту.
+    // Реалтайм-канал тенанта: живые сообщения и «клиент печатает». При живом WS
+    // поллинг — лишь редкий фолбэк (15с); без WS (или когда сокет отвалился) он и
+    // тащит обновления (3с).
     const echo = realtime(reverbConfig.value);
+    setPoll(echo && tenantId.value ? SLOW_POLL : FAST_POLL);
+
     if (echo && tenantId.value) {
         typingChannel = `tenant.${tenantId.value}`;
-        echo.private(typingChannel).listen('.client.typing', (e: { conversationId?: string }) => {
+        const channel = echo.private(typingChannel);
+
+        // Новое сообщение в ЭТОМ диалоге (ответ клиента/бота/оператора) → дотягиваем живьём.
+        channel.listen('.conversation.activity', (e: { conversationId?: string }) => {
+            if (e?.conversationId === props.conversation.id) void poll();
+        });
+
+        // «Клиент печатает»: индикатор только для своего диалога, гаснет по таймауту.
+        channel.listen('.client.typing', (e: { conversationId?: string }) => {
             if (e?.conversationId !== props.conversation.id) return;
             clientTyping.value = true;
             if (clientTypingTimer) window.clearTimeout(clientTypingTimer);
             clientTypingTimer = window.setTimeout(() => (clientTyping.value = false), 4000);
+        });
+
+        // Частота фолбэка следует за реальным состоянием сокета (а не за тем, что
+        // объект Echo создан): авторизация канала упала / Reverb отвалился → быстрый
+        // поллинг + один дотяг на восстановлении; живой коннект → редкий.
+        const conn = (echo as unknown as { connector?: { pusher?: { connection?: { bind?: (e: string, cb: (s: { current?: string }) => void) => void } } } }).connector?.pusher?.connection;
+        conn?.bind?.('state_change', (s: { current?: string }) => {
+            if (s?.current === 'connected') {
+                void poll();
+                setPoll(SLOW_POLL);
+            } else if (s?.current === 'unavailable' || s?.current === 'failed' || s?.current === 'disconnected') {
+                setPoll(FAST_POLL);
+            }
         });
     }
 });

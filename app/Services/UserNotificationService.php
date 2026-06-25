@@ -183,7 +183,7 @@ final readonly class UserNotificationService
         return $this->notifications->unreadEntityIdsForUser((string) $user->id, $entityType);
     }
 
-    /** Открыл раздел-список (клиенты/лиды) → гасим все уведомления его сущностей. */
+    /** Кнопка «Прочитать всё» в списке (клиенты/лиды) → гасим все уведомления его сущностей. */
     public function markEntityTypeRead(User $user, string $entityType): void
     {
         $this->notifications->markEntityTypeReadForUser((string) $user->id, $entityType);

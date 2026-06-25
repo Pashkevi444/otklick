@@ -13,6 +13,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -20,6 +21,63 @@ use Tests\TestCase;
 final class ConversationJournalTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_new_lead_highlighted_until_dialog_opened(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $conv = Conversation::factory()->create(['tenant_id' => $tenant->id, 'last_message_at' => now()]);
+
+        $notification = UserNotification::create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $owner->id,
+            'type' => 'new_lead',
+            'entity_type' => 'conversation',
+            'entity_id' => $conv->id,
+            'title' => 'Новый лид',
+        ]);
+
+        // Список лидов: лид подсвечен «Новый», метку НЕ гасим при открытии списка.
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('newConversationIds', [$conv->id]));
+        $this->assertNull($notification->fresh()->read_at);
+
+        // Открыли диалог → метка гаснет (его уже видели).
+        $this->actingAs($owner)->get("/cabinet/conversations/{$conv->id}")->assertOk();
+        $this->assertNotNull($notification->fresh()->read_at);
+    }
+
+    public function test_read_all_clears_every_new_lead_highlight(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $a = Conversation::factory()->create(['tenant_id' => $tenant->id, 'last_message_at' => now()]);
+        $b = Conversation::factory()->create(['tenant_id' => $tenant->id, 'last_message_at' => now()]);
+
+        foreach ([$a, $b] as $conv) {
+            UserNotification::create([
+                'tenant_id' => $tenant->id,
+                'user_id' => $owner->id,
+                'type' => 'new_lead',
+                'entity_type' => 'conversation',
+                'entity_id' => $conv->id,
+                'title' => 'Новый лид',
+            ]);
+        }
+
+        // Кнопка «Прочитать всё» гасит подсветку у всех лидов разом.
+        $this->actingAs($owner)
+            ->from('/cabinet/conversations')
+            ->post('/cabinet/conversations/read-all')
+            ->assertRedirect('/cabinet/conversations');
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('newConversationIds', []));
+    }
 
     public function test_owner_sees_conversation_journal(): void
     {

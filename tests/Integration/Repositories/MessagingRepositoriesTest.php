@@ -51,13 +51,11 @@ final class MessagingRepositoriesTest extends TestCase
             type: ChannelType::Telegram,
             externalId: '123456:bot',
             botToken: 'secret-bot-token',
-            secretToken: 'webhook-secret',
         ));
 
         $this->assertSame($this->tenant->id, $channel->tenant_id);
         $this->assertSame(ChannelType::Telegram, $channel->fresh()->type);
         $this->assertSame('secret-bot-token', $channel->fresh()->botToken());
-        $this->assertSame('webhook-secret', $channel->fresh()->secretToken());
 
         // Креды не лежат в БД открытым текстом.
         $raw = $this->app['db']->table('channels')->where('id', $channel->id)->value('credentials');
@@ -67,7 +65,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_first_or_create_for_chat_is_idempotent(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
 
         $first = $this->conversations->firstOrCreateForChat($channel->id, '999', 'Иван');
@@ -81,7 +79,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_creates_new_conversation_after_close(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
 
         $first = $this->conversations->firstOrCreateForChat($channel->id, '555', null);
@@ -98,7 +96,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_returning_chat_starts_a_fresh_conversation(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
         $client = Client::factory()->create(['tenant_id' => $this->tenant->id]);
 
@@ -118,7 +116,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_clear_client_links_nulls_conversations_of_client(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
         $client = Client::factory()->create(['tenant_id' => $this->tenant->id]);
 
@@ -133,7 +131,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_close_stale_open_closes_only_inactive_unbooked(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
 
         // Протух (открыт, давно без активности, без записи) — закроется.
@@ -160,7 +158,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_booking_stays_in_work_until_visit_then_closes_as_successful(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
         $conv = $this->conversations->firstOrCreateForChat($channel->id, 'booked1', null);
         $this->conversations->markBooked($conv);
@@ -188,7 +186,7 @@ final class MessagingRepositoriesTest extends TestCase
         // Схема: один активный диалог на чат (partial-unique), поэтому у чата
         // максимум одна активная запись.
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
 
         $conv = $this->conversations->firstOrCreateForChat($channel->id, 'c1', null);
@@ -212,7 +210,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_upcoming_bookings_exclude_cancelled_and_closed(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
         $make = fn (array $a) => Conversation::factory()->create(array_merge(
             ['tenant_id' => $this->tenant->id, 'channel_id' => $channel->id, 'crm_record_id' => 'r', 'booked_for' => now()->addHours(2)],
@@ -232,7 +230,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_reconcile_does_not_close_future_or_non_crm_bookings(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
         // Будущая запись — не трогаем.
         $future = $this->conversations->firstOrCreateForChat($channel->id, 'future', null);
@@ -247,7 +245,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_record_inbound_dedupes_by_external_message_id(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
         $conversation = $this->conversations->firstOrCreateForChat($channel->id, '999', null);
 
@@ -265,7 +263,7 @@ final class MessagingRepositoriesTest extends TestCase
     public function test_record_outbound_persists_with_status(): void
     {
         $channel = $this->channels->create(new NewChannelData(
-            $this->tenant->id, ChannelType::Telegram, null, 'token', 'secret',
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
         ));
         $conversation = $this->conversations->firstOrCreateForChat($channel->id, '999', null);
 

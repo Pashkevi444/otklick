@@ -28,7 +28,6 @@ class ChannelFactory extends Factory
             'external_id' => (string) fake()->unique()->numberBetween(100000, 999999999),
             'credentials' => [
                 'bot_token' => fake()->unique()->numerify('#########').':'.Str::random(35),
-                'secret_token' => Str::random(40),
             ],
             'is_active' => true,
             'settings' => [],

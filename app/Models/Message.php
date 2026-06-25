@@ -6,7 +6,9 @@ namespace App\Models;
 
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
+use App\Observers\MessageObserver;
 use Database\Factories\MessageFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -22,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, mixed>|null $payload
  * @property MessageStatus $status
  */
+#[ObservedBy(MessageObserver::class)]
 class Message extends TenantOwnedModel
 {
     /** @use HasFactory<MessageFactory> */

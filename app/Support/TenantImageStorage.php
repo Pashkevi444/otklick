@@ -8,16 +8,19 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Хранение картинок базы знаний на публичном диске под путём тенанта.
- * «Примеры работ» показываются клиентам, поэтому диск public.
+ * Хранение картинок тенанта на публичном диске под путём тенанта. Общее для всех
+ * фич, где клиент/бизнес прикрепляет изображения: база знаний («примеры работ»),
+ * узлы сценариев, веб-виджет, фото оператора, песочница теста. Поддиректория
+ * задаётся аргументом `$dir`. Диск public — картинки показываются клиентам.
  */
-final class KnowledgeImageStorage
+final class TenantImageStorage
 {
     private const string DISK = 'public';
 
     /**
      * @param  list<UploadedFile>  $files
-     * @param  string  $dir  поддиректория диска (knowledge — БЗ, flows — узлы сценариев)
+     * @param  string  $dir  поддиректория диска (knowledge — БЗ, flows — узлы сценариев,
+     *                       widget/operator/sandbox — соответствующие фичи)
      * @return list<array{path: string, url: string}>
      */
     public function store(string $tenantId, array $files, string $dir = 'knowledge'): array

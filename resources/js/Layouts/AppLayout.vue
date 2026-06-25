@@ -1,15 +1,31 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import Logo from '@/Components/Logo.vue';
 import NotificationBell from '@/Components/NotificationBell.vue';
+import { realtime, type ReverbConfig } from '@/echo';
 
 defineProps<{ title?: string }>();
 
 const mobileOpen = ref(false);
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+
+// Новости от супер-админа приходят живьём: публичный канал «announcements» → бейдж
+// непрочитанных перезапрашивается без перезагрузки (только нужный shared-prop).
+onMounted(() => {
+    const echo = realtime((page.props.reverb as ReverbConfig | null) ?? null);
+    if (echo) {
+        echo.channel('announcements').listen('.announcement.published', () => {
+            router.reload({ only: ['announcementsUnread'] });
+        });
+    }
+});
+onBeforeUnmount(() => {
+    const echo = realtime((page.props.reverb as ReverbConfig | null) ?? null);
+    if (echo) echo.leave('announcements');
+});
 
 interface NavItem {
     label: string;

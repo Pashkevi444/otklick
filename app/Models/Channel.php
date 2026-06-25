@@ -60,11 +60,6 @@ class Channel extends TenantOwnedModel
         return $this->credentials['bot_token'] ?? null;
     }
 
-    public function secretToken(): ?string
-    {
-        return $this->credentials['secret_token'] ?? null;
-    }
-
     /**
      * Значение креда канала по ключу (provider-специфика не утекает в модель).
      */

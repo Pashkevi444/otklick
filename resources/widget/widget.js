@@ -294,12 +294,16 @@
             var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
             if (msg.event === 'pusher:connection_established') {
                 ws.send(JSON.stringify({ event: 'pusher:subscribe', data: { channel: wsChannel } }));
+                setPollRate(12000); // WS на связи — поллинг лишь редкий фолбэк
             } else if (msg.event === 'operator.typing') {
                 showOperatorTyping();
+            } else if (msg.event === 'conversation.activity') {
+                poll(); // новое сообщение в диалоге — тянем ответ сразу, без ожидания тика
             }
         };
         ws.onclose = function () {
             ws = null;
+            setPollRate(3000); // WS отвалился — возвращаем активный поллинг как фолбэк
             // переподключаемся, пока виджет открыт и сессия жива
             setTimeout(function () { if (token && !document.hidden) connectRealtime(wsConf, wsChannel); }, 4000);
         };
@@ -573,7 +577,10 @@
             })
             .catch(function () { /* сеть моргнула — попробуем на следующем тике */ });
     }
-    setInterval(poll, 3000);
+    // Фолбэк-поллинг: активный (3с) без WS; когда поднимется Reverb — замедляем до 12с
+    // (живость даёт WS-событие conversation.activity, см. connectRealtime).
+    var pollTimer = setInterval(poll, 3000);
+    function setPollRate(ms) { clearInterval(pollTimer); pollTimer = setInterval(poll, ms); }
 
     // Фирменный цвет бизнеса (если задан в кабинете) — красим кнопку и шапку
     // ещё до открытия чата. Сбой/таймаут — остаёмся на брендовом цвете «Отклик».

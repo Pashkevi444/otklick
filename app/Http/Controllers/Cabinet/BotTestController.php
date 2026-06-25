@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Cabinet;
 
 use App\Http\Controllers\Controller;
 use App\Services\BotSandbox;
-use App\Support\KnowledgeImageStorage;
+use App\Support\TenantImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +25,7 @@ final class BotTestController extends Controller
 {
     public function __construct(
         private readonly BotSandbox $sandbox,
-        private readonly KnowledgeImageStorage $images,
+        private readonly TenantImageStorage $images,
     ) {}
 
     public function index(Request $request): Response

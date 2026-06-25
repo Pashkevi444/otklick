@@ -166,6 +166,7 @@ $onDomain(config('app.business_domain'), function (): void {
         Route::put('/menu', [BotMenuController::class, 'update'])->name('menu.update');
 
         Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
+        Route::post('/conversations/read-all', [ConversationController::class, 'readAll'])->name('conversations.read-all');
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
         // Живой чат: лайв-поллинг сообщений + перехват/возврат/ответ оператора (JSON).
         Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages'])->name('conversations.messages');
@@ -179,6 +180,7 @@ $onDomain(config('app.business_domain'), function (): void {
         // База клиентов — возможность тарифа (Макс/Индивидуальный или оверрайд СУ).
         Route::middleware('plan:clientBase')->group(function (): void {
             Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+            Route::post('/clients/read-all', [ClientController::class, 'readAll'])->name('clients.read-all');
             Route::get('/clients/{client}', [ClientController::class, 'show'])->name('clients.show');
             Route::put('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::post('/clients/{client}/summary', [ClientController::class, 'refreshSummary'])->name('clients.summary');

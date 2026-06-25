@@ -23,7 +23,6 @@ final class EloquentChannelRepository extends EloquentRepository implements Chan
     {
         $credentials = array_filter(array_merge([
             'bot_token' => $data->botToken,
-            'secret_token' => $data->secretToken,
         ], $data->credentials), static fn (?string $v): bool => $v !== null);
 
         return Channel::create([

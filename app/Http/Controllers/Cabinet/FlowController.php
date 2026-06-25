@@ -13,7 +13,7 @@ use App\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Services\FlowService;
 use App\Services\FlowSimulator;
-use App\Support\KnowledgeImageStorage;
+use App\Support\TenantImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,7 +54,7 @@ final class FlowController extends Controller
      * кладёт это в `images` узла (тот же формат, что в базе знаний). Сохранение
      * самого сценария идёт обычным PUT/POST с definition (URL уже внутри).
      */
-    public function image(Request $request, KnowledgeImageStorage $storage): JsonResponse
+    public function image(Request $request, TenantImageStorage $storage): JsonResponse
     {
         $request->validate(['image' => ['required', 'image', 'max:5120']]);
 

@@ -41,13 +41,12 @@ final class ClientController extends Controller
 
         $page = $this->clients->paginateForCurrentTenant($search, $channel, $sort, $dir, 15);
 
-        // Новые клиенты (с непрочитанным уведомлением) — подсветим в списке, а затем
-        // гасим их уведомления: открыл базу → бейдж на плашке спадает.
-        $newIds = [];
-        if (($user = $request->user()) instanceof User) {
-            $newIds = $this->notifications->unreadEntityIds($user, 'client');
-            $this->notifications->markEntityTypeRead($user, 'client');
-        }
+        // Новые клиенты (с непрочитанным уведомлением) — подсвечиваем «Новый» в списке.
+        // Метку НЕ гасим при открытии списка: она держится, пока не откроют карточку
+        // клиента (тогда `show()` пометит уведомление прочитанным) — как у уведомлений,
+        // чтобы было видно, кого ещё не смотрели. Per-user (уведомления привязаны к user).
+        $user = $request->user();
+        $newIds = $user instanceof User ? $this->notifications->unreadEntityIds($user, 'client') : [];
 
         return Inertia::render('Cabinet/Clients/Index', [
             'newClientIds' => $newIds,
@@ -70,6 +69,16 @@ final class ClientController extends Controller
                 $this->clients->channelsForCurrentTenant(),
             ),
         ]);
+    }
+
+    /** «Прочитать всё»: гасит подсветку «Новый» у всех клиентов (per-user). */
+    public function readAll(Request $request): RedirectResponse
+    {
+        if (($user = $request->user()) instanceof User) {
+            $this->notifications->markEntityTypeRead($user, 'client');
+        }
+
+        return back();
     }
 
     public function show(Request $request, string $client): Response

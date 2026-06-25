@@ -9,8 +9,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\WebWidgetService;
-use App\Support\KnowledgeImageStorage;
 use App\Support\RealtimeConfig;
+use App\Support\TenantImageStorage;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ final class WidgetChatController extends Controller
         private readonly TenantInitializer $tenancy,
         private readonly ChannelRepositoryInterface $channels,
         private readonly WebWidgetService $widget,
-        private readonly KnowledgeImageStorage $images,
+        private readonly TenantImageStorage $images,
     ) {}
 
     /**

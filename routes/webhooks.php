@@ -2,17 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Webhooks\TelegramWebhookController;
 use App\Http\Controllers\Widget\WidgetChatController;
 use App\Http\Controllers\Yclients\MarketplaceController;
 use Illuminate\Support\Facades\Route;
 
-/*
- * Входящие вебхуки каналов. Stateless (без сессий и CSRF) — внешние сервисы их
- * не присылают. Источник верифицируется в контроллере (secret-токен).
- */
-Route::post('/webhooks/telegram/{tenant}/{channel}', TelegramWebhookController::class)
-    ->name('webhooks.telegram');
+// Каналы (Telegram/VK/MAX/WhatsApp) работают через long polling (poll-команды),
+// вебхуков у них нет — РФ-хостинг их не принимает. Здесь — публичный API виджета
+// и вебхук маркетплейса YClients (он приходит из РФ-сервиса).
 
 /*
  * Публичный API веб-виджета (чат на сайте бизнеса). Stateless + CORS.

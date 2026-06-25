@@ -55,7 +55,9 @@ const markAll = async (): Promise<void> => {
     } catch {
         // игнор — обновим выдачу ниже
     }
-    await refresh();
+    // Перезапрашиваем shared-prop: разом обновляются и колокол, и бейджи меню
+    // (Лиды/Контакты) — без перезагрузки страницы.
+    router.reload({ only: ['notifications'] });
 };
 
 const go = (item: NItem): void => {
@@ -126,11 +128,13 @@ onMounted(() => {
     // Фолбэк-поллинг (и единственный механизм, пока WS не настроен).
     timer = setInterval(() => void refresh(), 20000);
 
-    // Реалтайм: пинг по приватному каналу тенанта → мгновенный рефетч.
+    // Реалтайм: пинг по приватному каналу тенанта → перезапрашиваем shared-prop
+    // `notifications` (разом обновляются и колокол через watch, и бейджи меню
+    // Лиды/Контакты) — живьём, без перезагрузки страницы.
     const echo = realtime(reverbConfig.value);
     if (echo && tenantId.value) {
         channel = `tenant.${tenantId.value}`;
-        echo.private(channel).listen('.notifications.updated', () => void refresh());
+        echo.private(channel).listen('.notifications.updated', () => router.reload({ only: ['notifications'] }));
     }
 });
 onBeforeUnmount(() => {

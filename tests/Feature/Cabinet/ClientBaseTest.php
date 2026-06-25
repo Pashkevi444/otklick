@@ -128,7 +128,7 @@ final class ClientBaseTest extends TestCase
         $this->assertDatabaseMissing('clients', ['id' => $client->id]);
     }
 
-    public function test_opening_base_highlights_new_clients_and_clears_badge(): void
+    public function test_new_client_highlighted_until_card_opened(): void
     {
         $tenant = Tenant::factory()->max()->create();
         $owner = User::factory()->owner($tenant)->create();
@@ -143,12 +143,51 @@ final class ClientBaseTest extends TestCase
             'title' => 'Новый клиент',
         ]);
 
-        // Заход в базу: новый клиент подсвечен (newClientIds), уведомление гаснет → бейдж спадает.
+        // Заход в список: клиент подсвечен «Новый», но метку НЕ гасим (как уведомления).
         $this->actingAs($owner)
             ->get('/cabinet/clients')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $p) => $p->where('newClientIds', [$client->id]));
+        $this->assertNull($notification->fresh()->read_at);
 
+        // Открыли карточку клиента → метка гаснет (его уже видели).
+        $this->actingAs($owner)->get("/cabinet/clients/{$client->id}")->assertOk();
         $this->assertNotNull($notification->fresh()->read_at);
+
+        // Повторный заход в список — клиент больше не «Новый».
+        $this->actingAs($owner)
+            ->get('/cabinet/clients')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('newClientIds', []));
+    }
+
+    public function test_read_all_clears_every_new_client_highlight(): void
+    {
+        $tenant = Tenant::factory()->max()->create();
+        $owner = User::factory()->owner($tenant)->create();
+        $a = Client::factory()->create(['tenant_id' => $tenant->id]);
+        $b = Client::factory()->create(['tenant_id' => $tenant->id]);
+
+        foreach ([$a, $b] as $client) {
+            UserNotification::create([
+                'tenant_id' => $tenant->id,
+                'user_id' => $owner->id,
+                'type' => 'new_client',
+                'entity_type' => 'client',
+                'entity_id' => $client->id,
+                'title' => 'Новый клиент',
+            ]);
+        }
+
+        // Кнопка «Прочитать всё» гасит подсветку у всех клиентов разом.
+        $this->actingAs($owner)
+            ->from('/cabinet/clients')
+            ->post('/cabinet/clients/read-all')
+            ->assertRedirect('/cabinet/clients');
+
+        $this->actingAs($owner)
+            ->get('/cabinet/clients')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $p) => $p->where('newClientIds', []));
     }
 }

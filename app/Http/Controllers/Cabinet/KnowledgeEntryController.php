@@ -21,7 +21,7 @@ use App\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Services\GapDraftStatus;
 use App\Services\KnowledgeBaseService;
 use App\Services\SiteImportStatus;
-use App\Support\KnowledgeImageStorage;
+use App\Support\TenantImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,7 +37,7 @@ final class KnowledgeEntryController extends Controller
     public function __construct(
         private readonly KnowledgeBaseService $knowledge,
         private readonly KnowledgeEntryRepositoryInterface $entries,
-        private readonly KnowledgeImageStorage $images,
+        private readonly TenantImageStorage $images,
         private readonly KnowledgeGapRepositoryInterface $gaps,
     ) {}
 
