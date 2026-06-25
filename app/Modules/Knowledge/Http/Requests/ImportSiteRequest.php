@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Knowledge\Http\Requests;
 
-use App\Http\Requests\AbstractFormRequest;
+use App\Shared\Http\AbstractFormRequest;
 
 /**
  * Запуск импорта базы знаний с сайта бизнеса: один URL. Принимаем только

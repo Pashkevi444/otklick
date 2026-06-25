@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Bot;
 
+use App\Modules\Bot\Contracts\BotApi;
 use App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface;
 use App\Modules\Bot\Repositories\Eloquent\EloquentPromptTemplateRepository;
 use Illuminate\Support\ServiceProvider;
@@ -20,5 +21,6 @@ final class BotServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     public array $bindings = [
         PromptTemplateRepositoryInterface::class => EloquentPromptTemplateRepository::class,
+        BotApi::class => BotApiService::class,
     ];
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Sandbox\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Sandbox\Services\BotSandbox;
+use App\Shared\Http\Controller;
 use App\Shared\Support\TenantImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;

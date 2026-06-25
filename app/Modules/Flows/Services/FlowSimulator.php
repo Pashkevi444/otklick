@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Flows\Services;
 
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Shared\Support\FlowExpr;
 use App\Shared\Support\KnowledgeLinks;
 
@@ -18,7 +18,7 @@ use App\Shared\Support\KnowledgeLinks;
 final class FlowSimulator
 {
     public function __construct(
-        private readonly KnowledgeEntryRepositoryInterface $knowledge,
+        private readonly KnowledgeApi $knowledge,
     ) {}
 
     /**

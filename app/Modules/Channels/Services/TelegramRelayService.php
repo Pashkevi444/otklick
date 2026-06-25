@@ -6,12 +6,10 @@ namespace App\Modules\Channels\Services;
 
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Channels\Telegram\TelegramGateway;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
-use App\Modules\Conversations\Services\ContactCapture;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Modules\Notifications\Models\NotificationRecipient;
-use App\Modules\Notifications\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Shared\DTO\IncomingMessage;
 use App\Shared\Enums\ConversationStatus;
 use App\Shared\Enums\MessageStatus;
@@ -33,10 +31,10 @@ final readonly class TelegramRelayService
 
     public function __construct(
         private TelegramGateway $telegram,
-        private NotificationRecipientRepositoryInterface $recipients,
-        private ConversationRepositoryInterface $conversations,
-        private MessageRepositoryInterface $messages,
-        private ContactCapture $contacts,
+        private NotificationsApi $recipients,
+        private ConversationsApi $conversations,
+        private ConversationsApi $messages,
+        private ConversationsApi $contacts,
         private CacheRepository $cache,
     ) {}
 

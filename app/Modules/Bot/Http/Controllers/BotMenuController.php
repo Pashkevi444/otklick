@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Bot\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
-use App\Modules\Identity\Services\TenantService;
+use App\Modules\Booking\Contracts\BookingApi;
+use App\Modules\Identity\Contracts\IdentityApi;
+use App\Shared\Http\Controller;
 use App\Shared\Support\BotMenu;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,8 +21,8 @@ use Inertia\Response;
 final class BotMenuController extends Controller
 {
     public function __construct(
-        private readonly TenantService $tenants,
-        private readonly CrmConnectionRepositoryInterface $crm,
+        private readonly IdentityApi $tenants,
+        private readonly BookingApi $crm,
     ) {}
 
     public function edit(Request $request): Response

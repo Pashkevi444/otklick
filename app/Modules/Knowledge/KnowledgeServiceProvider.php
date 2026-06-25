@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Knowledge;
 
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Modules\Knowledge\Repositories\Contracts\KnowledgeChunkRepositoryInterface;
 use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
@@ -28,5 +29,6 @@ final class KnowledgeServiceProvider extends ServiceProvider
         KnowledgeChunkRepositoryInterface::class => EloquentKnowledgeChunkRepository::class,
         KnowledgeGapRepositoryInterface::class => EloquentKnowledgeGapRepository::class,
         CrmKnowledgeRepositoryInterface::class => EloquentCrmKnowledgeRepository::class,
+        KnowledgeApi::class => KnowledgeApiService::class,
     ];
 }

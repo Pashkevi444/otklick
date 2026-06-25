@@ -7,9 +7,9 @@ namespace App\Modules\Clients\Services;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Clients\Repositories\Contracts\ClientIdentityRepositoryInterface;
 use App\Modules\Clients\Repositories\Contracts\ClientRepositoryInterface;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Modules\Notifications\Services\UserNotificationService;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Enums\UserNotificationType;
 use Illuminate\Support\Facades\DB;
@@ -30,9 +30,9 @@ class ClientService
 {
     public function __construct(
         private ClientRepositoryInterface $clients,
-        private ConversationRepositoryInterface $conversations,
+        private ConversationsApi $conversations,
         private ClientIdentityRepositoryInterface $identities,
-        private UserNotificationService $notifications,
+        private NotificationsApi $notifications,
     ) {}
 
     /**

@@ -7,8 +7,8 @@ namespace App\Modules\Booking\Console;
 use App\Modules\Booking\DTO\ReminderSettings;
 use App\Modules\Booking\Jobs\SendAppointmentReminder;
 use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Models\Tenant;
 use App\Shared\Tenancy\TenantInitializer;
@@ -29,7 +29,7 @@ final class SendAppointmentReminders extends Command
 
     public function handle(
         TenantInitializer $tenancy,
-        ConversationRepositoryInterface $conversations,
+        ConversationsApi $conversations,
         CrmConnectionRepositoryInterface $connections,
     ): int {
         $dispatched = 0;

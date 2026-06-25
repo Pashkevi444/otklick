@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
 use App\Modules\Knowledge\Services\KnowledgeIndexer;
-use App\Modules\Knowledge\Services\KnowledgeRetriever;
 use App\Shared\Models\Tenant;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -53,7 +53,7 @@ final class KnowledgeRagTest extends TestCase
 
         $this->app->make(KnowledgeIndexer::class)->reindex();
 
-        $result = $this->app->make(KnowledgeRetriever::class)->retrieve('сколько стоит стрижка', 1);
+        $result = $this->app->make(KnowledgeApi::class)->retrieve('сколько стоит стрижка', 1);
 
         $this->assertNotNull($result);
         $this->assertSame([$haircut->id], $result['manual']);
@@ -61,7 +61,7 @@ final class KnowledgeRagTest extends TestCase
 
     public function test_returns_null_when_index_empty(): void
     {
-        $result = $this->app->make(KnowledgeRetriever::class)->retrieve('что угодно', 5);
+        $result = $this->app->make(KnowledgeApi::class)->retrieve('что угодно', 5);
 
         $this->assertNull($result);
     }

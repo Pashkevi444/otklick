@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Shared\Llm;
 
-use App\Modules\Bot\Services\PromptBuilder;
 use App\Shared\Llm\Contracts\LlmClient;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -44,11 +43,11 @@ final readonly class YandexGptClient implements LlmClient
 
             $text = $response->json('choices.0.message.content');
 
-            return is_string($text) && trim($text) !== '' ? trim($text) : PromptBuilder::ESCALATE;
+            return is_string($text) && trim($text) !== '' ? trim($text) : LlmMarkers::ESCALATE;
         } catch (Throwable $e) {
             report($e);
 
-            return PromptBuilder::ESCALATE;
+            return LlmMarkers::ESCALATE;
         }
     }
 }

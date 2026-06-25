@@ -9,8 +9,8 @@ use App\Modules\Analytics\DTO\MetricCard;
 use App\Modules\Analytics\DTO\ServiceRevenue;
 use App\Modules\Analytics\DTO\ValueReport;
 use App\Modules\Analytics\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Booking\Models\CrmConnection;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Modules\Conversations\Models\Conversation;
 use Illuminate\Support\Collection;
 
@@ -27,7 +27,7 @@ final readonly class ValueReportService
 
     public function __construct(
         private LeadAnalyticsRepositoryInterface $repository,
-        private CrmConnectionRepositoryInterface $connections,
+        private BookingApi $connections,
     ) {}
 
     /**

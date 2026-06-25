@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Requests;
 
-use App\Http\Requests\AbstractFormRequest;
 use App\Shared\Enums\MemberPermission;
+use App\Shared\Http\AbstractFormRequest;
 use Illuminate\Validation\Rule;
 
 /**

@@ -6,8 +6,7 @@ namespace App\Modules\Channels\Jobs;
 
 use App\Modules\Channels\ChannelGatewayResolver;
 use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Shared\DTO\ReplyKeyboard;
 use App\Shared\Enums\ConversationStatus;
 use App\Shared\Enums\MessageStatus;
@@ -58,7 +57,7 @@ final class DeliverBotReply implements ShouldQueue
         TenantInitializer $tenancy,
         ChannelRepositoryInterface $channels,
         ChannelGatewayResolver $gateways,
-        MessageRepositoryInterface $messages,
+        ConversationsApi $messages,
     ): void {
         $tenancy->run($this->tenantId, function () use ($channels, $gateways, $messages): void {
             $channel = $channels->find($this->channelId);
@@ -82,9 +81,9 @@ final class DeliverBotReply implements ShouldQueue
     public function failed(Throwable $e): void
     {
         app(TenantInitializer::class)->run($this->tenantId, function () use ($e): void {
-            app(MessageRepositoryInterface::class)->markStatusById($this->messageId, MessageStatus::Failed);
+            app(ConversationsApi::class)->markStatusById($this->messageId, MessageStatus::Failed);
 
-            $conversations = app(ConversationRepositoryInterface::class);
+            $conversations = app(ConversationsApi::class);
             $conversation = $conversations->findForCurrentTenant($this->conversationId);
 
             if ($conversation !== null) {

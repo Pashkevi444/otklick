@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Channels\Http\Requests;
 
-use App\Http\Requests\AbstractFormRequest;
+use App\Shared\Http\AbstractFormRequest;
 
 /**
  * Обновление оформления веб-виджета: цвет акцента (шапка/кнопка). Принимаем HEX

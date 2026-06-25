@@ -10,9 +10,9 @@ use App\Modules\Analytics\DTO\LeadAnalytics;
 use App\Modules\Analytics\DTO\MetricCard;
 use App\Modules\Analytics\Services\LeadAnalyticsService;
 use App\Modules\Analytics\Services\LeadInsightsService;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Modules\Notifications\DTO\OwnerNotification;
 use App\Modules\Notifications\Models\NotificationRecipient;
-use App\Modules\Notifications\Services\NotificationService;
 use App\Shared\Enums\LeadAnalyticsPeriod;
 use App\Shared\Models\Tenant;
 use App\Shared\Tenancy\TenantInitializer;
@@ -37,7 +37,7 @@ final class SendWeeklyAnalyticsDigest extends Command
         TenantInitializer $tenancy,
         LeadAnalyticsService $analytics,
         LeadInsightsService $insights,
-        NotificationService $notifications,
+        NotificationsApi $notifications,
     ): int {
         $sent = 0;
 

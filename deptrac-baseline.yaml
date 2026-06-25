@@ -1,0 +1,23 @@
+deptrac:
+  skip_violations:
+    App\Modules\Bot\Services\BotResponder:
+      - App\Modules\Conversations\Services\ConsentGate
+      - App\Modules\Conversations\Services\ContactGate
+    App\Modules\Conversations\Services\IncomingMessageService:
+      - App\Modules\Channels\Jobs\DeliverBotReply
+      - App\Modules\Clients\Jobs\RefreshClientSummary
+      - App\Modules\Notifications\Jobs\SendOwnerNotification
+    App\Modules\Conversations\Services\WebWidgetService:
+      - App\Modules\Channels\Services\ImageRecognitionService
+      - App\Modules\Clients\Jobs\RefreshClientSummary
+      - App\Modules\Notifications\Jobs\SendOwnerNotification
+    App\Modules\Knowledge\Services\KnowledgeGapDrafter:
+      - App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface
+    App\Modules\Notifications\Delivery\TelegramNotifier:
+      - App\Modules\Channels\Telegram\TelegramGateway
+    App\Modules\Notifications\Services\NotificationRecipientService:
+      - App\Modules\Channels\Telegram\TelegramGateway
+    App\Modules\Platform\Http\Controllers\Admin\PromptTemplateController:
+      - App\Modules\Bot\Services\PromptBuilder
+    App\Modules\Sandbox\Services\BotSandbox:
+      - App\Modules\Channels\Services\ImageRecognitionService

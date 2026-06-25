@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Channels\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Channels\Http\Requests\StoreChannelRequest;
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Modules\Channels\Services\ChannelService;
 use App\Shared\Enums\ChannelType;
+use App\Shared\Http\Controller;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;

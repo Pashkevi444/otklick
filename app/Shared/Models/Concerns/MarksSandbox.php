@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Models\Concerns;
 
-use App\Modules\Sandbox\Models\SandboxRecord;
+use App\Shared\Models\SandboxRecord;
 use App\Shared\Tenancy\SandboxScope;
 use App\Shared\Tenancy\TestContext;
 use Illuminate\Database\Eloquent\Builder;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Analytics\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Identity\DTO\BusinessProfile;
+use App\Shared\DTO\BusinessProfile;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

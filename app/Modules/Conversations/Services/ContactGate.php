@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Conversations\Services;
 
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
-use App\Modules\Bot\Services\BotResponder;
-use App\Modules\Clients\Services\ClientService;
+use App\Modules\Booking\Contracts\BookingApi;
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
@@ -36,8 +35,8 @@ class ContactGate
     public function __construct(
         private readonly ConversationRepositoryInterface $conversations,
         private readonly MessageRepositoryInterface $messages,
-        private readonly ClientService $clients,
-        private readonly CrmConnectionRepositoryInterface $crm,
+        private readonly ClientsApi $clients,
+        private readonly BookingApi $crm,
     ) {}
 
     /**

@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Knowledge\Services;
 
-use App\Modules\Booking\Crm\CrmGatewayResolver;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Booking\Crm\Data\CrmCompany;
 use App\Modules\Booking\Crm\Data\CrmService;
 use App\Modules\Booking\Crm\Data\CrmStaff;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Modules\Knowledge\Jobs\SyncCrmKnowledge;
 use App\Modules\Knowledge\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Shared\Enums\CrmKnowledgeCategory;
@@ -23,8 +22,8 @@ use Illuminate\Support\Facades\Log;
 final readonly class CrmKnowledgeSyncService
 {
     public function __construct(
-        private CrmConnectionRepositoryInterface $connections,
-        private CrmGatewayResolver $gateways,
+        private BookingApi $connections,
+        private BookingApi $gateways,
         private CrmKnowledgeRepositoryInterface $knowledge,
     ) {}
 
@@ -48,7 +47,7 @@ final readonly class CrmKnowledgeSyncService
         }
 
         $progress(10);
-        $gateway = $this->gateways->for($connection->provider);
+        $gateway = $this->gateways->crmGatewayFor($connection->provider);
 
         $services = $gateway->services($connection);
         $progress(40);

@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Modules\Booking\Contracts\BookingApi;
+use App\Modules\Channels\Contracts\ChannelsApi;
 use App\Modules\Channels\Models\Channel;
-use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
-use App\Modules\Identity\Services\TenantService;
+use App\Modules\Identity\Contracts\IdentityApi;
 use App\Modules\Notifications\Models\NotificationRecipient;
 use App\Modules\Notifications\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Modules\Notifications\Services\NotificationRecipientService;
@@ -16,6 +15,7 @@ use App\Shared\Enums\ChannelType;
 use App\Shared\Enums\NotificationChannelType;
 use App\Shared\Enums\OwnerEvent;
 use App\Shared\Enums\RecipientRole;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,9 +30,9 @@ final class NotificationController extends Controller
     public function __construct(
         private readonly NotificationRecipientRepositoryInterface $recipients,
         private readonly NotificationRecipientService $service,
-        private readonly ChannelRepositoryInterface $channels,
-        private readonly TenantService $tenants,
-        private readonly CrmConnectionRepositoryInterface $crm,
+        private readonly ChannelsApi $channels,
+        private readonly IdentityApi $tenants,
+        private readonly BookingApi $crm,
     ) {}
 
     public function index(Request $request): Response

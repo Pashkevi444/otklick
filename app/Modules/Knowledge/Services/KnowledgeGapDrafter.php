@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Knowledge\Services;
 
 use App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface;
-use App\Modules\Identity\DTO\BusinessProfile;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
 use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Shared\DTO\BusinessProfile;
 use App\Shared\Llm\Contracts\LlmClient;
 use App\Shared\Models\Tenant;
 use Throwable;

@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Conversations\Services;
 
-use App\Modules\Bot\Services\BotResponder;
-use App\Modules\Channels\ChannelGatewayResolver;
+use App\Modules\Bot\Contracts\BotApi;
+use App\Modules\Channels\Contracts\ChannelsApi;
 use App\Modules\Channels\Jobs\DeliverBotReply;
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Clients\Jobs\RefreshClientSummary;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeGapRepositoryInterface;
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Modules\Notifications\Jobs\SendOwnerNotification;
-use App\Modules\Notifications\Services\UserNotificationService;
 use App\Shared\DTO\BotReply;
 use App\Shared\DTO\IncomingMessage;
 use App\Shared\Enums\ConversationOutcome;
@@ -36,12 +36,12 @@ final readonly class IncomingMessageService
     public function __construct(
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
-        private ChannelGatewayResolver $gateways,
-        private BotResponder $responder,
+        private ChannelsApi $gateways,
+        private BotApi $responder,
         private ContactCapture $contacts,
-        private KnowledgeGapRepositoryInterface $gaps,
+        private KnowledgeApi $gaps,
         private SpamDetector $spam,
-        private UserNotificationService $notifications,
+        private NotificationsApi $notifications,
     ) {}
 
     public function handle(Channel $channel, IncomingMessage $incoming): void

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Http\Requests;
 
-use App\Http\Requests\AbstractFormRequest;
+use App\Shared\Http\AbstractFormRequest;
 
 /**
  * Ручное редактирование карточки клиента в кабинете. Все поля необязательны

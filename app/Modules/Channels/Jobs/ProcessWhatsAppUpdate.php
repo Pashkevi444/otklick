@@ -9,7 +9,7 @@ use App\Modules\Channels\Services\ImageRecognitionService;
 use App\Modules\Channels\Services\TelegramRelayService;
 use App\Modules\Channels\Services\VoiceTranscriptionService;
 use App\Modules\Channels\WhatsApp\WhatsAppGateway;
-use App\Modules\Conversations\Services\IncomingMessageService;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Shared\DTO\IncomingMessage;
 use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -40,7 +40,7 @@ final class ProcessWhatsAppUpdate implements ShouldQueue
     public function handle(
         TenantInitializer $tenancy,
         ChannelRepositoryInterface $channels,
-        IncomingMessageService $messages,
+        ConversationsApi $messages,
         WhatsAppGateway $whatsapp,
         VoiceTranscriptionService $voice,
         ImageRecognitionService $image,

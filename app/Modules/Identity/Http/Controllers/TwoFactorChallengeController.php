@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Identity\Services\TwoFactorService;
+use App\Shared\Http\Controller;
 use App\Shared\Models\User;
 use App\Shared\Support\HomeRedirect;
 use Illuminate\Http\RedirectResponse;

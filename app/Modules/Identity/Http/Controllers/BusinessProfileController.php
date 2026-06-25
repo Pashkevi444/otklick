@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Identity\DTO\BusinessProfile;
 use App\Modules\Identity\Http\Requests\UpdateBusinessProfileRequest;
 use App\Modules\Identity\Services\TenantService;
+use App\Shared\DTO\BusinessProfile;
+use App\Shared\Http\Controller;
 use App\Shared\Models\BusinessType;
 use App\Shared\Support\BusinessAvatarStorage;
 use Illuminate\Http\RedirectResponse;

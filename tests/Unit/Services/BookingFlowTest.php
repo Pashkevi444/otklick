@@ -11,10 +11,10 @@ use App\Modules\Booking\Crm\Data\TimeSlot;
 use App\Modules\Booking\Models\CrmConnection;
 use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Modules\Booking\Services\BookingFlow;
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Clients\Models\Client;
-use App\Modules\Clients\Services\ClientService;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Shared\Enums\CrmProvider;
 use App\Shared\Llm\Contracts\LlmClient;
 use App\Shared\Llm\FakeLlmClient;
@@ -53,7 +53,7 @@ final class BookingFlowTest extends TestCase
         $connections->shouldReceive('activeForCurrentTenant')->andReturn($connected ? $connection : null);
         $connections->shouldReceive('find')->andReturn($connection)->byDefault();
 
-        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations = Mockery::mock(ConversationsApi::class);
         $conversations->shouldReceive('setBookingState')->andReturnUsing(
             function (Conversation $c, ?array $s): void {
                 $c->booking_state = $s;
@@ -79,7 +79,7 @@ final class BookingFlowTest extends TestCase
 
         // Контакты пишутся в карточку клиента (record*) — в юните мутируем
         // привязанную in-memory карточку, чтобы display* отдавали свежие значения.
-        $clients = Mockery::mock(ClientService::class);
+        $clients = Mockery::mock(ClientsApi::class);
         $clients->shouldReceive('recordPhone')->andReturnUsing(fn (Conversation $c, string $p) => $c->client->phone = $p)->byDefault();
         $clients->shouldReceive('recordName')->andReturnUsing(fn (Conversation $c, string $n) => $c->client->name = $n)->byDefault();
         $clients->shouldReceive('recordEmail')->byDefault();
@@ -422,11 +422,11 @@ final class BookingFlowTest extends TestCase
         $connections = Mockery::mock(CrmConnectionRepositoryInterface::class);
         $connections->shouldReceive('activeForCurrentTenant')->andReturn($connection);
 
-        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations = Mockery::mock(ConversationsApi::class);
         $conversations->shouldReceive('lastWithCrmRecordForChat')->once()->with('ch-1', '9001')->andReturn($booked);
         $conversations->shouldReceive('setCrmRecordId')->once()->with($booked, null); // снят после отмены
 
-        $flow = new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, new FakeLlmClient, Mockery::mock(ClientService::class));
+        $flow = new BookingFlow($connections, new CrmGatewayResolver([$crm]), $conversations, new FakeLlmClient, Mockery::mock(ClientsApi::class));
 
         $current = new Conversation;
         $current->channel_id = 'ch-1';

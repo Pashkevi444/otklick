@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Conversations\Services;
 
-use App\Modules\Clients\Services\ClientService;
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
 use App\Shared\Support\NameValidator;
@@ -26,7 +26,7 @@ class ContactCapture
     public function __construct(
         private MessageRepositoryInterface $messages,
         private NameDetector $names,
-        private ClientService $clients,
+        private ClientsApi $clients,
     ) {}
 
     public function fromInbound(Conversation $conversation, string $text): void

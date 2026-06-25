@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Flows;
 
+use App\Modules\Flows\Contracts\FlowsApi;
 use App\Modules\Flows\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Modules\Flows\Repositories\Contracts\FlowRepositoryInterface;
 use App\Modules\Flows\Repositories\Eloquent\EloquentFlowAbRepository;
@@ -21,5 +22,6 @@ final class FlowsServiceProvider extends ServiceProvider
     public array $bindings = [
         FlowRepositoryInterface::class => EloquentFlowRepository::class,
         FlowAbRepositoryInterface::class => EloquentFlowAbRepository::class,
+        FlowsApi::class => FlowsApiService::class,
     ];
 }

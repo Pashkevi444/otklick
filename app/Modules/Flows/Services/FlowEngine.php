@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Flows\Services;
 
-use App\Modules\Booking\Services\BookingFlow;
+use App\Modules\Booking\Contracts\BookingApi;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Modules\Flows\Models\Flow;
 use App\Modules\Flows\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Modules\Flows\Repositories\Contracts\FlowRepositoryInterface;
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use App\Shared\DTO\BotReply;
 use App\Shared\DTO\ReplyKeyboard;
 use App\Shared\Models\Tenant;
@@ -33,10 +33,10 @@ final readonly class FlowEngine
 {
     public function __construct(
         private FlowRepositoryInterface $flows,
-        private ConversationRepositoryInterface $conversations,
-        private BookingFlow $booking,
+        private ConversationsApi $conversations,
+        private BookingApi $booking,
         private FlowAbRepositoryInterface $ab,
-        private KnowledgeEntryRepositoryInterface $knowledge,
+        private KnowledgeApi $knowledge,
     ) {}
 
     public function handle(Tenant $tenant, Conversation $conversation, string $text, bool $strict = false): ?BotReply

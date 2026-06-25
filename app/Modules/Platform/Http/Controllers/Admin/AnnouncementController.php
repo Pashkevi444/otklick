@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Platform\Services\AnnouncementService;
 use App\Shared\Enums\AnnouncementType;
+use App\Shared\Http\Controller;
 use App\Shared\Support\AnnouncementImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;

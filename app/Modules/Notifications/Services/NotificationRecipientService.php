@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications\Services;
 
+use App\Modules\Channels\Contracts\ChannelsApi;
 use App\Modules\Channels\Models\Channel;
-use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Modules\Channels\Telegram\TelegramGateway;
 use App\Modules\Notifications\Models\NotificationRecipient;
 use App\Modules\Notifications\Repositories\Contracts\NotificationRecipientRepositoryInterface;
@@ -24,7 +24,7 @@ final readonly class NotificationRecipientService
 {
     public function __construct(
         private NotificationRecipientRepositoryInterface $recipients,
-        private ChannelRepositoryInterface $channels,
+        private ChannelsApi $channels,
         private TelegramGateway $telegram,
     ) {}
 

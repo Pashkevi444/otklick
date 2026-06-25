@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Booking\Console;
 
 use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Shared\Models\Tenant;
 use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Console\Command;
@@ -25,7 +25,7 @@ final class ReconcileBookings extends Command
 
     public function handle(
         TenantInitializer $tenancy,
-        ConversationRepositoryInterface $conversations,
+        ConversationsApi $conversations,
         CrmConnectionRepositoryInterface $connections,
     ): int {
         $closed = 0;

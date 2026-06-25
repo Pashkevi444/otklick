@@ -6,6 +6,7 @@ namespace App\Modules\Booking;
 
 use App\Modules\Booking\Console\ReconcileBookings;
 use App\Modules\Booking\Console\SendAppointmentReminders;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Booking\Crm\CrmGatewayResolver;
 use App\Modules\Booking\Crm\Yclients\YclientsGateway;
 use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
@@ -23,6 +24,7 @@ final class BookingServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     public array $bindings = [
         CrmConnectionRepositoryInterface::class => EloquentCrmConnectionRepository::class,
+        BookingApi::class => BookingApiService::class,
     ];
 
     public function register(): void

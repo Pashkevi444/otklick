@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Identity\Services\UserService;
+use App\Modules\Identity\Contracts\IdentityApi;
+use App\Shared\Http\Controller;
 use App\Shared\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +20,7 @@ final class ImpersonationController extends Controller
 {
     private const string KEY = 'impersonator_id';
 
-    public function __construct(private readonly UserService $users) {}
+    public function __construct(private readonly IdentityApi $users) {}
 
     public function start(string $tenant): RedirectResponse
     {

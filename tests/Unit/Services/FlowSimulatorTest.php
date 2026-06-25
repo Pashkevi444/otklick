@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Modules\Flows\Services\FlowSimulator;
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\TestCase;
@@ -18,7 +18,7 @@ final class FlowSimulatorTest extends TestCase
     /** Симулятор с заглушкой базы знаний (по умолчанию элемент не найден). */
     private function simulator(?KnowledgeEntry $entry = null): FlowSimulator
     {
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('find')->andReturn($entry)->byDefault();
 
         return new FlowSimulator($knowledge);

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Broadcasts\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Broadcasts\Http\Requests\StoreBroadcastRequest;
 use App\Modules\Broadcasts\Models\Broadcast;
 use App\Modules\Broadcasts\Models\BroadcastDelivery;
 use App\Modules\Broadcasts\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Modules\Broadcasts\Services\BroadcastService;
-use App\Modules\Clients\Repositories\Contracts\ClientRepositoryInterface;
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Shared\Enums\BroadcastRecurrence;
 use App\Shared\Enums\BroadcastStatus;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,7 +25,7 @@ final class BroadcastController extends Controller
 {
     public function __construct(
         private readonly BroadcastRepositoryInterface $broadcasts,
-        private readonly ClientRepositoryInterface $clients,
+        private readonly ClientsApi $clients,
         private readonly BroadcastService $service,
     ) {}
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform;
 
+use App\Modules\Platform\Contracts\PlatformApi;
 use App\Modules\Platform\Repositories\Contracts\AnnouncementRepositoryInterface;
 use App\Modules\Platform\Repositories\Contracts\DashboardCardStateRepositoryInterface;
 use App\Modules\Platform\Repositories\Contracts\SiteSettingsRepositoryInterface;
@@ -25,5 +26,6 @@ final class PlatformServiceProvider extends ServiceProvider
         AnnouncementRepositoryInterface::class => EloquentAnnouncementRepository::class,
         DashboardCardStateRepositoryInterface::class => EloquentDashboardCardStateRepository::class,
         SiteSettingsRepositoryInterface::class => EloquentSiteSettingsRepository::class,
+        PlatformApi::class => PlatformApiService::class,
     ];
 }

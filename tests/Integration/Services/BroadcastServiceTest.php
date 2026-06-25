@@ -9,9 +9,12 @@ use App\Modules\Broadcasts\Models\Broadcast;
 use App\Modules\Broadcasts\Repositories\Contracts\BroadcastRepositoryInterface;
 use App\Modules\Broadcasts\Services\BroadcastService;
 use App\Modules\Channels\ChannelGatewayResolver;
+use App\Modules\Channels\ChannelsApiService;
 use App\Modules\Channels\Models\Channel;
+use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
+use App\Modules\Channels\Telegram\TelegramGateway;
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Clients\Models\Client;
-use App\Modules\Clients\Repositories\Contracts\ClientRepositoryInterface;
 use App\Modules\Conversations\Models\Conversation;
 use App\Shared\Enums\BroadcastRecurrence;
 use App\Shared\Enums\BroadcastStatus;
@@ -35,8 +38,8 @@ final class BroadcastServiceTest extends TestCase
 
         return new BroadcastService(
             app(BroadcastRepositoryInterface::class),
-            app(ClientRepositoryInterface::class),
-            new ChannelGatewayResolver([$this->telegram]),
+            app(ClientsApi::class),
+            new ChannelsApiService(new ChannelGatewayResolver([$this->telegram]), app(ChannelRepositoryInterface::class), app(TelegramGateway::class)),
         );
     }
 

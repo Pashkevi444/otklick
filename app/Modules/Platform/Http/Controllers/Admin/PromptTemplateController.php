@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Bot\Models\PromptTemplate;
 use App\Modules\Bot\Services\PromptBuilder;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

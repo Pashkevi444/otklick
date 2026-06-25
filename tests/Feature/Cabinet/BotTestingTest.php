@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cabinet;
 
-use App\Modules\Bot\Services\BotResponder;
+use App\Modules\Bot\Contracts\BotApi;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Conversations\Models\Conversation;
 use App\Shared\Enums\UserRole;
@@ -96,7 +96,7 @@ final class BotTestingTest extends TestCase
 
         // Реальный пайплайн (LLM/эмбеддер/CRM) может бросить — тестовый чат должен
         // вернуть понятный ответ, а не 500.
-        $this->mock(BotResponder::class, function ($mock): void {
+        $this->mock(BotApi::class, function ($mock): void {
             $mock->shouldReceive('respond')->andThrow(new RuntimeException('boom'));
         });
 

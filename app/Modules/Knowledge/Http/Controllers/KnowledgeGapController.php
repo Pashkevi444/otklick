@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Knowledge\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Knowledge\DTO\KnowledgeEntryData;
 use App\Modules\Knowledge\Jobs\DraftGapAnswer;
 use App\Modules\Knowledge\Models\KnowledgeGap;
 use App\Modules\Knowledge\Repositories\Contracts\KnowledgeGapRepositoryInterface;
 use App\Modules\Knowledge\Services\GapDraftStatus;
 use App\Modules\Knowledge\Services\KnowledgeBaseService;
-use App\Modules\Notifications\Services\UserNotificationService;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Shared\Enums\KnowledgeGapStatus;
 use App\Shared\Enums\MemberPermission;
+use App\Shared\Http\Controller;
 use App\Shared\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ final class KnowledgeGapController extends Controller
         private readonly KnowledgeGapRepositoryInterface $gaps,
         private readonly KnowledgeBaseService $knowledge,
         private readonly GapDraftStatus $draftStatus,
-        private readonly UserNotificationService $notifications,
+        private readonly NotificationsApi $notifications,
     ) {}
 
     /** Обработал пробел (в БЗ/скрыл/удалил) → его уведомление у пользователя гаснет. */

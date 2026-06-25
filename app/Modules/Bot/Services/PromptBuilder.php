@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Bot\Services;
 
-use App\Modules\Identity\DTO\BusinessProfile;
 use App\Modules\Knowledge\Models\CrmKnowledgeEntry;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
+use App\Shared\DTO\BusinessProfile;
+use App\Shared\Llm\LlmMarkers;
 use Illuminate\Support\Collection;
 
 /**
@@ -16,23 +17,19 @@ use Illuminate\Support\Collection;
  */
 final class PromptBuilder
 {
-    /** Сентинел: настоящая эскалация — клиент зовёт человека, жалоба, нестандартная ситуация. */
-    public const string ESCALATE = '[[ESCALATE]]';
+    // Сентинелы протокола LLM↔бот переэкспортятся из общего ядра (App\Shared\Llm\LlmMarkers),
+    // чтобы LLM-порт (Shared) не зависел от модуля Bot. Источник истины — LlmMarkers.
+    public const string ESCALATE = LlmMarkers::ESCALATE;
 
-    /** Сентинел-префикс: бот не понял/не нашёл ответ и задаёт уточняющий вопрос. */
-    public const string CLARIFY = '[[CLARIFY]]';
+    public const string CLARIFY = LlmMarkers::CLARIFY;
 
-    /** Сентинел-префикс: запись состоялась — подтверждаем клиенту и закрываем диалог. */
-    public const string BOOKED = '[[BOOKED]]';
+    public const string BOOKED = LlmMarkers::BOOKED;
 
-    /** Сентинел: клиент отменил запись — подтверждаем отмену и закрываем диалог. */
-    public const string CANCELLED = '[[CANCELLED]]';
+    public const string CANCELLED = LlmMarkers::CANCELLED;
 
-    /** Сентинел: клиент хочет записаться — передаём диалог пошаговому мастеру записи в CRM. */
-    public const string BOOK = '[[BOOK]]';
+    public const string BOOK = LlmMarkers::BOOK;
 
-    /** Сентинел: к ответу нужно прикрепить фото примеров работ (URL подставит система). */
-    public const string PHOTOS = '[[PHOTOS]]';
+    public const string PHOTOS = LlmMarkers::PHOTOS;
 
     /**
      * Дефолтная «голова» промпта (тон + правила поведения) — используется, когда у

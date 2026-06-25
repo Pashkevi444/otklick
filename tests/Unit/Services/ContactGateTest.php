@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Booking\Models\CrmConnection;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Clients\Models\Client;
-use App\Modules\Clients\Services\ClientService;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
@@ -38,12 +38,12 @@ final class ContactGateTest extends TestCase
         $messages = Mockery::mock(MessageRepositoryInterface::class);
         $messages->shouldReceive('latestOutboundText')->andReturn($lastOutbound)->byDefault();
 
-        $clients = Mockery::mock(ClientService::class);
+        $clients = Mockery::mock(ClientsApi::class);
         $clients->shouldReceive('recordName')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->name = $v)->byDefault();
         $clients->shouldReceive('recordPhone')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->phone = $v)->byDefault();
         $clients->shouldReceive('recordEmail')->andReturnUsing(fn (Conversation $c, string $v) => $this->client->email = $v)->byDefault();
 
-        $crm = Mockery::mock(CrmConnectionRepositoryInterface::class);
+        $crm = Mockery::mock(BookingApi::class);
         $crm->shouldReceive('activeForCurrentTenant')->andReturn($crmConnected ? new CrmConnection : null)->byDefault();
 
         return new ContactGate($conversations, $messages, $clients, $crm);

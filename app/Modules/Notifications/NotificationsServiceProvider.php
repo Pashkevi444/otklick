@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications;
 
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Modules\Notifications\Delivery\EmailNotifier;
 use App\Modules\Notifications\Delivery\NotifierResolver;
 use App\Modules\Notifications\Delivery\TelegramNotifier;
@@ -25,6 +26,7 @@ final class NotificationsServiceProvider extends ServiceProvider
     public array $bindings = [
         UserNotificationRepositoryInterface::class => EloquentUserNotificationRepository::class,
         NotificationRecipientRepositoryInterface::class => EloquentNotificationRecipientRepository::class,
+        NotificationsApi::class => NotificationsApiService::class,
     ];
 
     public function register(): void

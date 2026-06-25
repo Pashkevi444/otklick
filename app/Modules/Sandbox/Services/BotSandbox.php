@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Sandbox\Services;
 
-use App\Modules\Bot\Services\BotResponder;
+use App\Modules\Bot\Contracts\BotApi;
 use App\Modules\Channels\Services\ImageRecognitionService;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
-use App\Modules\Conversations\Services\ContactCapture;
 use App\Modules\Sandbox\DTO\SandboxReply;
 use App\Modules\Sandbox\Repositories\Contracts\SandboxRepositoryInterface;
 use App\Shared\DTO\IncomingMessage;
@@ -37,10 +35,10 @@ final readonly class BotSandbox
 {
     public function __construct(
         private SandboxRepositoryInterface $sandbox,
-        private ConversationRepositoryInterface $conversations,
-        private MessageRepositoryInterface $messages,
-        private ContactCapture $contacts,
-        private BotResponder $responder,
+        private ConversationsApi $conversations,
+        private ConversationsApi $messages,
+        private ConversationsApi $contacts,
+        private BotApi $responder,
         private TestContext $test,
         private ImageToText $vision,
     ) {}

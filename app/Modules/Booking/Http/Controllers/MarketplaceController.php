@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Booking\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Booking\Services\YclientsMarketplaceService;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;

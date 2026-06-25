@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Identity\Http\Requests\StoreTeamMemberRequest;
 use App\Modules\Identity\Http\Requests\UpdateTeamMemberRequest;
 use App\Modules\Identity\Services\UserService;
 use App\Shared\Enums\CabinetSection;
 use App\Shared\Enums\MemberPermission;
+use App\Shared\Http\Controller;
 use App\Shared\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Knowledge\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Knowledge\DTO\KnowledgeEntryData;
 use App\Modules\Knowledge\Http\Requests\ImportSiteRequest;
 use App\Modules\Knowledge\Http\Requests\KnowledgeEntryRequest;
@@ -20,6 +19,7 @@ use App\Modules\Knowledge\Services\KnowledgeBaseService;
 use App\Modules\Knowledge\Services\SiteImportStatus;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Enums\MemberPermission;
+use App\Shared\Http\Controller;
 use App\Shared\Models\BusinessType;
 use App\Shared\Support\TenantImageStorage;
 use Illuminate\Http\JsonResponse;

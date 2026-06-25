@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Clients\Http\Requests\UpdateClientRequest;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Clients\Repositories\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Services\ClientService;
 use App\Modules\Clients\Services\ClientSummaryService;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Notifications\Services\UserNotificationService;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Shared\Enums\ChannelType;
+use App\Shared\Http\Controller;
 use App\Shared\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ final class ClientController extends Controller
         private readonly ClientRepositoryInterface $clients,
         private readonly ClientSummaryService $summaries,
         private readonly ClientService $service,
-        private readonly UserNotificationService $notifications,
+        private readonly NotificationsApi $notifications,
     ) {}
 
     public function index(Request $request): Response

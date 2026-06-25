@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Platform\Http\Requests\UpdateSiteSettingsRequest;
 use App\Modules\Platform\Models\SiteSetting;
 use App\Modules\Platform\Services\SiteSettingsService;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;

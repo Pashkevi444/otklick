@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications\Services;
 
-use App\Modules\Identity\Repositories\Contracts\UserRepositoryInterface;
+use App\Modules\Identity\Contracts\IdentityApi;
 use App\Modules\Notifications\Events\NotificationsUpdated;
 use App\Modules\Notifications\Models\UserNotification;
 use App\Modules\Notifications\Repositories\Contracts\UserNotificationRepositoryInterface;
@@ -25,7 +25,7 @@ final readonly class UserNotificationService
 {
     public function __construct(
         private UserNotificationRepositoryInterface $notifications,
-        private UserRepositoryInterface $users,
+        private IdentityApi $users,
     ) {}
 
     /**

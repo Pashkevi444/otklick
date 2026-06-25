@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Platform\Services\DashboardCardService;
 use App\Shared\Enums\CardState;
 use App\Shared\Enums\DashboardCard;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;

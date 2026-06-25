@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cabinet;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Clients\Repositories\Contracts\ClientRepositoryInterface;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Shared\Http\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

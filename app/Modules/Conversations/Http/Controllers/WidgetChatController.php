@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Conversations\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Modules\Channels\Contracts\ChannelsApi;
 use App\Modules\Channels\Models\Channel;
-use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Modules\Conversations\Services\WebWidgetService;
 use App\Shared\Enums\ChannelType;
+use App\Shared\Http\Controller;
 use App\Shared\Support\RealtimeConfig;
 use App\Shared\Support\TenantImageStorage;
 use App\Shared\Tenancy\TenantInitializer;
@@ -27,7 +27,7 @@ final class WidgetChatController extends Controller
 {
     public function __construct(
         private readonly TenantInitializer $tenancy,
-        private readonly ChannelRepositoryInterface $channels,
+        private readonly ChannelsApi $channels,
         private readonly WebWidgetService $widget,
         private readonly TenantImageStorage $images,
     ) {}

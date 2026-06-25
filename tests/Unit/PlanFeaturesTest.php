@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Modules\Billing\DTO\PlanFeatures;
+use App\Shared\DTO\PlanFeatures;
 use App\Shared\Enums\TenantPlan;
 use App\Shared\Models\Tenant;
 use Tests\TestCase;

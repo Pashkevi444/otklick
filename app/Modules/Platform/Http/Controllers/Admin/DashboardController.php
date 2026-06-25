@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Bot\Models\PromptTemplate;
 use App\Modules\Flows\Models\ScenarioTemplate;
 use App\Modules\Knowledge\Models\KnowledgeTemplate;
+use App\Shared\Http\Controller;
 use App\Shared\Models\Tenant;
 use Inertia\Inertia;
 use Inertia\Response;

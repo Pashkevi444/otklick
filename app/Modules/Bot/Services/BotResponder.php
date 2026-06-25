@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Bot\Services;
 
-use App\Modules\Booking\Services\BookingFlow;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Services\ConsentGate;
 use App\Modules\Conversations\Services\ContactGate;
-use App\Modules\Flows\Services\FlowEngine;
+use App\Modules\Flows\Contracts\FlowsApi;
 use App\Shared\DTO\BotReply;
 use App\Shared\DTO\ReplyKeyboard;
 use App\Shared\Models\Tenant;
@@ -28,9 +28,9 @@ class BotResponder
 {
     public function __construct(
         private readonly ReplyComposer $composer,
-        private readonly BookingFlow $booking,
+        private readonly BookingApi $booking,
         private readonly ContactGate $contacts,
-        private readonly FlowEngine $flows,
+        private readonly FlowsApi $flows,
         private readonly ConsentGate $consent,
     ) {}
 

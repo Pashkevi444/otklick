@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Channels\Http\Requests;
 
-use App\Http\Requests\AbstractFormRequest;
+use App\Shared\Http\AbstractFormRequest;
 
 /**
  * Обновление настроек веб-виджета: список разрешённых доменов (по одному в строке).

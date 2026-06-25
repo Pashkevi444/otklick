@@ -6,6 +6,7 @@ namespace App\Modules\Conversations;
 
 use App\Modules\Conversations\Console\CloseStaleConversations;
 use App\Modules\Conversations\Console\ReleaseIdleOperators;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
 use App\Modules\Conversations\Repositories\Eloquent\EloquentConversationRepository;
@@ -25,6 +26,7 @@ final class ConversationsServiceProvider extends ServiceProvider
     public array $bindings = [
         ConversationRepositoryInterface::class => EloquentConversationRepository::class,
         MessageRepositoryInterface::class => EloquentMessageRepository::class,
+        ConversationsApi::class => ConversationsApiService::class,
     ];
 
     public function boot(): void

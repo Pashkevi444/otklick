@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications\Delivery;
 
+use App\Modules\Channels\Contracts\ChannelsApi;
 use App\Modules\Channels\Models\Channel;
-use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Modules\Channels\Telegram\TelegramGateway;
 use App\Modules\Notifications\Delivery\Contracts\Notifier;
 use App\Modules\Notifications\DTO\OwnerNotification;
@@ -22,7 +22,7 @@ use App\Shared\Models\Tenant;
 final readonly class TelegramNotifier implements Notifier
 {
     public function __construct(
-        private ChannelRepositoryInterface $channels,
+        private ChannelsApi $channels,
         private TelegramGateway $telegram,
     ) {}
 

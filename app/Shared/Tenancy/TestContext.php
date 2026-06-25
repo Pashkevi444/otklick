@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Tenancy;
 
-use App\Modules\Sandbox\Models\SandboxRecord;
+use App\Shared\Models\SandboxRecord;
 
 /**
  * Флаг «текущий запрос — тестовый прогон бота» в рамках одного запроса.

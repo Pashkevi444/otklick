@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Analytics\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Analytics\DTO\AnalyticsRange;
 use App\Modules\Analytics\DTO\ValueReport;
 use App\Modules\Analytics\Jobs\RefreshLeadInsights;
@@ -13,6 +12,7 @@ use App\Modules\Analytics\Services\LeadAnalyticsService;
 use App\Modules\Analytics\Services\LeadInsightsService;
 use App\Modules\Analytics\Services\ValueReportService;
 use App\Modules\Conversations\Models\Conversation;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;

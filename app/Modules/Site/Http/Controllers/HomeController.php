@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Site\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Modules\Platform\Contracts\PlatformApi;
 use App\Modules\Platform\Models\SiteSetting;
-use App\Modules\Platform\Services\SiteSettingsService;
+use App\Shared\Http\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,7 +17,7 @@ use Inertia\Response;
 final class HomeController extends Controller
 {
     public function __construct(
-        private readonly SiteSettingsService $site,
+        private readonly PlatformApi $site,
     ) {}
 
     public function home(): Response

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Conversations\Services;
 
-use App\Modules\Channels\ChannelGatewayResolver;
+use App\Modules\Channels\Contracts\ChannelsApi;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Models\Message;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
@@ -26,7 +26,7 @@ final readonly class ConversationHandoffService
     public function __construct(
         private ConversationRepositoryInterface $conversations,
         private MessageRepositoryInterface $messages,
-        private ChannelGatewayResolver $gateways,
+        private ChannelsApi $gateways,
     ) {}
 
     /** Оператор перехватывает диалог у бота. */

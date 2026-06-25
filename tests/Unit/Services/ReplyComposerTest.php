@@ -7,13 +7,10 @@ namespace Tests\Unit\Services;
 use App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface;
 use App\Modules\Bot\Services\PromptBuilder;
 use App\Modules\Bot\Services\ReplyComposer;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
-use App\Modules\Knowledge\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
-use App\Modules\Knowledge\Services\KnowledgeRetriever;
 use App\Shared\Llm\Contracts\LlmClient;
 use App\Shared\Models\Tenant;
 use Illuminate\Support\Collection;
@@ -26,19 +23,19 @@ final class ReplyComposerTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
 
-    private function composer(LlmClient $llm, ?ConversationRepositoryInterface $conversations = null): ReplyComposer
+    private function composer(LlmClient $llm, ?ConversationsApi $conversations = null): ReplyComposer
     {
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection);
 
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
 
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
 
         // По умолчанию ретривер не находит индекс → фолбэк на всю базу (текущее поведение).
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         $retriever->shouldReceive('retrieve')->andReturn(null)->byDefault();
 
         return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $conversations ?? $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
@@ -56,9 +53,9 @@ final class ReplyComposerTest extends TestCase
     /**
      * Репозиторий диалогов по умолчанию терпит любые вызовы счётчика уточнений.
      */
-    private function conversations(): ConversationRepositoryInterface&MockInterface
+    private function conversations(): ConversationsApi&MockInterface
     {
-        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations = Mockery::mock(ConversationsApi::class);
         $conversations->shouldReceive('bumpClarificationAttempts')->andReturn(1)->byDefault();
         $conversations->shouldReceive('resetClarificationAttempts')->byDefault();
 
@@ -261,14 +258,14 @@ final class ReplyComposerTest extends TestCase
         $entry = new KnowledgeEntry(['title' => 'Стрижки', 'content' => 'Делаем фейды.', 'is_published' => true, 'links' => [], 'images' => $images]);
         $entry->id = 'e1';
 
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$entry]));
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
         // Запись — релевантный хит RAG: медиа берётся из неё (одна целевая запись).
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['e1'], 'crm' => []]);
 
         return new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
@@ -305,13 +302,13 @@ final class ReplyComposerTest extends TestCase
         $llm = Mockery::mock(LlmClient::class);
         $llm->shouldReceive('generate')->once()->andReturn('Мужская стрижка стоит 1500 ₽.');
 
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$entry]));
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['k1'], 'crm' => []]);
 
         $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
@@ -349,13 +346,13 @@ final class ReplyComposerTest extends TestCase
         $llm = Mockery::mock(LlmClient::class);
         $llm->shouldReceive('generate')->once()->andReturn('Делаем фейд, андеркат и классику.');
 
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$top, $other]));
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         // Порядок = релевантность: «Виды стрижек» сверху, «Барбер Никита» ниже.
         $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['top', 'barber'], 'crm' => []]);
 
@@ -387,13 +384,13 @@ final class ReplyComposerTest extends TestCase
         $llm = Mockery::mock(LlmClient::class);
         $llm->shouldReceive('generate')->once()->andReturn('Вот примеры стрижек! [[PHOTOS]]');
 
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$top, $other]));
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         $retriever->shouldReceive('retrieve')->once()->andReturn(['manual' => ['top', 'other'], 'crm' => []]);
 
         $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
@@ -433,13 +430,13 @@ final class ReplyComposerTest extends TestCase
         $llm = Mockery::mock(LlmClient::class);
         $llm->shouldReceive('generate')->once()->andReturn('Вот примеры! [[PHOTOS]]');
 
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$modcut, $crop]));
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['mod'], 'crm' => []]);
 
         $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
@@ -470,14 +467,14 @@ final class ReplyComposerTest extends TestCase
         $llm = Mockery::mock(LlmClient::class);
         $llm->shouldReceive('generate')->once()->andReturn('Вот примеры наших работ по mod cut! [[PHOTOS]]');
 
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$longhair, $modcut]));
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
         // RAG ставит №1 неверную запись (long), mod cut только №2.
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['long', 'mod'], 'crm' => []]);
 
         $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
@@ -509,14 +506,14 @@ final class ReplyComposerTest extends TestCase
         // Без [[PHOTOS]], но с фразой «примеры наших работ» и именем записи.
         $llm->shouldReceive('generate')->once()->andReturn('Вот ещё раз примеры наших работ по Warrior cut.');
 
-        $knowledge = Mockery::mock(KnowledgeEntryRepositoryInterface::class);
+        $knowledge = Mockery::mock(KnowledgeApi::class);
         $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$warrior, $crop]));
-        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages = Mockery::mock(ConversationsApi::class);
         $messages->shouldReceive('recentForChat')->andReturn(new Collection);
-        $crmKnowledge = Mockery::mock(CrmKnowledgeRepositoryInterface::class);
-        $crmKnowledge->shouldReceive('forCurrentTenant')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
         // RAG на «не дошли примеры» отобрал ТОЛЬКО Crop (Warrior cut нет в хитах).
-        $retriever = Mockery::mock(KnowledgeRetriever::class);
+        $retriever = Mockery::mock(KnowledgeApi::class);
         $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['crop'], 'crm' => []]);
 
         $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());

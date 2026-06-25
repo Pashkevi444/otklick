@@ -10,9 +10,9 @@ use App\Modules\Broadcasts\Mail\BroadcastMail;
 use App\Modules\Broadcasts\Models\Broadcast;
 use App\Modules\Broadcasts\Models\BroadcastDelivery;
 use App\Modules\Broadcasts\Repositories\Contracts\BroadcastRepositoryInterface;
-use App\Modules\Channels\ChannelGatewayResolver;
+use App\Modules\Channels\Contracts\ChannelsApi;
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Clients\Models\Client;
-use App\Modules\Clients\Repositories\Contracts\ClientRepositoryInterface;
 use App\Shared\Enums\BroadcastStatus;
 use App\Shared\Models\Tenant;
 use Illuminate\Support\Facades\Log;
@@ -28,8 +28,8 @@ final readonly class BroadcastService
 {
     public function __construct(
         private BroadcastRepositoryInterface $broadcasts,
-        private ClientRepositoryInterface $clients,
-        private ChannelGatewayResolver $channels,
+        private ClientsApi $clients,
+        private ChannelsApi $channels,
     ) {}
 
     public function create(string $tenantId, BroadcastData $data, ?int $createdBy): Broadcast

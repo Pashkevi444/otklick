@@ -1,0 +1,148 @@
+imports:
+  - deptrac-baseline.yaml
+deptrac:
+  paths:
+    - ./app
+  layers:
+    - name: Shared
+      collectors: [{ type: directory, value: 'app/Shared/.*' }]
+    - name: Kernel
+      collectors: [{ type: directory, value: 'app/(Http|Providers)/.*' }]
+    - name: Analytics_Open
+      collectors: [{ type: directory, value: 'app/Modules/Analytics/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Analytics
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Analytics/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Analytics/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Billing_Open
+      collectors: [{ type: directory, value: 'app/Modules/Billing/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Billing
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Billing/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Billing/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Booking_Open
+      collectors: [{ type: directory, value: 'app/Modules/Booking/((Contracts|Models|DTO|Events)|Crm/(Contracts|Data))/.*' }]
+    - name: Booking
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Booking/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Booking/((Contracts|Models|DTO|Events)|Crm/(Contracts|Data))/.*' }]
+    - name: Bot_Open
+      collectors: [{ type: directory, value: 'app/Modules/Bot/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Bot
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Bot/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Bot/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Broadcasts_Open
+      collectors: [{ type: directory, value: 'app/Modules/Broadcasts/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Broadcasts
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Broadcasts/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Broadcasts/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Channels_Open
+      collectors: [{ type: directory, value: 'app/Modules/Channels/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Channels
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Channels/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Channels/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Clients_Open
+      collectors: [{ type: directory, value: 'app/Modules/Clients/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Clients
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Clients/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Clients/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Conversations_Open
+      collectors: [{ type: directory, value: 'app/Modules/Conversations/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Conversations
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Conversations/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Conversations/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Flows_Open
+      collectors: [{ type: directory, value: 'app/Modules/Flows/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Flows
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Flows/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Flows/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Identity_Open
+      collectors: [{ type: directory, value: 'app/Modules/Identity/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Identity
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Identity/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Identity/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Knowledge_Open
+      collectors: [{ type: directory, value: 'app/Modules/Knowledge/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Knowledge
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Knowledge/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Knowledge/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Notifications_Open
+      collectors: [{ type: directory, value: 'app/Modules/Notifications/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Notifications
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Notifications/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Notifications/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Platform_Open
+      collectors: [{ type: directory, value: 'app/Modules/Platform/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Platform
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Platform/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Platform/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Sandbox_Open
+      collectors: [{ type: directory, value: 'app/Modules/Sandbox/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Sandbox
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Sandbox/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Sandbox/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Site_Open
+      collectors: [{ type: directory, value: 'app/Modules/Site/(Contracts|Models|DTO|Events)/.*' }]
+    - name: Site
+      collectors:
+        - type: bool
+          must: [{ type: directory, value: 'app/Modules/Site/.*' }]
+          must_not: [{ type: directory, value: 'app/Modules/Site/(Contracts|Models|DTO|Events)/.*' }]
+  ruleset:
+    Shared: ~
+    Kernel: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open, Analytics, Billing, Booking, Bot, Broadcasts, Channels, Clients, Conversations, Flows, Identity, Knowledge, Notifications, Platform, Sandbox, Site ]
+    Analytics_Open: [ Shared, Analytics, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Analytics: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Billing_Open: [ Shared, Billing, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Billing: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Booking_Open: [ Shared, Booking, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Booking: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Bot_Open: [ Shared, Bot, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Bot: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Broadcasts_Open: [ Shared, Broadcasts, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Broadcasts: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Channels_Open: [ Shared, Channels, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Channels: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Clients_Open: [ Shared, Clients, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Clients: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Conversations_Open: [ Shared, Conversations, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Conversations: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Flows_Open: [ Shared, Flows, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Flows: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Identity_Open: [ Shared, Identity, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Identity: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Knowledge_Open: [ Shared, Knowledge, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Knowledge: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Notifications_Open: [ Shared, Notifications, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Notifications: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Platform_Open: [ Shared, Platform, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Platform: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Sandbox_Open: [ Shared, Sandbox, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Sandbox: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Site_Open: [ Shared, Site, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]
+    Site: [ Shared, Analytics_Open, Billing_Open, Booking_Open, Bot_Open, Broadcasts_Open, Channels_Open, Clients_Open, Conversations_Open, Flows_Open, Identity_Open, Knowledge_Open, Notifications_Open, Platform_Open, Sandbox_Open, Site_Open ]

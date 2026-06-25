@@ -11,6 +11,7 @@ use App\Modules\Channels\Console\PollMaxUpdates;
 use App\Modules\Channels\Console\PollTelegramUpdates;
 use App\Modules\Channels\Console\PollVkUpdates;
 use App\Modules\Channels\Console\PollWhatsAppUpdates;
+use App\Modules\Channels\Contracts\ChannelsApi;
 use App\Modules\Channels\Contracts\MessengerGateway;
 use App\Modules\Channels\Max\MaxGateway;
 use App\Modules\Channels\Repositories\Contracts\ChannelRepositoryInterface;
@@ -33,6 +34,7 @@ final class ChannelsServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     public array $bindings = [
         ChannelRepositoryInterface::class => EloquentChannelRepository::class,
+        ChannelsApi::class => ChannelsApiService::class,
     ];
 
     public function register(): void

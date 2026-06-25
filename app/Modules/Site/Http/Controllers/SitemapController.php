@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Site\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Shared\Http\Controller;
 use Illuminate\Http\Response;
 
 /**

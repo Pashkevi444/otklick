@@ -4,16 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Identity\Repositories\Contracts\TenantRepositoryInterface;
-use App\Modules\Identity\Services\BusinessProvisioningService;
-use App\Modules\Identity\Services\TenantService;
-use App\Modules\Identity\Services\UserService;
+use App\Modules\Identity\Contracts\IdentityApi;
 use App\Modules\Platform\Http\Requests\StoreTenantRequest;
 use App\Modules\Platform\Http\Requests\UpdateTenantOverridesRequest;
 use App\Modules\Platform\Http\Requests\UpdateTenantOwnerPasswordRequest;
 use App\Modules\Platform\Http\Requests\UpdateTenantRequest;
 use App\Shared\Enums\TenantPlan;
+use App\Shared\Http\Controller;
 use App\Shared\Models\BusinessType;
 use App\Shared\Models\Tenant;
 use App\Shared\Models\User;
@@ -29,10 +26,10 @@ use Inertia\Response;
 final class TenantController extends Controller
 {
     public function __construct(
-        private readonly TenantRepositoryInterface $tenants,
-        private readonly TenantService $tenantService,
-        private readonly UserService $users,
-        private readonly BusinessProvisioningService $provisioning,
+        private readonly IdentityApi $tenants,
+        private readonly IdentityApi $tenantService,
+        private readonly IdentityApi $users,
+        private readonly IdentityApi $provisioning,
     ) {}
 
     public function index(): Response

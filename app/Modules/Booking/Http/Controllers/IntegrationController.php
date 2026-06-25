@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Booking\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Booking\Crm\Data\CredentialField;
 use App\Modules\Booking\DTO\ReminderSettings;
 use App\Modules\Booking\Models\CrmConnection;
 use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Modules\Booking\Services\CrmConnectionService;
 use App\Shared\Enums\CrmProvider;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

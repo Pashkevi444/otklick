@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Enums;
 
-use App\Modules\Billing\DTO\PlanFeatures;
+use App\Shared\DTO\PlanFeatures;
 use App\Shared\Enums\Contracts\HasLabel;
 
 /**

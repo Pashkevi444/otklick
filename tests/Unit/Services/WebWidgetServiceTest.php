@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Modules\Bot\Services\BotResponder;
+use App\Modules\Bot\Contracts\BotApi;
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Models\Message;
@@ -13,8 +13,13 @@ use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
 use App\Modules\Conversations\Services\ContactCapture;
 use App\Modules\Conversations\Services\SpamDetector;
 use App\Modules\Conversations\Services\WebWidgetService;
-use App\Modules\Identity\Repositories\Contracts\UserRepositoryInterface;
+use App\Modules\Identity\Contracts\IdentityApi;
+use App\Modules\Notifications\Contracts\NotificationsApi;
+use App\Modules\Notifications\NotificationsApiService;
+use App\Modules\Notifications\Repositories\Contracts\NotificationRecipientRepositoryInterface;
 use App\Modules\Notifications\Repositories\Contracts\UserNotificationRepositoryInterface;
+use App\Modules\Notifications\Services\NotificationService;
+use App\Modules\Notifications\Services\TelegramLinkService;
 use App\Modules\Notifications\Services\UserNotificationService;
 use App\Shared\DTO\BotReply;
 use App\Shared\Enums\ChannelType;
@@ -35,13 +40,14 @@ final class WebWidgetServiceTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
 
-    /** Реальный сервис уведомлений без получателей (final — не мокается): notify = no-op. */
-    private function notifications(): UserNotificationService
+    /** Контракт Notifications: notify/исходящие — no-op (нет получателей). */
+    private function notifications(): NotificationsApi
     {
-        $users = Mockery::mock(UserRepositoryInterface::class);
-        $users->shouldReceive('forCurrentTenant')->andReturn(collect())->byDefault();
+        $api = Mockery::mock(NotificationsApi::class);
+        $api->shouldReceive('notify')->byDefault();
+        $api->shouldReceive('sendOwnerNotificationAsync')->byDefault();
 
-        return new UserNotificationService(Mockery::mock(UserNotificationRepositoryInterface::class), $users);
+        return $api;
     }
 
     public function test_booking_closes_conversation(): void
@@ -65,7 +71,7 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordOutbound')
             ->once()->with($conversation, 'Записал вас!', MessageStatus::Sent)->andReturn(new Message);
 
-        $responder = Mockery::mock(BotResponder::class);
+        $responder = Mockery::mock(BotApi::class);
         $responder->shouldReceive('respond')->once()->with(Mockery::any(), $conversation, 'да, записывайте')
             ->andReturn(new BotReply('Записал вас!', escalate: false, booked: true));
 
@@ -102,7 +108,7 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordInbound')->once()->andReturn($inbound);
         $messages->shouldNotReceive('recordOutbound');
 
-        $responder = Mockery::mock(BotResponder::class);
+        $responder = Mockery::mock(BotApi::class);
         $responder->shouldNotReceive('respond');
 
         $contacts = Mockery::mock(ContactCapture::class);
@@ -140,7 +146,7 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
         $messages->shouldReceive('recordOutbound')->once()->andReturn(new Message);
 
-        $responder = Mockery::mock(BotResponder::class);
+        $responder = Mockery::mock(BotApi::class);
         $responder->shouldReceive('respond')->once()->andReturn(new BotReply('Передаю администратору.', escalate: true));
 
         $contacts = Mockery::mock(ContactCapture::class);
@@ -151,12 +157,19 @@ final class WebWidgetServiceTest extends TestCase
         $user = Mockery::mock(User::class)->makePartial();
         $user->shouldReceive('allows')->andReturn(true);
         $user->forceFill(['id' => 'u-1', 'tenant_id' => 't-1']);
-        $userRepo = Mockery::mock(UserRepositoryInterface::class);
+        $userRepo = Mockery::mock(IdentityApi::class);
         $userRepo->shouldReceive('forCurrentTenant')->andReturn(collect([$user]));
         $notifyRepo = Mockery::mock(UserNotificationRepositoryInterface::class);
         $notifyRepo->shouldReceive('insertMany')->once()
             ->with(Mockery::on(fn (array $rows): bool => count($rows) === 1 && $rows[0]['type'] === UserNotificationType::Escalation->value));
-        $notifications = new UserNotificationService($notifyRepo, $userRepo);
+        // Реальный сервис in-app уведомлений за фасадом NotificationsApi — проверяем,
+        // что строка уведомления реально вставляется (delegate notify → репозиторий).
+        $notifications = new NotificationsApiService(
+            new UserNotificationService($notifyRepo, $userRepo),
+            app(NotificationService::class),
+            app(TelegramLinkService::class),
+            app(NotificationRecipientRepositoryInterface::class),
+        );
 
         $service = new WebWidgetService(
             $conversations,
@@ -197,7 +210,7 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordInbound')->once()->andReturn($inbound);
         $messages->shouldNotReceive('recordOutbound');
 
-        $responder = Mockery::mock(BotResponder::class);
+        $responder = Mockery::mock(BotApi::class);
         $responder->shouldNotReceive('respond');
 
         $contacts = Mockery::mock(ContactCapture::class);
@@ -247,7 +260,7 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordOutbound')
             ->once()->with($conversation, 'Делаем такие стрижки, записать вас?', MessageStatus::Sent)->andReturn($outbound);
 
-        $responder = Mockery::mock(BotResponder::class);
+        $responder = Mockery::mock(BotApi::class);
         $responder->shouldReceive('respond')
             ->once()
             ->with(Mockery::any(), $conversation, '[Клиент прислал фото. На фото: Мужская стрижка андеркат.]')
@@ -304,7 +317,7 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
         $messages->shouldReceive('recordOutbound')->once()->andReturn(new Message);
 
-        $responder = Mockery::mock(BotResponder::class);
+        $responder = Mockery::mock(BotApi::class);
         $responder->shouldNotReceive('respond');
 
         $service = new WebWidgetService(

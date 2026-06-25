@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Services;
 
-use App\Modules\Identity\DTO\BusinessProfile;
 use App\Modules\Identity\DTO\NewTenantData;
 use App\Modules\Identity\Events\TenantRegistered;
 use App\Modules\Identity\Repositories\Contracts\TenantRepositoryInterface;
+use App\Shared\DTO\BusinessProfile;
 use App\Shared\Enums\TenantPlan;
 use App\Shared\Models\Tenant;
 use Illuminate\Support\Str;

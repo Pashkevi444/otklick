@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Billing\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Platform\Services\SiteSettingsService;
+use App\Modules\Platform\Contracts\PlatformApi;
+use App\Shared\Http\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,7 +16,7 @@ use Inertia\Response;
  */
 final class BillingController extends Controller
 {
-    public function __invoke(SiteSettingsService $site): Response
+    public function __invoke(PlatformApi $site): Response
     {
         $settings = $site->current();
 

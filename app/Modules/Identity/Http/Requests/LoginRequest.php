@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Requests;
 
-use App\Http\Requests\AbstractFormRequest;
+use App\Shared\Http\AbstractFormRequest;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;

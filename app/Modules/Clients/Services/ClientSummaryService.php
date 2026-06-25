@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Clients\Services;
 
 use App\Modules\Clients\Models\Client;
-use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Shared\Enums\MessageDirection;
 use App\Shared\Llm\Contracts\LlmClient;
 use Throwable;
@@ -30,7 +30,7 @@ final readonly class ClientSummaryService
 
     public function __construct(
         private LlmClient $llm,
-        private MessageRepositoryInterface $messages,
+        private ConversationsApi $messages,
     ) {}
 
     public function summarize(Client $client): ?string

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Clients\Models\Client;
-use App\Modules\Clients\Services\ClientService;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
 use App\Modules\Conversations\Services\ContactCapture;
@@ -86,7 +86,7 @@ final class ContactCaptureTest extends TestCase
 
     private function clients(): Mockery\MockInterface
     {
-        $clients = Mockery::mock(ClientService::class);
+        $clients = Mockery::mock(ClientsApi::class);
         $clients->shouldReceive('attachClient')->once()->byDefault();
 
         return $clients;

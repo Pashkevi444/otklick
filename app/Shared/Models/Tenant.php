@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\Models;
 
-use App\Modules\Billing\DTO\PlanFeatures;
-use App\Modules\Identity\DTO\BusinessProfile;
+use App\Shared\DTO\BusinessProfile;
+use App\Shared\DTO\PlanFeatures;
 use App\Shared\Enums\TenantPlan;
 use App\Shared\Enums\UserRole;
 use Database\Factories\TenantFactory;

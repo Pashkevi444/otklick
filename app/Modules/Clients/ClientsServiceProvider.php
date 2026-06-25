@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients;
 
+use App\Modules\Clients\Contracts\ClientsApi;
 use App\Modules\Clients\Repositories\Contracts\ClientIdentityRepositoryInterface;
 use App\Modules\Clients\Repositories\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Repositories\Eloquent\EloquentClientIdentityRepository;
@@ -22,5 +23,6 @@ final class ClientsServiceProvider extends ServiceProvider
     public array $bindings = [
         ClientRepositoryInterface::class => EloquentClientRepository::class,
         ClientIdentityRepositoryInterface::class => EloquentClientIdentityRepository::class,
+        ClientsApi::class => ClientsApiService::class,
     ];
 }

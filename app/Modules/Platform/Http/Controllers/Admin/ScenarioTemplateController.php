@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Flows\Models\ScenarioTemplate;
+use App\Shared\Http\Controller;
 use App\Shared\Models\BusinessType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Notifications\Services\UserNotificationService;
+use App\Shared\Http\Controller;
 use App\Shared\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Identity\Http\Requests\UpdatePasswordRequest;
+use App\Shared\Http\Controller;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;

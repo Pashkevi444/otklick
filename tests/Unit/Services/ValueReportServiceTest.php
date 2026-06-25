@@ -9,8 +9,8 @@ use App\Modules\Analytics\DTO\MetricCard;
 use App\Modules\Analytics\DTO\ValueReport;
 use App\Modules\Analytics\Repositories\Contracts\LeadAnalyticsRepositoryInterface;
 use App\Modules\Analytics\Services\ValueReportService;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Booking\Models\CrmConnection;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
 use App\Modules\Conversations\Models\Conversation;
 use App\Shared\Enums\CrmProvider;
 use Mockery;
@@ -67,7 +67,7 @@ final class ValueReportServiceTest extends TestCase
     {
         $range = AnalyticsRange::resolve(null, null, null);
 
-        $connections = Mockery::mock(CrmConnectionRepositoryInterface::class);
+        $connections = Mockery::mock(BookingApi::class);
         $connections->shouldReceive('forCurrentTenant')->andReturn(collect([
             $this->connection('crm-1', '111'),
             $this->connection('crm-2', '222'),

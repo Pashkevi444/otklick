@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Knowledge\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Knowledge\Jobs\SyncCrmKnowledge;
 use App\Modules\Knowledge\Models\CrmKnowledgeEntry;
 use App\Modules\Knowledge\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
 use App\Modules\Knowledge\Services\CrmSyncStatus;
+use App\Shared\Http\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -24,7 +24,7 @@ final class CrmKnowledgeController extends Controller
 {
     public function __construct(
         private readonly CrmKnowledgeRepositoryInterface $knowledge,
-        private readonly CrmConnectionRepositoryInterface $connections,
+        private readonly BookingApi $connections,
         private readonly CrmSyncStatus $status,
     ) {}
 

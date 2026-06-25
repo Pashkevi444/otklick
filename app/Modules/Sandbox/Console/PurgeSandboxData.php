@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Sandbox\Console;
 
-use App\Modules\Sandbox\Models\SandboxRecord;
 use App\Modules\Sandbox\Repositories\Contracts\SandboxRepositoryInterface;
+use App\Shared\Models\SandboxRecord;
 use App\Shared\Models\Tenant;
 use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Console\Command;

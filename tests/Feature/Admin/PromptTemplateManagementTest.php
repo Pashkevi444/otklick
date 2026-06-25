@@ -7,7 +7,7 @@ namespace Tests\Feature\Admin;
 use App\Modules\Bot\Models\PromptTemplate;
 use App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface;
 use App\Modules\Bot\Services\PromptBuilder;
-use App\Modules\Identity\DTO\BusinessProfile;
+use App\Shared\DTO\BusinessProfile;
 use App\Shared\Models\Tenant;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

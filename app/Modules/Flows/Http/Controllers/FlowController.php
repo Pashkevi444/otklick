@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Flows\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Flows\Models\Flow;
 use App\Modules\Flows\Models\ScenarioTemplate;
 use App\Modules\Flows\Services\FlowService;
 use App\Modules\Flows\Services\FlowSimulator;
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Shared\Http\Controller;
 use App\Shared\Models\BusinessType;
 use App\Shared\Support\TenantImageStorage;
 use Illuminate\Http\JsonResponse;
@@ -30,8 +30,8 @@ final class FlowController extends Controller
     public function __construct(
         private readonly FlowService $service,
         private readonly FlowSimulator $simulator,
-        private readonly CrmConnectionRepositoryInterface $crm,
-        private readonly KnowledgeEntryRepositoryInterface $knowledge,
+        private readonly BookingApi $crm,
+        private readonly KnowledgeApi $knowledge,
     ) {}
 
     /** Сухой прогон воронки для теста в кабинете (без побочных эффектов). */

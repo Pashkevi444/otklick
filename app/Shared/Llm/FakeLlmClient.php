@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Shared\Llm;
 
-use App\Modules\Bot\Services\PromptBuilder;
 use App\Shared\Llm\Contracts\LlmClient;
 
 /**
@@ -24,7 +23,7 @@ final class FakeLlmClient implements LlmClient
         $question = $this->lastUserMessage($messages);
 
         if ($question === null) {
-            return PromptBuilder::ESCALATE;
+            return LlmMarkers::ESCALATE;
         }
 
         $questionWords = $this->words($question);
@@ -51,7 +50,7 @@ final class FakeLlmClient implements LlmClient
             return $best;
         }
 
-        return PromptBuilder::CLARIFY.' Подскажите, пожалуйста, что именно вас интересует?';
+        return LlmMarkers::CLARIFY.' Подскажите, пожалуйста, что именно вас интересует?';
     }
 
     /**

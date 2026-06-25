@@ -10,8 +10,8 @@ use App\Modules\Channels\Services\ImageRecognitionService;
 use App\Modules\Channels\Services\TelegramRelayService;
 use App\Modules\Channels\Services\VoiceTranscriptionService;
 use App\Modules\Channels\Telegram\TelegramAlbumBuffer;
-use App\Modules\Conversations\Services\IncomingMessageService;
-use App\Modules\Notifications\Services\TelegramLinkService;
+use App\Modules\Conversations\Contracts\ConversationsApi;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Shared\DTO\IncomingMessage;
 use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -45,8 +45,8 @@ final class ProcessTelegramUpdate implements ShouldQueue
     public function handle(
         TenantInitializer $tenancy,
         ChannelRepositoryInterface $channels,
-        IncomingMessageService $messages,
-        TelegramLinkService $linker,
+        ConversationsApi $messages,
+        NotificationsApi $linker,
         TelegramRelayService $relay,
         VoiceTranscriptionService $voice,
         ImageRecognitionService $image,

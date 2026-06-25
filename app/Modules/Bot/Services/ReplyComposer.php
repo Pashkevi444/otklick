@@ -5,17 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Bot\Services;
 
 use App\Modules\Bot\Repositories\Contracts\PromptTemplateRepositoryInterface;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Models\Message;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
-use App\Modules\Identity\DTO\BusinessProfile;
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Modules\Knowledge\Models\CrmKnowledgeEntry;
 use App\Modules\Knowledge\Models\KnowledgeEntry;
-use App\Modules\Knowledge\Repositories\Contracts\CrmKnowledgeRepositoryInterface;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
-use App\Modules\Knowledge\Services\KnowledgeRetriever;
 use App\Shared\DTO\BotReply;
+use App\Shared\DTO\BusinessProfile;
 use App\Shared\Enums\MessageDirection;
 use App\Shared\Llm\Contracts\LlmClient;
 use App\Shared\Models\Tenant;
@@ -80,11 +77,11 @@ class ReplyComposer
     public function __construct(
         private readonly LlmClient $llm,
         private readonly PromptBuilder $prompt,
-        private readonly KnowledgeEntryRepositoryInterface $knowledge,
-        private readonly MessageRepositoryInterface $messages,
-        private readonly ConversationRepositoryInterface $conversations,
-        private readonly CrmKnowledgeRepositoryInterface $crmKnowledge,
-        private readonly KnowledgeRetriever $retriever,
+        private readonly KnowledgeApi $knowledge,
+        private readonly ConversationsApi $messages,
+        private readonly ConversationsApi $conversations,
+        private readonly KnowledgeApi $crmKnowledge,
+        private readonly KnowledgeApi $retriever,
         private readonly PromptTemplateRepositoryInterface $promptTemplates,
     ) {}
 
@@ -101,7 +98,7 @@ class ReplyComposer
         // нужную запись уже не отбирает). $published — то, что уходит в промпт.
         $allPublished = $this->knowledge->publishedForCurrentTenant();
         $published = $allPublished;
-        $crm = $this->crmKnowledge->forCurrentTenant();
+        $crm = $this->crmKnowledge->crmForCurrentTenant();
 
         // Семантический поиск (RAG) — только если возможность включена тарифом/оверрайдом;
         // иначе в промпт идёт вся база (как и было).

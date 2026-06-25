@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Conversations\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Booking\Services\BookingFlow;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Conversations\Events\OperatorTyping;
 use App\Modules\Conversations\Models\Conversation;
@@ -13,10 +12,11 @@ use App\Modules\Conversations\Models\Message;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Modules\Conversations\Repositories\Contracts\MessageRepositoryInterface;
 use App\Modules\Conversations\Services\ConversationHandoffService;
-use App\Modules\Notifications\Services\UserNotificationService;
+use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Enums\ConversationOutcome;
 use App\Shared\Enums\ConversationStatus;
+use App\Shared\Http\Controller;
 use App\Shared\Models\User;
 use App\Shared\Support\TenantImageStorage;
 use App\Shared\Support\WidgetRealtimeChannel;
@@ -36,9 +36,9 @@ final class ConversationController extends Controller
     public function __construct(
         private readonly ConversationRepositoryInterface $conversations,
         private readonly MessageRepositoryInterface $messages,
-        private readonly BookingFlow $booking,
+        private readonly BookingApi $booking,
         private readonly ConversationHandoffService $handoff,
-        private readonly UserNotificationService $notifications,
+        private readonly NotificationsApi $notifications,
         private readonly TenantImageStorage $images,
     ) {}
 

@@ -14,11 +14,11 @@ use App\Modules\Booking\Crm\Data\SlotQuery;
 use App\Modules\Booking\Crm\Data\TimeSlot;
 use App\Modules\Booking\Models\CrmConnection;
 use App\Modules\Booking\Repositories\Contracts\CrmConnectionRepositoryInterface;
-use App\Modules\Clients\Services\ClientService;
+use App\Modules\Clients\Contracts\ClientsApi;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
-use App\Modules\Identity\DTO\BusinessProfile;
 use App\Shared\DTO\BotReply;
+use App\Shared\DTO\BusinessProfile;
 use App\Shared\DTO\ReplyKeyboard;
 use App\Shared\Enums\BookingStep;
 use App\Shared\Llm\Contracts\LlmClient;
@@ -66,9 +66,9 @@ class BookingFlow
     public function __construct(
         private readonly CrmConnectionRepositoryInterface $connections,
         private readonly CrmGatewayResolver $gateways,
-        private readonly ConversationRepositoryInterface $conversations,
+        private readonly ConversationsApi $conversations,
         private readonly LlmClient $llm,
-        private readonly ClientService $clients,
+        private readonly ClientsApi $clients,
     ) {}
 
     /**

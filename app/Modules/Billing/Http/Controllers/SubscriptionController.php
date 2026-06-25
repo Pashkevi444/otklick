@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Billing\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Shared\Enums\TenantPlan;
+use App\Shared\Http\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

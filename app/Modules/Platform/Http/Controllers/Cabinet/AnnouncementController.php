@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Http\Controllers\Cabinet;
 
-use App\Http\Controllers\Controller;
 use App\Modules\Platform\Services\AnnouncementService;
 use App\Shared\Enums\AnnouncementType;
+use App\Shared\Http\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

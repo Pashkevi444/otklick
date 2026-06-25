@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Modules\Booking\Services\BookingFlow;
+use App\Modules\Booking\Contracts\BookingApi;
 use App\Modules\Bot\Services\BotResponder;
 use App\Modules\Bot\Services\ReplyComposer;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Modules\Conversations\Services\ConsentGate;
 use App\Modules\Conversations\Services\ContactGate;
+use App\Modules\Flows\Contracts\FlowsApi;
+use App\Modules\Flows\FlowsApiService;
 use App\Modules\Flows\Repositories\Contracts\FlowAbRepositoryInterface;
 use App\Modules\Flows\Repositories\Contracts\FlowRepositoryInterface;
 use App\Modules\Flows\Services\FlowEngine;
-use App\Modules\Knowledge\Repositories\Contracts\KnowledgeEntryRepositoryInterface;
+use App\Modules\Knowledge\Contracts\KnowledgeApi;
 use App\Shared\DTO\BotReply;
 use App\Shared\Models\Tenant;
 use Illuminate\Support\Collection;
@@ -47,12 +50,12 @@ final class BotResponderTest extends TestCase
     }
 
     /** Воронок нет — движок сценариев «пропускает» (handle → null). */
-    private function flows(): FlowEngine
+    private function flows(): FlowsApi
     {
         $repo = Mockery::mock(FlowRepositoryInterface::class);
         $repo->shouldReceive('activeForCurrentTenant')->andReturn(new Collection);
 
-        return new FlowEngine($repo, Mockery::mock(ConversationRepositoryInterface::class), Mockery::mock(BookingFlow::class), Mockery::mock(FlowAbRepositoryInterface::class), Mockery::mock(KnowledgeEntryRepositoryInterface::class));
+        return new FlowsApiService(new FlowEngine($repo, Mockery::mock(ConversationsApi::class), Mockery::mock(BookingApi::class), Mockery::mock(FlowAbRepositoryInterface::class), Mockery::mock(KnowledgeApi::class)));
     }
 
     public function test_active_booking_state_routes_to_flow(): void
@@ -61,7 +64,7 @@ final class BotResponderTest extends TestCase
         $conversation->consent_agreed = true;
         $conversation->booking_state = ['step' => 'service'];
 
-        $booking = Mockery::mock(BookingFlow::class);
+        $booking = Mockery::mock(BookingApi::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('advance')->once()->with(Mockery::type(Tenant::class), $conversation, 'хочу 1')
@@ -80,7 +83,7 @@ final class BotResponderTest extends TestCase
         $conversation = new Conversation;
         $conversation->consent_agreed = true;
 
-        $booking = Mockery::mock(BookingFlow::class);
+        $booking = Mockery::mock(BookingApi::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('isAvailable')->once()->andReturnTrue();
@@ -102,7 +105,7 @@ final class BotResponderTest extends TestCase
         $conversation = new Conversation;
         $conversation->consent_agreed = true;
 
-        $booking = Mockery::mock(BookingFlow::class);
+        $booking = Mockery::mock(BookingApi::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('isAvailable')->once()->andReturnTrue();
@@ -123,7 +126,7 @@ final class BotResponderTest extends TestCase
         $conversation->consent_agreed = true;
         $menu = new BotReply('У вас уже есть запись: Стрижка — 20.06 в 15:00…', escalate: false);
 
-        $booking = Mockery::mock(BookingFlow::class);
+        $booking = Mockery::mock(BookingApi::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull();
         $booking->shouldReceive('isAvailable')->andReturnTrue();
         // Есть активная запись → меню выбора, а не молча вторая запись.
@@ -143,7 +146,7 @@ final class BotResponderTest extends TestCase
         $conversation = new Conversation;
         $conversation->consent_agreed = true;
 
-        $booking = Mockery::mock(BookingFlow::class);
+        $booking = Mockery::mock(BookingApi::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull();
         $booking->shouldReceive('isAvailable')->andReturnTrue(); // для расчёта главного меню
         $booking->shouldReceive('start')->once()->andReturn(new BotReply('Какую услугу?', escalate: false));
@@ -162,7 +165,7 @@ final class BotResponderTest extends TestCase
         $conversation = new Conversation;
         $conversation->consent_agreed = true;
 
-        $booking = Mockery::mock(BookingFlow::class);
+        $booking = Mockery::mock(BookingApi::class);
         $booking->shouldReceive('interceptIntent')->andReturnNull(); // нет мета-намерения (отмена/перенос)
         $booking->shouldReceive('bookingChoiceMenu')->andReturnNull()->byDefault(); // нет активной записи → обычный поток
         $booking->shouldReceive('isAvailable')->once()->andReturnFalse();

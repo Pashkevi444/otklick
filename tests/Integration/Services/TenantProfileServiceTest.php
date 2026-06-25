@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
-use App\Modules\Identity\DTO\BusinessProfile;
 use App\Modules\Identity\Services\TenantService;
+use App\Shared\DTO\BusinessProfile;
 use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

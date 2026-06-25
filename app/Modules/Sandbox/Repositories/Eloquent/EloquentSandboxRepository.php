@@ -7,9 +7,9 @@ namespace App\Modules\Sandbox\Repositories\Eloquent;
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Conversations\Models\Conversation;
-use App\Modules\Sandbox\Models\SandboxRecord;
 use App\Modules\Sandbox\Repositories\Contracts\SandboxRepositoryInterface;
 use App\Shared\Enums\ChannelType;
+use App\Shared\Models\SandboxRecord;
 
 final class EloquentSandboxRepository implements SandboxRepositoryInterface
 {

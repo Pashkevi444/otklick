@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Booking\Jobs;
 
 use App\Modules\Channels\Contracts\MessengerGateway;
-use App\Modules\Conversations\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Shared\Tenancy\TenantInitializer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -29,7 +29,7 @@ final class SendAppointmentReminder implements ShouldQueue
 
     public function handle(
         TenantInitializer $tenancy,
-        ConversationRepositoryInterface $conversations,
+        ConversationsApi $conversations,
         MessengerGateway $gateway,
     ): void {
         $tenancy->run($this->tenantId, function () use ($conversations, $gateway): void {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Identity;
 
 use App\Modules\Identity\Console\CreateSuperAdmin;
+use App\Modules\Identity\Contracts\IdentityApi;
 use App\Modules\Identity\Repositories\Contracts\EmailChangeCodeRepositoryInterface;
 use App\Modules\Identity\Repositories\Contracts\PasswordResetCodeRepositoryInterface;
 use App\Modules\Identity\Repositories\Contracts\TenantRepositoryInterface;
@@ -25,6 +26,7 @@ final class IdentityServiceProvider extends ServiceProvider
 {
     /** @var array<class-string, class-string> */
     public array $bindings = [
+        IdentityApi::class => IdentityApiService::class,
         UserRepositoryInterface::class => EloquentUserRepository::class,
         TenantRepositoryInterface::class => EloquentTenantRepository::class,
         EmailChangeCodeRepositoryInterface::class => EloquentEmailChangeCodeRepository::class,
