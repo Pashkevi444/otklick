@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Widget;
 
+use App\Enums\ConversationStatus;
+use App\Enums\MessageDirection;
 use App\Models\Channel;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\Tenant;
 use App\Services\ChannelService;
 use App\Services\ConversationHandoffService;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 final class WidgetChatTest extends TestCase
@@ -148,6 +153,53 @@ final class WidgetChatTest extends TestCase
 
         // Первое сообщение — диалог создаётся.
         $this->assertSame(1, Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->count());
+    }
+
+    public function test_upload_attaches_image_and_hands_off_to_operator(): void
+    {
+        Storage::fake('public');
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        $res = $this->post($this->url($channel, 'upload'), [
+            'token' => $token,
+            'image' => UploadedFile::fake()->image('hairstyle.jpg', 600, 400),
+            'caption' => 'Вот такую стрижку хочу',
+        ], ['Accept' => 'application/json']);
+
+        $res->assertOk()
+            ->assertJsonStructure(['reply', 'needsHuman', 'images', 'lastId', 'operatorActive'])
+            ->assertJsonPath('needsHuman', true);
+        $this->assertNotEmpty($res->json('images'));
+
+        $conv = Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->firstOrFail();
+        app(TenantInitializer::class)->run((string) $channel->tenant_id, function () use ($conv): void {
+            $inbound = Message::withoutGlobalScopes()
+                ->where('conversation_id', $conv->id)
+                ->where('direction', MessageDirection::Inbound)
+                ->firstOrFail();
+            $this->assertNotEmpty($inbound->payload['images'] ?? []);
+
+            // Диалог передан администратору (бот фото не «видит»).
+            $this->assertSame(ConversationStatus::NeedsHuman, $conv->fresh()->status);
+        });
+    }
+
+    public function test_upload_rejects_non_image_file(): void
+    {
+        Storage::fake('public');
+        $channel = $this->webChannel();
+        $token = $this->postJson($this->url($channel, 'session'))->json('token');
+
+        // Не-картинку валидация отклоняет (роут stateless; в проде виджет шлёт
+        // Accept: application/json → 422, здесь — редирект-отказ). Главное: файл НЕ
+        // обработан и диалог не создан.
+        $this->post($this->url($channel, 'upload'), [
+            'token' => $token,
+            'image' => UploadedFile::fake()->create('malware.exe', 50, 'application/octet-stream'),
+        ])->assertStatus(302);
+
+        $this->assertSame(0, Conversation::withoutGlobalScopes()->where('channel_id', $channel->id)->count());
     }
 
     public function test_widget_captures_client_phone(): void

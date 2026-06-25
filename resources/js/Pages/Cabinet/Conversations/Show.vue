@@ -8,6 +8,7 @@ interface Msg {
     id: string;
     direction: string;
     text: string;
+    images?: string[];
     time: string | null;
     date: string | null;
 }
@@ -162,7 +163,9 @@ const groups = computed(() => {
     const out: { date: string | null; items: ParsedMsg[] }[] = [];
     for (const m of messages.value) {
         const p = parse(m.text);
-        const item: ParsedMsg = { id: m.id, direction: m.direction, time: m.time, date: m.date, text: p.text, images: p.images };
+        // Картинки из текста + присланные отдельным полем (фото клиента из виджета).
+        const images = [...p.images, ...(m.images ?? []).filter((u) => !p.images.includes(u))];
+        const item: ParsedMsg = { id: m.id, direction: m.direction, time: m.time, date: m.date, text: p.text, images };
         const last = out[out.length - 1];
         if (last && last.date === m.date) last.items.push(item);
         else out.push({ date: m.date, items: [item] });

@@ -43,6 +43,43 @@ final class ConversationJournalTest extends TestCase
                 ->where('conversations.0.messagesCount', 2));
     }
 
+    public function test_grid_exposes_conversation_creation_date(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        Conversation::factory()->withClient('Иван Петров')->create([
+            'tenant_id' => $tenant->id,
+            'created_at' => '2026-01-15 10:30:00',
+            'last_message_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('conversations.0.createdAt', '15.01.2026 10:30'));
+    }
+
+    public function test_grid_sorts_by_creation_date(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $owner = User::factory()->owner($tenant)->create();
+
+        $old = Conversation::factory()->withClient('Старый')->create([
+            'tenant_id' => $tenant->id, 'created_at' => '2026-01-01 09:00:00', 'last_message_at' => now(),
+        ]);
+        $new = Conversation::factory()->withClient('Новый')->create([
+            'tenant_id' => $tenant->id, 'created_at' => '2026-06-01 09:00:00', 'last_message_at' => now()->subDay(),
+        ]);
+
+        // По дате создания ↑ — старый первым (порядок не совпадает с last_message_at).
+        $this->actingAs($owner)
+            ->get('/cabinet/conversations?sort=created&dir=asc')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('conversations.0.contact', 'Старый')
+                ->where('conversations.1.contact', 'Новый'));
+    }
+
     public function test_lead_shows_name_and_phone_from_linked_client_card(): void
     {
         $tenant = Tenant::factory()->create();

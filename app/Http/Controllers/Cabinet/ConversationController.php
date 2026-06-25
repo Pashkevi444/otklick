@@ -43,7 +43,7 @@ final class ConversationController extends Controller
         $search = trim((string) $request->query('search', '')) ?: null;
         $status = ConversationStatus::tryFrom((string) $request->query('status', ''));
         $channel = ChannelType::tryFrom((string) $request->query('channel', ''));
-        $sort = in_array($request->query('sort'), ['last', 'contact', 'messages'], true) ? (string) $request->query('sort') : 'last';
+        $sort = in_array($request->query('sort'), ['last', 'contact', 'messages', 'created'], true) ? (string) $request->query('sort') : 'last';
         $dir = $request->query('dir') === 'asc' ? 'asc' : 'desc';
 
         $page = $this->conversations->paginateForCurrentTenant($search, $status, $channel, $sort, $dir, 15);
@@ -186,9 +186,30 @@ final class ConversationController extends Controller
             'id' => $m->id,
             'direction' => $m->direction->value,
             'text' => (string) $m->text,
+            'images' => $this->messageImages($m),
             'time' => $m->created_at?->format('H:i'),
             'date' => $m->created_at?->format('d.m.Y'),
         ];
+    }
+
+    /**
+     * URL картинок сообщения (клиент прислал фото через веб-виджет — лежат в
+     * `payload.images` как {path, url}). Для текстовых сообщений — пустой список.
+     *
+     * @return list<string>
+     */
+    private function messageImages(Message $m): array
+    {
+        $images = $m->payload['images'] ?? null;
+
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            static fn ($img): ?string => is_array($img) && isset($img['url']) && is_string($img['url']) ? $img['url'] : null,
+            $images,
+        )));
     }
 
     /**
@@ -257,6 +278,7 @@ final class ConversationController extends Controller
             'messagesCount' => (int) $c->getAttribute('messages_count'),
             'lastMessage' => $c->latestMessage?->text,
             'lastMessageAt' => $c->last_message_at?->format('d.m.Y H:i'),
+            'createdAt' => $c->created_at?->format('d.m.Y H:i'),
         ];
     }
 

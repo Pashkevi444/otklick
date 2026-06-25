@@ -110,6 +110,20 @@
         '.otk-oper.otk-on{display:block}',
         '.otk-img{margin-top:8px;max-width:220px;max-height:220px;width:auto;border-radius:13px;cursor:zoom-in;display:block;object-fit:cover;box-shadow:0 2px 10px rgba(16,42,73,.14);transition:transform .2s ease}',
         '.otk-img:hover{transform:scale(1.03)}',
+        // Время под сообщением (мелкое, полупрозрачное; у «своих» — белёсое).
+        '.otk-time{font-size:10.5px;opacity:.6;margin-top:4px;text-align:right;font-variant-numeric:tabular-nums}',
+        '.otk-me .otk-time{color:rgba(255,255,255,.85)}',
+        // Разделитель дней: «Сегодня» / «Вчера» / «5 мар» по центру ленты.
+        '.otk-day{align-self:center;font-size:11px;color:#7b8aa0;background:rgba(255,255,255,.7);border:1px solid rgba(16,42,73,.06);border-radius:11px;padding:3px 11px;margin:4px 0;box-shadow:0 1px 4px rgba(16,42,73,.05)}',
+        // Кнопки-инструменты ввода (эмодзи, скрепка) слева от поля.
+        '.otk-tool{flex:0 0 auto;width:34px;height:34px;border:0;border-radius:11px;background:rgba(46,116,181,.08);color:var(--otk-a);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s}',
+        '.otk-tool:hover{background:rgba(46,116,181,.16);transform:translateY(-1px)}',
+        '.otk-tool svg{width:18px;height:18px;fill:var(--otk-a)}',
+        // Панель эмодзи над полем ввода.
+        '.otk-emoji{display:none;flex-wrap:wrap;gap:3px;padding:8px 10px;border-top:1px solid rgba(16,42,73,.06);background:rgba(255,255,255,.95);max-height:128px;overflow-y:auto}',
+        '.otk-emoji.otk-on{display:flex}',
+        '.otk-emoji button{border:0;background:none;cursor:pointer;font-size:21px;line-height:1;padding:4px;border-radius:8px;transition:background .15s,transform .15s}',
+        '.otk-emoji button:hover{background:rgba(46,116,181,.1);transform:scale(1.18)}',
         '.otk-lightbox{position:fixed;inset:0;z-index:2147483600;background:rgba(8,15,30,0);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;transition:background .28s ease}',
         '.otk-lightbox.otk-lb-on{background:rgba(8,15,30,.88)}',
         '.otk-lightbox img{max-width:92vw;max-height:88vh;border-radius:14px;box-shadow:0 28px 80px rgba(0,0,0,.6);transform:scale(.9);opacity:0;transition:transform .32s cubic-bezier(.2,.85,.25,1),opacity .25s ease}',
@@ -149,6 +163,7 @@
         '<svg viewBox="0 0 24 24"><path d="M12 3C6.9 3 2.8 6.3 2.8 10.5c0 2 .95 3.8 2.5 5.2-.1.95-.5 2-.95 2.7-.2.3 0 .7.4.65 1.4-.2 2.6-.7 3.5-1.3.85.2 1.75.3 2.7.3 5.1 0 9.2-3.3 9.2-7.5S17.1 3 12 3z"/></svg>';
     var closeMark = '✕';
     var sendIcon = '<svg viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.4.92V9.5c0 .5.37.92.87.98l9.13 1.52-9.13 1.52a1 1 0 0 0-.87.98v4.98a1 1 0 0 0 1.4.92z"/></svg>';
+    var clipIcon = '<svg viewBox="0 0 24 24"><path d="M16.5 6.5l-7.8 7.8a2 2 0 1 0 2.83 2.83l8.49-8.49a4 4 0 1 0-5.66-5.66l-8.49 8.49a6 6 0 0 0 8.49 8.49l7.07-7.07-1.41-1.41-7.07 7.07a4 4 0 0 1-5.66-5.66l8.49-8.49a2 2 0 1 1 2.83 2.83l-8.49 8.49a.5.5 0 0 1-.71-.71l7.8-7.8z"/></svg>';
 
     var launcher = document.createElement('button');
     launcher.className = 'otk-launcher';
@@ -164,7 +179,11 @@
         '<button class="otk-x" aria-label="Закрыть">' + closeMark + '</button>' +
         '</div>' +
         '<div class="otk-body"></div>' +
+        '<div class="otk-emoji"></div>' +
         '<div class="otk-foot">' +
+        '<button class="otk-tool otk-emoji-btn" type="button" aria-label="Эмодзи">😊</button>' +
+        '<button class="otk-tool otk-attach-btn" type="button" aria-label="Прикрепить фото">' + clipIcon + '</button>' +
+        '<input class="otk-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />' +
         '<textarea class="otk-in" rows="1" placeholder="Напишите сообщение…"></textarea>' +
         '<button class="otk-send" aria-label="Отправить">' + sendIcon + '</button>' +
         '</div>' +
@@ -179,7 +198,37 @@
     var sendBtn = panel.querySelector('.otk-send');
     var closeBtn = panel.querySelector('.otk-x');
     var operEl = panel.querySelector('.otk-oper');
+    var emojiPanel = panel.querySelector('.otk-emoji');
+    var emojiBtn = panel.querySelector('.otk-emoji-btn');
+    var attachBtn = panel.querySelector('.otk-attach-btn');
+    var fileInput = panel.querySelector('.otk-file');
     var typingEl = null;
+    // Дата последнего отрисованного сообщения — чтобы вставлять разделитель «день».
+    var lastDayKey = '';
+
+    // Человекочитаемая дата для разделителя: «Сегодня» / «Вчера» / «5 мар 2025».
+    function dayLabel(d) {
+        var today = new Date();
+        var yest = new Date();
+        yest.setDate(today.getDate() - 1);
+        var k = d.toDateString();
+        if (k === today.toDateString()) return 'Сегодня';
+        if (k === yest.toDateString()) return 'Вчера';
+        var opts = { day: 'numeric', month: 'short' };
+        if (d.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+        return d.toLocaleDateString('ru-RU', opts);
+    }
+
+    // Вставляет разделитель дня перед сообщением, если день сменился.
+    function maybeDaySeparator(d) {
+        var key = d.toDateString();
+        if (key === lastDayKey) return;
+        lastDayKey = key;
+        var sep = document.createElement('div');
+        sep.className = 'otk-day';
+        sep.textContent = dayLabel(d);
+        body.appendChild(sep);
+    }
 
     function setOperator(active) {
         operEl.classList.toggle('otk-on', !!active);
@@ -207,11 +256,18 @@
         requestAnimationFrame(function () { ov.classList.add('otk-lb-on'); });
     }
 
-    function addMsg(text, who, noSave, extraImages) {
+    function addMsg(text, who, noSave, extraImages, ts) {
+        // Метка времени: серверная (если пришла) либо момент показа. Для лайв-чата
+        // клиентского времени достаточно, а в истории оно переживает перезагрузку.
+        var when = ts || new Date().toISOString();
         if (!noSave) {
-            history.push({ t: String(text), w: who });
+            history.push({ t: String(text), w: who, ts: when, imgs: extraImages || [] });
             persist();
         }
+
+        var date = new Date(when);
+        if (isNaN(date.getTime())) date = new Date();
+        maybeDaySeparator(date);
 
         var el = document.createElement('div');
         el.className = 'otk-msg ' + (who === 'me' ? 'otk-me' : 'otk-bot');
@@ -240,6 +296,12 @@
             img.addEventListener('load', function () { body.scrollTop = body.scrollHeight; });
             el.appendChild(img);
         });
+
+        // Время сообщения — мелкой строкой под текстом/фото.
+        var tm = document.createElement('div');
+        tm.className = 'otk-time';
+        tm.textContent = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        el.appendChild(tm);
 
         body.appendChild(el);
         body.scrollTop = body.scrollHeight;
@@ -346,7 +408,7 @@
                 // При перехвате оператором бот молчит (reply пустой) — ничего не рисуем,
                 // ответ оператора придёт лайв-поллингом.
                 if (data.reply || (data.images && data.images.length)) {
-                    addMsg(data.reply, 'bot', false, data.images);
+                    addMsg(data.reply, 'bot', false, data.images, data.createdAt);
                 }
                 renderChips(data.options);
             })
@@ -396,7 +458,7 @@
                             lastId = m.id;
                             if (seenIds[m.id]) return; // страховка от дублей
                             seenIds[m.id] = 1;
-                            addMsg(m.text, 'bot');
+                            addMsg(m.text, 'bot', false, m.images, m.createdAt);
                         });
                     }
                     persist();
@@ -415,9 +477,10 @@
         .then(function (data) { if (data && data.color) applyTheme(data.color); })
         .catch(function () { /* нет конфига — дефолтная тема */ });
 
-    // Восстанавливаем прошлую переписку (если страницу перезагрузили).
+    // Восстанавливаем прошлую переписку (если страницу перезагрузили) — вместе с
+    // временем и картинками каждого сообщения.
     if (history.length) {
-        history.forEach(function (m) { addMsg(m.t, m.w, true); });
+        history.forEach(function (m) { addMsg(m.t, m.w, true, m.imgs || [], m.ts); });
     }
 
     launcher.addEventListener('click', function () { toggle(); });
@@ -430,4 +493,74 @@
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 96) + 'px';
     });
+
+    // Эмодзи-пикер: вставляет смайл в позицию курсора.
+    function insertAtCursor(el, text) {
+        var s = el.selectionStart;
+        var e = el.selectionEnd;
+        if (typeof s === 'number' && typeof e === 'number') {
+            el.value = el.value.slice(0, s) + text + el.value.slice(e);
+            el.selectionStart = el.selectionEnd = s + text.length;
+        } else {
+            el.value += text;
+        }
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+    }
+    var EMOJIS = ['😊', '🙂', '😉', '😄', '😅', '😂', '🥰', '😍', '👍', '👌', '🙏', '🤝', '💪', '🔥', '✨', '🎉', '❤️', '💜', '✅', '📅', '💈', '💇', '💅', '💡', '📍', '📞', '🤔', '🙌'];
+    EMOJIS.forEach(function (e) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = e;
+        b.addEventListener('click', function () { insertAtCursor(input, e); input.focus(); });
+        emojiPanel.appendChild(b);
+    });
+    emojiBtn.addEventListener('click', function () {
+        emojiPanel.classList.toggle('otk-on');
+        if (emojiPanel.classList.contains('otk-on')) body.scrollTop = body.scrollHeight;
+    });
+
+    // Прикрепить фото: клиент отправляет картинку — её увидит администратор, диалог
+    // уходит к человеку (бот изображения не распознаёт).
+    attachBtn.addEventListener('click', function () { if (!sending) fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+        var file = fileInput.files && fileInput.files[0];
+        fileInput.value = '';
+        if (file) uploadImage(file);
+    });
+    function uploadImage(file) {
+        if (sending) return;
+        if (!file.type || file.type.indexOf('image/') !== 0) return;
+        if (file.size > 5 * 1024 * 1024) { addBotOnce('Файл больше 5 МБ — выберите фото поменьше.'); return; }
+        emojiPanel.classList.remove('otk-on');
+        var go = function () {
+            if (!token) return;
+            sending = true;
+            sendBtn.disabled = true;
+            var caption = (input.value || '').trim();
+            input.value = '';
+            input.style.height = 'auto';
+            var fd = new FormData();
+            fd.append('token', token);
+            fd.append('image', file);
+            if (caption) fd.append('caption', caption);
+            showTyping();
+            fetch(api + '/upload', { method: 'POST', headers: { Accept: 'application/json' }, body: fd })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(r); })
+                .then(function (data) {
+                    hideTyping();
+                    addMsg(caption, 'me', false, data.images || [], data.createdAt);
+                    if (data.lastId) { lastId = data.lastId; persist(); }
+                    if (data.reply) addMsg(data.reply, 'bot', false, [], data.replyAt);
+                    setOperator(data.operatorActive);
+                })
+                .catch(function (err) {
+                    hideTyping();
+                    if (err && err.status === 403) resetSession();
+                    addBotOnce('Не удалось отправить фото. Попробуйте ещё раз.');
+                })
+                .finally(function () { sending = false; sendBtn.disabled = false; });
+        };
+        if (!token) { startSession().then(function () { if (token) go(); }); } else { go(); }
+    }
 })();

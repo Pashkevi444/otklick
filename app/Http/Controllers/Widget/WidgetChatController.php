@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Services\WebWidgetService;
+use App\Support\KnowledgeImageStorage;
 use App\Tenancy\TenantInitializer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ final class WidgetChatController extends Controller
         private readonly TenantInitializer $tenancy,
         private readonly ChannelRepositoryInterface $channels,
         private readonly WebWidgetService $widget,
+        private readonly KnowledgeImageStorage $images,
     ) {}
 
     /**
@@ -98,6 +100,42 @@ final class WidgetChatController extends Controller
                 'images' => $reply->images,
                 // Курсор для лайв-поллинга: с него виджет тянет ответы оператора.
                 'lastId' => $lastId,
+            ]), $origin);
+        });
+    }
+
+    /**
+     * Клиент прикрепил фото в виджете. Сохраняем картинку, фиксируем её в диалоге и
+     * передаём администратору (бот изображения не распознаёт). Возвращаем URL фото
+     * (виджет покажет) + подтверждение.
+     */
+    public function upload(Request $request, string $tenant, string $channel): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:5120'],
+            'caption' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        return $this->tenancy->run($tenant, function () use ($request, $channel, $validated): JsonResponse {
+            $model = $this->resolve($channel);
+            $origin = $this->guardOrigin($request, $model);
+
+            $stored = $this->images->store((string) $model->getAttribute('tenant_id'), [$request->file('image')], 'widget');
+
+            [
+                'reply' => $reply,
+                'lastId' => $lastId,
+                'images' => $images,
+                'operatorActive' => $operatorActive,
+            ] = $this->widget->receiveImage($model, (string) $validated['token'], $stored, (string) ($validated['caption'] ?? ''), $request->ip());
+
+            return $this->cors(response()->json([
+                'reply' => $reply->text,
+                'needsHuman' => $reply->escalate,
+                'images' => $images,
+                'lastId' => $lastId,
+                'operatorActive' => $operatorActive,
             ]), $origin);
         });
     }

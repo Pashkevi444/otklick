@@ -86,8 +86,61 @@ final class ReplyComposerTest extends TestCase
         $reply = $this->composer($llm)->compose($tenant, new Conversation);
 
         $this->assertTrue($reply->escalate);
+        $this->assertTrue($reply->knowledgeGap); // эскалация по [[ESCALATE]] = пробел в БЗ
         $this->assertStringContainsString('администратору', $reply->text);
         $this->assertStringContainsString('+7 900', $reply->text);
+    }
+
+    public function test_refusal_answer_without_sentinel_escalates_and_records_gap(): void
+    {
+        // Контроль качества: LLM ответила отказом, но забыла сентинел — это всё равно
+        // провал → передаём человеку и фиксируем пробел в «развитии бота».
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()
+            ->andReturn('К сожалению, не могу помочь с этим вопросом.');
+
+        $reply = $this->composer($llm)->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertTrue($reply->escalate);
+        $this->assertTrue($reply->knowledgeGap);
+        $this->assertStringContainsString('администратору', $reply->text);
+    }
+
+    public function test_redirect_to_human_without_sentinel_records_gap(): void
+    {
+        // «Обратитесь к администратору» без сентинела — бот спасовал → пробел.
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()
+            ->andReturn('По этому вопросу обратитесь к администратору, пожалуйста.');
+
+        $reply = $this->composer($llm)->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertTrue($reply->escalate);
+        $this->assertTrue($reply->knowledgeGap);
+    }
+
+    public function test_refusal_detection_is_case_and_yo_insensitive(): void
+    {
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('НЕ ВЛАДЕЮ ИНФОРМАЦИЕЙ по этому.');
+
+        $reply = $this->composer($llm)->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertTrue($reply->escalate);
+        $this->assertTrue($reply->knowledgeGap);
+    }
+
+    public function test_normal_answer_does_not_flag_gap(): void
+    {
+        // Живой ответ по делу не должен ложно эскалировать/писать пробел.
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()
+            ->andReturn('Конечно помогу! Мужская стрижка — 1500 ₽, записать вас?');
+
+        $reply = $this->composer($llm)->compose(new Tenant(['name' => 'Бизнес']), new Conversation);
+
+        $this->assertFalse($reply->escalate);
+        $this->assertFalse($reply->knowledgeGap);
     }
 
     public function test_clarifies_instead_of_escalating_below_limit(): void

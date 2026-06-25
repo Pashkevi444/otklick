@@ -206,7 +206,7 @@ interface ConversationRepositoryInterface
      * Диалоги текущего тенанта с поиском, фильтрами по статусу и каналу,
      * сортировкой и пагинацией (для грид-журнала).
      *
-     * @param  'last'|'contact'|'messages'  $sort
+     * @param  'last'|'contact'|'messages'|'created'  $sort
      * @param  'asc'|'desc'  $direction
      * @return LengthAwarePaginator<int, Conversation>
      */

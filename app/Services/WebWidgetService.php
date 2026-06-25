@@ -129,6 +129,52 @@ final readonly class WebWidgetService
     }
 
     /**
+     * Клиент прислал фото в виджете. Бот изображения не распознаёт, поэтому фото
+     * сохраняется к диалогу и передаётся администратору (диалог → needs_human):
+     * оператор увидит картинку в кабинете и ответит лично.
+     *
+     * @param  list<array{path: string, url: string}>  $images  уже сохранённые на диск файлы
+     * @return array{reply: BotReply, lastId: string, images: list<string>, operatorActive: bool}
+     */
+    public function receiveImage(Channel $channel, string $token, array $images, string $caption, ?string $clientIp = null): array
+    {
+        $sessionId = $this->sessionFromToken($channel, $token);
+        $conversation = $this->conversations->firstOrCreateForChat($channel->id, $sessionId, null, $clientIp);
+
+        $urls = array_map(static fn (array $i): string => $i['url'], $images);
+
+        $inbound = $this->messages->recordInbound($conversation, new IncomingMessage(
+            externalChatId: $sessionId,
+            externalMessageId: (string) Str::uuid(),
+            text: $caption,
+            raw: ['images' => $images],
+        ));
+        $inboundId = $inbound !== null ? (string) $inbound->id : '';
+
+        if ($caption !== '') {
+            $this->contacts->fromInbound($conversation, $caption);
+        }
+
+        // Оператор уже ведёт диалог — просто сохраняем фото, он его увидит.
+        if ($conversation->isOperatorHandling()) {
+            $this->conversations->touchLastMessage($conversation);
+
+            return ['reply' => new BotReply('', escalate: false), 'lastId' => $inboundId, 'images' => $urls, 'operatorActive' => true];
+        }
+
+        // Бот не «видит» картинки — честно передаём администратору.
+        $ack = 'Спасибо! Получили ваше фото и передали администратору — он скоро ответит.';
+        $reply = new BotReply($ack, escalate: true);
+        $outbound = $this->messages->recordOutbound($conversation, $ack, MessageStatus::Sent);
+        $this->conversations->updateStatus($conversation, ConversationStatus::NeedsHuman);
+        $this->conversations->touchLastMessage($conversation);
+
+        $this->notifyOwner($channel, $conversation, $caption !== '' ? $caption : '📷 Фото от клиента', $reply);
+
+        return ['reply' => $reply, 'lastId' => (string) $outbound->id, 'images' => $urls, 'operatorActive' => false];
+    }
+
+    /**
      * Лайв-поллинг виджета: исходящие сообщения диалога (ответы бота И оператора),
      * появившиеся после $afterId, + признак того, что сейчас на связи оператор
      * (виджет покажет баннер). Диалога ещё нет (сессия без переписки) → пусто.

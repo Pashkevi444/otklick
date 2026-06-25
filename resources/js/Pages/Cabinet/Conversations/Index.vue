@@ -16,6 +16,7 @@ interface Row {
     messagesCount: number;
     lastMessage: string | null;
     lastMessageAt: string | null;
+    createdAt: string | null;
 }
 interface Pagination {
     current: number;
@@ -211,6 +212,7 @@ const remove = (id: string): void => {
                         <span>{{ c.source }} · {{ c.messagesCount }} сообщ.</span>
                         <span>{{ c.lastMessageAt }}</span>
                     </div>
+                    <p v-if="c.createdAt" class="mt-0.5 text-xs text-slate-400">Создан: {{ c.createdAt }}</p>
                     <button v-if="can('conversations.delete')" type="button" class="mt-2 text-xs text-red-600 hover:underline" @click.prevent.stop="remove(c.id)">Удалить лид</button>
                 </Link>
             </div>
@@ -226,6 +228,7 @@ const remove = (id: string): void => {
                             <th class="px-5 py-3 font-medium">Последнее сообщение</th>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('messages')">Сообщений{{ arrow('messages') }}</th>
                             <th class="px-5 py-3 font-medium">Статус</th>
+                            <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('created')">Создан{{ arrow('created') }}</th>
                             <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('last')">Обновлён{{ arrow('last') }}</th>
                             <th v-if="can('conversations.delete')" class="px-5 py-3" />
                         </tr>
@@ -245,6 +248,7 @@ const remove = (id: string): void => {
                             <td class="px-5 py-3">
                                 <span class="rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                             </td>
+                            <td class="whitespace-nowrap px-5 py-3 text-slate-400">{{ c.createdAt ?? '—' }}</td>
                             <td class="whitespace-nowrap px-5 py-3 text-slate-400">{{ c.lastMessageAt }}</td>
                             <td v-if="can('conversations.delete')" class="px-5 py-3 text-right" @click.stop>
                                 <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>
