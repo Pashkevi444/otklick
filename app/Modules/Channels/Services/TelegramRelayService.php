@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Channels\Services;
 
+use App\Modules\Bot\Contracts\BotApi;
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Channels\Telegram\TelegramGateway;
 use App\Modules\Conversations\Contracts\ConversationsApi;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Notifications\Contracts\NotificationsApi;
 use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Shared\DTO\BotReply;
 use App\Shared\DTO\IncomingMessage;
 use App\Shared\Enums\ConversationStatus;
 use App\Shared\Enums\MessageStatus;
@@ -36,6 +38,7 @@ final readonly class TelegramRelayService
         private ConversationsApi $messages,
         private ConversationsApi $contacts,
         private CacheRepository $cache,
+        private BotApi $responder,
     ) {}
 
     public function isOperator(string $chatId): bool
@@ -122,6 +125,14 @@ final readonly class TelegramRelayService
         $this->contacts->fromInbound($conversation, $incoming->text);
         $this->conversations->touchLastMessage($conversation);
         $this->forwardToOperators($channel, $conversation, '💬 '.$this->label($conversation), $incoming->text);
+
+        // Бот не молчит при эскалации: дополнительно отвечает клиенту на его вопрос
+        // с пометкой, что оператор уже подключён (оператор получил сообщение выше и
+        // может ответить через «Ответить»). Так клиент не ждёт молча оператора.
+        $answer = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
+        $botText = BotReply::ESCALATED_NOTE."\n\n".$answer->text;
+        $this->telegram->send($channel, $conversation->external_chat_id, $botText);
+        $this->messages->recordOutbound($conversation, $botText, MessageStatus::Sent);
 
         return true;
     }

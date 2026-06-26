@@ -68,10 +68,16 @@ final readonly class IncomingMessageService
             return;
         }
 
-        // Диалог уже эскалирован (ждёт оператора) — бот молчит, чтобы не повторять
-        // «передал администратору» на каждое сообщение (даже смайлик); клиента
-        // подхватит оператор. (В Telegram это делает мост; здесь — для VK/MAX/WhatsApp.)
+        // Диалог уже эскалирован (ждёт оператора), но оператор ещё НЕ перехватил
+        // (isOperatorHandling — ветка выше): бот не молчит, а продолжает отвечать на
+        // вопросы клиента, явно помечая, что оператор уже подключён. Перехватит
+        // оператор — сработает ветка выше и бот замолчит (не перебиваем живого).
+        // (В Telegram то же делает TelegramRelayService; здесь — VK/MAX/WhatsApp.)
         if ($conversation->status === ConversationStatus::NeedsHuman) {
+            $this->contacts->fromInbound($conversation, $incoming->text);
+            $answer = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
+            $reply = new BotReply(BotReply::ESCALATED_NOTE."\n\n".$answer->text, escalate: false);
+            $this->deliver($channel, $conversation, $incoming->externalChatId, $reply);
             $this->conversations->touchLastMessage($conversation);
 
             return;
@@ -94,28 +100,7 @@ final readonly class IncomingMessageService
             $reply = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
         }
 
-        try {
-            // Ответ уходит через шлюз того канала, откуда пришло сообщение
-            // (Telegram/VK/…), а не через жёстко зашитый мессенджер.
-            $this->gateways->for($channel->type)->send($channel, $incoming->externalChatId, $reply->text, $reply->keyboard, $reply->images);
-            $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
-        } catch (Throwable $e) {
-            // Отправка сорвалась — НЕ теряем реплай и НЕ оставляем диалог висеть:
-            // фиксируем как «в очереди» и добиваем фоновым ретраем с бэкоффом
-            // (если канал так и не оживёт — DeliverBotReply уведёт диалог на человека).
-            report($e);
-            $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Queued);
-            DeliverBotReply::dispatch(
-                (string) $channel->tenant_id,
-                $channel->id,
-                $incoming->externalChatId,
-                $reply->text,
-                $reply->keyboard,
-                (string) $outbound->id,
-                (string) $conversation->id,
-                $reply->images,
-            );
-        }
+        $this->deliver($channel, $conversation, $incoming->externalChatId, $reply);
 
         $this->conversations->touchLastMessage($conversation);
 
@@ -183,6 +168,34 @@ final readonly class IncomingMessageService
         }
 
         $this->notifyOwner($channel, $conversation, $incoming->text, $reply);
+    }
+
+    /**
+     * Отправляет ответ в канал и фиксирует исходящее; при сбое сети НЕ теряем
+     * реплай: пишем как «в очереди» и добиваем фоновым ретраем с бэкоффом
+     * (DeliverBotReply; исчерпает попытки — уведёт диалог на человека).
+     */
+    private function deliver(Channel $channel, Conversation $conversation, string $chatId, BotReply $reply): void
+    {
+        try {
+            // Ответ уходит через шлюз того канала, откуда пришло сообщение
+            // (Telegram/VK/…), а не через жёстко зашитый мессенджер.
+            $this->gateways->for($channel->type)->send($channel, $chatId, $reply->text, $reply->keyboard, $reply->images);
+            $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
+        } catch (Throwable $e) {
+            report($e);
+            $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Queued);
+            DeliverBotReply::dispatch(
+                (string) $channel->tenant_id,
+                $channel->id,
+                $chatId,
+                $reply->text,
+                $reply->keyboard,
+                (string) $outbound->id,
+                (string) $conversation->id,
+                $reply->images,
+            );
+        }
     }
 
     /** Короткая выжимка текста клиента для тела уведомления. */

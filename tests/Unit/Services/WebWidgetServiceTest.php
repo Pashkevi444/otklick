@@ -186,10 +186,10 @@ final class WebWidgetServiceTest extends TestCase
         $this->assertTrue($reply->escalate);
     }
 
-    public function test_silent_when_conversation_already_needs_human(): void
+    public function test_escalated_conversation_still_answers_with_note(): void
     {
-        // Диалог уже эскалирован (ждёт оператора) — бот молчит, не дублирует
-        // «передал администратору» и не зовёт LLM.
+        // Диалог уже эскалирован (ждёт оператора), оператор НЕ перехватил → бот не
+        // молчит: отвечает на вопрос посетителя с пометкой, что оператор подключён.
         $channel = new Channel;
         $channel->id = 'web-1';
         $channel->setRelation('tenant', new Tenant(['name' => 'Бизнес']));
@@ -199,19 +199,23 @@ final class WebWidgetServiceTest extends TestCase
         $conversation->id = 'conv-1';
         $conversation->status = ConversationStatus::NeedsHuman;
 
-        $inbound = new Message;
-        $inbound->id = 'm-in-1';
+        $expected = BotReply::ESCALATED_NOTE."\n\nРаботаем с 9 до 21.";
+
+        $outbound = new Message;
+        $outbound->id = 'm-out-1';
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
         $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+        $conversations->shouldNotReceive('updateStatus'); // уже эскалирован — повторно не трогаем
 
         $messages = Mockery::mock(MessageRepositoryInterface::class);
-        $messages->shouldReceive('recordInbound')->once()->andReturn($inbound);
-        $messages->shouldNotReceive('recordOutbound');
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $messages->shouldReceive('recordOutbound')->once()->with($conversation, $expected, MessageStatus::Sent)->andReturn($outbound);
 
         $responder = Mockery::mock(BotApi::class);
-        $responder->shouldNotReceive('respond');
+        $responder->shouldReceive('respond')->once()->with(Mockery::any(), $conversation, 'во сколько вы открываетесь?')
+            ->andReturn(new BotReply('Работаем с 9 до 21.', escalate: false));
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
@@ -226,10 +230,10 @@ final class WebWidgetServiceTest extends TestCase
             $this->notifications(),
         );
 
-        ['reply' => $reply, 'lastId' => $lastId] = $service->reply($channel, $token, 'привет ещё раз');
+        ['reply' => $reply, 'lastId' => $lastId] = $service->reply($channel, $token, 'во сколько вы открываетесь?');
 
-        $this->assertSame('', $reply->text);
-        $this->assertSame('m-in-1', $lastId);
+        $this->assertSame($expected, $reply->text);
+        $this->assertSame('m-out-1', $lastId);
     }
 
     public function test_recognized_image_gets_bot_answer_instead_of_escalation(): void

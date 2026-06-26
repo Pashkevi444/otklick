@@ -103,12 +103,16 @@ final readonly class WebWidgetService
             return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
         }
 
-        // Диалог уже эскалирован (ждёт оператора) — бот молчит, чтобы не повторять
-        // «передал администратору» на каждое сообщение; клиента подхватит оператор.
+        // Диалог эскалирован (ждёт оператора), но оператор НЕ перехватил
+        // (isOperatorHandling — ветка выше): бот продолжает отвечать на вопросы
+        // посетителя, помечая, что оператор уже подключён. Перехватит — замолчит.
         if ($conversation->status === ConversationStatus::NeedsHuman) {
+            $answer = $this->responder->respond($channel->tenant, $conversation, $text);
+            $reply = new BotReply(BotReply::ESCALATED_NOTE."\n\n".$answer->text, escalate: false);
+            $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
             $this->conversations->touchLastMessage($conversation);
 
-            return ['reply' => new BotReply('', escalate: false), 'lastId' => (string) $inbound->id];
+            return ['reply' => $reply, 'lastId' => (string) $outbound->id];
         }
 
         // Забаненный посетитель — фиксированное уведомление без LLM.

@@ -16,6 +16,14 @@ namespace App\Shared\DTO;
  */
 final readonly class BotReply
 {
+    /**
+     * Префикс ответа, когда диалог уже эскалирован на оператора, но бот всё равно
+     * отвечает на вопросы клиента (пока оператор не подключился). Ставится перед
+     * текстом ответа единообразно во всех каналах (IncomingMessageService /
+     * WebWidgetService / TelegramRelayService).
+     */
+    public const string ESCALATED_NOTE = 'Диалог уже передан администратору, но я могу ответить на ваши вопросы.';
+
     public function __construct(
         public string $text,
         public bool $escalate,

@@ -8,6 +8,7 @@ use App\Modules\Channels\Jobs\ProcessTelegramUpdate;
 use App\Modules\Channels\Models\Channel;
 use App\Modules\Conversations\Models\Conversation;
 use App\Modules\Notifications\Models\NotificationRecipient;
+use App\Shared\DTO\BotReply;
 use App\Shared\Enums\ConversationStatus;
 use App\Shared\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,17 +61,23 @@ final class TelegramRelayTest extends TestCase
         ]];
     }
 
-    public function test_client_message_in_human_mode_is_forwarded_to_operator(): void
+    public function test_client_message_in_human_mode_is_forwarded_and_bot_still_answers(): void
     {
         Http::fake(['*sendMessage*' => Http::response(['result' => ['message_id' => 777]])]);
         [$tenant, $channel] = $this->escalated();
 
         $this->process($tenant, $channel, $this->clientMessage('у меня вопрос'));
 
-        // Сообщение клиента ушло оператору (chat 555), а боту-ИИ не отвечал клиенту.
+        // Сообщение клиента ушло оператору (chat 555)…
         Http::assertSent(fn ($r): bool => str_contains($r->url(), '/sendMessage')
             && (string) $r['chat_id'] === self::OPERATOR_CHAT
             && str_contains((string) $r['text'], 'у меня вопрос'));
+
+        // …и при этом бот НЕ молчит: дополнительно отвечает клиенту (chat 9001) с
+        // пометкой, что диалог уже передан администратору.
+        Http::assertSent(fn ($r): bool => str_contains($r->url(), '/sendMessage')
+            && (string) $r['chat_id'] === self::CLIENT_CHAT
+            && str_contains((string) $r['text'], BotReply::ESCALATED_NOTE));
     }
 
     public function test_operator_reply_relays_to_client(): void

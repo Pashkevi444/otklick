@@ -119,6 +119,40 @@ final class IncomingMessageServiceTest extends TestCase
         (new IncomingMessageService($conversations, $messages, $this->gateways($gateway), $responder, $contacts, Mockery::mock(KnowledgeApi::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }
 
+    public function test_escalated_conversation_still_answers_with_note(): void
+    {
+        // Диалог эскалирован (ждёт оператора), оператор НЕ перехватил → бот не
+        // молчит: отвечает на вопрос, добавляя пометку, что оператор подключён.
+        $channel = $this->channel();
+        $conversation = new Conversation;
+        $conversation->id = 'conv-1';
+        $conversation->status = ConversationStatus::NeedsHuman;
+        $incoming = new IncomingMessage('555', '42', 'во сколько вы открываетесь?', 'Иван', null);
+
+        $expected = BotReply::ESCALATED_NOTE."\n\nРаботаем с 9 до 21.";
+
+        $conversations = Mockery::mock(ConversationRepositoryInterface::class);
+        $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
+        $conversations->shouldReceive('touchLastMessage')->once()->with($conversation);
+        $conversations->shouldNotReceive('updateStatus'); // уже эскалирован — повторно не трогаем
+
+        $messages = Mockery::mock(MessageRepositoryInterface::class);
+        $messages->shouldReceive('recordInbound')->once()->andReturn(new Message);
+        $messages->shouldReceive('recordOutbound')->once()->with($conversation, $expected, MessageStatus::Sent)->andReturn(new Message);
+
+        $responder = Mockery::mock(BotApi::class);
+        $responder->shouldReceive('respond')->once()->with(Mockery::type(Tenant::class), $conversation, 'во сколько вы открываетесь?')->andReturn(new BotReply('Работаем с 9 до 21.', escalate: false));
+
+        $gateway = Mockery::mock(ChannelGateway::class);
+        $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
+        $gateway->shouldReceive('send')->once()->with($channel, '555', $expected, null, []);
+
+        $contacts = Mockery::mock(ContactCapture::class);
+        $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'во сколько вы открываетесь?');
+
+        (new IncomingMessageService($conversations, $messages, $this->gateways($gateway), $responder, $contacts, Mockery::mock(KnowledgeApi::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
+    }
+
     public function test_banned_client_gets_ban_notice_without_llm(): void
     {
         $channel = $this->channel();
