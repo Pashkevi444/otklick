@@ -228,6 +228,20 @@ final class EloquentConversationRepository implements ConversationRepositoryInte
             ->update(['status' => ConversationStatus::Closed]);
     }
 
+    public function closeStaleNeedsHuman(Carbon $before): int
+    {
+        // Эскалация без активности дольше суток: оператор не разобрал — закрываем
+        // как потерянный лид (status → Closed ⇒ ConversationOutcome::Lost).
+        // Активность оператора/клиента двигает last_message_at, поэтому реально
+        // обрабатываемые диалоги под порог не попадают.
+        return Conversation::query()
+            ->where('status', ConversationStatus::NeedsHuman)
+            ->whereNull('booked_at')
+            ->whereNotNull('last_message_at')
+            ->where('last_message_at', '<', $before)
+            ->update(['status' => ConversationStatus::Closed]);
+    }
+
     public function closeCompletedBookingsForCurrentTenant(Carbon $now): int
     {
         // Запись с CRM-бронью, время визита которой уже прошло, — услуга оказана:

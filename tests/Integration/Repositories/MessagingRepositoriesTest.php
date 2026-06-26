@@ -155,6 +155,34 @@ final class MessagingRepositoriesTest extends TestCase
         $this->assertNull($stale->fresh()->booked_at); // потерян, не запись
     }
 
+    public function test_close_stale_needs_human_closes_escalations_idle_over_a_day(): void
+    {
+        $channel = $this->channels->create(new NewChannelData(
+            $this->tenant->id, ChannelType::Telegram, null, 'token',
+        ));
+
+        // «Нужен человек» больше суток без активности — оператор не разобрал,
+        // лид считаем потерянным.
+        $stale = $this->conversations->firstOrCreateForChat($channel->id, 'nh-stale', null);
+        $stale->forceFill(['status' => ConversationStatus::NeedsHuman, 'last_message_at' => now()->subHours(25)])->save();
+
+        // «Нужен человек», но активность была недавно — ещё в работе у оператора.
+        $fresh = $this->conversations->firstOrCreateForChat($channel->id, 'nh-fresh', null);
+        $fresh->forceFill(['status' => ConversationStatus::NeedsHuman, 'last_message_at' => now()->subHours(2)])->save();
+
+        // Открытый старый — этот проход (про «нужен человек») его не трогает.
+        $open = $this->conversations->firstOrCreateForChat($channel->id, 'open-stale', null);
+        $open->forceFill(['last_message_at' => now()->subHours(25)])->save();
+
+        $closed = $this->conversations->closeStaleNeedsHuman(now()->subDay());
+
+        $this->assertSame(1, $closed);
+        $this->assertSame(ConversationStatus::Closed, $stale->fresh()->status);
+        $this->assertSame(ConversationOutcome::Lost, $stale->fresh()->outcome()); // потерянный лид
+        $this->assertSame(ConversationStatus::NeedsHuman, $fresh->fresh()->status);
+        $this->assertSame(ConversationStatus::Open, $open->fresh()->status);
+    }
+
     public function test_booking_stays_in_work_until_visit_then_closes_as_successful(): void
     {
         $channel = $this->channels->create(new NewChannelData(

@@ -76,6 +76,14 @@ interface ConversationRepositoryInterface
     public function closeStaleOpen(Carbon $before): int;
 
     /**
+     * Закрывает диалоги текущего тенанта, зависшие в статусе «нужен человек» без
+     * активности с момента $before (оператор не разобрал) и без записи — лид
+     * считаем потерянным (status → Closed ⇒ ConversationOutcome::Lost). Возвращает
+     * число закрытых.
+     */
+    public function closeStaleNeedsHuman(Carbon $before): int;
+
+    /**
      * Закрывает диалоги с CRM-записью, время визита которой уже прошло (услуга
      * оказана) — лид становится «Успешным» (см. Conversation::outcome). Возвращает
      * число закрытых. Вызывается планировщиком только у тенантов с CRM.
