@@ -108,7 +108,8 @@ final readonly class WebWidgetService
         // посетителя, помечая, что оператор уже подключён. Перехватит — замолчит.
         if ($conversation->status === ConversationStatus::NeedsHuman) {
             $answer = $this->responder->respond($channel->tenant, $conversation, $text);
-            $reply = new BotReply(BotReply::ESCALATED_NOTE."\n\n".$answer->text, escalate: false);
+            // Несём картинки/клавиатуру ответа (напр. «примеры работ») — иначе фото терялись.
+            $reply = new BotReply(BotReply::ESCALATED_NOTE."\n\n".$answer->text, escalate: false, keyboard: $answer->keyboard, images: $answer->images);
             $outbound = $this->messages->recordOutbound($conversation, $reply->text, MessageStatus::Sent);
             $this->conversations->touchLastMessage($conversation);
 

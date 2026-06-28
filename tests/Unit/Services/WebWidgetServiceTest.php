@@ -199,7 +199,7 @@ final class WebWidgetServiceTest extends TestCase
         $conversation->id = 'conv-1';
         $conversation->status = ConversationStatus::NeedsHuman;
 
-        $expected = BotReply::ESCALATED_NOTE."\n\nРаботаем с 9 до 21.";
+        $expected = BotReply::ESCALATED_NOTE."\n\nВот примеры наших работ!";
 
         $outbound = new Message;
         $outbound->id = 'm-out-1';
@@ -214,8 +214,8 @@ final class WebWidgetServiceTest extends TestCase
         $messages->shouldReceive('recordOutbound')->once()->with($conversation, $expected, MessageStatus::Sent)->andReturn($outbound);
 
         $responder = Mockery::mock(BotApi::class);
-        $responder->shouldReceive('respond')->once()->with(Mockery::any(), $conversation, 'во сколько вы открываетесь?')
-            ->andReturn(new BotReply('Работаем с 9 до 21.', escalate: false));
+        $responder->shouldReceive('respond')->once()->with(Mockery::any(), $conversation, 'покажи примеры')
+            ->andReturn(new BotReply('Вот примеры наших работ!', escalate: false, images: ['https://x/a.jpg']));
 
         $contacts = Mockery::mock(ContactCapture::class);
         $contacts->shouldReceive('fromInbound')->once();
@@ -230,9 +230,10 @@ final class WebWidgetServiceTest extends TestCase
             $this->notifications(),
         );
 
-        ['reply' => $reply, 'lastId' => $lastId] = $service->reply($channel, $token, 'во сколько вы открываетесь?');
+        ['reply' => $reply, 'lastId' => $lastId] = $service->reply($channel, $token, 'покажи примеры');
 
         $this->assertSame($expected, $reply->text);
+        $this->assertSame(['https://x/a.jpg'], $reply->images); // картинки «примеры работ» не теряются в эскалации
         $this->assertSame('m-out-1', $lastId);
     }
 

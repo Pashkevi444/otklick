@@ -127,9 +127,9 @@ final class IncomingMessageServiceTest extends TestCase
         $conversation = new Conversation;
         $conversation->id = 'conv-1';
         $conversation->status = ConversationStatus::NeedsHuman;
-        $incoming = new IncomingMessage('555', '42', 'во сколько вы открываетесь?', 'Иван', null);
+        $incoming = new IncomingMessage('555', '42', 'покажи примеры работ', 'Иван', null);
 
-        $expected = BotReply::ESCALATED_NOTE."\n\nРаботаем с 9 до 21.";
+        $expected = BotReply::ESCALATED_NOTE."\n\nВот примеры наших работ!";
 
         $conversations = Mockery::mock(ConversationRepositoryInterface::class);
         $conversations->shouldReceive('firstOrCreateForChat')->once()->andReturn($conversation);
@@ -141,14 +141,16 @@ final class IncomingMessageServiceTest extends TestCase
         $messages->shouldReceive('recordOutbound')->once()->with($conversation, $expected, MessageStatus::Sent)->andReturn(new Message);
 
         $responder = Mockery::mock(BotApi::class);
-        $responder->shouldReceive('respond')->once()->with(Mockery::type(Tenant::class), $conversation, 'во сколько вы открываетесь?')->andReturn(new BotReply('Работаем с 9 до 21.', escalate: false));
+        $responder->shouldReceive('respond')->once()->with(Mockery::type(Tenant::class), $conversation, 'покажи примеры работ')
+            ->andReturn(new BotReply('Вот примеры наших работ!', escalate: false, images: ['https://x/a.jpg']));
 
         $gateway = Mockery::mock(ChannelGateway::class);
         $gateway->shouldReceive('provider')->andReturn(ChannelType::Telegram);
-        $gateway->shouldReceive('send')->once()->with($channel, '555', $expected, null, []);
+        // Картинки ответа («примеры работ») НЕ теряются в эскалации — уходят в канал.
+        $gateway->shouldReceive('send')->once()->with($channel, '555', $expected, null, ['https://x/a.jpg']);
 
         $contacts = Mockery::mock(ContactCapture::class);
-        $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'во сколько вы открываетесь?');
+        $contacts->shouldReceive('fromInbound')->once()->with($conversation, 'покажи примеры работ');
 
         (new IncomingMessageService($conversations, $messages, $this->gateways($gateway), $responder, $contacts, Mockery::mock(KnowledgeApi::class), $this->spam(), $this->notifications()))->handle($channel, $incoming);
     }

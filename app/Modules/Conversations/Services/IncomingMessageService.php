@@ -76,7 +76,8 @@ final readonly class IncomingMessageService
         if ($conversation->status === ConversationStatus::NeedsHuman) {
             $this->contacts->fromInbound($conversation, $incoming->text);
             $answer = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
-            $reply = new BotReply(BotReply::ESCALATED_NOTE."\n\n".$answer->text, escalate: false);
+            // Несём картинки/клавиатуру ответа (напр. «примеры работ») — иначе фото терялись.
+            $reply = new BotReply(BotReply::ESCALATED_NOTE."\n\n".$answer->text, escalate: false, keyboard: $answer->keyboard, images: $answer->images);
             $this->deliver($channel, $conversation, $incoming->externalChatId, $reply);
             $this->conversations->touchLastMessage($conversation);
 

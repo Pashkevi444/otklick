@@ -131,7 +131,8 @@ final readonly class TelegramRelayService
         // может ответить через «Ответить»). Так клиент не ждёт молча оператора.
         $answer = $this->responder->respond($channel->tenant, $conversation, $incoming->text);
         $botText = BotReply::ESCALATED_NOTE."\n\n".$answer->text;
-        $this->telegram->send($channel, $conversation->external_chat_id, $botText);
+        // Несём картинки ответа (напр. «примеры работ») — шлём настоящими фото.
+        $this->telegram->send($channel, $conversation->external_chat_id, $botText, null, $answer->images);
         $this->messages->recordOutbound($conversation, $botText, MessageStatus::Sent);
 
         return true;
