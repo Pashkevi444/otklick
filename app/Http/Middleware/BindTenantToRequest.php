@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Shared\Tenancy\TenantContext;
 use App\Shared\Tenancy\TenantInitializer;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -26,6 +28,18 @@ final class BindTenantToRequest
 
         if ($user !== null && $user->tenant_id !== null) {
             $this->tenancy->initialize($user->tenant_id);
+        }
+
+        // ВРЕМЕННАЯ ДИАГНОСТИКА (баг impersonation: пустой кабинет) — снять после съёма.
+        if ($request->is('cabinet*')) {
+            Log::info('tenant.diag', [
+                'path' => $request->path(),
+                'user' => $user?->email,
+                'user_id' => $user?->id,
+                'user_tenant_id' => $user?->tenant_id,
+                'impersonating' => $request->session()->has('impersonator_id'),
+                'context_tenant' => app(TenantContext::class)->id(),
+            ]);
         }
 
         return $next($request);
