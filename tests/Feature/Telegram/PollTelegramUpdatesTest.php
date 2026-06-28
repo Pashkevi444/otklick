@@ -45,6 +45,31 @@ final class PollTelegramUpdatesTest extends TestCase
         $this->assertSame(101, (int) Cache::get("telegram:poll:offset:{$channel->id}"));
     }
 
+    public function test_poll_fetches_all_active_channels_in_one_round(): void
+    {
+        // Конкурентный опрос: оба активных канала тянутся за один круг (раньше — по
+        // очереди), джоба ставится на каждый, offset продвигается у каждого.
+        Bus::fake([ProcessTelegramUpdate::class]);
+
+        $tenant = Tenant::factory()->create();
+        $ch1 = Channel::factory()->create(['tenant_id' => $tenant->id, 'type' => ChannelType::Telegram, 'is_active' => true]);
+        $ch2 = Channel::factory()->create(['tenant_id' => $tenant->id, 'type' => ChannelType::Telegram, 'is_active' => true]);
+
+        Http::fake([
+            '*/deleteWebhook*' => Http::response(['ok' => true, 'result' => true]),
+            '*/getUpdates*' => Http::response(['ok' => true, 'result' => [
+                ['update_id' => 100, 'message' => ['message_id' => 1, 'chat' => ['id' => 55], 'text' => 'привет']],
+            ]]),
+        ]);
+
+        $this->artisan('telegram:poll', ['--once' => true])->assertExitCode(0);
+
+        Bus::assertDispatched(ProcessTelegramUpdate::class, fn (ProcessTelegramUpdate $job): bool => $job->channelId === $ch1->id);
+        Bus::assertDispatched(ProcessTelegramUpdate::class, fn (ProcessTelegramUpdate $job): bool => $job->channelId === $ch2->id);
+        $this->assertSame(101, (int) Cache::get("telegram:poll:offset:{$ch1->id}"));
+        $this->assertSame(101, (int) Cache::get("telegram:poll:offset:{$ch2->id}"));
+    }
+
     public function test_poll_ignores_inactive_channels(): void
     {
         Bus::fake([ProcessTelegramUpdate::class]);

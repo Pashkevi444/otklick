@@ -14,6 +14,9 @@ use App\Shared\Enums\ChannelType;
 use App\Shared\Support\ImageBytes;
 use App\Shared\Support\ImageMime;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -164,6 +167,49 @@ final readonly class TelegramGateway implements ChannelGateway, ReceivesImage, R
         $result = $response->json('result', []);
 
         return $result;
+    }
+
+    /**
+     * КОНКУРЕНТНЫЙ long-poll: опрашивает getUpdates у ВСЕХ каналов ОДНОВРЕМЕННО
+     * (Http::pool), а не по очереди. Иначе один простаивающий бот держит свой long-poll
+     * и задерживает доставку сообщений остальным — задержка росла линейно с числом
+     * каналов. Канал со сбоем (исключение/не-2xx) просто отсутствует в результате —
+     * повторит на следующем круге, не роняя остальных.
+     *
+     * @param  Collection<int, Channel>  $channels
+     * @param  array<string, int>  $offsets  channelId => offset
+     * @return array<string, list<array<string, mixed>>> channelId => «сырые» апдейты
+     */
+    public function getUpdatesPool(Collection $channels, array $offsets, int $longPollSeconds = 3): array
+    {
+        $responses = Http::pool(function (Pool $pool) use ($channels, $offsets, $longPollSeconds): array {
+            $requests = [];
+            foreach ($channels as $channel) {
+                $requests[] = $pool->as((string) $channel->id)
+                    ->asJson()
+                    ->withOptions($this->netOptions())
+                    ->connectTimeout(10)
+                    ->timeout($longPollSeconds + 10)
+                    ->get("{$this->apiUrl}/bot{$channel->botToken()}/getUpdates", [
+                        'offset' => $offsets[(string) $channel->id] ?? 0,
+                        'timeout' => $longPollSeconds,
+                        'allowed_updates' => json_encode(['message']),
+                    ]);
+            }
+
+            return $requests;
+        });
+
+        $out = [];
+        foreach ($responses as $channelId => $response) {
+            if ($response instanceof Response && $response->successful()) {
+                /** @var list<array<string, mixed>> $result */
+                $result = $response->json('result', []);
+                $out[(string) $channelId] = $result;
+            }
+        }
+
+        return $out;
     }
 
     /**

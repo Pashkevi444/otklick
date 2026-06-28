@@ -10,7 +10,6 @@ use App\Modules\Channels\Telegram\TelegramGateway;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Support\SecretScrubber;
 use Illuminate\Console\Command;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -20,16 +19,25 @@ use Throwable;
  * Long polling для Telegram-ботов: сервер сам забирает апдейты у Telegram.
  * Нужно в РФ, где вебхуки не доставляются (входящий путь Telegram→IPv4 блокирован).
  *
- * Для каждого активного Telegram-канала снимает вебхук (иначе getUpdates даёт
- * 409), тянет апдейты и кладёт их в ту же очередь, что и вебхук
- * (ProcessTelegramUpdate → Horizon). Offset (last update_id) хранится в кэше;
- * при его потере дубли отсекаются идемпотентностью recordInbound.
+ * Все активные каналы опрашиваются КОНКУРЕНТНО (Http::pool в `TelegramGateway::getUpdatesPool`),
+ * а НЕ по очереди: иначе один простаивающий бот держал бы свой long-poll и задерживал
+ * доставку сообщений остальным — задержка росла линейно с числом каналов (N×long-poll).
+ * Апдейты кладутся в ту же очередь, что и вебхук (ProcessTelegramUpdate → Horizon).
+ * Offset (last update_id) хранится в кэше; при его потере дубли отсекаются
+ * идемпотентностью recordInbound.
  */
 final class PollTelegramUpdates extends Command
 {
     protected $signature = 'telegram:poll {--once : Один проход и выход (для тестов/отладки)}';
 
     protected $description = 'Забирает апдейты Telegram-ботов через long polling (вебхуки в РФ недоступны).';
+
+    /**
+     * Длительность long-poll, сек. Короткий — потому что круг ждёт ВСЕ каналы (барьер
+     * пула), значит задержка доставки ≈ этому порогу. 3с — баланс «снапко» vs частота
+     * запросов. При сотнях каналов на воркер — шардировать поллеры (см. docs).
+     */
+    private const int LONG_POLL_SECONDS = 3;
 
     /** @var array<string, bool> */
     private array $webhookCleared = [];
@@ -39,51 +47,63 @@ final class PollTelegramUpdates extends Command
         do {
             $channels = $this->activeChannels();
 
-            foreach ($channels as $channel) {
-                $this->pollChannel($telegram, $channel);
+            if ($channels->isEmpty()) {
+                // Нет активных каналов — пулу не на чём блокироваться, иначе цикл крутит CPU.
+                if (! $this->option('once')) {
+                    sleep(5);
+                }
+
+                continue;
             }
 
-            // Нет активных каналов — пустой foreach не блокируется на long poll,
-            // поэтому ждём сами, иначе цикл крутит CPU на 100%.
-            if ($channels->isEmpty() && ! $this->option('once')) {
-                sleep(5);
-            }
+            $this->pollRound($telegram, $channels);
         } while (! $this->option('once'));
 
         return self::SUCCESS;
     }
 
-    private function pollChannel(TelegramGateway $telegram, Channel $channel): void
+    /**
+     * Один круг: снимаем вебхуки (раз на канал), ОДНИМ пулом тянем апдейты у всех
+     * каналов разом, раскидываем по очереди и двигаем offset'ы.
+     *
+     * @param  Collection<int, Channel>  $channels
+     */
+    private function pollRound(TelegramGateway $telegram, Collection $channels): void
     {
-        try {
-            // Вебхук и getUpdates взаимоисключающи — снимаем вебхук один раз.
+        foreach ($channels as $channel) {
             if (! isset($this->webhookCleared[$channel->id])) {
-                $telegram->deleteWebhook($channel);
-                $this->webhookCleared[$channel->id] = true;
+                try {
+                    // Вебхук и getUpdates взаимоисключающи — снимаем вебхук один раз.
+                    $telegram->deleteWebhook($channel);
+                    $this->webhookCleared[$channel->id] = true;
+                } catch (Throwable $e) {
+                    // Сбой снятия вебхука у одного канала не валит остальных — повторим.
+                    Log::warning('telegram.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
+                }
+            }
+        }
+
+        $offsets = [];
+        foreach ($channels as $channel) {
+            $offsets[(string) $channel->id] = (int) Cache::get($this->offsetKey($channel->id), 0);
+        }
+
+        $longPoll = $this->option('once') ? 0 : self::LONG_POLL_SECONDS;
+        $updatesByChannel = $telegram->getUpdatesPool($channels, $offsets, $longPoll);
+
+        foreach ($channels as $channel) {
+            $updates = $updatesByChannel[(string) $channel->id] ?? [];
+            if ($updates === []) {
+                continue;
             }
 
-            $offset = (int) Cache::get($this->offsetKey($channel->id), 0);
-            $longPoll = $this->option('once') ? 0 : 25;
-            $updates = $telegram->getUpdates((string) $channel->botToken(), $offset, $longPoll);
-
+            $offset = $offsets[(string) $channel->id];
             foreach ($updates as $update) {
                 ProcessTelegramUpdate::dispatch((string) $channel->tenant_id, (string) $channel->id, $update);
                 $offset = max($offset, ((int) ($update['update_id'] ?? 0)) + 1);
             }
 
-            if ($updates !== []) {
-                Cache::forever($this->offsetKey($channel->id), $offset);
-            }
-        } catch (ConnectionException $e) {
-            // Транзиентный сетевой сбой до api.telegram.org (таймаут/блокировка
-            // маршрута из РФ) — обычное дело, поллер ретраит на следующем цикле.
-            // Не шумим в трекер; секрет (токен в URL) вырезаем из лога.
-            Log::warning('telegram.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
-            usleep(500_000);
-        } catch (Throwable $e) {
-            Log::warning('telegram.poll_failed', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
-            report($e);
-            usleep(500_000); // не молотим Telegram при ошибке
+            Cache::forever($this->offsetKey($channel->id), $offset);
         }
     }
 
