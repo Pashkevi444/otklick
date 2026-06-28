@@ -9,11 +9,15 @@ use App\Modules\Channels\Contracts\ReceivesImage;
 use App\Modules\Channels\Contracts\ReceivesVoice;
 use App\Modules\Channels\Data\IncomingImage;
 use App\Modules\Channels\Models\Channel;
+use App\Modules\Channels\Support\PollFailureLog;
 use App\Shared\DTO\ReplyKeyboard;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Support\ImageBytes;
 use App\Shared\Support\ImageMime;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -43,13 +47,18 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesImage, R
      */
     private function http(): PendingRequest
     {
-        $request = Http::connectTimeout(5);
+        return Http::connectTimeout(5)->withOptions($this->proxyOptions());
+    }
 
-        if ($this->proxy !== null && $this->proxy !== '') {
-            $request->withOptions(['proxy' => $this->proxy]);
-        }
-
-        return $request;
+    /**
+     * Сетевые опции Green API: через прокси (VPN, обход блокировки), если задан.
+     * Иначе пусто — `withOptions([])` это no-op.
+     *
+     * @return array<string, mixed>
+     */
+    private function proxyOptions(): array
+    {
+        return ($this->proxy !== null && $this->proxy !== '') ? ['proxy' => $this->proxy] : [];
     }
 
     public function send(Channel $channel, string $chatId, string $text, ?ReplyKeyboard $keyboard = null, array $images = []): void
@@ -126,6 +135,59 @@ final readonly class WhatsAppGateway implements ChannelGateway, ReceivesImage, R
             ->throw()
             ->json();
 
+        return $this->parseNotification($data);
+    }
+
+    /**
+     * КОНКУРЕНТНЫЙ приём: ПЕРВЫЙ receiveNotification у ВСЕХ каналов ОДНОВРЕМЕННО
+     * (Http::pool), чтобы простаивающий канал не держал общий круг блокирующим
+     * long-poll'ом (задержка росла линейно с числом каналов). Дальнейший дренаж
+     * очереди (timeout=0) поллер делает per-channel уже после — он быстрый. Канал со
+     * сбоем (исключение/не-2xx) отсутствует в результате (сбой залогирован) — повторит
+     * на следующем круге, не роняя остальных. Ключ результата = id канала; значение —
+     * уведомление или null (очередь пуста за время ожидания).
+     *
+     * @param  Collection<int, Channel>  $channels
+     * @return array<string, array{receiptId: int, body: array<string, mixed>}|null>
+     */
+    public function receiveNotificationPool(Collection $channels, int $timeout): array
+    {
+        $responses = Http::pool(function (Pool $pool) use ($channels, $timeout): array {
+            $requests = [];
+            foreach ($channels as $channel) {
+                $requests[] = $pool->as((string) $channel->id)
+                    ->asJson()
+                    ->withOptions($this->proxyOptions())
+                    ->connectTimeout(10)
+                    ->timeout($timeout + 10)
+                    ->get($this->url($channel, 'receiveNotification'), ['receiveTimeout' => $timeout]);
+            }
+
+            return $requests;
+        });
+
+        $out = [];
+        foreach ($responses as $channelId => $response) {
+            if ($response instanceof Response && $response->successful()) {
+                $out[(string) $channelId] = $this->parseNotification($response->json());
+
+                continue;
+            }
+
+            PollFailureLog::record('whatsapp', (string) $channelId, $response);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Разбирает ответ receiveNotification Green API в конверт уведомления.
+     * null — очередь пуста (Green API отдаёт тело null) либо ответ без receiptId/body.
+     *
+     * @return array{receiptId: int, body: array<string, mixed>}|null
+     */
+    private function parseNotification(mixed $data): ?array
+    {
         if (! is_array($data) || ! isset($data['receiptId']) || ! is_array($data['body'] ?? null)) {
             return null;
         }

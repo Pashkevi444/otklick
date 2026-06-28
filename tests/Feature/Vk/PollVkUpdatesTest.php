@@ -43,6 +43,34 @@ final class PollVkUpdatesTest extends TestCase
         $this->assertSame('51', Cache::get("vk:poll:state:{$channel->id}")['ts'] ?? null);
     }
 
+    public function test_poll_fetches_all_active_channels_in_one_round(): void
+    {
+        // Конкурентный a_check: оба активных сообщества тянутся за один круг (раньше —
+        // по очереди), джоба ставится на каждое, ts продвигается у каждого.
+        Bus::fake([ProcessVkUpdate::class]);
+
+        $tenant = Tenant::factory()->create();
+        $ch1 = Channel::factory()->vk()->create(['tenant_id' => $tenant->id, 'is_active' => true]);
+        $ch2 = Channel::factory()->vk()->create(['tenant_id' => $tenant->id, 'is_active' => true]);
+
+        Http::fake([
+            '*/groups.getLongPollServer*' => Http::response([
+                'response' => ['server' => 'https://lp.vk.com/wh1', 'key' => 'k1', 'ts' => '50'],
+            ]),
+            'lp.vk.com/*' => Http::response([
+                'ts' => '51',
+                'updates' => [['type' => 'message_new', 'object' => ['message' => ['peer_id' => 555, 'text' => 'привет']]]],
+            ]),
+        ]);
+
+        $this->artisan('vk:poll', ['--once' => true])->assertExitCode(0);
+
+        Bus::assertDispatched(ProcessVkUpdate::class, fn (ProcessVkUpdate $job): bool => $job->channelId === $ch1->id);
+        Bus::assertDispatched(ProcessVkUpdate::class, fn (ProcessVkUpdate $job): bool => $job->channelId === $ch2->id);
+        $this->assertSame('51', Cache::get("vk:poll:state:{$ch1->id}")['ts'] ?? null);
+        $this->assertSame('51', Cache::get("vk:poll:state:{$ch2->id}")['ts'] ?? null);
+    }
+
     public function test_failed_two_resets_server_state(): void
     {
         Bus::fake([ProcessVkUpdate::class]);

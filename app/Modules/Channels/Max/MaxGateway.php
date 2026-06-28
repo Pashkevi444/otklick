@@ -9,11 +9,15 @@ use App\Modules\Channels\Contracts\ReceivesImage;
 use App\Modules\Channels\Contracts\ReceivesVoice;
 use App\Modules\Channels\Data\IncomingImage;
 use App\Modules\Channels\Models\Channel;
+use App\Modules\Channels\Support\PollFailureLog;
 use App\Shared\DTO\ReplyKeyboard;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Support\ImageBytes;
 use App\Shared\Support\ImageMime;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -219,6 +223,56 @@ final readonly class MaxGateway implements ChannelGateway, ReceivesImage, Receiv
             ->json() ?? [];
 
         return $data;
+    }
+
+    /**
+     * КОНКУРЕНТНЫЙ long-poll: GET /updates у ВСЕХ каналов ОДНОВРЕМЕННО (Http::pool),
+     * а не по очереди — иначе один простаивающий бот держит свой long-poll и
+     * задерживает доставку остальным (задержка росла линейно с числом каналов).
+     * Токен у MAX — в заголовке Authorization, повторяем его per-channel. Канал со
+     * сбоем (исключение/не-2xx) отсутствует в результате (сбой залогирован) — повторит
+     * на следующем круге, не роняя остальных. Ключ результата = id канала.
+     *
+     * @param  Collection<int, Channel>  $channels
+     * @param  array<string, int|null>  $markers  channelId => marker
+     * @return array<string, array{updates?: list<array<string, mixed>>, marker?: int}>
+     */
+    public function getUpdatesPool(Collection $channels, array $markers, int $longPollSeconds = 3): array
+    {
+        $responses = Http::pool(function (Pool $pool) use ($channels, $markers, $longPollSeconds): array {
+            $requests = [];
+            foreach ($channels as $channel) {
+                $params = ['timeout' => $longPollSeconds, 'limit' => 100];
+                $marker = $markers[(string) $channel->id] ?? null;
+                if ($marker !== null) {
+                    $params['marker'] = $marker;
+                }
+
+                $requests[] = $pool->as((string) $channel->id)
+                    ->asJson()
+                    ->withHeaders(['Authorization' => (string) $channel->credential('access_token')])
+                    ->connectTimeout(10)
+                    ->timeout($longPollSeconds + 10)
+                    ->get("{$this->apiUrl}/updates", $params);
+            }
+
+            return $requests;
+        });
+
+        $out = [];
+        foreach ($responses as $channelId => $response) {
+            if ($response instanceof Response && $response->successful()) {
+                /** @var array{updates?: list<array<string, mixed>>, marker?: int} $data */
+                $data = $response->json() ?? [];
+                $out[(string) $channelId] = $data;
+
+                continue;
+            }
+
+            PollFailureLog::record('max', (string) $channelId, $response);
+        }
+
+        return $out;
     }
 
     /**

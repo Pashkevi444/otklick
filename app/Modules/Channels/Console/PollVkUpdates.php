@@ -6,20 +6,24 @@ namespace App\Modules\Channels\Console;
 
 use App\Modules\Channels\Jobs\ProcessVkUpdate;
 use App\Modules\Channels\Models\Channel;
+use App\Modules\Channels\Support\PollFailureLog;
 use App\Modules\Channels\Vk\VkGateway;
 use App\Shared\Enums\ChannelType;
-use App\Shared\Support\SecretScrubber;
 use Illuminate\Console\Command;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
  * Bots Long Poll для сообществ ВКонтакте: сервер сам забирает апдейты у VK.
  * Аналог `telegram:poll`, но протокол VK двухшаговый — сперва берём адрес
  * Long Poll сервера (groups.getLongPollServer), затем опрашиваем его (a_check).
+ *
+ * Все активные каналы опрашиваются КОНКУРЕНТНО (Http::pool в `VkGateway::getUpdatesPool`),
+ * а НЕ по очереди: иначе одно простаивающее сообщество держало бы свой long-poll и
+ * задерживало доставку остальным — задержка росла линейно с числом каналов. Резолв
+ * адреса сервера (шаг 1) остаётся per-channel перед пулом: он нужен редко (только
+ * когда нет кэша). Конкурентно пуляем только a_check (шаг 2).
  *
  * Состояние опроса {server, key, ts} хранится в кэше. VK отдаёт «failed»-коды:
  *  - failed=1 — устарел ts (VK присылает новый), просто продолжаем с ним;
@@ -32,43 +36,75 @@ final class PollVkUpdates extends Command
 
     protected $description = 'Забирает апдейты сообществ ВКонтакте через Bots Long Poll (vk:poll).';
 
+    /**
+     * Длительность long-poll, сек. Короткий — круг ждёт ВСЕ каналы (барьер пула),
+     * значит задержка доставки ≈ этому порогу (см. PollTelegramUpdates).
+     */
+    private const int LONG_POLL_SECONDS = 3;
+
     public function handle(VkGateway $vk): int
     {
         do {
             $channels = $this->activeChannels();
 
-            foreach ($channels as $channel) {
-                $this->pollChannel($vk, $channel);
+            if ($channels->isEmpty()) {
+                // Нет активных каналов — пулу не на чём блокироваться, иначе цикл крутит CPU.
+                if (! $this->option('once')) {
+                    sleep(5);
+                }
+
+                continue;
             }
 
-            // Нет активных VK-каналов — пустой foreach не блокируется на long poll,
-            // поэтому ждём сами, иначе цикл крутит CPU на 100% (на свежем проде
-            // контейнер vk стартует до того, как кто-то подключит сообщество).
-            if ($channels->isEmpty() && ! $this->option('once')) {
-                sleep(5);
-            }
+            $this->pollRound($vk, $channels);
         } while (! $this->option('once'));
 
         return self::SUCCESS;
     }
 
-    private function pollChannel(VkGateway $vk, Channel $channel): void
+    /**
+     * Один круг: резолвим state {server,key,ts} per-channel (адрес сервера берётся
+     * редко — только при отсутствии кэша), затем ОДНИМ пулом бьём a_check у всех
+     * каналов разом и раскидываем результат (failed-коды / апдейты + новый ts).
+     *
+     * @param  Collection<int, Channel>  $channels
+     */
+    private function pollRound(VkGateway $vk, Collection $channels): void
     {
-        try {
-            $state = $this->longPollState($vk, $channel);
-            if ($state === null) {
-                usleep(500_000); // адрес сервера не получен — не долбим VK тугим циклом
+        $states = [];
+        foreach ($channels as $channel) {
+            try {
+                $state = $this->longPollState($vk, $channel);
+            } catch (Throwable $e) {
+                // Резолв адреса сервера у одного канала упал — не валит остальных.
+                PollFailureLog::record('vk', (string) $channel->id, $e);
 
-                return;
+                continue;
             }
 
-            $wait = $this->option('once') ? 0 : 25;
-            $result = $vk->getUpdates($state['server'], $state['key'], $state['ts'], $wait);
+            if ($state !== null) {
+                $states[(string) $channel->id] = $state;
+            }
+        }
+
+        if ($states === []) {
+            return;
+        }
+
+        $wait = $this->option('once') ? 0 : self::LONG_POLL_SECONDS;
+        $resultByChannel = $vk->getUpdatesPool($channels, $states, $wait);
+
+        foreach ($channels as $channel) {
+            $state = $states[(string) $channel->id] ?? null;
+            $result = $resultByChannel[(string) $channel->id] ?? null;
+            if ($state === null || $result === null) {
+                continue;
+            }
 
             if (isset($result['failed'])) {
                 $this->handleFailed($channel, $state, $result);
 
-                return;
+                continue;
             }
 
             foreach ($result['updates'] ?? [] as $update) {
@@ -77,15 +113,6 @@ final class PollVkUpdates extends Command
 
             $state['ts'] = (string) ($result['ts'] ?? $state['ts']);
             Cache::forever($this->stateKey($channel->id), $state);
-        } catch (ConnectionException $e) {
-            // Транзиентный сетевой сбой до VK — поллер ретраит; не шумим в трекер,
-            // секрет (access_token в URL) вырезаем из лога.
-            Log::warning('vk.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
-            usleep(500_000);
-        } catch (Throwable $e) {
-            Log::warning('vk.poll_failed', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
-            report($e);
-            usleep(500_000); // не молотим VK при ошибке
         }
     }
 

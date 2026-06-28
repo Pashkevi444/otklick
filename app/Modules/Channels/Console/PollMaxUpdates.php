@@ -8,21 +8,20 @@ use App\Modules\Channels\Jobs\ProcessMaxUpdate;
 use App\Modules\Channels\Max\MaxGateway;
 use App\Modules\Channels\Models\Channel;
 use App\Shared\Enums\ChannelType;
-use App\Shared\Support\SecretScrubber;
 use Illuminate\Console\Command;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Throwable;
 
 /**
  * Long polling для ботов MAX: сервер сам забирает апдейты (GET /updates) и кладёт
  * их в очередь Horizon (ProcessMaxUpdate). Аналог `telegram:poll`/`vk:poll`.
  *
- * Позиция чтения — marker: каждый ответ MAX отдаёт новый marker, его храним в
- * кэше и передаём в следующий запрос, чтобы не получать события повторно. При
- * потере marker дубли отсекаются идемпотентностью recordInbound.
+ * Все активные каналы опрашиваются КОНКУРЕНТНО (Http::pool в `MaxGateway::getUpdatesPool`),
+ * а НЕ по очереди: иначе один простаивающий бот держал бы свой long-poll и задерживал
+ * доставку остальным — задержка росла линейно с числом каналов (N×long-poll).
+ * Позиция чтения — marker: каждый ответ MAX отдаёт новый marker, его храним в кэше и
+ * передаём в следующий запрос. При потере marker дубли отсекаются идемпотентностью
+ * recordInbound.
  */
 final class PollMaxUpdates extends Command
 {
@@ -30,52 +29,63 @@ final class PollMaxUpdates extends Command
 
     protected $description = 'Забирает апдейты ботов MAX через long polling (max:poll).';
 
+    /**
+     * Длительность long-poll, сек. Короткий — круг ждёт ВСЕ каналы (барьер пула),
+     * значит задержка доставки ≈ этому порогу (см. PollTelegramUpdates).
+     */
+    private const int LONG_POLL_SECONDS = 3;
+
     public function handle(MaxGateway $max): int
     {
         do {
             $channels = $this->activeChannels();
 
-            foreach ($channels as $channel) {
-                $this->pollChannel($max, $channel);
+            if ($channels->isEmpty()) {
+                // Нет активных каналов — пулу не на чём блокироваться, иначе цикл крутит CPU.
+                if (! $this->option('once')) {
+                    sleep(5);
+                }
+
+                continue;
             }
 
-            // Нет активных MAX-каналов — пустой foreach не блокируется на long poll,
-            // поэтому ждём сами, иначе цикл крутит CPU на 100%.
-            if ($channels->isEmpty() && ! $this->option('once')) {
-                sleep(5);
-            }
+            $this->pollRound($max, $channels);
         } while (! $this->option('once'));
 
         return self::SUCCESS;
     }
 
-    private function pollChannel(MaxGateway $max, Channel $channel): void
+    /**
+     * Один круг: ОДНИМ пулом тянем апдейты у всех каналов разом, раскидываем по
+     * очереди и двигаем marker'ы. marker сохраняем только когда MAX его прислал (при
+     * отсутствии новых событий он может не приходить — тогда продолжаем с прежним).
+     *
+     * @param  Collection<int, Channel>  $channels
+     */
+    private function pollRound(MaxGateway $max, Collection $channels): void
     {
-        try {
+        $markers = [];
+        foreach ($channels as $channel) {
             $stored = Cache::get($this->markerKey($channel->id));
-            $marker = is_numeric($stored) ? (int) $stored : null;
-            $longPoll = $this->option('once') ? 0 : 30;
+            $markers[(string) $channel->id] = is_numeric($stored) ? (int) $stored : null;
+        }
 
-            $result = $max->getUpdates($channel, $marker, $longPoll);
+        $longPoll = $this->option('once') ? 0 : self::LONG_POLL_SECONDS;
+        $resultByChannel = $max->getUpdatesPool($channels, $markers, $longPoll);
+
+        foreach ($channels as $channel) {
+            $result = $resultByChannel[(string) $channel->id] ?? null;
+            if ($result === null) {
+                continue;
+            }
 
             foreach ($result['updates'] ?? [] as $update) {
                 ProcessMaxUpdate::dispatch((string) $channel->tenant_id, (string) $channel->id, $update);
             }
 
-            // marker обновляем только когда MAX его прислал (при отсутствии новых
-            // событий он может не приходить — тогда продолжаем с прежним).
             if (isset($result['marker'])) {
                 Cache::forever($this->markerKey($channel->id), (int) $result['marker']);
             }
-        } catch (ConnectionException $e) {
-            // Транзиентный сетевой сбой до MAX — поллер ретраит; не шумим в трекер,
-            // секрет вырезаем из лога.
-            Log::warning('max.poll_connection', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
-            usleep(500_000);
-        } catch (Throwable $e) {
-            Log::warning('max.poll_failed', ['channel_id' => $channel->id, 'error' => SecretScrubber::scrub($e->getMessage())]);
-            report($e);
-            usleep(500_000); // не молотим MAX при ошибке
         }
     }
 

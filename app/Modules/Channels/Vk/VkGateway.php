@@ -9,11 +9,14 @@ use App\Modules\Channels\Contracts\ReceivesImage;
 use App\Modules\Channels\Contracts\ReceivesVoice;
 use App\Modules\Channels\Data\IncomingImage;
 use App\Modules\Channels\Models\Channel;
+use App\Modules\Channels\Support\PollFailureLog;
 use App\Shared\DTO\ReplyKeyboard;
 use App\Shared\Enums\ChannelType;
 use App\Shared\Support\ImageBytes;
 use App\Shared\Support\ImageMime;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -165,6 +168,57 @@ final readonly class VkGateway implements ChannelGateway, ReceivesImage, Receive
             ->json() ?? [];
 
         return $data;
+    }
+
+    /**
+     * КОНКУРЕНТНЫЙ Bots Long Poll: a_check у ВСЕХ каналов ОДНОВРЕМЕННО (Http::pool),
+     * а не по очереди — иначе одно простаивающее сообщество держит свой long-poll и
+     * задерживает остальных. У каждого канала свой адрес сервера (server) из его
+     * state — резолв адреса (longPollServer) делается ДО пула, per-channel (он нужен
+     * редко, только при отсутствии кэша). Канал со сбоем (исключение/не-2xx)
+     * отсутствует в результате (сбой залогирован) — повторит на следующем круге, не
+     * роняя остальных. VK отдаёт failed-коды HTTP 200 с телом {failed:N} — они
+     * попадают в результат как есть, их разбирает поллер (handleFailed). Ключ
+     * результата = id канала.
+     *
+     * @param  Collection<int, Channel>  $channels
+     * @param  array<string, array{server: string, key: string, ts: string}>  $states  channelId => state
+     * @return array<string, array{ts?: string, updates?: list<array<string, mixed>>, failed?: int}>
+     */
+    public function getUpdatesPool(Collection $channels, array $states, int $wait = 3): array
+    {
+        $responses = Http::pool(function (Pool $pool) use ($channels, $states, $wait): array {
+            $requests = [];
+            foreach ($channels as $channel) {
+                $state = $states[(string) $channel->id] ?? null;
+                if ($state === null) {
+                    continue;
+                }
+
+                $requests[] = $pool->as((string) $channel->id)
+                    ->asJson()
+                    ->connectTimeout(10)
+                    ->timeout($wait + 10)
+                    ->get($state['server'], ['act' => 'a_check', 'key' => $state['key'], 'ts' => $state['ts'], 'wait' => $wait]);
+            }
+
+            return $requests;
+        });
+
+        $out = [];
+        foreach ($responses as $channelId => $response) {
+            if ($response instanceof Response && $response->successful()) {
+                /** @var array{ts?: string, updates?: list<array<string, mixed>>, failed?: int} $data */
+                $data = $response->json() ?? [];
+                $out[(string) $channelId] = $data;
+
+                continue;
+            }
+
+            PollFailureLog::record('vk', (string) $channelId, $response);
+        }
+
+        return $out;
     }
 
     /**
