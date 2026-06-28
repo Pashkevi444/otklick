@@ -31,7 +31,7 @@ final class BindTenantToRequest
         }
 
         // ВРЕМЕННАЯ ДИАГНОСТИКА (баг impersonation: пустой кабинет) — снять после съёма.
-        if ($request->is('cabinet*')) {
+        if ($request->hasSession() && $request->is('cabinet*')) {
             Log::info('tenant.diag', [
                 'path' => $request->path(),
                 'user' => $user?->email,
