@@ -522,4 +522,77 @@ final class ReplyComposerTest extends TestCase
         // Фото Warrior cut, а не Crop, и несмотря на отсутствие метки.
         $this->assertSame(['https://otcl1ck.ru/storage/k/w1.jpg'], $reply->images);
     }
+
+    public function test_no_photos_for_overview_listing_multiple_types(): void
+    {
+        // Прод-баг («опять фотки прислал»): на «какие есть стрижки?» бот перечисляет
+        // несколько типов, но система прикрепляла фото ОДНОЙ записи — к списку это не
+        // подходит и путает клиента. Если ответ называет ≥2 РАЗНЫХ записи БЗ (обзор),
+        // фото НЕ шлём даже при метке [[PHOTOS]] — бот предложит выбрать конкретную.
+        $warrior = new KnowledgeEntry(['title' => 'Warrior cut', 'content' => 'брутальная', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/w1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/w1.jpg'],
+        ]]);
+        $warrior->id = 'war';
+        $crop = new KnowledgeEntry(['title' => 'Crop', 'content' => 'короткая', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/c1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/c1.jpg'],
+        ]]);
+        $crop->id = 'crop';
+        $flow = new KnowledgeEntry(['title' => 'Flow', 'content' => 'длинная', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/f1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/f1.jpg'],
+        ]]);
+        $flow->id = 'flow';
+
+        $llm = Mockery::mock(LlmClient::class);
+        // Обзор: перечислены три разные стрижки — и даже с меткой фото не шлём.
+        $llm->shouldReceive('generate')->once()->andReturn('У нас есть Warrior cut, Crop и Flow — какой вам ближе? [[PHOTOS]]');
+
+        $knowledge = Mockery::mock(KnowledgeApi::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$warrior, $crop, $flow]));
+        $messages = Mockery::mock(ConversationsApi::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeApi::class);
+        $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['war'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
+        $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
+
+        // Обзор из нескольких стрижек → ни одного фото; метка убрана из текста.
+        $this->assertSame([], $reply->images);
+        $this->assertStringNotContainsString('PHOTOS', $reply->text);
+    }
+
+    public function test_single_type_still_gets_photos_after_overview_guard(): void
+    {
+        // Контроль на ложное срабатывание гарда обзора: когда в ответе названа РОВНО
+        // одна запись (пусть и с упоминанием вложенного заголовка «Crop» ⊂ «French
+        // crop»), это НЕ обзор — фото по-прежнему прикрепляем.
+        $french = new KnowledgeEntry(['title' => 'French crop', 'content' => 'стрижка', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/fr1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/fr1.jpg'],
+        ]]);
+        $french->id = 'fr';
+        $crop = new KnowledgeEntry(['title' => 'Crop', 'content' => 'стрижка', 'is_published' => true, 'links' => [], 'images' => [
+            ['path' => 'k/c1.jpg', 'url' => 'https://otcl1ck.ru/storage/k/c1.jpg'],
+        ]]);
+        $crop->id = 'crop';
+
+        $llm = Mockery::mock(LlmClient::class);
+        $llm->shouldReceive('generate')->once()->andReturn('Вот примеры French crop! [[PHOTOS]]');
+
+        $knowledge = Mockery::mock(KnowledgeApi::class);
+        $knowledge->shouldReceive('publishedForCurrentTenant')->andReturn(new Collection([$french, $crop]));
+        $messages = Mockery::mock(ConversationsApi::class);
+        $messages->shouldReceive('recentForChat')->andReturn(new Collection);
+        $crmKnowledge = Mockery::mock(KnowledgeApi::class);
+        $crmKnowledge->shouldReceive('crmForCurrentTenant')->andReturn(new Collection);
+        $retriever = Mockery::mock(KnowledgeApi::class);
+        $retriever->shouldReceive('retrieve')->andReturn(['manual' => ['fr'], 'crm' => []]);
+
+        $composer = new ReplyComposer($llm, new PromptBuilder, $knowledge, $messages, $this->conversations(), $crmKnowledge, $retriever, $this->promptTemplates());
+        $reply = $composer->compose(new Tenant(['name' => 'Бизнес', 'settings' => ['overrides' => ['rag' => true]]]), new Conversation);
+
+        // «Crop» — подстрока «French crop», отдельной записью не считается → 1 тип → фото есть.
+        $this->assertSame(['https://otcl1ck.ru/storage/k/fr1.jpg'], $reply->images);
+    }
 }
