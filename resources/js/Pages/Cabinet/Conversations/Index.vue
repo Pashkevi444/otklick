@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
@@ -49,9 +49,20 @@ const props = defineProps<{
 const state = reactive<Filters>({ ...props.filters });
 
 // Новые лиды (с непрочитанным уведомлением) — подсветка «Новый», пока не открыли диалог.
+// Открытые в этой вкладке лиды гасим сразу и ЛОКАЛЬНО (sessionStorage): сервер их тоже
+// метит прочитанными в show(), но Inertia на «назад» отдаёт закешированный список со
+// СТАРЫМ newConversationIds — из-за этого подсветка «залипала» до ручного обновления.
 const newIds = new Set(props.newConversationIds ?? []);
-const isNew = (id: string): boolean => newIds.has(id);
-const newCount = newIds.size;
+const READ_KEY = 'convReadLocal';
+const readStored = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(READ_KEY) : null;
+const readLocal = ref<Set<string>>(new Set((readStored ? JSON.parse(readStored) : []) as string[]));
+const isNew = (id: string): boolean => newIds.has(id) && !readLocal.value.has(id);
+const newCount = computed((): number => [...newIds].filter((id) => !readLocal.value.has(id)).length);
+const markRead = (id: string): void => {
+    if (!newIds.has(id) || readLocal.value.has(id)) return;
+    readLocal.value = new Set(readLocal.value).add(id);
+    if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(READ_KEY, JSON.stringify([...readLocal.value]));
+};
 
 // «Прочитать всё» — гасит подсветку «Новый» у всех лидов (и бейдж секции).
 // POST без preserveState → страница перерисуется со свежим (пустым) newConversationIds.
@@ -126,6 +137,7 @@ const initials = (name: string): string =>
         .join('');
 
 const open = (id: string): void => {
+    markRead(id);
     router.visit(`/cabinet/conversations/${id}`);
 };
 
@@ -220,6 +232,7 @@ const remove = (id: string): void => {
                     :href="`/cabinet/conversations/${c.id}`"
                     class="block rounded-xl border border-slate-200 bg-white p-4"
                     :class="isNew(c.id) ? 'ring-1 ring-[#2E74B5]/40 bg-[#2E74B5]/5' : ''"
+                    @click="markRead(c.id)"
                 >
                     <div class="flex items-center justify-between gap-2">
                         <span class="font-medium text-slate-800">

@@ -186,8 +186,8 @@ const toggleBan = (row: Row): void => {
             Клиентов пока нет. Карточка заводится автоматически, когда бот узнаёт телефон клиента.
         </div>
 
-        <div v-else class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <table class="w-full text-sm">
+        <div v-else class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table class="w-full min-w-[560px] text-sm">
                 <thead class="bg-slate-50 text-left text-xs text-slate-400">
                     <tr>
                         <th class="px-4 py-3 font-medium">Клиент</th>

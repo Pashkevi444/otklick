@@ -71,7 +71,7 @@ const statusBadge = (status: string): { cls: string; label: string } => {
         </div>
 
         <!-- Журнал доставки -->
-        <div class="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5">
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-white/10">
                 <div class="font-semibold text-[#1F4E79] dark:text-sky-200">Журнал доставки</div>
                 <div class="text-xs text-slate-400">✓ {{ sentRows }} · ✕ {{ failedRows }} · ⊘ {{ skippedRows }}</div>
@@ -81,7 +81,7 @@ const statusBadge = (status: string): { cls: string; label: string } => {
                 Доставок пока нет — рассылка ещё не запускалась.
             </div>
 
-            <table v-else class="w-full text-sm">
+            <table v-else class="w-full min-w-[520px] text-sm">
                 <thead>
                     <tr class="text-left text-xs text-slate-400">
                         <th class="px-5 py-2 font-medium">Получатель</th>

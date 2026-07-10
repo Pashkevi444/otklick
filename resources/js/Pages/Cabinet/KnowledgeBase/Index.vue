@@ -428,7 +428,7 @@ onUnmounted(stopImportPolling);
 
         <div v-else class="space-y-3">
             <div v-for="entry in entries" :key="entry.id" class="bg-white rounded-xl border border-slate-200 p-5">
-                <div class="flex items-start justify-between gap-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                     <div class="min-w-0">
                         <div class="font-medium text-slate-700">
                             {{ entry.title }}
@@ -449,7 +449,7 @@ onUnmounted(stopImportPolling);
                             <img v-for="(img, i) in entry.images" :key="i" :src="img.url" class="h-14 w-14 object-cover rounded border border-slate-200" />
                         </div>
                     </div>
-                    <div v-if="canEdit" class="flex items-center gap-3 shrink-0">
+                    <div v-if="canEdit" class="flex flex-wrap items-center gap-3 sm:shrink-0">
                         <button
                             type="button"
                             class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
@@ -494,7 +494,7 @@ onUnmounted(stopImportPolling);
                                 <Link v-if="gap.conversation_id" :href="`/cabinet/conversations/${gap.conversation_id}`" class="text-[#2E74B5] hover:underline">Диалог →</Link>
                             </div>
                         </div>
-                        <div v-if="canEdit" class="flex items-center gap-3 shrink-0">
+                        <div v-if="canEdit" class="flex flex-wrap items-center gap-3 sm:shrink-0">
                             <button type="button" class="rounded-lg bg-[#2E74B5] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#255f96]" @click="promoteGap(gap.id)">В базу знаний</button>
                             <button type="button" class="text-sm text-slate-500 hover:underline" @click="dismissGap(gap.id)">Скрыть</button>
                             <button type="button" class="text-sm text-red-600 hover:underline" @click="removeGap(gap.id)">Удалить</button>
