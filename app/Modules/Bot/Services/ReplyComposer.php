@@ -219,12 +219,17 @@ class ReplyComposer
         $availableImages = $mediaEntry !== null ? $this->imagesFrom(new Collection([$mediaEntry])) : [];
         $availableLinks = $mediaEntry !== null ? $this->linksFrom(new Collection([$mediaEntry])) : [];
 
-        // Прикрепляем фото, если бот поставил метку [[PHOTOS]] ИЛИ в ответе прямо
-        // предлагает примеры/работы (DeepSeek непостоянно ставит метку, но фразу
-        // «вот примеры наших работ» пишет надёжно) и у целевой записи есть фото.
+        // Прикрепляем фото, если бот поставил метку [[PHOTOS]] ИЛИ в ответе ЯВНО
+        // показывает работы («вот примеры…»), и у целевой записи есть фото. НО НЕ
+        // прикрепляем к ОБЗОРУ-списку: если в ответе названо ≥2 РАЗНЫХ записей БЗ
+        // (перечисление типов/услуг), фото ОДНОЙ записи к списку не подходит и путает
+        // клиента — бот вместо этого предлагает выбрать конкретную (см. промпт).
         // URL берём ТОЧНЫЕ из данных (LLM их искажает) + ловим пастнутые ботом.
-        $wantsPhotos = str_contains($answer, PromptBuilder::PHOTOS)
-            || ($availableImages !== [] && $this->answerOffersExamples($answer));
+        $isOverview = $this->distinctTitlesMentioned($allPublished, $answer) >= 2;
+        $wantsPhotos = ! $isOverview && (
+            str_contains($answer, PromptBuilder::PHOTOS)
+            || ($availableImages !== [] && $this->answerOffersExamples($answer))
+        );
         [$text, $pasted] = ImageUrls::split($this->stripSentinels($answer));
         $images = array_values(array_unique(array_merge($wantsPhotos ? $availableImages : [], $pasted)));
         $finalText = $images === []
@@ -324,15 +329,51 @@ class ReplyComposer
     }
 
     /**
-     * Ответ модели прямо предлагает показать примеры/работы (страховка на случай,
-     * когда DeepSeek забыл метку [[PHOTOS]], но фразу «вот примеры наших работ»
-     * написал). Срабатывает только если у целевой записи реально есть фото.
+     * Сколько РАЗНЫХ записей БЗ названо в ответе — сигнал «обзор/список» (например,
+     * перечисление типов услуг). Заголовок, вложенный в более длинный совпавший
+     * («Crop» внутри «French Crop»), отдельной записью не считаем. Регистр и ё→е
+     * нормализованы. По ≥2 разным записям фото НЕ прикрепляем (фото одной ≠ список).
+     *
+     * @param  Collection<int, KnowledgeEntry>  $published
+     */
+    private function distinctTitlesMentioned(Collection $published, string $answer): int
+    {
+        $a = str_replace('ё', 'е', mb_strtolower($answer));
+
+        $titles = [];
+        foreach ($published as $entry) {
+            $title = str_replace('ё', 'е', mb_strtolower(trim((string) $entry->title)));
+            if (mb_strlen($title) >= 3 && mb_strpos($a, $title) !== false) {
+                $titles[$title] = true;
+            }
+        }
+        $titles = array_keys($titles);
+
+        // Отсекаем заголовки, вложенные в другой совпавший («Crop» ⊂ «French Crop»).
+        $distinct = array_filter($titles, function (string $t) use ($titles): bool {
+            foreach ($titles as $other) {
+                if ($other !== $t && mb_strpos($other, $t) !== false) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        return count($distinct);
+    }
+
+    /**
+     * Ответ модели ЯВНО показывает работы прямо сейчас («вот примеры…», «прикрепляю
+     * фото») — страховка, когда LLM забыл метку [[PHOTOS]]. НЕ ловим описательное
+     * «есть примеры наших работ» / «пришлю фото» (это не показ, а предложение).
+     * Срабатывает только если у целевой записи реально есть фото.
      */
     private function answerOffersExamples(string $answer): bool
     {
         $a = mb_strtolower($answer);
 
-        foreach (['вот примеры', 'примеры наших работ', 'примеры работ', 'наших работ', 'еще раз примеры', 'ещё раз примеры', 'вот фото', 'вот несколько работ'] as $needle) {
+        foreach (['вот примеры', 'вот фото', 'вот работы', 'вот наши работы', 'вот несколько работ', 'прикрепляю фото', 'прилагаю фото', 'высылаю фото', 'скидываю фото', 'ещё раз примеры', 'еще раз примеры'] as $needle) {
             if (mb_strpos($a, $needle) !== false) {
                 return true;
             }
