@@ -148,7 +148,13 @@ html.dark .mkt .bg-base::after {
     animation: mktAuraRot 60s linear infinite;
     will-change: transform;
 }
+/* На светлой теме аврору прячем: сине-фиолетовый конус тонировал теплый крем
+   макета в холодную лаванду. В темной теме — уместное живое свечение. */
+.mkt .aurora {
+    display: none;
+}
 html.dark .mkt .aurora {
+    display: block;
     opacity: 0.65;
 }
 

@@ -145,9 +145,9 @@ onBeforeUnmount(() => metricsObserver?.disconnect());
             </div>
         </section>
 
-        <!-- Метрики: тёмно-нави блок со счётчиками -->
-        <section class="mx-auto max-w-6xl px-6 py-12">
-            <div ref="metricsEl" data-reveal class="relative overflow-hidden rounded-[28px] bg-[#0F1E3D] px-8 py-12 text-white dark:bg-[#0F1728]">
+        <!-- Метрики: продолжение тёмной зоны героя, мягко закругляется в крем -->
+        <section class="relative -mt-px overflow-hidden rounded-b-[44px] px-6 pb-20 pt-2 text-white" style="background: radial-gradient(640px 300px at 70% 0%, rgba(238, 138, 92, 0.07), transparent 70%), #0b1120">
+            <div ref="metricsEl" data-reveal class="relative mx-auto max-w-6xl overflow-hidden rounded-[28px] bg-[#0F1E3D] px-8 py-12">
                 <div aria-hidden="true" class="pointer-events-none absolute -right-10 -top-16 h-72 w-72 rounded-full" style="background: radial-gradient(circle, rgba(43, 92, 224, 0.5), transparent 68%); filter: blur(10px)"></div>
                 <div class="relative grid grid-cols-2 gap-8 text-center lg:grid-cols-4">
                     <div v-for="m in metrics" :key="m.label">
