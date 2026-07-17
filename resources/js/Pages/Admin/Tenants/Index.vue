@@ -45,7 +45,18 @@ const impersonate = (id: string): void => router.post(`/admin/tenants/${id}/impe
 const statusLabel = (t: TenantRow): string =>
     t.is_blocked ? 'заблокирован' : t.has_active_access ? 'активен' : 'истёк';
 const statusClass = (t: TenantRow): string =>
-    t.has_active_access && !t.is_blocked ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+    t.has_active_access && !t.is_blocked
+        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+        : 'bg-red-500/15 text-red-600 dark:text-red-400';
+
+// Инициалы бизнеса для аватара (первые буквы двух первых слов).
+const initials = (name: string): string =>
+    name
+        .split(/\s+/)
+        .filter((w) => /[a-zA-Zа-яА-ЯёЁ0-9]/.test(w))
+        .slice(0, 2)
+        .map((w) => (w.match(/[a-zA-Zа-яА-ЯёЁ0-9]/)?.[0] ?? '').toUpperCase())
+        .join('');
 </script>
 
 <template>
@@ -53,49 +64,49 @@ const statusClass = (t: TenantRow): string =>
 
     <AppLayout title="Бизнесы">
         <div class="flex justify-end mb-4">
-            <button type="button" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]" @click="showForm = !showForm">
+            <button type="button" class="otk-btn-primary" @click="showForm = !showForm">
                 {{ showForm ? 'Отмена' : 'Новый бизнес' }}
             </button>
         </div>
 
-        <form v-if="showForm" class="bg-white rounded-xl border border-slate-200 p-6 mb-6 grid sm:grid-cols-2 gap-4" @submit.prevent="submit">
-            <div class="sm:col-span-2 font-semibold text-[#1F4E79]">Новый бизнес и владелец</div>
+        <form v-if="showForm" class="otk-card p-6 mb-6 grid sm:grid-cols-2 gap-4" @submit.prevent="submit">
+            <div class="sm:col-span-2 font-display text-base font-semibold text-ink">Новый бизнес и владелец</div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Название бизнеса</label>
-                <input v-model="form.name" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                <label class="block text-sm font-medium text-ink mb-1">Название бизнеса</label>
+                <input v-model="form.name" type="text" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" />
                 <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Тариф</label>
-                <select v-model="form.plan" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+                <label class="block text-sm font-medium text-ink mb-1">Тариф</label>
+                <select v-model="form.plan" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand">
                     <option v-for="p in plans" :key="p.value" :value="p.value">{{ p.label }}</option>
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Доступ оплачен до (необязательно)</label>
-                <input v-model="form.access_expires_at" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-                <p class="mt-1 text-xs text-slate-400">После этой даты кабинет блокируется. Пусто — без ограничения.</p>
+                <label class="block text-sm font-medium text-ink mb-1">Доступ оплачен до (необязательно)</label>
+                <input v-model="form.access_expires_at" type="date" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand" />
+                <p class="mt-1 text-xs text-muted2">После этой даты кабинет блокируется. Пусто — без ограничения.</p>
             </div>
             <div class="hidden sm:block"></div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Имя владельца</label>
-                <input v-model="form.owner_name" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                <label class="block text-sm font-medium text-ink mb-1">Имя владельца</label>
+                <input v-model="form.owner_name" type="text" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" />
                 <p v-if="form.errors.owner_name" class="mt-1 text-sm text-red-600">{{ form.errors.owner_name }}</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Email владельца</label>
-                <input v-model="form.owner_email" type="email" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                <label class="block text-sm font-medium text-ink mb-1">Email владельца</label>
+                <input v-model="form.owner_email" type="email" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" />
                 <p v-if="form.errors.owner_email" class="mt-1 text-sm text-red-600">{{ form.errors.owner_email }}</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Пароль владельца</label>
-                <input v-model="form.owner_password" type="password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                <label class="block text-sm font-medium text-ink mb-1">Пароль владельца</label>
+                <input v-model="form.owner_password" type="password" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" />
                 <p v-if="form.errors.owner_password" class="mt-1 text-sm text-red-600">{{ form.errors.owner_password }}</p>
             </div>
 
             <div class="sm:col-span-2">
-                <button type="submit" :disabled="form.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">Создать</button>
+                <button type="submit" :disabled="form.processing" class="otk-btn-primary disabled:opacity-50">Создать</button>
             </div>
         </form>
 
@@ -105,55 +116,61 @@ const statusClass = (t: TenantRow): string =>
                 v-for="tenant in tenants"
                 :key="tenant.id"
                 :href="`/admin/tenants/${tenant.id}`"
-                class="block rounded-xl border border-slate-200 bg-white p-4"
+                class="block otk-card p-4"
             >
                 <div class="flex items-center justify-between gap-2">
-                    <span class="font-medium text-[#2E74B5]">{{ tenant.name }}</span>
-                    <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="statusClass(tenant)">{{ statusLabel(tenant) }}</span>
+                    <span class="flex min-w-0 items-center gap-2.5">
+                        <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-active text-sm font-bold text-brand">{{ initials(tenant.name) }}</span>
+                        <span class="truncate font-semibold text-ink">{{ tenant.name }}</span>
+                    </span>
+                    <span class="flex-none rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="statusClass(tenant)">{{ statusLabel(tenant) }}</span>
                 </div>
-                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                     <span>Тариф: {{ tenant.plan_label }}</span>
                     <span>Доступ до: {{ tenant.access_expires_at ?? '∞' }}</span>
                 </div>
                 <button
                     type="button"
-                    class="mt-3 rounded-lg bg-[#2E74B5] px-3 py-1.5 text-xs font-medium text-white"
+                    class="mt-3 rounded-xl bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-hover"
                     @click.stop.prevent="impersonate(tenant.id)"
                 >
                     ➜ Войти в бизнес
                 </button>
             </Link>
-            <div v-if="tenants.length === 0" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-400">
+            <div v-if="tenants.length === 0" class="otk-card p-8 text-center text-muted2">
                 Бизнесов пока нет.
             </div>
         </div>
 
         <!-- Таблица (десктоп) -->
-        <div class="hidden overflow-hidden rounded-xl border border-slate-200 bg-white md:block">
+        <div class="hidden otk-card overflow-hidden md:block">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="text-left text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">
                     <tr>
-                        <th class="px-5 py-3 font-medium">Название</th>
-                        <th class="px-5 py-3 font-medium">Тариф</th>
-                        <th class="px-5 py-3 font-medium">Доступ до</th>
-                        <th class="px-5 py-3 font-medium">Статус</th>
-                        <th class="px-5 py-3 font-medium"></th>
+                        <th class="px-5 py-3.5">Название</th>
+                        <th class="px-5 py-3.5">Тариф</th>
+                        <th class="px-5 py-3.5">Доступ до</th>
+                        <th class="px-5 py-3.5">Статус</th>
+                        <th class="px-5 py-3.5"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
-                    <tr v-for="tenant in tenants" :key="tenant.id" class="hover:bg-slate-50">
-                        <td class="px-5 py-3 font-medium">
-                            <Link :href="`/admin/tenants/${tenant.id}`" class="text-[#2E74B5] hover:underline">{{ tenant.name }}</Link>
-                        </td>
-                        <td class="px-5 py-3 text-slate-500">{{ tenant.plan_label }}</td>
-                        <td class="px-5 py-3 text-slate-500">{{ tenant.access_expires_at ?? '∞' }}</td>
+                <tbody>
+                    <tr v-for="tenant in tenants" :key="tenant.id" class="border-t border-line hover:bg-hoverbg">
                         <td class="px-5 py-3">
-                            <span class="text-xs rounded-full px-2 py-0.5" :class="statusClass(tenant)">{{ statusLabel(tenant) }}</span>
+                            <Link :href="`/admin/tenants/${tenant.id}`" class="flex items-center gap-3 font-semibold text-ink hover:text-brand">
+                                <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-active text-sm font-bold text-brand">{{ initials(tenant.name) }}</span>
+                                {{ tenant.name }}
+                            </Link>
+                        </td>
+                        <td class="px-5 py-3 text-muted">{{ tenant.plan_label }}</td>
+                        <td class="px-5 py-3 text-muted">{{ tenant.access_expires_at ?? '∞' }}</td>
+                        <td class="px-5 py-3">
+                            <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="statusClass(tenant)">{{ statusLabel(tenant) }}</span>
                         </td>
                         <td class="px-5 py-3 text-right">
                             <button
                                 type="button"
-                                class="rounded-lg border border-[#2E74B5]/40 px-3 py-1.5 text-xs font-medium text-[#2E74B5] hover:bg-[#2E74B5]/5"
+                                class="rounded-xl border border-line px-3 py-1.5 text-xs font-semibold text-brand hover:bg-active"
                                 @click="impersonate(tenant.id)"
                             >
                                 ➜ Войти
@@ -161,7 +178,7 @@ const statusClass = (t: TenantRow): string =>
                         </td>
                     </tr>
                     <tr v-if="tenants.length === 0">
-                        <td colspan="5" class="px-5 py-8 text-center text-slate-400">Бизнесов пока нет.</td>
+                        <td colspan="5" class="px-5 py-8 text-center text-muted2">Бизнесов пока нет.</td>
                     </tr>
                 </tbody>
             </table>

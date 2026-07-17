@@ -66,7 +66,7 @@ onBeforeUnmount(() => items.value.forEach((i) => URL.revokeObjectURL(i.url)));
     <div>
         <div
             class="rounded-xl border-2 border-dashed px-4 py-6 text-center cursor-pointer transition"
-            :class="dragging ? 'border-[#2E74B5] bg-blue-50' : 'border-slate-300 hover:border-slate-400'"
+            :class="dragging ? 'border-[#2B5CE0] bg-blue-50' : 'border-slate-300 hover:border-slate-400'"
             @click="open"
             @dragover.prevent="dragging = true"
             @dragleave.prevent="dragging = false"
@@ -74,7 +74,7 @@ onBeforeUnmount(() => items.value.forEach((i) => URL.revokeObjectURL(i.url)));
         >
             <div class="text-sm text-slate-600">
                 Перетащите картинки сюда или
-                <span class="text-[#2E74B5] font-medium">выберите файлы</span>
+                <span class="text-[#2B5CE0] font-medium">выберите файлы</span>
             </div>
             <div class="text-xs text-slate-400 mt-1">JPG/PNG, можно несколько, до 5 МБ каждая</div>
             <input ref="input" type="file" multiple accept="image/*" class="hidden" @change="onInput" />

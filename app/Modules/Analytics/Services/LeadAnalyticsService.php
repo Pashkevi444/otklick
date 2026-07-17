@@ -32,7 +32,7 @@ final readonly class LeadAnalyticsService
 
     /** @var array<string, string> */
     private const array CHANNEL_COLORS = [
-        'telegram' => '#2E74B5',
+        'telegram' => '#2B5CE0',
         'web' => '#22b8cf',
         'whatsapp' => '#22c55e',
     ];
@@ -40,7 +40,7 @@ final readonly class LeadAnalyticsService
     /** @var array<string, string> */
     private const array OUTCOME_COLORS = [
         'booked' => '#22c55e',
-        'open' => '#2E74B5',
+        'open' => '#2B5CE0',
         'needs_human' => '#f59e0b',
         'cancelled' => '#a855f7',
         'lost' => '#ef4444',

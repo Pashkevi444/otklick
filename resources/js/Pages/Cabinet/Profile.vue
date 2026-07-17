@@ -96,30 +96,30 @@ const submit = (): void => {
     <Head title="Профиль бизнеса" />
 
     <AppLayout title="Профиль бизнеса">
-        <p class="mb-4 max-w-2xl text-sm text-slate-500">
+        <p class="mb-4 max-w-2xl text-sm text-muted">
             Это «контекст работы» — данные о бизнесе, которые бот использует в ответах, и витрина для карточки бизнеса.
         </p>
 
         <!-- Тип бизнеса (ниша) — влияет на подбор шаблонов сценариев и базы знаний -->
-        <div class="ui-scope mb-4 max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10">
+        <div class="otk-card mb-4 max-w-3xl p-5">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div class="min-w-0 sm:flex-1">
-                    <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Тип бизнеса</div>
-                    <p class="mt-0.5 text-xs text-slate-500">
+                    <div class="font-display text-base font-semibold text-ink">Тип бизнеса</div>
+                    <p class="mt-0.5 text-xs text-muted">
                         Сейчас:
-                        <span class="font-medium text-slate-700 dark:text-slate-200">{{ businessTypeLabel ?? 'не задан' }}</span>.
+                        <span class="font-medium text-ink">{{ businessTypeLabel ?? 'не задан' }}</span>.
                         От него зависит, какие готовые шаблоны и элементы базы знаний вам показываются.
                     </p>
                 </div>
                 <div class="flex items-stretch gap-2">
-                    <select v-model="btForm.business_type" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm sm:flex-none dark:border-white/10 dark:bg-white/5">
+                    <select v-model="btForm.business_type" class="min-w-0 flex-1 rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand sm:flex-none">
                         <option value="">Не задан</option>
                         <option v-for="bt in businessTypes" :key="bt.value" :value="bt.value">{{ bt.label }}</option>
                     </select>
                     <button
                         type="button"
                         :disabled="btForm.processing || btForm.business_type === (businessType ?? '')"
-                        class="flex-none whitespace-nowrap rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-40"
+                        class="otk-btn-primary flex-none whitespace-nowrap disabled:opacity-40"
                         @click="saveBusinessType"
                     >
                         Сохранить
@@ -128,81 +128,81 @@ const submit = (): void => {
             </div>
         </div>
 
-        <form class="ui-scope max-w-3xl space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-white/10" @submit.prevent="submit">
+        <form class="otk-card max-w-3xl space-y-5 p-6 sm:p-8" @submit.prevent="submit">
             <!-- Аватар -->
             <div class="flex items-center gap-4">
-                <div class="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-2xl bg-[#EAF2FB] text-xl font-bold text-[#1F4E79] dark:bg-white/10 dark:text-sky-200">
+                <div class="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-2xl bg-active text-xl font-bold text-brand">
                     <img v-if="previewUrl" :src="previewUrl" alt="Аватар" class="h-full w-full object-cover" />
                     <span v-else>{{ initials }}</span>
                 </div>
                 <div class="space-y-2">
-                    <label class="inline-block cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-[#2E74B5]/50 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
+                    <label class="inline-block cursor-pointer rounded-xl border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-hoverbg">
                         Загрузить аватар
                         <input type="file" accept="image/*" class="hidden" @change="onAvatarPick" />
                     </label>
-                    <button v-if="previewUrl" type="button" class="ml-2 text-sm text-slate-400 hover:text-red-500" @click="removeAvatar">Удалить</button>
-                    <p class="text-xs text-slate-400">PNG/JPG до 2 МБ.</p>
-                    <p v-if="form.errors.avatar" class="text-sm text-red-600">{{ form.errors.avatar }}</p>
+                    <button v-if="previewUrl" type="button" class="ml-2 text-sm text-muted2 hover:text-red-500" @click="removeAvatar">Удалить</button>
+                    <p class="text-xs text-muted2">PNG/JPG до 2 МБ.</p>
+                    <p v-if="form.errors.avatar" class="text-sm text-red-600 dark:text-red-400">{{ form.errors.avatar }}</p>
                 </div>
             </div>
 
             <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Название бизнеса</label>
-                <input v-model="form.name" type="text" placeholder="Барбершоп «Бруно»" class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
-                <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
+                <label class="mb-1 block text-sm font-medium text-ink">Название бизнеса</label>
+                <input v-model="form.name" type="text" placeholder="Барбершоп «Бруно»" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
+                <p v-if="form.errors.name" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.name }}</p>
             </div>
 
             <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Описание</label>
-                <textarea v-model="form.description" rows="3" placeholder="Чем занимается бизнес, ключевые услуги и преимущества. Пара предложений." class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
-                <p class="mt-1 text-xs text-slate-400">Показывается в карточке бизнеса и помогает боту отвечать в контексте.</p>
-                <p v-if="form.errors.description" class="mt-1 text-sm text-red-600">{{ form.errors.description }}</p>
+                <label class="mb-1 block text-sm font-medium text-ink">Описание</label>
+                <textarea v-model="form.description" rows="3" placeholder="Чем занимается бизнес, ключевые услуги и преимущества. Пара предложений." class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
+                <p class="mt-1 text-xs text-muted2">Показывается в карточке бизнеса и помогает боту отвечать в контексте.</p>
+                <p v-if="form.errors.description" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.description }}</p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Телефон</label>
-                    <input v-model="form.phone" type="text" placeholder="+7 900 123-45-67" class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
+                    <label class="mb-1 block text-sm font-medium text-ink">Телефон</label>
+                    <input v-model="form.phone" type="text" placeholder="+7 900 123-45-67" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Почта</label>
-                    <input v-model="form.email" type="email" placeholder="hello@business.ru" class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
-                    <p v-if="form.errors.email" class="mt-1 text-sm text-red-600">{{ form.errors.email }}</p>
+                    <label class="mb-1 block text-sm font-medium text-ink">Почта</label>
+                    <input v-model="form.email" type="email" placeholder="hello@business.ru" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
+                    <p v-if="form.errors.email" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.email }}</p>
                 </div>
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Часы работы</label>
-                    <input v-model="form.working_hours" type="text" placeholder="Пн–Пт 9:00–20:00, Сб 10:00–18:00" class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
+                    <label class="mb-1 block text-sm font-medium text-ink">Часы работы</label>
+                    <input v-model="form.working_hours" type="text" placeholder="Пн–Пт 9:00–20:00, Сб 10:00–18:00" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
                 </div>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Адрес</label>
-                    <input v-model="form.address" type="text" placeholder="Москва, ул. Ленина 1, 2 этаж" class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
+                    <label class="mb-1 block text-sm font-medium text-ink">Адрес</label>
+                    <input v-model="form.address" type="text" placeholder="Москва, ул. Ленина 1, 2 этаж" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Сайт</label>
-                    <input v-model="form.website" type="text" placeholder="example.ru" class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
-                    <p v-if="form.errors.website" class="mt-1 text-sm text-red-600">{{ form.errors.website }}</p>
+                    <label class="mb-1 block text-sm font-medium text-ink">Сайт</label>
+                    <input v-model="form.website" type="text" placeholder="example.ru" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
+                    <p v-if="form.errors.website" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.website }}</p>
                 </div>
             </div>
 
             <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Правила эскалации на администратора</label>
-                <textarea v-model="form.escalation_note" rows="3" placeholder="Когда передавать диалог человеку. Например: клиент просит позвать администратора, жалоба, вопрос про возврат денег, нестандартная просьба." class="w-full rounded-lg border border-slate-300 px-3 py-2 transition focus:border-[#2E74B5] focus:outline-none focus:ring-2 focus:ring-[#2E74B5]/15 dark:border-white/15 dark:bg-white/5" />
-                <p class="mt-1 text-xs text-slate-400">Бот переключит диалог на администратора в этих случаях.</p>
-                <p v-if="form.errors.escalation_note" class="mt-1 text-sm text-red-600">{{ form.errors.escalation_note }}</p>
+                <label class="mb-1 block text-sm font-medium text-ink">Правила эскалации на администратора</label>
+                <textarea v-model="form.escalation_note" rows="3" placeholder="Когда передавать диалог человеку. Например: клиент просит позвать администратора, жалоба, вопрос про возврат денег, нестандартная просьба." class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
+                <p class="mt-1 text-xs text-muted2">Бот переключит диалог на администратора в этих случаях.</p>
+                <p v-if="form.errors.escalation_note" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.escalation_note }}</p>
             </div>
 
             <div class="flex items-center gap-3">
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="rounded-lg bg-[#2E74B5] px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-[#2E74B5]/25 transition hover:-translate-y-0.5 hover:bg-[#255f96] disabled:translate-y-0 disabled:opacity-50"
+                    class="otk-btn-primary px-5 py-2.5 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
                 >
                     Сохранить
                 </button>
-                <span v-if="form.recentlySuccessful" class="text-sm text-green-600">Сохранено</span>
+                <span v-if="form.recentlySuccessful" class="text-sm text-emerald-600 dark:text-emerald-400">Сохранено</span>
             </div>
         </form>
     </AppLayout>

@@ -96,22 +96,22 @@ onBeforeUnmount(() => {
     <Head title="Запись базы знаний" />
 
     <AppLayout>
-        <Link href="/cabinet/knowledge" class="text-sm text-[#2E74B5] hover:underline">← К базе знаний</Link>
+        <Link href="/cabinet/knowledge" class="text-sm font-semibold text-brand hover:underline">← К базе знаний</Link>
 
-        <form class="bg-white rounded-xl border border-slate-200 p-6 mt-2 max-w-2xl space-y-5" @submit.prevent="submit">
+        <form class="otk-card p-6 mt-3 max-w-2xl space-y-5" @submit.prevent="submit">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Заголовок</label>
-                <input v-model="form.title" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-                <p v-if="form.errors.title" class="mt-1 text-sm text-red-600">{{ form.errors.title }}</p>
+                <label class="block text-sm font-semibold text-ink mb-1">Заголовок</label>
+                <input v-model="form.title" type="text" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" />
+                <p v-if="form.errors.title" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.title }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Текст</label>
+                <label class="block text-sm font-semibold text-ink mb-1">Текст</label>
                 <div
                     v-if="drafting"
-                    class="mb-2 flex items-center gap-2 rounded-lg bg-[#EAF2FB] px-3 py-2 text-sm text-[#1F4E79]"
+                    class="mb-2 flex items-center gap-2 rounded-xl bg-active px-3.5 py-2.5 text-sm font-semibold text-brand"
                 >
-                    <span class="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#2E74B5] border-t-transparent"></span>
+                    <span class="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-brand border-t-transparent"></span>
                     🤖 AI пишет черновик ответа на основе данных вашего бизнеса… Обычно пара секунд.
                 </div>
                 <textarea
@@ -119,28 +119,28 @@ onBeforeUnmount(() => {
                     rows="6"
                     :disabled="drafting"
                     :placeholder="drafting ? 'AI готовит черновик…' : ''"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-50 disabled:text-slate-400"
+                    class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand disabled:bg-chip disabled:text-muted2"
                 />
-                <p v-if="form.errors.content" class="mt-1 text-sm text-red-600">{{ form.errors.content }}</p>
+                <p v-if="form.errors.content" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.content }}</p>
             </div>
 
             <div>
                 <div class="flex items-center justify-between mb-1">
-                    <label class="text-sm font-medium text-slate-700">Ссылки</label>
-                    <button type="button" class="text-sm text-[#2E74B5] hover:underline" @click="addLink">+ ссылка</button>
+                    <label class="text-sm font-semibold text-ink">Ссылки</label>
+                    <button type="button" class="text-sm font-semibold text-brand hover:underline" @click="addLink">+ ссылка</button>
                 </div>
                 <div v-for="(link, i) in form.links" :key="i" class="flex gap-2 mb-2">
-                    <input v-model="link.label" type="text" placeholder="Подпись" class="w-1/3 rounded-lg border border-slate-300 px-3 py-2" />
-                    <input v-model="link.url" type="url" placeholder="https://..." class="flex-1 rounded-lg border border-slate-300 px-3 py-2" />
-                    <button type="button" class="text-red-600 px-2" @click="removeLink(i)">×</button>
+                    <input v-model="link.label" type="text" placeholder="Подпись" class="w-1/3 rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" />
+                    <input v-model="link.url" type="url" placeholder="https://..." class="flex-1 rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" />
+                    <button type="button" class="px-2 text-red-600 dark:text-red-400" @click="removeLink(i)">×</button>
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-2">Картинки</label>
+                <label class="block text-sm font-semibold text-ink mb-2">Картинки</label>
                 <div v-if="existing.length" class="flex flex-wrap gap-2 mb-3">
                     <div v-for="(img, i) in existing" :key="img.path" class="relative">
-                        <img :src="img.url" class="h-20 w-20 object-cover rounded-lg border border-slate-200" />
+                        <img :src="img.url" class="h-20 w-20 object-cover rounded-xl border border-line" />
                         <button
                             type="button"
                             class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs"
@@ -149,10 +149,10 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
                 <ImageUploader v-model="form.images" />
-                <p v-if="form.errors.images" class="mt-1 text-sm text-red-600">{{ form.errors.images }}</p>
+                <p v-if="form.errors.images" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.images }}</p>
             </div>
 
-            <label class="flex items-center gap-2 text-sm text-slate-600">
+            <label class="flex items-center gap-2 text-sm text-muted">
                 <Toggle v-model="form.is_published" />
                 Опубликовано
             </label>
@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
+                class="otk-btn-primary disabled:opacity-50"
             >
                 Сохранить
             </button>

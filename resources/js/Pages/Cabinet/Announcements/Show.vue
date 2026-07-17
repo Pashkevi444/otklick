@@ -22,13 +22,13 @@ const fmt = (d: string | null): string =>
 
     <AppLayout :title="title">
         <div class="mx-auto max-w-2xl">
-            <Link :href="backHref" class="mb-4 inline-block text-sm text-[#2E74B5] hover:underline">← Все {{ title.toLowerCase() }}</Link>
+            <Link :href="backHref" class="mb-4 inline-block text-sm font-semibold text-brand hover:underline">← Все {{ title.toLowerCase() }}</Link>
 
-            <article class="rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/5">
-                <h1 class="text-xl font-bold text-[#1F4E79] dark:text-sky-200">{{ item.title }}</h1>
-                <p v-if="item.published_at" class="mt-1 text-xs text-slate-400">{{ fmt(item.published_at) }}</p>
+            <article class="otk-card p-6">
+                <h1 class="font-display text-xl font-semibold text-ink">{{ item.title }}</h1>
+                <p v-if="item.published_at" class="mt-1 text-xs text-muted2">{{ fmt(item.published_at) }}</p>
                 <!-- Текст анонса — форматированный HTML от супер-админа (доверенный автор). -->
-                <div class="rte mt-4 text-sm text-slate-700 dark:text-slate-200" v-html="item.body"></div>
+                <div class="rte mt-4 text-sm text-ink" v-html="item.body"></div>
             </article>
         </div>
     </AppLayout>

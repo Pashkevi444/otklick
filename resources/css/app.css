@@ -8,82 +8,144 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-html.dark body {
-    background-color: #0b1220;
+/*
+ * ══════════════════════════════════════════════════════════════════════
+ *  ДИЗАЙН-СИСТЕМА «Отклик 2.0» — токены из макетов (Otklik *.dc.html).
+ *  Светлая тема: тёплый крем + синий; тёмная — глубокий нави. Токены
+ *  флипаются классом .dark, всё что ссылается на них перекрашивается само.
+ * ══════════════════════════════════════════════════════════════════════
+ */
+:root {
+    --otk-bg: #f4f1eb; /* фон приложения (крем) */
+    --otk-panel: #ffffff; /* карточки/панели */
+    --otk-sidebar: #fbfaf7; /* сайдбар */
+    --otk-ink: #101c33; /* основной текст */
+    --otk-muted: #66708a; /* вторичный текст */
+    --otk-muted-2: #8a93a6; /* приглушённый текст/подписи */
+    --otk-border: rgba(16, 28, 51, 0.08);
+    --otk-blue: #2b5ce0; /* бренд-синий (CTA, ссылки, актив) */
+    --otk-blue-hover: #2350c8;
+    --otk-violet: #7c5cfc; /* градиентный партнёр синего */
+    --otk-warm: #ee8a5c; /* тёплый акцент (уведомления, счётчики) */
+    --otk-active: rgba(43, 92, 224, 0.1); /* актив/чипы бренда */
+    --otk-chip: #f4f1eb; /* нейтральные чипы/подложки */
+    --otk-hover: rgba(16, 28, 51, 0.04); /* ховер строк/пунктов */
+}
+html.dark {
+    --otk-bg: #0b1120;
+    --otk-panel: #141e30;
+    --otk-sidebar: #0e1626;
+    --otk-ink: #eaeef6;
+    --otk-muted: #93a0b5;
+    --otk-muted-2: #6c7890;
+    --otk-border: rgba(255, 255, 255, 0.1);
+    --otk-blue: #5b8cff;
+    --otk-blue-hover: #6e9aff;
+    --otk-violet: #8f75ff;
+    --otk-warm: #ee8a5c;
+    --otk-active: rgba(91, 140, 255, 0.16);
+    --otk-chip: #1c2942;
+    --otk-hover: rgba(255, 255, 255, 0.05);
 }
 
 /*
- * Тёмная тема для админки/кабинета/форм входа. Страницы используют обычные
- * Tailwind-утилиты (bg-white, text-slate-*, …); чтобы не править каждую,
- * перекрашиваем их разом внутри обёртки .ui-scope. Несложный «слой темы».
+ * Токены → Tailwind-утилиты (bg-panel, text-ink, border-line, bg-brand…).
+ * `inline` оставляет var() в утилите — цвет меняется вместе с темой.
  */
-html.dark .ui-scope .bg-white {
-    background-color: #141d33;
+@theme inline {
+    --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Unbounded', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --color-page: var(--otk-bg);
+    --color-panel: var(--otk-panel);
+    --color-side: var(--otk-sidebar);
+    --color-ink: var(--otk-ink);
+    --color-muted: var(--otk-muted);
+    --color-muted2: var(--otk-muted-2);
+    --color-line: var(--otk-border);
+    --color-brand: var(--otk-blue);
+    --color-brand-hover: var(--otk-blue-hover);
+    --color-violet-brand: var(--otk-violet);
+    --color-warm: var(--otk-warm);
+    --color-active: var(--otk-active);
+    --color-chip: var(--otk-chip);
+    --color-hoverbg: var(--otk-hover);
 }
-html.dark .ui-scope .bg-slate-50 {
-    background-color: #0f1830;
+
+html {
+    background-color: var(--otk-bg);
 }
-html.dark .ui-scope .bg-slate-100 {
-    background-color: rgba(255, 255, 255, 0.07);
+body {
+    background-color: var(--otk-bg);
+    color: var(--otk-ink);
 }
-html.dark .ui-scope .border-slate-200,
-html.dark .ui-scope .border-slate-300 {
-    border-color: rgba(255, 255, 255, 0.12);
+
+/*
+ * СОВМЕСТИМОСТЬ: часть общих компонентов (аплоадер, тосты, канвас сценариев,
+ * матрица прав, дропдауны и т.п.) ещё использует slate-утилиты — перекрашиваем
+ * их централизованно на токены. Токены сами флипаются в тёмной теме — дубли
+ * под html.dark не нужны.
+ */
+.ui-scope .bg-white {
+    background-color: var(--otk-panel);
 }
-html.dark .ui-scope .border-slate-100 {
-    border-color: rgba(255, 255, 255, 0.08);
+.ui-scope .bg-slate-50,
+.ui-scope .bg-slate-100 {
+    background-color: var(--otk-chip);
 }
-html.dark .ui-scope .text-slate-800 {
-    color: #e6edf6;
+.ui-scope .border-slate-100,
+.ui-scope .border-slate-200,
+.ui-scope .border-slate-300 {
+    border-color: var(--otk-border);
 }
-html.dark .ui-scope .text-slate-700 {
-    color: #cbd5e1;
+.ui-scope .text-slate-800,
+.ui-scope .text-slate-700 {
+    color: var(--otk-ink);
 }
-html.dark .ui-scope .text-slate-600 {
-    color: #b6c2d2;
+.ui-scope .text-slate-600,
+.ui-scope .text-slate-500 {
+    color: var(--otk-muted);
 }
-html.dark .ui-scope .text-slate-500 {
-    color: #93a3b8;
+.ui-scope .text-slate-400,
+.ui-scope .text-slate-300 {
+    color: var(--otk-muted-2);
 }
-html.dark .ui-scope .text-slate-400 {
-    color: #7c8aa0;
-}
-html.dark .ui-scope .text-\[\#1F4E79\] {
-    color: #93c5fd;
-}
-html.dark .ui-scope .text-\[\#2E74B5\] {
-    color: #93c5fd;
-}
-html.dark .ui-scope .hover\:bg-slate-50:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+.ui-scope .hover\:bg-slate-50:hover,
+.ui-scope .hover\:bg-slate-100:hover {
+    background-color: var(--otk-hover);
 }
 /*
  * Tailwind v4 рисует divide-y как border-bottom у всех, КРОМЕ последнего
- * (:not(:last-child)) — включая первый элемент. Поэтому перекрашиваем тем же
- * селектором, иначе нижняя граница первой строки осталась бы светлой (slate-100)
- * и выглядела яркой полоской в тёмной теме.
+ * (:not(:last-child)) — включая первый элемент; перекрашиваем тем же селектором.
  */
-html.dark .ui-scope .divide-slate-100 > :not(:last-child) {
-    border-color: rgba(255, 255, 255, 0.08);
+.ui-scope .divide-slate-100 > :not(:last-child),
+.ui-scope .divide-slate-200 > :not(:last-child) {
+    border-color: var(--otk-border);
 }
+/* Тени старых карточек — мягче, под тёплый фон */
+.ui-scope .shadow-sm {
+    --tw-shadow: 0 1px 2px 0 rgba(16, 28, 51, 0.04);
+}
+
+/* Формы: в тёмной теме поля получают тёмную заливку (страницы стилизуют light сами) */
 html.dark .ui-scope input,
 html.dark .ui-scope textarea,
 html.dark .ui-scope select {
     background-color: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.14);
-    color: #e6edf6;
+    color: var(--otk-ink);
 }
 html.dark .ui-scope input::placeholder,
 html.dark .ui-scope textarea::placeholder {
-    color: #6b7a90;
+    color: var(--otk-muted-2);
 }
 html.dark .ui-scope select option {
-    background-color: #141d33;
-    color: #e6edf6;
+    background-color: #141e30;
+    color: #eaeef6;
 }
 /* Цветные статус-бейджи в тёмной теме */
 html.dark .ui-scope .bg-green-100 {
-    background-color: rgba(34, 197, 94, 0.16);
+    background-color: rgba(37, 165, 90, 0.16);
 }
 html.dark .ui-scope .bg-red-100 {
     background-color: rgba(239, 68, 68, 0.16);
@@ -91,9 +153,12 @@ html.dark .ui-scope .bg-red-100 {
 html.dark .ui-scope .bg-amber-100 {
     background-color: rgba(245, 158, 11, 0.16);
 }
+html.dark .ui-scope .bg-sky-100 {
+    background-color: rgba(91, 140, 255, 0.16);
+}
 html.dark .ui-scope .text-green-700,
 html.dark .ui-scope .text-green-600 {
-    color: #86efac;
+    color: #6ee7a0;
 }
 html.dark .ui-scope .text-red-700 {
     color: #fca5a5;
@@ -101,101 +166,53 @@ html.dark .ui-scope .text-red-700 {
 html.dark .ui-scope .text-amber-700 {
     color: #fcd34d;
 }
-html.dark .ui-scope .text-slate-300 {
-    color: #5b6677;
+html.dark .ui-scope .text-sky-700 {
+    color: #9db9ff;
 }
 
 /*
- * РЕБРЕНД: брендовый синий (#2E74B5 / #1F4E79) освежаем в спокойную
- * сине-индиго-циановую гамму (в тон лендингу) внутри .app-shell — как тёмную
- * тему, без правки 60+ страниц. CTA — градиентные (синий→индиго), текст
- * остаётся читаемым (заголовки — тёмно-синий, не градиент).
+ * Переиспользуемые примитивы новой системы (композиция для повторяющихся
+ * паттернов; остальное — токен-утилитами прямо в страницах).
  */
-.app-shell .text-\[\#1F4E79\] {
-    color: #1e3a8a;
+.otk-card {
+    background-color: var(--otk-panel);
+    border: 1px solid var(--otk-border);
+    border-radius: 18px;
 }
-.app-shell .text-\[\#2E74B5\] {
-    color: #2563eb;
+.otk-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: var(--otk-blue);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.875rem;
+    border-radius: 12px;
+    padding: 0.625rem 1.15rem;
+    transition: background-color 0.2s;
+    cursor: pointer;
 }
-/* Тёмная тема: брендовый текст — СВЕТЛЫЙ синий (тёмный нечитаем на тёмном фоне),
-   в т.ч. шапка (логотип, активный пункт) — она вне .ui-scope. */
-html.dark .app-shell .text-\[\#1F4E79\] {
-    color: #93c5fd;
+.otk-btn-primary:hover {
+    background-color: var(--otk-blue-hover);
 }
-html.dark .app-shell .text-\[\#2E74B5\] {
-    color: #93c5fd;
+.otk-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: var(--otk-panel);
+    color: var(--otk-ink);
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: 1px solid var(--otk-border);
+    border-radius: 12px;
+    padding: 0.625rem 1.15rem;
+    transition: background-color 0.2s;
+    cursor: pointer;
 }
-/* Сплошные брендовые заливки (кнопки/акценты) → спокойный градиент синий→индиго */
-.app-shell .bg-\[\#2E74B5\] {
-    background-color: #2563eb;
-    background-image: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-}
-.app-shell .hover\:bg-\[\#255f96\]:hover {
-    background-color: #1e3a8a;
-    background-image: linear-gradient(135deg, #1e3a8a 0%, #4338ca 100%);
-}
-/* Светлые брендовые плашки/чипы (#EAF2FB) → светло-индиговые */
-.app-shell .bg-\[\#EAF2FB\] {
-    background-color: #eef2ff;
-}
-.app-shell .border-\[\#2E74B5\]\/40,
-.app-shell .hover\:border-\[\#2E74B5\]\/40:hover {
-    border-color: rgba(37, 99, 235, 0.45);
-}
-.app-shell .focus\:border-\[\#2E74B5\]:focus {
-    border-color: #2563eb;
-}
-/* Тёмная тема: индиговые плашки/чипы вместо голубых */
-html.dark .app-shell .bg-\[\#EAF2FB\] {
-    background-color: rgba(99, 102, 241, 0.16);
-}
-/* Остальные брендовые варианты: заливки с прозрачностью, рамки, кольца, градиенты */
-.app-shell .bg-\[\#1F4E79\] {
-    background-color: #1e3a8a;
-    background-image: linear-gradient(135deg, #1e3a8a 0%, #4338ca 100%);
-}
-.app-shell .bg-\[\#2E74B5\]\/10 {
-    background-color: rgba(37, 99, 235, 0.1);
-}
-.app-shell .bg-\[\#2E74B5\]\/12 {
-    background-color: rgba(37, 99, 235, 0.12);
-}
-.app-shell .bg-\[\#2E74B5\]\/5 {
-    background-color: rgba(37, 99, 235, 0.06);
-}
-.app-shell .border-\[\#2E74B5\] {
-    border-color: #2563eb;
-}
-.app-shell .border-\[\#2E74B5\]\/30 {
-    border-color: rgba(37, 99, 235, 0.3);
-}
-.app-shell .border-\[\#2E74B5\]\/50 {
-    border-color: rgba(37, 99, 235, 0.5);
-}
-.app-shell .ring-\[\#2E74B5\] {
-    --tw-ring-color: #2563eb;
-}
-.app-shell .ring-\[\#2E74B5\]\/15 {
-    --tw-ring-color: rgba(37, 99, 235, 0.15);
-}
-.app-shell .ring-\[\#2E74B5\]\/50 {
-    --tw-ring-color: rgba(37, 99, 235, 0.5);
-}
-.app-shell .from-\[\#2E74B5\] {
-    --tw-gradient-from: #2563eb var(--tw-gradient-from-position);
-    --tw-gradient-to: rgb(37 99 235 / 0) var(--tw-gradient-to-position);
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.app-shell .from-\[\#1F4E79\] {
-    --tw-gradient-from: #1e3a8a var(--tw-gradient-from-position);
-    --tw-gradient-to: rgb(30 58 138 / 0) var(--tw-gradient-to-position);
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.app-shell .to-\[\#2E74B5\] {
-    --tw-gradient-to: #2563eb var(--tw-gradient-to-position);
-}
-.app-shell .to-\[\#1F4E79\] {
-    --tw-gradient-to: #4338ca var(--tw-gradient-to-position);
+.otk-btn-ghost:hover {
+    background-color: var(--otk-hover);
 }
 
 /* Плавное появление контента (страницы кабинета/входа) */
@@ -216,11 +233,6 @@ html.dark .app-shell .bg-\[\#EAF2FB\] {
     .ui-fade-in {
         animation: none;
     }
-}
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 /* Форматированный текст анонсов (редактор, детальная страница, предпросмотр). */
@@ -255,14 +267,14 @@ html.dark .app-shell .bg-\[\#EAF2FB\] {
     list-style: decimal;
 }
 .rte a {
-    color: #2e74b5;
+    color: var(--otk-blue);
     text-decoration: underline;
 }
 .rte blockquote {
     margin: 0.5rem 0;
     border-left: 3px solid #cbd5e1;
     padding-left: 0.75rem;
-    color: #64748b;
+    color: var(--otk-muted);
 }
 .rte img {
     max-width: 100%;

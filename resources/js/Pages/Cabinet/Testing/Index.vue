@@ -138,18 +138,18 @@ onMounted(scrollToEnd);
     <Head title="Тестирование бота" />
 
     <AppLayout title="Тестирование бота">
-        <div class="mb-5 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100">
-            <p class="font-semibold">🧪 Это тестовый чат с вашим ботом.</p>
-            <p class="mt-1">
+        <div class="mb-5 rounded-2xl bg-active p-4 text-sm">
+            <p class="font-semibold text-brand">🧪 Это тестовый чат с вашим ботом.</p>
+            <p class="mt-1 text-muted">
                 Пишите как обычный клиент — бот отвечает по вашим настройкам (база знаний, сценарии, запись). Эти диалоги
                 <b>не попадают</b> в «Лиды» и «Базу клиентов», а запись в YClients <b>не создаётся по-настоящему</b>.
                 Тестовые данные стираются автоматически.
             </p>
         </div>
 
-        <div class="mx-auto flex h-[60vh] max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5">
+        <div class="mx-auto flex h-[60vh] max-w-2xl flex-col overflow-hidden rounded-2xl border border-line bg-panel">
             <div ref="scroller" class="flex-1 space-y-3 overflow-y-auto p-4">
-                <p v-if="messages.length === 0" class="mt-10 text-center text-sm text-slate-400">
+                <p v-if="messages.length === 0" class="mt-10 text-center text-sm text-muted2">
                     Напишите первое сообщение — например, «Здравствуйте» или вопрос об услуге.
                 </p>
 
@@ -158,8 +158,8 @@ onMounted(scrollToEnd);
                         <div
                             class="max-w-[80%] rounded-2xl px-4 py-2 text-sm"
                             :class="m.from === 'client'
-                                ? 'bg-[#2E74B5] text-white'
-                                : 'bg-slate-100 text-slate-800 dark:bg-white/10 dark:text-slate-100'"
+                                ? 'bg-brand text-white'
+                                : 'bg-chip text-ink'"
                         >
                             <p class="whitespace-pre-line">{{ m.text }}</p>
 
@@ -174,7 +174,7 @@ onMounted(scrollToEnd);
                                     v-for="(b, bi) in m.buttons"
                                     :key="bi"
                                     type="button"
-                                    class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 transition hover:border-[#2E74B5] hover:text-[#2E74B5] disabled:opacity-50 dark:border-white/15 dark:bg-white/5 dark:text-slate-200"
+                                    class="rounded-full border border-line bg-panel px-3 py-1 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand disabled:opacity-50"
                                     :disabled="busy"
                                     @click="send(b)"
                                 >
@@ -187,21 +187,21 @@ onMounted(scrollToEnd);
                     <p
                         v-if="m.note"
                         class="text-center text-xs"
-                        :class="m.booked ? 'text-emerald-600 dark:text-emerald-300' : m.escalate ? 'text-amber-600 dark:text-amber-300' : 'text-slate-400'"
+                        :class="m.booked ? 'text-emerald-600 dark:text-emerald-400' : m.escalate ? 'text-warm' : 'text-muted2'"
                     >
                         {{ m.note }}
                     </p>
                 </template>
 
-                <p v-if="busy" class="text-left text-xs text-slate-400">Бот печатает…</p>
+                <p v-if="busy" class="text-left text-xs text-muted2">Бот печатает…</p>
             </div>
 
-            <form class="flex items-center gap-2 border-t border-slate-200 p-3 dark:border-white/10" @submit.prevent="send()">
+            <form class="flex items-center gap-2 border-t border-line p-3" @submit.prevent="send()">
                 <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="sendImage" />
                 <button
                     type="button"
                     title="Прикрепить фото (проверить ответ бота по картинке)"
-                    class="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 transition hover:text-[#2E74B5] disabled:opacity-50 dark:border-white/15"
+                    class="rounded-xl border border-line px-3 py-2 text-sm text-muted transition hover:text-brand disabled:opacity-50"
                     :disabled="busy"
                     @click="fileInput?.click()"
                 >
@@ -211,12 +211,12 @@ onMounted(scrollToEnd);
                     v-model="input"
                     type="text"
                     placeholder="Напишите сообщение от лица клиента…"
-                    class="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm focus:border-[#2E74B5] focus:outline-none dark:border-white/15 dark:bg-white/5 dark:text-slate-100"
+                    class="flex-1 rounded-xl border border-line bg-panel px-4 py-2 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand"
                     :disabled="busy"
                 />
                 <button
                     type="submit"
-                    class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#255f97] disabled:opacity-50"
+                    class="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-hover disabled:opacity-50"
                     :disabled="busy || input.trim() === ''"
                 >
                     Отправить
@@ -227,7 +227,7 @@ onMounted(scrollToEnd);
         <div class="mx-auto mt-3 max-w-2xl text-right">
             <button
                 type="button"
-                class="text-sm text-slate-500 underline-offset-2 hover:text-rose-600 hover:underline"
+                class="text-sm text-muted underline-offset-2 hover:text-red-600 hover:underline"
                 @click="reset"
             >
                 Начать заново

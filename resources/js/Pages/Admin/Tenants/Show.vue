@@ -136,19 +136,21 @@ const savePassword = (): void => {
     <Head :title="tenant.name" />
 
     <AppLayout>
-        <Link href="/admin/tenants" class="text-sm text-[#2E74B5] hover:underline">← К списку</Link>
+        <Link href="/admin/tenants" class="text-sm font-semibold text-brand hover:underline">← К списку</Link>
 
         <div class="mt-2 mb-6 flex flex-wrap items-center gap-3">
-            <h1 class="text-2xl font-bold text-[#1F4E79]">{{ tenant.name }}</h1>
+            <h1 class="font-display text-2xl font-semibold text-ink">{{ tenant.name }}</h1>
             <span
-                class="text-xs rounded-full px-2 py-0.5"
-                :class="tenant.has_active_access && !tenant.is_blocked ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                :class="tenant.has_active_access && !tenant.is_blocked
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-red-500/15 text-red-600 dark:text-red-400'"
             >
                 {{ tenant.is_blocked ? 'заблокирован' : tenant.has_active_access ? 'активен' : 'доступ истёк' }}
             </span>
             <button
                 type="button"
-                class="ml-auto rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]"
+                class="ml-auto otk-btn-primary"
                 @click="impersonate"
             >
                 ➜ Войти в кабинет бизнеса
@@ -156,142 +158,142 @@ const savePassword = (): void => {
         </div>
 
         <!-- Тип бизнеса (ниша) -->
-        <div class="bg-white rounded-xl border border-slate-200 p-6 max-w-xl mb-6">
-            <div class="font-semibold text-[#1F4E79] mb-1">Тип бизнеса</div>
-            <p class="mb-3 text-xs text-slate-500">
-                Сейчас: <span class="font-medium text-slate-700">{{ tenant.business_type_label ?? 'не задан' }}</span>.
+        <div class="otk-card p-6 max-w-xl mb-6">
+            <div class="font-display text-base font-semibold text-ink mb-1">Тип бизнеса</div>
+            <p class="mb-3 text-xs text-muted">
+                Сейчас: <span class="font-medium text-ink">{{ tenant.business_type_label ?? 'не задан' }}</span>.
                 Влияет на подбор шаблонов сценариев и базы знаний в кабинете бизнеса.
             </p>
             <div class="flex flex-wrap items-center gap-3">
-                <select v-model="btForm.business_type" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <select v-model="btForm.business_type" class="rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand">
                     <option value="">Не задан</option>
                     <option v-for="bt in businessTypes" :key="bt.value" :value="bt.value">{{ bt.label }}</option>
                 </select>
                 <button
                     type="button"
                     :disabled="btForm.processing || btForm.business_type === (tenant.business_type ?? '')"
-                    class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-40"
+                    class="otk-btn-primary disabled:opacity-40"
                     @click="saveBusinessType"
                 >
                     Сохранить
                 </button>
-                <span v-if="btForm.recentlySuccessful" class="text-sm text-green-600">Сохранено</span>
+                <span v-if="btForm.recentlySuccessful" class="text-sm text-emerald-600 dark:text-emerald-400">Сохранено</span>
             </div>
         </div>
 
         <!-- Подписка -->
-        <div class="bg-white rounded-xl border border-slate-200 p-6 max-w-xl mb-6">
-            <div class="font-semibold text-[#1F4E79] mb-4">Подписка</div>
+        <div class="otk-card p-6 max-w-xl mb-6">
+            <div class="font-display text-base font-semibold text-ink mb-4">Подписка</div>
             <form class="grid sm:grid-cols-2 gap-4" @submit.prevent="save">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Тариф</label>
-                    <select v-model="form.plan" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+                    <label class="block text-sm font-medium text-ink mb-1">Тариф</label>
+                    <select v-model="form.plan" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand">
                         <option v-for="p in plans" :key="p.value" :value="p.value">{{ p.label }}</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Доступ оплачен до</label>
-                    <input v-model="form.access_expires_at" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-                    <p class="mt-1 text-xs text-slate-400">Пусто — без ограничения.</p>
+                    <label class="block text-sm font-medium text-ink mb-1">Доступ оплачен до</label>
+                    <input v-model="form.access_expires_at" type="date" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand" />
+                    <p class="mt-1 text-xs text-muted2">Пусто — без ограничения.</p>
                 </div>
                 <div class="sm:col-span-2 flex items-center gap-3">
-                    <button type="submit" :disabled="form.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">
+                    <button type="submit" :disabled="form.processing" class="otk-btn-primary disabled:opacity-50">
                         Сохранить
                     </button>
-                    <span v-if="form.recentlySuccessful" class="text-sm text-green-600">Сохранено</span>
+                    <span v-if="form.recentlySuccessful" class="text-sm text-emerald-600 dark:text-emerald-400">Сохранено</span>
                 </div>
             </form>
 
-            <div class="mt-5 pt-5 border-t border-slate-100">
-                <button v-if="tenant.is_blocked" type="button" class="rounded-lg border border-green-300 text-green-700 px-4 py-2 text-sm font-medium hover:bg-green-50" @click="unblock">
+            <div class="mt-5 pt-5 border-t border-line">
+                <button v-if="tenant.is_blocked" type="button" class="rounded-xl border border-emerald-500/40 px-4 py-2.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400" @click="unblock">
                     Разблокировать бизнес
                 </button>
-                <button v-else type="button" class="rounded-lg border border-red-300 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50" @click="block">
+                <button v-else type="button" class="rounded-xl border border-red-500/40 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400" @click="block">
                     Заблокировать бизнес
                 </button>
             </div>
         </div>
 
         <!-- Права и лимиты (по договорённости) -->
-        <div class="bg-white rounded-xl border border-slate-200 p-6 max-w-xl mb-6">
+        <div class="otk-card p-6 max-w-xl mb-6">
             <div class="mb-1 flex items-center gap-2">
-                <span class="font-semibold text-[#1F4E79]">Права и лимиты</span>
-                <span v-if="tenant.hasOverrides" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">индивидуальные</span>
-                <span v-else class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">по тарифу</span>
+                <span class="font-display text-base font-semibold text-ink">Права и лимиты</span>
+                <span v-if="tenant.hasOverrides" class="rounded-full bg-[#EE8A5C]/15 px-2.5 py-0.5 text-xs font-semibold text-warm">индивидуальные</span>
+                <span v-else class="rounded-full bg-chip px-2.5 py-0.5 text-xs font-semibold text-muted">по тарифу</span>
             </div>
-            <p class="mb-3 text-sm text-slate-500">
+            <p class="mb-3 text-sm text-muted">
                 Переопределяет возможности тарифа для этого бизнеса (для сделок по договорённости).
                 «Сбросить к тарифу» возвращает возможности тарифа «{{ tenant.plan_label }}».
             </p>
 
             <form class="space-y-4" @submit.prevent="saveOverrides">
                 <div class="grid gap-2 sm:grid-cols-2">
-                    <label v-for="t in toggles" :key="t.key" class="flex items-center gap-2 text-sm text-slate-700">
+                    <label v-for="t in toggles" :key="t.key" class="flex items-center gap-2 text-sm text-ink">
                         <Toggle :model-value="Boolean(ovForm[t.key])" @update:model-value="setOverride(t.key, $event)" />
                         {{ t.label }}
                     </label>
                 </div>
                 <div class="grid gap-3 sm:grid-cols-3">
                     <div v-for="n in numbers" :key="n.key">
-                        <label class="block text-xs font-medium text-slate-600 mb-1">{{ n.label }}</label>
-                        <input v-model.number="ovForm[n.key] as number" type="number" min="0" max="999" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                        <p class="mt-0.5 text-xs text-slate-400">тариф: {{ planDefaultsFor[n.key] }}</p>
+                        <label class="block text-xs font-medium text-muted mb-1">{{ n.label }}</label>
+                        <input v-model.number="ovForm[n.key] as number" type="number" min="0" max="999" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand" />
+                        <p class="mt-0.5 text-xs text-muted2">тариф: {{ planDefaultsFor[n.key] }}</p>
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <button type="submit" :disabled="ovForm.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">
+                    <button type="submit" :disabled="ovForm.processing" class="otk-btn-primary disabled:opacity-50">
                         Сохранить права
                     </button>
-                    <button type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50" @click="applyPlanDefaults">
+                    <button type="button" class="otk-btn-ghost" @click="applyPlanDefaults">
                         Заполнить по тарифу
                     </button>
-                    <button v-if="tenant.hasOverrides" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50" @click="resetOverrides">
+                    <button v-if="tenant.hasOverrides" type="button" class="otk-btn-ghost" @click="resetOverrides">
                         Сбросить к тарифу
                     </button>
-                    <span v-if="ovForm.recentlySuccessful" class="text-sm text-green-600">Сохранено</span>
+                    <span v-if="ovForm.recentlySuccessful" class="text-sm text-emerald-600 dark:text-emerald-400">Сохранено</span>
                 </div>
             </form>
         </div>
 
-        <h2 class="font-semibold text-slate-700 mb-2">Пользователи</h2>
-        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <h2 class="mb-2 text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">Пользователи</h2>
+        <div class="otk-card overflow-x-auto">
             <table class="w-full min-w-[420px] text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="text-left text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">
                     <tr>
-                        <th class="px-5 py-3 font-medium whitespace-nowrap">Имя</th>
-                        <th class="px-5 py-3 font-medium whitespace-nowrap">Email</th>
-                        <th class="px-5 py-3 font-medium whitespace-nowrap">Роль</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap">Имя</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap">Email</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap">Роль</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
-                    <tr v-for="user in users" :key="user.id">
-                        <td class="px-5 py-3 font-medium text-slate-700 whitespace-nowrap">{{ user.name }}</td>
-                        <td class="px-5 py-3 text-slate-500 whitespace-nowrap">{{ user.email }}</td>
-                        <td class="px-5 py-3 text-slate-500 whitespace-nowrap">{{ user.role }}</td>
+                <tbody>
+                    <tr v-for="user in users" :key="user.id" class="border-t border-line hover:bg-hoverbg">
+                        <td class="px-5 py-3 font-medium text-ink whitespace-nowrap">{{ user.name }}</td>
+                        <td class="px-5 py-3 text-muted whitespace-nowrap">{{ user.email }}</td>
+                        <td class="px-5 py-3 text-muted whitespace-nowrap">{{ user.role }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <!-- Смена пароля владельцу -->
-        <div class="bg-white rounded-xl border border-slate-200 p-6 max-w-xl mt-6">
-            <div class="font-semibold text-[#1F4E79] mb-1">Пароль владельца</div>
-            <p class="text-sm text-slate-500 mb-4">Задайте новый пароль для входа владельца бизнеса.</p>
+        <div class="otk-card p-6 max-w-xl mt-6">
+            <div class="font-display text-base font-semibold text-ink mb-1">Пароль владельца</div>
+            <p class="text-sm text-muted mb-4">Задайте новый пароль для входа владельца бизнеса.</p>
             <form class="grid sm:grid-cols-2 gap-4" @submit.prevent="savePassword">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Новый пароль</label>
-                    <input v-model="pwForm.password" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                    <label class="block text-sm font-medium text-ink mb-1">Новый пароль</label>
+                    <input v-model="pwForm.password" type="password" autocomplete="new-password" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand" />
                     <p v-if="pwForm.errors.password" class="mt-1 text-sm text-red-600">{{ pwForm.errors.password }}</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Повторите пароль</label>
-                    <input v-model="pwForm.password_confirmation" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                    <label class="block text-sm font-medium text-ink mb-1">Повторите пароль</label>
+                    <input v-model="pwForm.password_confirmation" type="password" autocomplete="new-password" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand" />
                 </div>
                 <div class="sm:col-span-2 flex items-center gap-3">
-                    <button type="submit" :disabled="pwForm.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">
+                    <button type="submit" :disabled="pwForm.processing" class="otk-btn-primary disabled:opacity-50">
                         Сменить пароль
                     </button>
-                    <span v-if="pwForm.recentlySuccessful" class="text-sm text-green-600">Пароль обновлён</span>
+                    <span v-if="pwForm.recentlySuccessful" class="text-sm text-emerald-600 dark:text-emerald-400">Пароль обновлён</span>
                 </div>
             </form>
         </div>

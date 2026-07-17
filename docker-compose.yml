@@ -42,6 +42,9 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8000
+      # Ключ шифрования — с хоста (.env), чтобы данные, засеянные хост-artisan'ом
+      # напрямую в pgsql (у демо-сидера так), контейнер мог расшифровать.
+      APP_KEY: ${APP_KEY:-}
       DB_CONNECTION: pgsql
       DB_HOST: pgsql
       DB_PORT: "5432"
@@ -73,6 +76,7 @@ services:
       APP_NAME: "Отклик"
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_KEY: ${APP_KEY:-}
       DB_CONNECTION: pgsql
       DB_HOST: pgsql
       DB_PORT: "5432"

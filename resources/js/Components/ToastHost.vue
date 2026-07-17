@@ -6,7 +6,7 @@ const { items, dismiss } = useToast();
 const accent: Record<ToastType, string> = {
     error: 'before:bg-red-500',
     success: 'before:bg-green-500',
-    info: 'before:bg-[#2E74B5]',
+    info: 'before:bg-[#2B5CE0]',
 };
 
 const icon: Record<ToastType, string> = {

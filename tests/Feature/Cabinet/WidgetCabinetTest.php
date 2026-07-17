@@ -133,7 +133,7 @@ final class WidgetCabinetTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Cabinet/Widget/Index')
-                ->where('widget.color', '#2E74B5'));
+                ->where('widget.color', '#2B5CE0'));
     }
 
     public function test_widget_tab_is_not_available_to_guests(): void

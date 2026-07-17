@@ -49,7 +49,7 @@ const cards = computed<Card[]>(() => [
 const cardClass = (c: Card): string =>
     c.disabled
         ? 'cursor-not-allowed opacity-60 grayscale'
-        : 'transition hover:-translate-y-1 hover:border-[#2E74B5] hover:shadow-lg hover:shadow-slate-100';
+        : 'transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(16,28,51,0.06)]';
 
 const tag = (c: Card): typeof Link | 'a' | 'div' => (c.disabled || !c.href ? 'div' : c.external ? 'a' : Link);
 </script>
@@ -57,17 +57,16 @@ const tag = (c: Card): typeof Link | 'a' | 'div' => (c.disabled || !c.href ? 'di
 <template>
     <Head title="Дашборд" />
 
-    <AppLayout>
-        <!-- Живая hero-плашка супер-админки -->
-        <div class="dash-hero relative mb-7 overflow-hidden rounded-3xl px-6 py-7 sm:px-8 sm:py-9">
-            <span class="dash-orb dash-orb-1"></span>
-            <span class="dash-orb dash-orb-2"></span>
-            <span class="dash-orb dash-orb-3"></span>
-            <span class="dash-grid"></span>
+    <AppLayout title="Дашборд платформы">
+        <!-- Hero-плашка супер-админки -->
+        <div
+            class="relative mb-7 overflow-hidden rounded-3xl p-7 text-white sm:p-9"
+            style="background: linear-gradient(135deg, #2b5ce0 0%, #4d6ef0 45%, #7c5cfc 100%)"
+        >
             <div class="relative">
-                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-white/65">Площадка «Отклик»</div>
-                <h1 class="mt-1.5 text-2xl font-extrabold text-white sm:text-3xl">Супер-админка</h1>
-                <p class="mt-1.5 text-sm text-white/85 sm:text-base">Управление площадкой — выберите раздел.</p>
+                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">Площадка «Отклик»</div>
+                <h1 class="mt-1.5 font-display text-3xl font-semibold">Супер-админка</h1>
+                <p class="mt-2 text-sm text-white/85 sm:text-base">Управление площадкой — выберите раздел.</p>
             </div>
         </div>
 
@@ -79,63 +78,23 @@ const tag = (c: Card): typeof Link | 'a' | 'div' => (c.disabled || !c.href ? 'di
                 :href="c.disabled || !c.href ? undefined : c.href"
                 :target="c.external ? '_blank' : undefined"
                 :rel="c.external ? 'noopener' : undefined"
-                class="group relative block rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5"
+                class="group relative block otk-card p-5"
                 :class="cardClass(c)"
             >
-                <span
-                    v-if="c.badge"
-                    class="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                    :class="c.disabled ? 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-300' : 'bg-[#EAF2FB] text-[#1F4E79] dark:bg-white/10 dark:text-sky-200'"
-                >
-                    {{ c.badge }}
-                </span>
-
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EAF2FB] text-2xl transition dark:bg-white/10" :class="!c.disabled && 'group-hover:scale-110'">
-                    {{ c.icon }}
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span :class="c.badge && !c.disabled ? 'text-[13px] font-semibold text-muted' : 'font-display text-base font-semibold text-ink'">{{ c.label }}</span>
+                            <span v-if="c.badge && c.disabled" class="rounded-full bg-chip px-2.5 py-0.5 text-xs font-semibold text-muted">{{ c.badge }}</span>
+                        </div>
+                        <div v-if="c.badge && !c.disabled" class="mt-1 font-display text-3xl font-semibold text-ink">{{ c.badge }}</div>
+                    </div>
+                    <div class="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-active text-lg transition" :class="!c.disabled && 'group-hover:scale-110'">
+                        {{ c.icon }}
+                    </div>
                 </div>
-                <div class="mt-4 font-semibold text-[#1F4E79] dark:text-sky-200">{{ c.label }}</div>
-                <div class="mt-1 text-sm text-slate-500">{{ c.text }}</div>
+                <div class="mt-1.5 text-sm text-muted2">{{ c.text }}</div>
             </component>
         </div>
     </AppLayout>
 </template>
-
-<style scoped>
-/* Сочная hero-плашка: переливающийся фиолетово-фуксиевый градиент + свечения + сетка. */
-.dash-hero {
-    background: linear-gradient(120deg, #2563eb 0%, #2e74b5 38%, #4f46e5 72%, #18b6c9 100%);
-    background-size: 240% 240%;
-    animation: dashPan 16s ease infinite;
-}
-.dash-orb {
-    position: absolute;
-    border-radius: 9999px;
-    filter: blur(30px);
-    opacity: 0.5;
-    pointer-events: none;
-    will-change: transform;
-}
-.dash-orb-1 { width: 190px; height: 190px; background: #818cf8; top: -85px; left: 4%; animation: dashFloat 9s ease-in-out infinite; }
-.dash-orb-2 { width: 150px; height: 150px; background: #7cc0ff; top: -45px; right: 13%; animation: dashFloat 12s ease-in-out infinite reverse; }
-.dash-orb-3 { width: 140px; height: 140px; background: #6ee7ff; bottom: -75px; left: 42%; animation: dashFloat 10s ease-in-out infinite; }
-.dash-grid {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1.4px);
-    background-size: 18px 18px;
-    mask-image: linear-gradient(180deg, #000, transparent);
-    -webkit-mask-image: linear-gradient(180deg, #000, transparent);
-    pointer-events: none;
-}
-@keyframes dashPan {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-@keyframes dashFloat {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(22px, 16px); }
-}
-@media (prefers-reduced-motion: reduce) {
-    .dash-hero, .dash-orb { animation: none; }
-}
-</style>

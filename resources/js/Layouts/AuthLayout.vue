@@ -1,140 +1,42 @@
 <script setup lang="ts">
-import Logo from '@/Components/Logo.vue';
-
 defineProps<{ title: string; subtitle?: string }>();
 </script>
 
 <template>
-    <div class="relative flex min-h-screen items-center justify-center overflow-x-clip p-6 text-slate-800 dark:text-slate-200">
-        <div class="bg-base"></div>
-        <div class="orbs" aria-hidden="true">
-            <span class="orb orb-1"></span>
-            <span class="orb orb-2"></span>
-            <span class="orb orb-3"></span>
+    <div class="relative flex min-h-screen items-center justify-center overflow-x-clip bg-page p-6 text-ink">
+        <!-- Мягкие цветовые пятна фона -->
+        <div class="pointer-events-none absolute inset-0 overflow-hidden dark:opacity-35" aria-hidden="true">
+            <div
+                class="absolute -top-[18%] -left-[10%] h-[56vw] w-[56vw] rounded-full blur-[90px]"
+                style="background: radial-gradient(circle at 40% 40%, rgba(43, 92, 224, 0.2), transparent 66%)"
+            ></div>
+            <div
+                class="absolute -right-[12%] -bottom-[22%] h-[60vw] w-[60vw] rounded-full blur-[90px]"
+                style="background: radial-gradient(circle at 60% 40%, rgba(238, 138, 92, 0.18), transparent 64%)"
+            ></div>
+            <div class="absolute top-[16%] right-[12%] h-[110px] w-[110px] rounded-full border-[1.5px] border-dashed border-[rgba(43,92,224,0.35)]"></div>
+            <div class="absolute bottom-[14%] left-[10%] h-16 w-16 rotate-[18deg] rounded-[20px] border-[6px] border-[rgba(238,138,92,0.45)]"></div>
         </div>
 
-        <div class="auth-enter w-full max-w-md">
-            <div class="mb-8 text-center">
-                <Logo :size="30" class="justify-center text-2xl text-[#1F4E79] dark:text-white" />
-                <h1 class="mt-3 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">{{ title }}</h1>
-                <p v-if="subtitle" class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
+        <div class="ui-fade-in relative z-10 w-full max-w-md">
+            <div class="mb-7 text-center">
+                <span class="inline-flex items-center gap-2.5">
+                    <span class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-brand shadow-lg shadow-[rgba(43,92,224,0.32)]">
+                        <span class="h-3 w-3 rounded-[999px_999px_999px_2px] bg-white"></span>
+                    </span>
+                    <span class="font-display text-xl font-semibold tracking-tight text-ink">Отклик</span>
+                </span>
+                <h1 class="mt-4 font-display text-2xl font-semibold tracking-tight text-ink">{{ title }}</h1>
+                <p v-if="subtitle" class="mt-2 text-[15px] text-muted">{{ subtitle }}</p>
             </div>
-            <div class="ui-scope glass rounded-3xl p-8">
+
+            <div class="ui-scope otk-card rounded-3xl p-8 shadow-xl shadow-[rgba(16,28,51,0.10)]">
                 <slot />
             </div>
+
+            <p class="mt-6 text-center text-[13px] text-muted2">
+                <a href="/" class="transition hover:text-muted">← Вернуться на сайт</a>
+            </p>
         </div>
     </div>
 </template>
-
-<style scoped>
-.glass {
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(18px) saturate(170%);
-    -webkit-backdrop-filter: blur(18px) saturate(170%);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 8px 32px rgba(31, 78, 121, 0.14);
-}
-html.dark .glass {
-    background: rgba(20, 30, 48, 0.6);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-}
-
-.bg-base {
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    background: linear-gradient(125deg, #eaf1fe 0%, #f6faff 45%, #e7f6ff 100%);
-    background-size: 200% 200%;
-    animation: bgpan 22s ease infinite;
-}
-html.dark .bg-base {
-    background: linear-gradient(125deg, #0b1220 0%, #0e1828 45%, #0a1a26 100%);
-    background-size: 200% 200%;
-}
-html.dark .orb {
-    opacity: 0.25;
-}
-
-.orbs {
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    overflow: hidden;
-    pointer-events: none;
-}
-.orb {
-    position: absolute;
-    border-radius: 9999px;
-    filter: blur(70px);
-    opacity: 0.5;
-}
-.orb-1 {
-    width: 380px;
-    height: 380px;
-    background: #7cc0ff;
-    top: -80px;
-    left: -60px;
-    animation: floaty 18s ease-in-out infinite;
-}
-.orb-2 {
-    width: 320px;
-    height: 320px;
-    background: #b9a8ff;
-    bottom: -90px;
-    right: -70px;
-    animation: floaty 24s ease-in-out infinite reverse;
-}
-.orb-3 {
-    width: 260px;
-    height: 260px;
-    background: #7df3e1;
-    bottom: 20%;
-    left: 8%;
-    animation: floaty 20s ease-in-out infinite;
-}
-
-.auth-enter {
-    animation: enter 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-
-@keyframes bgpan {
-    0%,
-    100% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-}
-@keyframes floaty {
-    0%,
-    100% {
-        transform: translate(0, 0) scale(1);
-    }
-    50% {
-        transform: translate(24px, -30px) scale(1.06);
-    }
-}
-@keyframes enter {
-    from {
-        opacity: 0;
-        transform: translateY(22px);
-    }
-    to {
-        opacity: 1;
-        transform: none;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .bg-base,
-    .orb {
-        animation: none;
-    }
-    .auth-enter {
-        animation: none;
-    }
-}
-</style>

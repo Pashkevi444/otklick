@@ -30,7 +30,7 @@ onMounted(() => requestAnimationFrame(() => (shown.value = true)));
             >
                 <div class="flex h-full items-end">
                     <div
-                        class="w-full rounded-t bg-gradient-to-t from-[#2E74B5]/40 to-[#2E74B5] transition-all duration-300 ease-out group-hover:from-[#2E74B5]/60 group-hover:to-[#1F4E79] dark:from-sky-500/30 dark:to-sky-400 dark:group-hover:to-sky-300"
+                        class="w-full rounded-t bg-gradient-to-t from-[#2B5CE0]/40 to-[#2B5CE0] transition-all duration-300 ease-out group-hover:from-[#2B5CE0]/60 group-hover:to-[#101C33] dark:from-sky-500/30 dark:to-sky-400 dark:group-hover:to-sky-300"
                         :style="{
                             height: shown ? `${(b.value / max) * 100}%` : '0%',
                             transitionDelay: shown ? '0ms' : `${i * 18}ms`,
@@ -40,7 +40,7 @@ onMounted(() => requestAnimationFrame(() => (shown.value = true)));
                     />
                 </div>
                 <div
-                    class="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 rounded-md bg-[#1F4E79] px-1.5 py-0.5 text-center text-[10px] leading-tight text-white opacity-0 shadow-lg transition group-hover:opacity-100 dark:bg-sky-600"
+                    class="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 rounded-md bg-[#101C33] px-1.5 py-0.5 text-center text-[10px] leading-tight text-white opacity-0 shadow-lg transition group-hover:opacity-100 dark:bg-sky-600"
                 >
                     <div class="font-semibold">{{ b.value }}</div>
                     <div class="opacity-75">{{ b.label }}</div>

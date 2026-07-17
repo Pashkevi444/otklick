@@ -20,39 +20,39 @@ const tenant = computed(() => page.props.auth.user?.tenant ?? null);
 
     <AppLayout title="Оплата подписки">
         <div class="max-w-xl">
-            <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#EAF2FB] text-3xl dark:bg-white/10">💳</div>
-                <h2 class="mt-4 text-xl font-bold text-[#1F4E79]">Онлайн-оплата скоро</h2>
-                <p class="mx-auto mt-2 max-w-md text-sm text-slate-500">
+            <div class="otk-card p-8 text-center">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-active text-3xl">💳</div>
+                <h2 class="mt-4 font-display text-xl font-semibold text-ink">Онлайн-оплата скоро</h2>
+                <p class="mx-auto mt-2 max-w-md text-sm text-muted">
                     Мы готовим оплату подписки прямо из кабинета. Пока доступ продлевается по договорённости —
                     напишите нам, и мы всё оформим.
                 </p>
 
-                <div v-if="tenant" class="mt-6 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    Ваш тариф: <span class="font-semibold text-[#1F4E79]">{{ tenant.plan }}</span>
+                <div v-if="tenant" class="mt-6 rounded-xl bg-chip px-4 py-3 text-sm text-muted">
+                    Ваш тариф: <span class="font-semibold text-ink">{{ tenant.plan }}</span>
                     <template v-if="tenant.accessExpiresAt"> · доступ до {{ tenant.accessExpiresAt }}</template>
                 </div>
 
                 <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
                     <Link
                         href="/cabinet/subscription"
-                        class="rounded-xl border border-[#2E74B5]/30 bg-white px-5 py-2.5 text-sm font-medium text-[#1F4E79] transition hover:-translate-y-0.5"
+                        class="otk-btn-ghost px-5 py-2.5 transition hover:-translate-y-0.5"
                     >
                         Что входит в тариф
                     </Link>
                     <a
                         v-if="support.email"
                         :href="`mailto:${support.email}`"
-                        class="rounded-xl bg-[#2E74B5] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:-translate-y-0.5 hover:bg-[#255f96]"
+                        class="otk-btn-primary px-5 py-2.5 transition hover:-translate-y-0.5"
                     >
                         Связаться для оплаты
                     </a>
                 </div>
 
-                <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-slate-500">
-                    <a v-if="support.email" :href="`mailto:${support.email}`" class="hover:text-[#2E74B5]">✉️ {{ support.email }}</a>
-                    <a v-if="support.phone" :href="`tel:${support.phone}`" class="hover:text-[#2E74B5]">📞 {{ support.phone }}</a>
-                    <a v-if="support.telegram" :href="`https://t.me/${support.telegram}`" target="_blank" rel="noopener" class="hover:text-[#2E74B5]">✈️ Telegram</a>
+                <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted">
+                    <a v-if="support.email" :href="`mailto:${support.email}`" class="hover:text-brand">✉️ {{ support.email }}</a>
+                    <a v-if="support.phone" :href="`tel:${support.phone}`" class="hover:text-brand">📞 {{ support.phone }}</a>
+                    <a v-if="support.telegram" :href="`https://t.me/${support.telegram}`" target="_blank" rel="noopener" class="hover:text-brand">✈️ Telegram</a>
                 </div>
             </div>
         </div>

@@ -71,7 +71,7 @@ onMounted(() => requestAnimationFrame(() => (shown.value = true)));
                 />
             </svg>
             <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-7 text-center">
-                <span class="text-2xl font-bold text-[#1F4E79] dark:text-sky-200">{{ activeSlice ? activeSlice.value : centerValue }}</span>
+                <span class="text-2xl font-bold text-[#101C33] dark:text-sky-200">{{ activeSlice ? activeSlice.value : centerValue }}</span>
                 <span class="text-[11px] leading-tight text-slate-400">{{ activeSlice ? `${activeSlice.label} · ${activeSlice.pct}%` : centerLabel }}</span>
             </div>
         </div>
@@ -95,7 +95,7 @@ onMounted(() => requestAnimationFrame(() => (shown.value = true)));
                     :style="{ background: s.color, color: s.color }"
                 />
                 <span class="flex-1 truncate text-slate-600 dark:text-slate-300">{{ s.label }}</span>
-                <span class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ s.value }}</span>
+                <span class="font-semibold text-[#101C33] dark:text-sky-200">{{ s.value }}</span>
                 <span class="w-12 text-right text-xs text-slate-400">{{ s.pct }}%</span>
             </li>
             <li v-if="slices.length === 0" class="text-sm text-slate-400">Нет данных за период</li>

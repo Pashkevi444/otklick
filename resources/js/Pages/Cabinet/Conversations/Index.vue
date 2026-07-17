@@ -117,13 +117,13 @@ const arrow = (col: string): string => (state.sort !== col ? '' : state.dir === 
 
 const outcomeClass = (o: string): string =>
     ({
-        booked: 'bg-green-100 text-green-700',
-        lost: 'bg-red-100 text-red-700',
-        cancelled: 'bg-amber-100 text-amber-700',
-        spam: 'bg-slate-100 text-slate-500',
-        needs_human: 'bg-amber-100 text-amber-700',
-        open: 'bg-green-100 text-green-700',
-    })[o] ?? 'bg-slate-100 text-slate-500';
+        booked: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+        lost: 'bg-red-500/15 text-red-600 dark:text-red-400',
+        cancelled: 'bg-[#EE8A5C]/15 text-warm',
+        spam: 'bg-chip text-muted',
+        needs_human: 'bg-[#EE8A5C]/15 text-warm',
+        open: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    })[o] ?? 'bg-chip text-muted';
 
 const outcomeIcon = (o: string): string =>
     ({ booked: '✅', lost: '✖', cancelled: '🚫', spam: '🗑', needs_human: '🙋', open: '⏳' })[o] ?? '';
@@ -153,26 +153,26 @@ const remove = (id: string): void => {
     <Head title="Лиды" />
 
     <AppLayout title="Лиды">
-        <p class="mb-5 max-w-2xl text-sm text-slate-500">
+        <p class="mb-5 max-w-2xl text-sm text-muted">
             Все обращения клиентов — 100% лидов и переписки бота сохраняется здесь. Ищите, фильтруйте и сортируйте.
         </p>
 
         <!-- Тулбар: поиск + фильтр статуса -->
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div class="relative flex-1">
-                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted2">🔍</span>
                 <input
                     v-model="state.search"
                     type="text"
                     placeholder="Поиск по имени, телефону или тексту сообщений…"
-                    class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[#2E74B5]"
+                    class="w-full rounded-xl border border-line bg-panel py-2.5 pl-9 pr-3.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand"
                 />
             </div>
             <div class="flex flex-wrap gap-1.5">
                 <button
                     type="button"
-                    class="rounded-lg px-3 py-2 text-sm font-medium transition"
-                    :class="state.status === '' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                    class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                    :class="state.status === '' ? 'bg-brand text-white' : 'bg-panel border border-line text-muted hover:bg-hoverbg'"
                     @click="setStatus('')"
                 >
                     Все
@@ -181,8 +181,8 @@ const remove = (id: string): void => {
                     v-for="s in statuses"
                     :key="s.value"
                     type="button"
-                    class="rounded-lg px-3 py-2 text-sm font-medium transition"
-                    :class="state.status === s.value ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                    class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                    :class="state.status === s.value ? 'bg-brand text-white' : 'bg-panel border border-line text-muted hover:bg-hoverbg'"
                     @click="setStatus(s.value)"
                 >
                     {{ s.label }}
@@ -192,11 +192,11 @@ const remove = (id: string): void => {
 
         <!-- Фильтр по каналу -->
         <div class="mb-4 flex flex-wrap items-center gap-1.5">
-            <span class="text-xs text-slate-400">Канал:</span>
+            <span class="text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">Канал:</span>
             <button
                 type="button"
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                :class="state.channel === '' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                :class="state.channel === '' ? 'bg-brand text-white' : 'bg-panel border border-line text-muted hover:bg-hoverbg'"
                 @click="setChannel('')"
             >
                 Все
@@ -205,8 +205,8 @@ const remove = (id: string): void => {
                 v-for="c in channels"
                 :key="c.value"
                 type="button"
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                :class="state.channel === c.value ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                :class="state.channel === c.value ? 'bg-brand text-white' : 'bg-panel border border-line text-muted hover:bg-hoverbg'"
                 @click="setChannel(c.value)"
             >
                 {{ c.label }}
@@ -214,12 +214,12 @@ const remove = (id: string): void => {
         </div>
 
         <!-- Есть новые лиды — кнопка массово погасить подсветку «Новый». -->
-        <div v-if="newCount > 0" class="mb-3 flex items-center justify-between rounded-xl border border-[#2E74B5]/20 bg-[#2E74B5]/5 px-4 py-2.5">
-            <span class="text-sm text-slate-600"><span class="font-semibold text-[#2E74B5]">{{ newCount }}</span> новых</span>
-            <button type="button" class="text-sm font-medium text-[#2E74B5] hover:underline" @click="markAllRead">Прочитать всё</button>
+        <div v-if="newCount > 0" class="mb-3 flex items-center justify-between rounded-xl border border-brand/20 bg-active px-4 py-2.5">
+            <span class="text-sm text-muted"><span class="font-bold text-brand">{{ newCount }}</span> новых</span>
+            <button type="button" class="text-sm font-semibold text-brand hover:underline" @click="markAllRead">Прочитать всё</button>
         </div>
 
-        <div v-if="conversations.length === 0" class="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400">
+        <div v-if="conversations.length === 0" class="otk-card p-10 text-center text-muted2">
             {{ state.search || state.status ? 'Ничего не найдено. Измените поиск или фильтр.' : 'Пока нет лидов. Как только клиент напишет боту — обращение появится здесь.' }}
         </div>
 
@@ -230,65 +230,65 @@ const remove = (id: string): void => {
                     v-for="c in conversations"
                     :key="c.id"
                     :href="`/cabinet/conversations/${c.id}`"
-                    class="block rounded-xl border border-slate-200 bg-white p-4"
-                    :class="isNew(c.id) ? 'ring-1 ring-[#2E74B5]/40 bg-[#2E74B5]/5' : ''"
+                    class="otk-card block p-4"
+                    :class="isNew(c.id) ? 'ring-1 ring-brand/40 bg-active' : ''"
                     @click="markRead(c.id)"
                 >
                     <div class="flex items-center justify-between gap-2">
-                        <span class="font-medium text-slate-800">
-                            <span v-if="isNew(c.id)" class="mr-1 rounded-full bg-[#2E74B5]/10 px-2 py-0.5 text-xs font-medium text-[#2E74B5]">Новый</span>
+                        <span class="font-semibold text-ink">
+                            <span v-if="isNew(c.id)" class="mr-1 rounded-full bg-active px-2 py-0.5 text-xs font-semibold text-brand">Новый</span>
                             {{ c.contact }}
                         </span>
-                        <span class="flex-none rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
+                        <span class="flex-none rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                     </div>
-                    <p v-if="c.phone" class="mt-1 text-sm font-medium text-[#2E74B5]">📞 {{ c.phone }}</p>
-                    <p class="mt-1 truncate text-sm text-slate-500">{{ c.lastMessage ?? '—' }}</p>
-                    <div class="mt-1 flex justify-between text-xs text-slate-400">
+                    <p v-if="c.phone" class="mt-1 text-sm font-semibold text-brand">📞 {{ c.phone }}</p>
+                    <p class="mt-1 truncate text-sm text-muted">{{ c.lastMessage ?? '—' }}</p>
+                    <div class="mt-1 flex justify-between text-xs text-muted2">
                         <span>{{ c.source }} · {{ c.messagesCount }} сообщ.</span>
                         <span>{{ c.lastMessageAt }}</span>
                     </div>
-                    <p v-if="c.createdAt" class="mt-0.5 text-xs text-slate-400">Создан: {{ c.createdAt }}</p>
-                    <button v-if="can('conversations.delete')" type="button" class="mt-2 text-xs text-red-600 hover:underline" @click.prevent.stop="remove(c.id)">Удалить лид</button>
+                    <p v-if="c.createdAt" class="mt-0.5 text-xs text-muted2">Создан: {{ c.createdAt }}</p>
+                    <button v-if="can('conversations.delete')" type="button" class="mt-2 text-xs font-semibold text-red-600 hover:underline dark:text-red-400" @click.prevent.stop="remove(c.id)">Удалить лид</button>
                 </Link>
             </div>
 
             <!-- Таблица (десктоп) -->
-            <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
+            <div class="otk-card hidden overflow-x-auto md:block">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-left text-slate-500">
+                    <thead class="border-b border-line text-left text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">
                         <tr>
-                            <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('contact')">Клиент{{ arrow('contact') }}</th>
-                            <th class="px-5 py-3 font-medium">Телефон</th>
-                            <th class="px-5 py-3 font-medium">Источник</th>
-                            <th class="px-5 py-3 font-medium">Последнее сообщение</th>
-                            <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('messages')">Сообщений{{ arrow('messages') }}</th>
-                            <th class="px-5 py-3 font-medium">Статус</th>
-                            <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('created')">Создан{{ arrow('created') }}</th>
-                            <th class="cursor-pointer select-none px-5 py-3 font-medium hover:text-[#1F4E79]" @click="sortBy('last')">Обновлён{{ arrow('last') }}</th>
-                            <th v-if="can('conversations.delete')" class="px-5 py-3" />
+                            <th class="cursor-pointer select-none px-6 py-4 hover:text-brand" @click="sortBy('contact')">Клиент{{ arrow('contact') }}</th>
+                            <th class="px-6 py-4">Телефон</th>
+                            <th class="px-6 py-4">Источник</th>
+                            <th class="px-6 py-4">Последнее сообщение</th>
+                            <th class="cursor-pointer select-none px-6 py-4 hover:text-brand" @click="sortBy('messages')">Сообщений{{ arrow('messages') }}</th>
+                            <th class="px-6 py-4">Статус</th>
+                            <th class="cursor-pointer select-none px-6 py-4 hover:text-brand" @click="sortBy('created')">Создан{{ arrow('created') }}</th>
+                            <th class="cursor-pointer select-none px-6 py-4 hover:text-brand" @click="sortBy('last')">Обновлён{{ arrow('last') }}</th>
+                            <th v-if="can('conversations.delete')" class="px-6 py-4" />
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        <tr v-for="c in conversations" :key="c.id" class="cursor-pointer transition hover:bg-slate-50" :class="isNew(c.id) ? 'bg-[#2E74B5]/5' : ''" @click="open(c.id)">
-                            <td class="px-5 py-3">
+                    <tbody class="divide-y divide-[color:var(--otk-border)]">
+                        <tr v-for="c in conversations" :key="c.id" class="cursor-pointer transition hover:bg-hoverbg" :class="isNew(c.id) ? 'bg-active' : ''" @click="open(c.id)">
+                            <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
-                                    <span v-if="isNew(c.id)" title="Новый лид" class="h-2 w-2 flex-none rounded-full bg-[#2E74B5]"></span>
-                                    <span class="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#EAF2FB] text-xs font-semibold text-[#1F4E79]">{{ initials(c.contact) }}</span>
-                                    <span class="font-medium text-slate-800">{{ c.contact }}</span>
-                                    <span v-if="isNew(c.id)" class="rounded-full bg-[#2E74B5]/10 px-2 py-0.5 text-xs font-medium text-[#2E74B5]">Новый</span>
+                                    <span v-if="isNew(c.id)" title="Новый лид" class="h-2 w-2 flex-none rounded-full bg-brand"></span>
+                                    <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-active text-sm font-bold text-brand">{{ initials(c.contact) }}</span>
+                                    <span class="font-semibold text-ink">{{ c.contact }}</span>
+                                    <span v-if="isNew(c.id)" class="rounded-full bg-active px-2 py-0.5 text-xs font-semibold text-brand">Новый</span>
                                 </div>
                             </td>
-                            <td class="whitespace-nowrap px-5 py-3 font-medium" :class="c.phone ? 'text-[#2E74B5]' : 'text-slate-300'">{{ c.phone ?? '—' }}</td>
-                            <td class="px-5 py-3 text-slate-500">{{ c.source }}</td>
-                            <td class="max-w-xs truncate px-5 py-3 text-slate-500">{{ c.lastMessage ?? '—' }}</td>
-                            <td class="px-5 py-3 text-slate-500">{{ c.messagesCount }}</td>
-                            <td class="px-5 py-3">
-                                <span class="rounded-full px-2 py-0.5 text-xs" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
+                            <td class="whitespace-nowrap px-6 py-4 font-semibold" :class="c.phone ? 'text-brand' : 'text-muted2'">{{ c.phone ?? '—' }}</td>
+                            <td class="px-6 py-4 text-muted">{{ c.source }}</td>
+                            <td class="max-w-xs truncate px-6 py-4 text-muted">{{ c.lastMessage ?? '—' }}</td>
+                            <td class="px-6 py-4 text-muted">{{ c.messagesCount }}</td>
+                            <td class="px-6 py-4">
+                                <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="outcomeClass(c.outcome)">{{ outcomeIcon(c.outcome) }} {{ c.outcomeLabel }}</span>
                             </td>
-                            <td class="whitespace-nowrap px-5 py-3 text-slate-400">{{ c.createdAt ?? '—' }}</td>
-                            <td class="whitespace-nowrap px-5 py-3 text-slate-400">{{ c.lastMessageAt }}</td>
-                            <td v-if="can('conversations.delete')" class="px-5 py-3 text-right" @click.stop>
-                                <button type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>
+                            <td class="whitespace-nowrap px-6 py-4 text-muted2">{{ c.createdAt ?? '—' }}</td>
+                            <td class="whitespace-nowrap px-6 py-4 text-muted2">{{ c.lastMessageAt }}</td>
+                            <td v-if="can('conversations.delete')" class="px-6 py-4 text-right" @click.stop>
+                                <button type="button" class="text-sm font-semibold text-red-600 hover:underline dark:text-red-400" @click="remove(c.id)">Удалить</button>
                             </td>
                         </tr>
                     </tbody>

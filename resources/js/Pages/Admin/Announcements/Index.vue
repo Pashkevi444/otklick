@@ -81,10 +81,10 @@ const remove = (item: Item): void => {
     <AppLayout :title="title">
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <!-- Редактор -->
-            <form class="min-w-0 space-y-3 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5" @submit.prevent="submit">
+            <form class="min-w-0 space-y-3 otk-card p-5" @submit.prevent="submit">
                 <div class="flex items-center justify-between">
-                    <h2 class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ editingId ? 'Редактировать' : 'Новый анонс' }}</h2>
-                    <button type="button" class="text-sm text-slate-500 hover:underline" @click="showPreview = !showPreview">
+                    <h2 class="font-display text-base font-semibold text-ink">{{ editingId ? 'Редактировать' : 'Новый анонс' }}</h2>
+                    <button type="button" class="text-sm font-semibold text-brand hover:underline" @click="showPreview = !showPreview">
                         {{ showPreview ? 'Скрыть предпросмотр' : 'Предпросмотр' }}
                     </button>
                 </div>
@@ -93,32 +93,32 @@ const remove = (item: Item): void => {
                     v-model="form.title"
                     type="text"
                     placeholder="Заголовок"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5"
+                    class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand"
                 />
-                <p v-if="form.errors.title" class="text-xs text-rose-600">{{ form.errors.title }}</p>
+                <p v-if="form.errors.title" class="text-xs text-red-600">{{ form.errors.title }}</p>
 
                 <template v-if="!showPreview">
                     <RichTextEditor v-model="form.body" upload-url="/admin/announcements/images" />
-                    <p class="text-xs text-slate-400">Выделяйте жирным/курсивом, добавляйте заголовки, списки, ссылки и картинки прямо в текст.</p>
+                    <p class="text-xs text-muted2">Выделяйте жирным/курсивом, добавляйте заголовки, списки, ссылки и картинки прямо в текст.</p>
                 </template>
 
                 <!-- Предпросмотр (как увидит бизнес) -->
-                <div v-else class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
-                    <h3 class="text-lg font-bold text-[#1F4E79] dark:text-sky-200">{{ form.title || 'Заголовок' }}</h3>
-                    <div class="rte mt-2 text-sm text-slate-700 dark:text-slate-200" v-html="form.body || '<p class=\'text-slate-400\'>Текст анонса…</p>'"></div>
+                <div v-else class="rounded-xl border border-line bg-chip p-4">
+                    <h3 class="font-display text-lg font-semibold text-ink">{{ form.title || 'Заголовок' }}</h3>
+                    <div class="rte mt-2 text-sm text-ink" v-html="form.body || '<p class=\'text-muted2\'>Текст анонса…</p>'"></div>
                 </div>
-                <p v-if="form.errors.body" class="text-xs text-rose-600">{{ form.errors.body }}</p>
+                <p v-if="form.errors.body" class="text-xs text-red-600">{{ form.errors.body }}</p>
 
-                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <label class="flex items-center gap-2 text-sm text-ink">
                     <input v-model="form.is_published" type="checkbox" class="rounded" />
                     Опубликовать (видно бизнесам)
                 </label>
 
                 <div class="flex gap-2">
-                    <button type="submit" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-semibold text-white hover:bg-[#255f97] disabled:opacity-50" :disabled="form.processing">
+                    <button type="submit" class="otk-btn-primary disabled:opacity-50" :disabled="form.processing">
                         {{ editingId ? 'Сохранить' : 'Добавить' }}
                     </button>
-                    <button v-if="editingId" type="button" class="rounded-lg px-4 py-2 text-sm text-slate-500 hover:underline" @click="reset">Отмена</button>
+                    <button v-if="editingId" type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-muted hover:underline" @click="reset">Отмена</button>
                 </div>
             </form>
 
@@ -129,39 +129,39 @@ const remove = (item: Item): void => {
                     v-model="search"
                     type="search"
                     placeholder="Поиск по заголовку и тексту…"
-                    class="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-white/5"
+                    class="mb-3 w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand"
                     @input="runSearch"
                 />
 
                 <!-- Список -->
                 <div class="space-y-3">
-                <p v-if="props.page.data.length === 0" class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
+                <p v-if="props.page.data.length === 0" class="otk-card p-6 text-center text-muted2">
                     {{ search ? 'Ничего не найдено.' : 'Анонсов пока нет.' }}
                 </p>
                 <article
                     v-for="item in props.page.data"
                     :key="item.id"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5"
+                    class="otk-card p-4"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
-                                <h3 class="truncate font-semibold text-slate-800 dark:text-slate-100">{{ item.title }}</h3>
+                                <h3 class="truncate font-semibold text-ink">{{ item.title }}</h3>
                                 <span
-                                    class="flex-none rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                    :class="item.is_published ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300' : 'bg-slate-200 text-slate-500 dark:bg-white/10'"
+                                    class="flex-none rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                    :class="item.is_published ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-chip text-muted'"
                                 >
                                     {{ item.is_published ? 'Опубликовано' : 'Черновик' }}
                                 </span>
                             </div>
-                            <p class="mt-1 line-clamp-2 text-xs text-slate-500">{{ item.excerpt }}</p>
-                            <p class="mt-1 text-[11px] text-slate-400">
+                            <p class="mt-1 line-clamp-2 text-xs text-muted">{{ item.excerpt }}</p>
+                            <p class="mt-1 text-[11px] text-muted2">
                                 Создано: {{ fmt(item.created_at) }}<template v-if="item.published_at"> · Опубликовано: {{ fmt(item.published_at) }}</template>
                             </p>
                         </div>
-                        <div class="flex flex-none gap-2 text-sm">
-                            <button type="button" class="text-[#2E74B5] hover:underline" @click="edit(item)">Править</button>
-                            <button type="button" class="text-rose-600 hover:underline" @click="remove(item)">Удалить</button>
+                        <div class="flex flex-none gap-2 text-sm font-semibold">
+                            <button type="button" class="text-brand hover:underline" @click="edit(item)">Править</button>
+                            <button type="button" class="text-red-600 hover:underline dark:text-red-400" @click="remove(item)">Удалить</button>
                         </div>
                     </div>
                 </article>

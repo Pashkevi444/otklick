@@ -112,80 +112,99 @@ const grouped = computed(() =>
 );
 
 const accentTile: Record<GroupKey, string> = {
-    sales: 'bg-[#2E74B5]/12 text-[#2E74B5] dark:bg-sky-400/15 dark:text-sky-300',
-    bot: 'bg-violet-500/12 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300',
-    connect: 'bg-emerald-500/12 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300',
-    business: 'bg-amber-500/12 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300',
+    sales: 'bg-active text-brand',
+    bot: 'bg-violet-500/12 text-violet-600 dark:text-violet-300',
+    connect: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400',
+    business: 'bg-[#EE8A5C]/15 text-warm',
 };
 const accentDot: Record<GroupKey, string> = {
-    sales: 'bg-[#2E74B5]',
-    bot: 'bg-violet-500',
+    sales: 'bg-brand',
+    bot: 'bg-violet-brand',
     connect: 'bg-emerald-500',
-    business: 'bg-amber-500',
+    business: 'bg-warm',
 };
 const accentHover: Record<GroupKey, string> = {
-    sales: 'hover:border-[#2E74B5]/50',
-    bot: 'hover:border-violet-400/50',
-    connect: 'hover:border-emerald-400/50',
-    business: 'hover:border-amber-400/50',
+    sales: 'hover:border-brand/40',
+    bot: 'hover:border-violet-brand/40',
+    connect: 'hover:border-emerald-500/40',
+    business: 'hover:border-warm/40',
 };
 
 const cardClass = (c: DecoratedCard): string =>
     c.disabled
         ? 'cursor-not-allowed opacity-60 grayscale'
-        : `transition hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60 dark:hover:shadow-black/30 ${accentHover[c.group]}`;
+        : `transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(16,28,51,0.06)] ${accentHover[c.group]}`;
 
 const badgeClass = (label: string): string => {
-    if (label === 'Новое') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300';
-    if (label === 'Обновлено') return 'bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300';
-    if (label === 'Тех. работы') return 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300';
-    return 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-300';
+    if (label === 'Новое') return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
+    if (label === 'Обновлено') return 'bg-active text-brand';
+    if (label === 'Тех. работы') return 'bg-[#EE8A5C]/15 text-warm';
+    return 'bg-chip text-muted';
 };
 </script>
 
 <template>
     <Head title="Дашборд" />
 
-    <AppLayout>
-        <!-- Живая hero-плашка дашборда -->
-        <div class="dash-hero relative mb-7 overflow-hidden rounded-3xl px-6 py-7 sm:px-8 sm:py-9">
-            <span class="dash-orb dash-orb-1"></span>
-            <span class="dash-orb dash-orb-2"></span>
-            <span class="dash-orb dash-orb-3"></span>
-            <span class="dash-grid"></span>
+    <AppLayout title="Дашборд">
+        <!-- Герой-баннер: градиент бренд→фиолет, мягкие орбы + точечная сетка -->
+        <div
+            class="relative mb-7 overflow-hidden rounded-3xl p-7 text-white sm:p-9"
+            style="background: linear-gradient(135deg, #2b5ce0 0%, #4d6ef0 45%, #7c5cfc 100%)"
+        >
+            <div
+                aria-hidden="true"
+                class="pointer-events-none absolute -top-40 -right-10 h-[420px] w-[420px] rounded-full"
+                style="background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 66%)"
+            ></div>
+            <div
+                aria-hidden="true"
+                class="pointer-events-none absolute -bottom-56 right-1/4 h-[360px] w-[360px] rounded-full"
+                style="background: radial-gradient(circle, rgba(238, 138, 92, 0.4), transparent 64%)"
+            ></div>
+            <div
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-0"
+                style="
+                    background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1.4px);
+                    background-size: 18px 18px;
+                    -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+                    mask-image: linear-gradient(180deg, #000, transparent);
+                "
+            ></div>
             <div class="relative">
-                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-white/65">Панель управления</div>
-                <h1 class="mt-1.5 text-2xl font-extrabold text-white sm:text-3xl">Дашборд</h1>
-                <p class="mt-1.5 text-sm text-white/85 sm:text-base">С возвращением 👋 Обзор по «{{ tenantName }}»</p>
+                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">Панель управления</div>
+                <h1 class="mt-2 font-display text-3xl font-semibold">С возвращением 👋</h1>
+                <p class="mt-2 text-sm text-white/85 sm:text-base">Обзор по «{{ tenantName }}» за сегодня.</p>
             </div>
         </div>
 
         <!-- Мини-статы -->
-        <div v-if="stats" class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                <div class="text-2xl font-extrabold text-[#1F4E79] dark:text-sky-200">{{ stats.leadsToday }}</div>
-                <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Лидов сегодня</div>
+        <div v-if="stats" class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            <div class="otk-card p-5">
+                <div class="text-xs font-semibold text-muted">Лидов сегодня</div>
+                <div class="mt-2 font-display text-3xl font-semibold text-ink">{{ stats.leadsToday }}</div>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                <div class="text-2xl font-extrabold text-[#1F4E79] dark:text-sky-200">{{ stats.leadsWeek }}</div>
-                <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Лидов за 7 дней</div>
+            <div class="otk-card p-5">
+                <div class="text-xs font-semibold text-muted">Лидов за 7 дней</div>
+                <div class="mt-2 font-display text-3xl font-semibold text-ink">{{ stats.leadsWeek }}</div>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                <div class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ stats.bookedWeek }}</div>
-                <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Записей за неделю</div>
+            <div class="otk-card p-5">
+                <div class="text-xs font-semibold text-muted">Записей за неделю</div>
+                <div class="mt-2 font-display text-3xl font-semibold text-ink">{{ stats.bookedWeek }}</div>
             </div>
-            <div v-if="stats.clients !== null" class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                <div class="text-2xl font-extrabold text-[#1F4E79] dark:text-sky-200">{{ stats.clients }}</div>
-                <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Клиентов в базе</div>
+            <div v-if="stats.clients !== null" class="otk-card p-5">
+                <div class="text-xs font-semibold text-muted">Клиентов в базе</div>
+                <div class="mt-2 font-display text-3xl font-semibold text-ink">{{ stats.clients }}</div>
             </div>
         </div>
 
         <!-- Группы разделов -->
         <div class="space-y-8">
             <section v-for="g in grouped" :key="g.key">
-                <div class="mb-3 flex items-center gap-2">
+                <div class="mb-3 flex items-center gap-2.5">
                     <span class="h-2 w-2 rounded-full" :class="accentDot[g.key]"></span>
-                    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ g.title }}</h2>
+                    <h2 class="text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">{{ g.title }}</h2>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <component
@@ -193,71 +212,30 @@ const badgeClass = (label: string): string => {
                         v-for="c in g.items"
                         :key="c.key"
                         :href="c.to ?? undefined"
-                        class="group relative block rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5"
+                        class="group relative block rounded-2xl border border-line bg-panel p-5"
                         :class="cardClass(c)"
                     >
                         <span
                             v-if="c.statusLabel || c.badge"
-                            class="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                            class="absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
                             :class="badgeClass(c.statusLabel ?? c.badge ?? '')"
                         >
                             {{ c.statusLabel ?? c.badge }}
                         </span>
 
-                        <div class="relative flex h-11 w-11 items-center justify-center rounded-2xl transition" :class="[accentTile[c.group], !c.disabled && 'group-hover:scale-110']">
+                        <div class="relative flex h-[42px] w-[42px] items-center justify-center rounded-xl transition" :class="[accentTile[c.group], !c.disabled && 'group-hover:scale-110']">
                             <Icon :name="c.icon" class="h-6 w-6" />
                             <span
                                 v-if="c.notifyCount > 0"
-                                class="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-bold text-white shadow"
+                                class="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warm px-1 text-[11px] font-bold text-white shadow"
                             >{{ c.notifyCount > 99 ? '99+' : c.notifyCount }}</span>
                         </div>
-                        <div class="mt-3.5 font-semibold text-[#1F4E79] dark:text-sky-200">{{ c.label }}</div>
-                        <div class="mt-1 text-sm leading-snug text-slate-500 dark:text-slate-400">{{ c.text }}</div>
-                        <div v-if="c.planLocked" class="mt-2 text-xs font-medium text-[#2E74B5]">Открыть в подписке →</div>
+                        <div class="mt-3.5 font-semibold text-ink">{{ c.label }}</div>
+                        <div class="mt-1 text-sm leading-snug text-muted">{{ c.text }}</div>
+                        <div v-if="c.planLocked" class="mt-2 text-xs font-semibold text-brand">Открыть в подписке →</div>
                     </component>
                 </div>
             </section>
         </div>
     </AppLayout>
 </template>
-
-<style scoped>
-/* Сочная hero-плашка: переливающийся фиолетово-фуксиевый градиент + плавающие
-   свечения + точечная сетка. */
-.dash-hero {
-    background: linear-gradient(120deg, #2563eb 0%, #2e74b5 38%, #4f46e5 72%, #18b6c9 100%);
-    background-size: 240% 240%;
-    animation: dashPan 16s ease infinite;
-}
-.dash-orb {
-    position: absolute;
-    border-radius: 9999px;
-    filter: blur(30px);
-    opacity: 0.5;
-    pointer-events: none;
-    will-change: transform;
-}
-.dash-orb-1 { width: 190px; height: 190px; background: #818cf8; top: -85px; left: 4%; animation: dashFloat 9s ease-in-out infinite; }
-.dash-orb-2 { width: 150px; height: 150px; background: #7cc0ff; top: -45px; right: 13%; animation: dashFloat 12s ease-in-out infinite reverse; }
-.dash-orb-3 { width: 140px; height: 140px; background: #6ee7ff; bottom: -75px; left: 42%; animation: dashFloat 10s ease-in-out infinite; }
-.dash-grid {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1.4px);
-    background-size: 18px 18px;
-    mask-image: linear-gradient(180deg, #000, transparent);
-    -webkit-mask-image: linear-gradient(180deg, #000, transparent);
-    pointer-events: none;
-}
-@keyframes dashPan {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-@keyframes dashFloat {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(22px, 16px); }
-}
-@media (prefers-reduced-motion: reduce) {
-    .dash-hero, .dash-orb { animation: none; }
-}
-</style>
