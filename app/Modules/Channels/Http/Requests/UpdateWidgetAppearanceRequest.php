@@ -28,7 +28,7 @@ final class UpdateWidgetAppearanceRequest extends AbstractFormRequest
     public function messages(): array
     {
         return [
-            'color.regex' => 'Цвет должен быть в формате #RRGGBB, например #2E74B5.',
+            'color.regex' => 'Цвет должен быть в формате #RRGGBB, например #2B5CE0.',
         ];
     }
 }

@@ -75,7 +75,7 @@
     // --otk-b (тёмный край градиента). По умолчанию — бренд «Отклик»; реальный
     // цвет бизнеса подтягивается с /config и переопределяет переменные.
     var css = [
-        ':root{--otk-a:#2E74B5;--otk-b:#1F4E79}',
+        ':root{--otk-a:#2B5CE0;--otk-b:#7C5CFC}',
         '.otk-launcher{position:fixed;right:22px;bottom:22px;width:62px;height:62px;border:0;border-radius:50%;cursor:pointer;z-index:2147483000;',
         'background:linear-gradient(135deg,var(--otk-a),var(--otk-b));box-shadow:0 12px 30px rgba(16,42,73,.42),inset 0 1px 1px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;',
         'transition:transform .28s cubic-bezier(.2,.85,.25,1),box-shadow .28s ease}',

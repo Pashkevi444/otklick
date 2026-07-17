@@ -161,6 +161,6 @@ const onEdgesChange = (changes: EdgeChange[]): void => {
 .fc-input { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
 .fc-condition { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
 .fc-split { background: #f5f3ff; border-color: #c4b5fd; color: #5b21b6; }
-.fc-start { box-shadow: 0 0 0 2px #2e74b5; }
+.fc-start { box-shadow: 0 0 0 2px #2B5CE0; }
 .vue-flow__handle { width: 9px; height: 9px; }
 </style>

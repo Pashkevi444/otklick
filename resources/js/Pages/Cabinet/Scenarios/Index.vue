@@ -523,7 +523,7 @@ const testSend = (text?: string): void => {
     <Head title="Сценарии" />
 
     <AppLayout title="Сценарии">
-        <p class="mb-4 max-w-2xl text-sm text-slate-500">
+        <p class="mb-4 max-w-2xl text-sm text-muted">
             Конструктор воронок: задайте «если клиент написал X → ответь Y, предложи кнопки Z, сделай действие».
             Сработавший сценарий ведёт диалог по кнопкам; не совпало — отвечает ИИ по базе знаний.
         </p>
@@ -531,13 +531,13 @@ const testSend = (text?: string): void => {
         <!-- Список сценариев -->
         <div v-if="editing === null">
             <div class="mb-4 flex flex-wrap gap-2">
-                <button type="button" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96]" @click="newFlow">
+                <button type="button" class="otk-btn-primary" @click="newFlow">
                     + Новый сценарий с нуля
                 </button>
                 <button
                     v-if="templates.length"
                     type="button"
-                    class="rounded-lg border border-[#2E74B5] px-4 py-2 text-sm font-medium text-[#2E74B5] hover:bg-[#EAF2FB] dark:border-sky-400 dark:text-sky-300 dark:hover:bg-white/5"
+                    class="otk-btn-ghost"
                     @click="showTemplates = !showTemplates"
                 >
                     {{ showTemplates ? 'Скрыть шаблоны' : '📋 Готовые шаблоны' }}
@@ -546,76 +546,81 @@ const testSend = (text?: string): void => {
 
             <!-- Готовые шаблоны, сгруппированные по типу бизнеса (сперва «Общие») -->
             <div v-if="showTemplates && templates.length" class="mb-5">
-                <div class="mb-3 text-sm font-medium text-slate-600 dark:text-slate-300">Выберите готовый шаблон — он откроется в редакторе, останется поправить под себя:</div>
+                <div class="mb-3 text-sm font-medium text-muted">Выберите готовый шаблон — он откроется в редакторе, останется поправить под себя:</div>
 
                 <!-- Поиск + фильтр по типу бизнеса -->
                 <input
                     v-model="tplQuery"
                     type="search"
                     placeholder="Поиск шаблона по названию или фразе запуска…"
-                    class="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5"
+                    class="mb-2 w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand"
                 />
                 <div class="mb-4 flex flex-wrap gap-2">
                     <button
                         v-for="chip in tplChips"
                         :key="chip.key"
                         type="button"
-                        class="rounded-full px-3 py-1 text-xs font-medium transition"
-                        :class="tplType === chip.key ? 'bg-[#2E74B5] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300'"
+                        class="rounded-full px-3 py-1 text-xs font-semibold transition"
+                        :class="tplType === chip.key ? 'bg-brand text-white' : 'bg-panel border border-line text-muted hover:bg-hoverbg'"
                         @click="tplType = chip.key"
                     >
                         {{ chip.label }} <span class="opacity-70">{{ chip.count }}</span>
                     </button>
                 </div>
 
-                <div v-if="templateGroups.length === 0" class="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+                <div v-if="templateGroups.length === 0" class="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-muted2">
                     Ничего не найдено — измените запрос или фильтр.
                 </div>
 
                 <div v-for="g in templateGroups" :key="g.key" class="mb-4">
                     <div class="mb-2 flex items-center gap-2">
-                        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ g.label }}</span>
-                        <span class="h-px flex-1 bg-slate-200 dark:bg-white/10"></span>
+                        <span class="text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">{{ g.label }}</span>
+                        <span class="h-px flex-1 bg-line"></span>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         <button
                             v-for="t in g.items"
                             :key="t.key"
                             type="button"
-                            class="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-[#2E74B5] hover:shadow-sm dark:border-white/10 dark:bg-white/5"
+                            class="rounded-2xl border border-line bg-panel p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg hover:shadow-[rgba(16,28,51,0.06)]"
                             @click="startFromTemplate(t)"
                         >
-                            <div class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">{{ t.name }}</div>
-                            <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ t.description }}</div>
-                            <div class="mt-2 text-[11px] text-slate-400">Запуск по: {{ t.triggers.slice(0, 3).join(', ') }}…</div>
+                            <div class="text-sm font-semibold text-ink">{{ t.name }}</div>
+                            <div class="mt-1 text-xs text-muted">{{ t.description }}</div>
+                            <div class="mt-2 text-[11px] text-muted2">Запуск по: {{ t.triggers.slice(0, 3).join(', ') }}…</div>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div v-if="flows.length === 0" class="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400">
+            <div v-if="flows.length === 0" class="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted2">
                 Сценариев пока нет. Создайте первый — возьмите шаблон выше или начните с нуля.
             </div>
 
             <div class="space-y-3">
-                <div v-for="f in flows" :key="f.id" class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+                <div v-for="f in flows" :key="f.id" class="rounded-2xl border border-line bg-panel p-5">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="min-w-0">
-                            <div class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ f.name }}</div>
-                            <div class="mt-1 text-xs text-slate-400">Запуск по фразам: {{ f.triggers.join(', ') || '—' }}</div>
+                        <div class="flex min-w-0 items-center gap-3.5">
+                            <span class="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-violet-brand/15 text-violet-brand">
+                                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H15a3 3 0 0 1 3 3v6.5"/></svg>
+                            </span>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-ink">{{ f.name }}</div>
+                                <div class="mt-1 text-xs text-muted2">Запуск по фразам: {{ f.triggers.join(', ') || '—' }}</div>
+                            </div>
                         </div>
                         <div class="flex flex-none items-center gap-3">
                             <Toggle :model-value="f.is_active" @update:model-value="toggle(f)" />
-                            <button type="button" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="editFlow(f)">Редактировать</button>
-                            <button type="button" class="text-sm text-red-600 hover:underline" @click="destroy(f)">Удалить</button>
+                            <button type="button" class="text-sm font-semibold text-brand hover:underline" @click="editFlow(f)">Редактировать</button>
+                            <button type="button" class="text-sm font-semibold text-red-600 hover:underline" @click="destroy(f)">Удалить</button>
                         </div>
                     </div>
 
                     <!-- A/B-конверсия по вариантам -->
-                    <div v-if="f.ab && f.ab.length" class="mt-3 border-t border-slate-100 pt-3 dark:border-white/10">
-                        <div class="mb-1 text-xs font-medium text-slate-500">A/B-конверсия (запись)</div>
+                    <div v-if="f.ab && f.ab.length" class="mt-3 border-t border-line pt-3">
+                        <div class="mb-1 text-xs font-medium text-muted">A/B-конверсия (запись)</div>
                         <div class="flex flex-wrap gap-2">
-                            <span v-for="s in f.ab" :key="s.variant" class="rounded-lg bg-[#EAF2FB] px-2.5 py-1 text-xs text-[#1F4E79] dark:bg-white/10 dark:text-sky-200">
+                            <span v-for="s in f.ab" :key="s.variant" class="rounded-full bg-active px-2.5 py-1 text-xs text-brand">
                                 {{ s.variant }}: <b>{{ s.conversion }}%</b> ({{ s.booked }}/{{ s.total }})
                             </span>
                         </div>
@@ -630,273 +635,273 @@ const testSend = (text?: string): void => {
         <!-- Редактор -->
         <form v-else class="max-w-3xl space-y-5" @submit.prevent="save">
             <!-- Простое объяснение для новичка -->
-            <div class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-100">
-                <div class="font-medium">Как это работает 👇</div>
-                <p class="mt-1 text-xs leading-relaxed text-sky-800/90 dark:text-sky-100/80">
+            <div class="rounded-2xl bg-active p-4 text-sm">
+                <div class="font-semibold text-brand">Как это работает 👇</div>
+                <p class="mt-1 text-xs leading-relaxed text-muted">
                     Сценарий — это «если клиент написал нужное слово, бот ведёт его по шагам». Шаги называются <b>узлами</b>: бот пишет сообщение,
                     задаёт вопрос, делает развилку или A/B-тест. Соберите шаги ниже, перетащите их на схеме как удобно, и нажмите
                     <b>«🧪 Тест-прогон»</b>, чтобы проверить, как пойдёт диалог — без реальной переписки.
                 </p>
             </div>
 
-            <div class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <div class="otk-card p-5">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Название
+                        <label class="mb-1 block text-sm font-medium text-ink">Название
                             <Hint text="Внутреннее имя сценария — только для вас, клиент его не видит." />
                         </label>
-                        <input v-model="form.name" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Напр. Акция месяца" />
+                        <input v-model="form.name" type="text" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="Напр. Акция месяца" />
                         <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Запуск по фразам (через запятую)
+                        <label class="mb-1 block text-sm font-medium text-ink">Запуск по фразам (через запятую)
                             <Hint text="Слова, при которых сработает сценарий. Перечислите через запятую: акция, скидка, промо. Ловятся любые формы слова (акции, акцию) и опечатки по смыслу." />
                         </label>
-                        <input v-model="form.triggers" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="акция, скидка, промо" />
-                        <div class="mt-2 flex items-start gap-2.5 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200">
-                            <span class="mt-px flex-none rounded-md bg-amber-400/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-100">Совет</span>
+                        <input v-model="form.triggers" type="text" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="акция, скидка, промо" />
+                        <div class="mt-2 flex items-start gap-2.5 rounded-xl bg-warm/10 px-3 py-2.5 text-sm text-ink">
+                            <span class="mt-px flex-none rounded-md bg-warm/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-warm">Совет</span>
                             <span>На один ключ — <b>одно-два слова без предлогов</b> (напр. «стрижка», а не «как записаться на стрижку»). Так бот точнее ловит запрос и не путает сценарии. Разные ключи — через запятую.</span>
                         </div>
                     </div>
                 </div>
-                <div class="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <div class="mt-3 flex items-center gap-2 text-sm text-muted">
                     <Toggle v-model="form.is_active" /> Сценарий включён
                     <Hint text="Выключенный сценарий не срабатывает у клиентов, но остаётся в списке." />
                 </div>
                 <div class="mt-3">
-                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Стартовый узел
+                    <label class="mb-1 block text-sm font-medium text-ink">Стартовый узел
                         <Hint text="С какого шага начинается воронка, когда сработал запуск по фразам." />
                     </label>
-                    <select v-model="form.start" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <select v-model="form.start" class="rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-brand">
                         <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                     </select>
                 </div>
 
                 <!-- Доступные переменные для подстановки -->
-                <div class="mt-4 border-t border-slate-100 pt-3 dark:border-white/10">
-                    <div class="mb-1 text-xs font-medium text-slate-500">Переменные для вставки в тексты
+                <div class="mt-4 border-t border-line pt-3">
+                    <div class="mb-1 text-xs font-medium text-muted">Переменные для вставки в тексты
                         <Hint text="Вставьте такую переменную в любой текст — бот подставит значение. client_* берутся из карточки клиента сами; остальные — это ответы из узлов-вопросов." />
                     </div>
                     <div class="flex flex-wrap gap-1.5">
-                        <code v-for="v in availableVars" :key="v" class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300">{{ varTag(v) }}</code>
+                        <code v-for="v in availableVars" :key="v" class="rounded bg-chip px-1.5 py-0.5 text-xs text-muted">{{ varTag(v) }}</code>
                     </div>
                 </div>
             </div>
 
             <!-- Визуальная схема воронки: тяни узлы мышкой, клик — к редактору узла -->
             <div>
-                <div class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Схема воронки</div>
+                <div class="mb-1 text-sm font-medium text-ink">Схема воронки</div>
                 <FlowCanvas :nodes="form.nodes" :start="form.start" @moved="onNodeMoved" @select="focusNode" @connect="onNodeConnect" @disconnect="onNodeDisconnect" />
-                <p class="mt-1 text-xs text-slate-400">Тяни узлы мышкой; от нижних точек тяни стрелку к другому узлу — задашь переход. Клик по узлу откроет его настройки. Стрелку можно выделить и удалить (Delete).</p>
+                <p class="mt-1 text-xs text-muted2">Тяни узлы мышкой; от нижних точек тяни стрелку к другому узлу — задашь переход. Клик по узлу откроет его настройки. Стрелку можно выделить и удалить (Delete).</p>
             </div>
 
             <!-- Тест-прогон: проверить воронку, не написав живому боту -->
-            <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
+            <div class="otk-card p-5">
                 <div class="flex items-center justify-between">
-                    <div class="text-sm font-medium text-slate-700 dark:text-slate-200">🧪 Тест-прогон</div>
-                    <button type="button" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="testStart">{{ testLog.length ? 'Перезапустить' : 'Запустить' }}</button>
+                    <div class="font-display text-base font-semibold text-ink">🧪 Тест-прогон</div>
+                    <button type="button" class="text-sm font-semibold text-brand hover:underline" @click="testStart">{{ testLog.length ? 'Перезапустить' : 'Запустить' }}</button>
                 </div>
 
                 <div v-if="testOpen" class="mt-3">
-                    <div class="max-h-72 space-y-2 overflow-y-auto rounded-lg bg-slate-50 p-3 dark:bg-white/5">
+                    <div class="max-h-72 space-y-2 overflow-y-auto rounded-xl bg-chip p-3">
                         <div v-for="(m, i) in testLog" :key="i" :class="m.from === 'you' ? 'text-right' : 'text-left'">
-                            <span class="inline-block max-w-[85%] rounded-2xl px-3 py-1.5 text-sm" :class="m.from === 'you' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 dark:bg-white/10 dark:text-slate-200 dark:ring-white/10'">{{ m.text }}</span>
+                            <span class="inline-block max-w-[85%] rounded-2xl px-3 py-1.5 text-sm" :class="m.from === 'you' ? 'bg-brand text-white' : 'bg-panel text-ink ring-1 ring-[color:var(--otk-border)]'">{{ m.text }}</span>
                             <div v-if="m.images && m.images.length" class="mt-1 flex flex-wrap gap-1" :class="m.from === 'you' ? 'justify-end' : ''">
-                                <img v-for="(src, k) in m.images" :key="k" :src="src" alt="" class="h-20 w-20 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-white/10" />
+                                <img v-for="(src, k) in m.images" :key="k" :src="src" alt="" class="h-20 w-20 rounded-lg object-cover ring-1 ring-[color:var(--otk-border)]" />
                             </div>
-                            <div v-if="m.note" class="mt-0.5 text-xs italic text-slate-400">{{ m.note }}</div>
+                            <div v-if="m.note" class="mt-0.5 text-xs italic text-muted2">{{ m.note }}</div>
                             <div v-if="m.buttons && m.buttons.length" class="mt-1 flex flex-wrap gap-1" :class="m.from === 'you' ? 'justify-end' : ''">
-                                <button v-for="b in m.buttons" :key="b" type="button" class="rounded-full border border-[#2E74B5] px-2.5 py-0.5 text-xs text-[#2E74B5] hover:bg-[#EAF2FB] dark:border-sky-400 dark:text-sky-300" @click="testSend(b)">{{ b }}</button>
+                                <button v-for="b in m.buttons" :key="b" type="button" class="rounded-full border border-brand px-2.5 py-0.5 text-xs font-semibold text-brand hover:bg-active" @click="testSend(b)">{{ b }}</button>
                             </div>
                         </div>
-                        <div v-if="testDone" class="text-center text-xs text-slate-400">— конец сценария —</div>
+                        <div v-if="testDone" class="text-center text-xs text-muted2">— конец сценария —</div>
                     </div>
                     <div v-if="!testDone" class="mt-2 flex gap-2">
-                        <input v-model="testInput" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Ответ клиента…" :disabled="testBusy" @keydown.enter.prevent="testSend()" />
-                        <button type="button" class="rounded-lg bg-[#2E74B5] px-3 py-1.5 text-sm text-white hover:bg-[#255f96] disabled:opacity-50" :disabled="testBusy" @click="testSend()">→</button>
+                        <input v-model="testInput" type="text" class="flex-1 rounded-xl border border-line bg-panel px-3.5 py-2 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="Ответ клиента…" :disabled="testBusy" @keydown.enter.prevent="testSend()" />
+                        <button type="button" class="rounded-xl bg-brand px-3.5 py-2 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-50" :disabled="testBusy" @click="testSend()">→</button>
                     </div>
                 </div>
-                <p v-else class="mt-1 text-xs text-slate-400">Прогон по текущей (несохранённой) схеме — без реальной записи/эскалации.</p>
+                <p v-else class="mt-1 text-xs text-muted2">Прогон по текущей (несохранённой) схеме — без реальной записи/эскалации.</p>
             </div>
 
             <!-- Узлы -->
-            <div v-for="node in form.nodes" :id="`node-card-${node.id}`" :key="node.id" class="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <div v-for="node in form.nodes" :id="`node-card-${node.id}`" :key="node.id" class="rounded-2xl border border-line bg-panel p-5">
                 <div class="mb-2 flex items-center justify-between gap-2">
                     <div class="flex min-w-0 flex-1 items-center gap-2">
-                        <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-white/10 dark:text-slate-300">{{ node.id }}</span>
-                        <span v-if="form.start === node.id" class="rounded bg-[#EAF2FB] px-1.5 py-0.5 text-xs text-[#2E74B5]">старт</span>
+                        <span class="rounded bg-chip px-1.5 py-0.5 font-mono text-xs text-muted">{{ node.id }}</span>
+                        <span v-if="form.start === node.id" class="rounded-full bg-active px-2 py-0.5 text-xs font-semibold text-brand">старт</span>
                         <input
                             v-model="node.title"
                             type="text"
                             maxlength="40"
                             placeholder="Название шага (напр. Приветствие)"
-                            class="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-[#1F4E79] outline-none transition hover:border-slate-200 focus:border-[#2E74B5] dark:text-sky-200 dark:hover:border-white/10"
+                            class="min-w-0 flex-1 rounded-xl border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-ink outline-none transition placeholder:text-muted2 hover:border-line focus:border-brand"
                         />
                     </div>
-                    <button v-if="form.nodes.length > 1" type="button" class="flex-none text-xs text-red-600 hover:underline" @click="removeNode(node.id)">Удалить узел</button>
+                    <button v-if="form.nodes.length > 1" type="button" class="flex-none text-xs font-semibold text-red-600 hover:underline" @click="removeNode(node.id)">Удалить узел</button>
                 </div>
                 <div class="mb-3">
-                    <label class="mb-1 block text-xs font-medium text-slate-500">Тип узла
+                    <label class="mb-1 block text-xs font-medium text-muted">Тип узла
                         <Hint text="Сообщение — бот пишет текст и кнопки. Вопрос — спрашивает и запоминает ответ. Условие — развилка по переменной (если…то). A/B-сплит — делит людей на варианты, чтобы сравнить, что лучше записывает." />
                     </label>
-                    <select v-model="node.type" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
+                    <select v-model="node.type" class="w-full rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-brand sm:w-auto">
                         <option v-for="o in nodeTypeOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
                 </div>
 
                 <!-- СООБЩЕНИЕ: текст + действие + кнопки -->
                 <template v-if="node.type === 'message'">
-                    <textarea v-model="node.text" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" :placeholder="msgPlaceholder"></textarea>
+                    <textarea v-model="node.text" rows="2" class="w-full rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" :placeholder="msgPlaceholder"></textarea>
                     <div class="mt-3">
-                        <label class="mb-1 block text-xs font-medium text-slate-500">Действие
+                        <label class="mb-1 block text-xs font-medium text-muted">Действие
                             <Hint text="Что бот сделает на этом шаге. «Нет» — просто покажет сообщение и кнопки. Или сразу начнёт запись в YClients / позовёт администратора / завершит сценарий." />
                         </label>
-                        <select v-model="node.action" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto">
+                        <select v-model="node.action" class="w-full rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-brand sm:w-auto">
                             <option v-for="a in actionOptionsFor(node)" :key="a.value" :value="a.value">{{ a.label }}</option>
                         </select>
                     </div>
                     <div v-if="node.action === 'none'" class="mt-3">
-                        <div class="mb-1 text-xs font-medium text-slate-500">Кнопки (вариант → переход к узлу)
+                        <div class="mb-1 text-xs font-medium text-muted">Кнопки (вариант → переход к узлу)
                             <Hint text="Клиент нажимает кнопку — бот переходит к указанному узлу. Без кнопок шаг просто покажет сообщение и завершится." />
                         </div>
                         <div class="space-y-2">
                             <div v-for="(opt, i) in node.options" :key="i" class="flex items-center gap-2">
-                                <input v-model="opt.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="Текст кнопки" />
-                                <span class="text-slate-400">→</span>
-                                <select v-model="opt.next" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                                <input v-model="opt.label" type="text" class="flex-1 rounded-xl border border-line bg-panel px-3 py-1.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="Текст кнопки" />
+                                <span class="text-muted2">→</span>
+                                <select v-model="opt.next" class="rounded-xl border border-line bg-panel px-2 py-1.5 text-sm text-ink outline-none focus:border-brand">
                                     <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                                 </select>
                                 <button type="button" class="text-xs text-red-600 hover:underline" @click="removeOption(node, i)">убрать</button>
                             </div>
                         </div>
-                        <button type="button" class="mt-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="addOption(node)">+ кнопка</button>
+                        <button type="button" class="mt-2 text-sm font-semibold text-brand hover:underline" @click="addOption(node)">+ кнопка</button>
                     </div>
                     <!-- Действие «Показать элемент базы знаний» — выбор конкретного элемента -->
                     <div v-else-if="node.action === 'show_knowledge'" class="mt-3">
-                        <label class="mb-1 block text-xs font-medium text-slate-500">Какой элемент базы знаний показать
+                        <label class="mb-1 block text-xs font-medium text-muted">Какой элемент базы знаний показать
                             <Hint text="Бот отправит текст этого элемента вместе с его фото и ссылками и завершит сценарий. Удобно для кнопок вроде «Барбер Никита» — клиент сразу получит инфо из базы знаний." />
                         </label>
-                        <select v-model="node.knowledgeId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                        <select v-model="node.knowledgeId" class="w-full rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand">
                             <option value="">— выберите элемент —</option>
                             <option v-for="k in knowledgeEntries" :key="k.id" :value="k.id">{{ k.title }}</option>
                         </select>
-                        <p v-if="knowledgeEntries.length === 0" class="mt-1 text-xs text-amber-600 dark:text-amber-300">В базе знаний пока нет элементов — сначала добавьте их в разделе «База знаний».</p>
-                        <p class="mt-1 text-xs text-slate-400">Текст узла выше (если задан) добавится перед содержимым элемента. Это конечный шаг сценария.</p>
+                        <p v-if="knowledgeEntries.length === 0" class="mt-1 text-xs font-medium text-warm">В базе знаний пока нет элементов — сначала добавьте их в разделе «База знаний».</p>
+                        <p class="mt-1 text-xs text-muted2">Текст узла выше (если задан) добавится перед содержимым элемента. Это конечный шаг сценария.</p>
                     </div>
-                    <p v-else class="mt-2 text-xs text-slate-400">{{ actionLabel(node.action) }} — это конечный шаг сценария.</p>
+                    <p v-else class="mt-2 text-xs text-muted2">{{ actionLabel(node.action) }} — это конечный шаг сценария.</p>
                 </template>
 
                 <!-- ВОПРОС: приглашение + сохранить ответ в переменную + переход -->
                 <template v-else-if="node.type === 'input'">
-                    <textarea v-model="node.text" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Вопрос клиенту (например: Как вас зовут?)"></textarea>
+                    <textarea v-model="node.text" rows="2" class="w-full rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="Вопрос клиенту (например: Как вас зовут?)"></textarea>
                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label class="mb-1 block text-xs font-medium text-slate-500">Сохранить ответ в переменную
+                            <label class="mb-1 block text-xs font-medium text-muted">Сохранить ответ в переменную
                                 <Hint text="Имя латиницей без пробелов: name, phone. Ответ клиента запомнится, и его можно вставить дальше как {{name}}." />
                             </label>
-                            <input v-model="node.variable" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="name" />
+                            <input v-model="node.variable" type="text" class="w-full rounded-xl border border-line bg-panel px-3 py-1.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="name" />
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs font-medium text-slate-500">Дальше → узел</label>
-                            <select v-model="node.next" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                            <label class="mb-1 block text-xs font-medium text-muted">Дальше → узел</label>
+                            <select v-model="node.next" class="w-full rounded-xl border border-line bg-panel px-2 py-1.5 text-sm text-ink outline-none focus:border-brand">
                                 <option value="">—</option>
                                 <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                         </div>
                     </div>
-                    <p class="mt-2 text-xs text-slate-400">{{ inputHint }}</p>
+                    <p class="mt-2 text-xs text-muted2">{{ inputHint }}</p>
                 </template>
 
                 <!-- УСЛОВИЕ: если «что проверяем» «как» «значение» → да/нет -->
                 <template v-else-if="node.type === 'condition'">
-                    <div class="mb-1 text-xs font-medium text-slate-500">Если…
+                    <div class="mb-1 text-xs font-medium text-muted">Если…
                         <Hint text="Проверяем данные клиента или его ответ из прошлого вопроса и ведём в нужную ветку. Пример: «Имя клиента — содержит — Иван» → ветка ДА, иначе НЕТ. «Заполнена» — просто проверка, что значение вообще есть (тогда поле справа не нужно). Сравнение идёт без участия клиента." />
                     </div>
                     <div class="grid items-center gap-2 sm:grid-cols-[auto_1fr_auto_1fr] sm:gap-3">
-                        <span class="text-sm text-slate-500">Если</span>
-                        <select v-model="node.variable" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                        <span class="text-sm text-muted">Если</span>
+                        <select v-model="node.variable" class="rounded-xl border border-line bg-panel px-2 py-1.5 text-sm text-ink outline-none focus:border-brand">
                             <option value="">— что проверяем —</option>
                             <option v-for="o in variableOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                             <option v-if="node.variable && !availableVars.includes(node.variable)" :value="node.variable">{{ node.variable }} (своя)</option>
                         </select>
-                        <select v-model="node.operator" class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                        <select v-model="node.operator" class="rounded-xl border border-line bg-panel px-2 py-1.5 text-sm text-ink outline-none focus:border-brand">
                             <option v-for="o in operatorOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                         </select>
-                        <input v-if="node.operator !== 'filled'" v-model="node.value" type="text" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="напр. маникюр" />
-                        <span v-else class="text-xs text-slate-400">значение не нужно</span>
+                        <input v-if="node.operator !== 'filled'" v-model="node.value" type="text" class="rounded-xl border border-line bg-panel px-3 py-1.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="напр. маникюр" />
+                        <span v-else class="text-xs text-muted2">значение не нужно</span>
                     </div>
                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-emerald-600">Если ДА → узел</label>
-                            <select v-model="node.next" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                            <select v-model="node.next" class="w-full rounded-xl border border-line bg-panel px-2 py-1.5 text-sm text-ink outline-none focus:border-brand">
                                 <option value="">—</option>
                                 <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-red-600">Если НЕТ → узел</label>
-                            <select v-model="node.else" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                            <select v-model="node.else" class="w-full rounded-xl border border-line bg-panel px-2 py-1.5 text-sm text-ink outline-none focus:border-brand">
                                 <option value="">—</option>
                                 <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                         </div>
                     </div>
-                    <p class="mt-2 text-xs text-slate-400">Условие проходит без участия клиента — сразу уводит в нужную ветку.</p>
+                    <p class="mt-2 text-xs text-muted2">Условие проходит без участия клиента — сразу уводит в нужную ветку.</p>
                 </template>
 
                 <!-- A/B-СПЛИТ: варианты, между которыми делится трафик -->
                 <template v-else>
-                    <div class="mb-1 text-xs font-medium text-slate-500">Варианты (трафик делится поровну, липко на клиента)
+                    <div class="mb-1 text-xs font-medium text-muted">Варианты (трафик делится поровну, липко на клиента)
                         <Hint text="Каждый клиент случайно попадает в один вариант и всегда видит его же. Потом в списке сценариев увидите, какой вариант чаще доводит до записи." />
                     </div>
                     <div class="space-y-2">
                         <div v-for="(v, i) in node.variants" :key="i" class="flex items-center gap-2">
-                            <input v-model="v.label" type="text" class="w-20 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" placeholder="A" />
-                            <span class="text-slate-400">→</span>
-                            <select v-model="v.next" class="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                            <input v-model="v.label" type="text" class="w-20 rounded-xl border border-line bg-panel px-3 py-1.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand" placeholder="A" />
+                            <span class="text-muted2">→</span>
+                            <select v-model="v.next" class="flex-1 rounded-xl border border-line bg-panel px-2 py-1.5 text-sm text-ink outline-none focus:border-brand">
                                 <option value="">—</option>
                                 <option v-for="id in nodeIds" :key="id" :value="id">{{ nodeLabel(id) }}</option>
                             </select>
                             <button type="button" class="text-xs text-red-600 hover:underline" @click="removeVariant(node, i)">убрать</button>
                         </div>
                     </div>
-                    <button type="button" class="mt-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300" @click="addVariant(node)">+ вариант</button>
-                    <p class="mt-2 text-xs text-slate-400">Конверсия по вариантам (% записей) появится в карточке сценария в списке.</p>
+                    <button type="button" class="mt-2 text-sm font-semibold text-brand hover:underline" @click="addVariant(node)">+ вариант</button>
+                    <p class="mt-2 text-xs text-muted2">Конверсия по вариантам (% записей) появится в карточке сценария в списке.</p>
                 </template>
 
                 <!-- Фото шага: бот пришлёт их настоящими картинками (как в базе знаний) -->
-                <div v-if="node.type === 'message' || node.type === 'input'" class="mt-3 border-t border-slate-100 pt-3 dark:border-white/10">
-                    <div class="mb-1 text-xs font-medium text-slate-500">Фото на этом шаге
+                <div v-if="node.type === 'message' || node.type === 'input'" class="mt-3 border-t border-line pt-3">
+                    <div class="mb-1 text-xs font-medium text-muted">Фото на этом шаге
                         <Hint text="Прикреплённые фото бот отправит клиенту настоящими картинками вместе с сообщением (как примеры работ в базе знаний)." />
                     </div>
                     <div v-if="node.images.length" class="mb-2 flex flex-wrap gap-2">
                         <div v-for="(img, i) in node.images" :key="img.path" class="relative">
-                            <img :src="img.url" alt="" class="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-white/10" />
+                            <img :src="img.url" alt="" class="h-16 w-16 rounded-lg object-cover ring-1 ring-[color:var(--otk-border)]" />
                             <button type="button" class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white" @click="removeNodeImage(node, i)">×</button>
                         </div>
                     </div>
-                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-[#2E74B5] hover:underline dark:text-sky-300">
+                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand hover:underline">
                         <input type="file" accept="image/*" multiple class="hidden" :disabled="uploadingImage === node.id" @change="uploadNodeImage(node, $event)" />
                         {{ uploadingImage === node.id ? 'Загрузка…' : '+ фото' }}
                     </label>
                 </div>
             </div>
 
-            <button type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200" @click="addNode">
+            <button type="button" class="otk-btn-ghost" @click="addNode">
                 + Добавить узел
             </button>
 
             <!-- Проверка воронки: предупреждения о битых/недостижимых узлах -->
-            <div v-if="issues.length" class="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
-                <div class="mb-1 text-sm font-medium text-amber-800 dark:text-amber-300">⚠️ Проверьте воронку ({{ issues.length }})</div>
-                <ul class="list-disc space-y-0.5 pl-5 text-xs text-amber-700 dark:text-amber-200/90">
+            <div v-if="issues.length" class="rounded-2xl border border-[#EE8A5C]/30 bg-warm/10 p-4">
+                <div class="mb-1 text-sm font-semibold text-warm">⚠️ Проверьте воронку ({{ issues.length }})</div>
+                <ul class="list-disc space-y-0.5 pl-5 text-xs text-ink/80">
                     <li v-for="(msg, i) in issues" :key="i">{{ msg }}</li>
                 </ul>
             </div>
 
             <div class="flex gap-3">
-                <button type="submit" :disabled="form.processing" class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50">Сохранить</button>
-                <button type="button" class="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10" @click="cancel">Отмена</button>
+                <button type="submit" :disabled="form.processing" class="otk-btn-primary disabled:opacity-50">Сохранить</button>
+                <button type="button" class="otk-btn-ghost" @click="cancel">Отмена</button>
             </div>
         </form>
     </AppLayout>

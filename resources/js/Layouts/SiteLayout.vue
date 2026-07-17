@@ -91,44 +91,35 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div ref="root" class="mkt text-slate-800 dark:text-slate-200" :class="{ 'reveal-armed': armed }">
-        <!-- Анимированный градиентный фон + мягкое аврора-свечение -->
+    <div ref="root" class="mkt text-ink" :class="{ 'reveal-armed': armed }">
+        <!-- Фон страницы + вращающееся аврора-кольцо (эстетика нового макета) -->
         <div class="bg-base"></div>
         <div class="aurora" aria-hidden="true"></div>
 
-        <!-- Анимированные 3D-роботы: параллакс при скролле + наклон за курсором.
-             Мы продаём ИИ — фон это подчёркивает. На мобиле слой скрыт (CSS). -->
-        <div class="scene3d" aria-hidden="true">
-            <div v-for="n in 4" :key="n" class="obj3d robot3d" :class="`obj-${n}`">
-                <span class="r-antenna"></span>
-                <span class="r-head"><span class="r-eye"></span><span class="r-eye"></span></span>
-                <span class="r-body"></span>
-            </div>
-        </div>
-
-        <!-- Шапка -->
-        <header class="sticky top-0 z-30">
-            <div class="mx-auto mt-3 max-w-6xl px-4">
-                <div class="glass rounded-2xl px-4 sm:px-5">
-                    <div class="flex h-14 items-center justify-between">
-                        <Link href="/"><Logo class="text-lg text-[#1F4E79] dark:text-white" /></Link>
-                        <nav class="hidden items-center gap-7 text-sm md:flex">
+        <!-- Шапка: плавающая «пилюля» с блюром -->
+        <header class="sticky top-0 z-40 px-3 sm:px-4">
+            <div class="mx-auto mt-3 max-w-6xl">
+                <div class="mkt-nav px-4 sm:px-6" :class="mobileOpen ? 'rounded-3xl' : 'rounded-full'">
+                    <div class="flex h-14 items-center justify-between gap-4">
+                        <Link href="/" class="text-ink"><Logo :size="30" class="text-[17px]" /></Link>
+                        <nav class="hidden items-center gap-7 text-[15px] md:flex">
                             <Link
                                 v-for="l in navLinks"
                                 :key="l.href"
                                 :href="l.href"
                                 class="transition"
-                                :class="isActive(l.href) ? 'font-semibold text-[#1F4E79] dark:text-white' : 'text-slate-600 hover:text-[#1F4E79] dark:text-slate-300 dark:hover:text-white'"
+                                :class="isActive(l.href) ? 'font-bold text-ink' : 'font-medium text-muted hover:text-ink'"
                             >
                                 {{ l.label }}
                             </Link>
                         </nav>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 sm:gap-3">
                             <ThemeToggle />
-                            <a :href="loginUrl" class="hidden rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-[#2E74B5]/25 transition hover:-translate-y-0.5 hover:bg-[#255f96] sm:inline-block">Войти</a>
+                            <a :href="loginUrl" class="hidden px-1 text-[15px] font-semibold text-ink transition hover:text-brand md:inline-block">Войти</a>
+                            <Link href="/tarify" class="hidden rounded-full bg-gradient-to-r from-[#2B5CE0] to-[#5B62F0] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#2B5CE0]/30 transition hover:-translate-y-0.5 sm:inline-block">Попробовать</Link>
                             <button
                                 type="button"
-                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/50 bg-white/40 text-[#1F4E79] md:hidden dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                class="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-panel text-ink md:hidden"
                                 :aria-label="mobileOpen ? 'Закрыть меню' : 'Открыть меню'"
                                 @click="mobileOpen = !mobileOpen"
                             >
@@ -136,17 +127,17 @@ onBeforeUnmount(() => {
                             </button>
                         </div>
                     </div>
-                    <nav v-if="mobileOpen" class="flex flex-col gap-1 border-t border-white/40 py-3 text-sm md:hidden dark:border-white/10">
+                    <nav v-if="mobileOpen" class="flex flex-col gap-1 border-t border-line py-3 text-sm md:hidden">
                         <Link
                             v-for="l in navLinks"
                             :key="l.href"
                             :href="l.href"
-                            class="rounded-lg px-3 py-2 text-slate-700 transition hover:bg-white/50 dark:text-slate-200 dark:hover:bg-white/10"
+                            class="rounded-xl px-3 py-2.5 font-semibold text-ink transition hover:bg-hoverbg"
                             @click="mobileOpen = false"
                         >
                             {{ l.label }}
                         </Link>
-                        <a :href="loginUrl" class="mt-1 rounded-lg bg-[#2E74B5] px-3 py-2 text-center font-medium text-white">Войти</a>
+                        <a :href="loginUrl" class="mt-1 rounded-full bg-[#2B5CE0] px-3 py-2.5 text-center font-bold text-white">Войти</a>
                     </nav>
                 </div>
             </div>
@@ -154,24 +145,24 @@ onBeforeUnmount(() => {
 
         <slot />
 
-        <!-- Футер -->
-        <footer class="mx-auto max-w-6xl px-6 pb-10 pt-4">
-            <div class="glass rounded-3xl px-6 py-8">
-                <div class="flex flex-col justify-between gap-4 sm:flex-row">
-                    <div>
-                        <div class="font-bold text-[#1F4E79] dark:text-white">Отклик</div>
-                        <p class="mt-1 max-w-sm text-sm text-slate-400 dark:text-slate-500">AI-администратор для локального бизнеса: ответы клиентам и запись в CRM круглосуточно.</p>
+        <!-- Футер: тёмно-нави блок на всю ширину -->
+        <footer class="mkt-footer mt-16">
+            <div class="mx-auto max-w-6xl px-6 pb-10 pt-14">
+                <div class="flex flex-col justify-between gap-10 border-b border-white/10 pb-10 sm:flex-row">
+                    <div class="max-w-xs">
+                        <Logo :size="30" class="text-[17px] text-white" />
+                        <p class="mt-3.5 text-sm leading-relaxed text-white/60">AI-администратор для локального бизнеса: ответы клиентам и запись в CRM круглосуточно.</p>
                     </div>
-                    <div class="flex flex-wrap items-start gap-x-6 gap-y-2 text-sm">
-                        <Link v-for="l in navLinks" :key="l.href" :href="l.href" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">{{ l.label }}</Link>
-                        <Link href="/privacy" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Конфиденциальность</Link>
-                        <Link href="/offer" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Оферта</Link>
-                        <Link href="/terms" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Соглашение</Link>
-                        <Link href="/consent" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Согласие на ПДн</Link>
-                        <a :href="loginUrl" class="text-slate-500 transition hover:text-[#1F4E79] dark:text-slate-400 dark:hover:text-white">Вход</a>
+                    <div class="flex max-w-xl flex-wrap content-start items-start gap-x-6 gap-y-2.5 text-sm">
+                        <Link v-for="l in navLinks" :key="l.href" :href="l.href" class="text-white/70 transition hover:text-white">{{ l.label }}</Link>
+                        <Link href="/privacy" class="text-white/70 transition hover:text-white">Конфиденциальность</Link>
+                        <Link href="/offer" class="text-white/70 transition hover:text-white">Оферта</Link>
+                        <Link href="/terms" class="text-white/70 transition hover:text-white">Соглашение</Link>
+                        <Link href="/consent" class="text-white/70 transition hover:text-white">Согласие на ПДн</Link>
+                        <a :href="loginUrl" class="text-white/70 transition hover:text-white">Вход</a>
                     </div>
                 </div>
-                <div class="mt-8 border-t border-white/50 pt-6 text-xs leading-relaxed text-slate-400 dark:border-white/10 dark:text-slate-500">
+                <div class="pt-6 text-xs leading-relaxed text-white/45">
                     <span v-if="site.legalName">{{ site.legalName }}</span>
                     <span v-if="site.inn"> · ИНН {{ site.inn }}</span>
                     <span v-if="site.ogrnip"> · ОГРНИП {{ site.ogrnip }}</span>

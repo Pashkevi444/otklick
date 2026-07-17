@@ -80,15 +80,15 @@ const when = (iso: string): string =>
         <div class="mx-auto max-w-3xl">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-[#2E74B5] dark:text-sky-300">Журнал</p>
-                    <h1 class="text-2xl font-bold text-[#1F4E79] dark:text-sky-100">Уведомления</h1>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    <p class="text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">Журнал</p>
+                    <h1 class="font-display text-2xl font-semibold text-ink">Уведомления</h1>
+                    <p class="mt-1 text-sm text-muted">
                         Все события сервиса, доступные вам по вашим правам.
                     </p>
                 </div>
                 <button
                     type="button"
-                    class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#2E74B5] transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-sky-300"
+                    class="otk-btn-ghost"
                     @click="markAll"
                 >
                     Прочитать всё
@@ -101,10 +101,10 @@ const when = (iso: string): string =>
                     v-for="s in props.sections"
                     :key="s.value"
                     type="button"
-                    class="rounded-full px-3.5 py-1.5 text-sm font-medium transition"
+                    class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
                     :class="props.filters.section === s.value
-                        ? 'bg-[#2E74B5] text-white'
-                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300'"
+                        ? 'bg-brand text-white'
+                        : 'border border-line bg-panel text-muted hover:bg-hoverbg'"
                     @click="filterBy(s.value)"
                 >
                     {{ s.label }}
@@ -112,8 +112,8 @@ const when = (iso: string): string =>
             </div>
 
             <!-- Список -->
-            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5">
-                <p v-if="props.notifications.length === 0" class="px-5 py-16 text-center text-sm text-slate-400">
+            <div class="otk-card overflow-hidden">
+                <p v-if="props.notifications.length === 0" class="px-5 py-16 text-center text-sm text-muted2">
                     Уведомлений пока нет
                 </p>
                 <component
@@ -121,19 +121,19 @@ const when = (iso: string): string =>
                     v-for="item in props.notifications"
                     :key="item.id"
                     type="button"
-                    class="flex w-full items-start gap-3 border-b border-slate-100 px-5 py-3.5 text-left transition last:border-0 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
-                    :class="!item.read ? 'bg-[#EAF2FB]/50 dark:bg-white/5' : ''"
+                    class="flex w-full items-start gap-3 border-b border-line px-5 py-3.5 text-left transition last:border-0 hover:bg-hoverbg"
+                    :class="!item.read ? 'bg-active' : ''"
                     @click="go(item)"
                 >
                     <span class="mt-0.5 text-lg leading-5">{{ item.icon }}</span>
                     <span class="min-w-0 flex-1">
                         <span class="flex items-center justify-between gap-2">
-                            <span class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{{ item.title }}</span>
-                            <span class="shrink-0 text-xs text-slate-400">{{ when(item.at) }}</span>
+                            <span class="truncate text-sm font-semibold text-ink">{{ item.title }}</span>
+                            <span class="shrink-0 text-xs text-muted2">{{ when(item.at) }}</span>
                         </span>
-                        <span v-if="item.body" class="mt-0.5 block truncate text-sm text-slate-500 dark:text-slate-400">{{ item.body }}</span>
+                        <span v-if="item.body" class="mt-0.5 block truncate text-sm text-muted">{{ item.body }}</span>
                     </span>
-                    <span v-if="!item.read" class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-rose-500"></span>
+                    <span v-if="!item.read" class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand"></span>
                 </component>
             </div>
 

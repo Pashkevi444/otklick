@@ -118,7 +118,7 @@ const isActive = (name: string, attrs?: Record<string, unknown>): boolean => edi
     background: rgba(46, 116, 181, 0.1);
 }
 .rte-on {
-    background: #2e74b5;
+    background: #2B5CE0;
     color: #fff;
 }
 </style>

@@ -20,30 +20,30 @@ const submit = (): void => {
     <Head title="Смена пароля" />
 
     <AppLayout title="Смена пароля">
-        <form class="bg-white rounded-xl border border-slate-200 p-6 max-w-md space-y-5" @submit.prevent="submit">
+        <form class="otk-card max-w-md space-y-5 p-6" @submit.prevent="submit">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Текущий пароль</label>
-                <input v-model="form.current_password" type="password" autocomplete="current-password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-                <p v-if="form.errors.current_password" class="mt-1 text-sm text-red-600">{{ form.errors.current_password }}</p>
+                <label class="mb-1.5 block text-sm font-semibold text-ink">Текущий пароль</label>
+                <input v-model="form.current_password" type="password" autocomplete="current-password" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
+                <p v-if="form.errors.current_password" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.current_password }}</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Новый пароль</label>
-                <input v-model="form.password" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-                <p v-if="form.errors.password" class="mt-1 text-sm text-red-600">{{ form.errors.password }}</p>
+                <label class="mb-1.5 block text-sm font-semibold text-ink">Новый пароль</label>
+                <input v-model="form.password" type="password" autocomplete="new-password" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
+                <p v-if="form.errors.password" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.password }}</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Повторите новый пароль</label>
-                <input v-model="form.password_confirmation" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+                <label class="mb-1.5 block text-sm font-semibold text-ink">Повторите новый пароль</label>
+                <input v-model="form.password_confirmation" type="password" autocomplete="new-password" class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand" />
             </div>
             <div class="flex items-center gap-3">
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
+                    class="otk-btn-primary disabled:pointer-events-none disabled:opacity-50"
                 >
                     Сменить пароль
                 </button>
-                <span v-if="form.recentlySuccessful" class="text-sm text-green-600">Обновлено</span>
+                <span v-if="form.recentlySuccessful" class="text-sm text-emerald-600 dark:text-emerald-400">Обновлено</span>
             </div>
         </form>
     </AppLayout>

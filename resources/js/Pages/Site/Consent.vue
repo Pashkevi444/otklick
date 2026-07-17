@@ -25,10 +25,10 @@ const updatedAt = '23 июня 2026 г.';
 
     <SiteLayout :site="site" :login-url="loginUrl">
         <section class="mx-auto max-w-3xl px-6 py-16">
-            <h1 data-reveal class="text-3xl font-bold text-[#1F4E79] dark:text-sky-200">Согласие на обработку персональных данных</h1>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Редакция от {{ updatedAt }}</p>
+            <h1 data-reveal class="font-display text-3xl font-semibold tracking-tight text-ink">Согласие на обработку персональных данных</h1>
+            <p class="mt-2 text-sm text-muted2">Редакция от {{ updatedAt }}</p>
 
-            <div class="prose-policy mt-8 space-y-8 text-slate-700 dark:text-slate-300">
+            <div class="prose-policy mt-8 space-y-8 rounded-3xl border border-line bg-panel p-6 text-ink shadow-sm sm:p-10">
                 <section>
                     <p>
                         Отправляя форму на сайте <a :href="`https://${r.site}`">{{ r.site }}</a>, регистрируясь
@@ -101,7 +101,7 @@ const updatedAt = '23 июня 2026 г.';
                 </section>
             </div>
 
-            <Link href="/" class="mt-10 inline-block text-sm text-[#2E74B5] hover:underline dark:text-sky-300">← На главную</Link>
+            <Link href="/" class="mt-10 inline-block text-sm font-semibold text-brand hover:underline">← На главную</Link>
         </section>
     </SiteLayout>
 </template>

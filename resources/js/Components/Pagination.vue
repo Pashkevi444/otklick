@@ -52,28 +52,29 @@ const hasRange = computed(
 
 <template>
     <div v-if="last > 1" class="mt-5 flex flex-col items-center justify-between gap-3 sm:flex-row">
-        <div v-if="hasRange" class="text-sm text-slate-400">Показано {{ from }}–{{ to }} из {{ total }}</div>
+        <div v-if="hasRange" class="text-sm text-muted2">Показано {{ from }}–{{ to }} из {{ total }}</div>
         <div v-else class="hidden sm:block"></div>
 
-        <div class="flex flex-wrap items-center justify-center gap-1">
+        <div class="flex flex-wrap items-center justify-center gap-1.5">
             <button
                 type="button"
                 :disabled="current <= 1"
-                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                aria-label="Назад"
+                class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-line bg-panel text-[15px] text-muted transition hover:bg-hoverbg disabled:pointer-events-none disabled:opacity-40"
                 @click="go(current - 1)"
             >
-                ←
+                ‹
             </button>
 
             <template v-for="(p, i) in items" :key="i">
-                <span v-if="p === '…'" class="px-1.5 text-sm text-slate-400">…</span>
+                <span v-if="p === '…'" class="px-1 text-sm text-muted2">…</span>
                 <button
                     v-else
                     type="button"
-                    class="min-w-9 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                    class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full text-sm font-bold transition"
                     :class="p === current
-                        ? 'bg-[#2E74B5] text-white'
-                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300'"
+                        ? 'bg-brand text-white'
+                        : 'border border-line bg-panel text-muted hover:bg-hoverbg'"
                     @click="go(p)"
                 >
                     {{ p }}
@@ -83,10 +84,11 @@ const hasRange = computed(
             <button
                 type="button"
                 :disabled="current >= last"
-                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                aria-label="Вперёд"
+                class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-line bg-panel text-[15px] text-muted transition hover:bg-hoverbg disabled:pointer-events-none disabled:opacity-40"
                 @click="go(current + 1)"
             >
-                →
+                ›
             </button>
         </div>
     </div>

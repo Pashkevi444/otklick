@@ -26,26 +26,26 @@ const submit = (): void => {
     <Head title="Новый пароль" />
 
     <AuthLayout title="Новый пароль" subtitle="Введите код из письма и придумайте пароль">
-        <div v-if="status" class="mb-5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 text-sm">
+        <div v-if="status" class="mb-5 rounded-xl border border-brand/25 bg-active px-4 py-2.5 text-sm font-medium text-brand">
             {{ status }}
         </div>
 
         <form class="space-y-5" @submit.prevent="submit">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="email">Email</label>
+                <label class="mb-1.5 block text-sm font-semibold text-ink" for="email">Email</label>
                 <input
                     id="email"
                     v-model="form.email"
                     type="email"
                     required
                     autocomplete="username"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5] outline-none"
+                    class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand"
                 />
-                <p v-if="form.errors.email" class="mt-1 text-sm text-red-600">{{ form.errors.email }}</p>
+                <p v-if="form.errors.email" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.email }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="code">Код из письма</label>
+                <label class="mb-1.5 block text-sm font-semibold text-ink" for="code">Код из письма</label>
                 <input
                     id="code"
                     v-model="form.code"
@@ -53,46 +53,46 @@ const submit = (): void => {
                     autocomplete="one-time-code"
                     required
                     placeholder="6 цифр"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 tracking-widest focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5] outline-none"
+                    class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm tracking-widest text-ink outline-none transition placeholder:text-muted2 focus:border-brand"
                 />
-                <p v-if="form.errors.code" class="mt-1 text-sm text-red-600">{{ form.errors.code }}</p>
+                <p v-if="form.errors.code" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.code }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="password">Новый пароль</label>
+                <label class="mb-1.5 block text-sm font-semibold text-ink" for="password">Новый пароль</label>
                 <input
                     id="password"
                     v-model="form.password"
                     type="password"
                     required
                     autocomplete="new-password"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5] outline-none"
+                    class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand"
                 />
-                <p v-if="form.errors.password" class="mt-1 text-sm text-red-600">{{ form.errors.password }}</p>
+                <p v-if="form.errors.password" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.password }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="password_confirmation">Повторите пароль</label>
+                <label class="mb-1.5 block text-sm font-semibold text-ink" for="password_confirmation">Повторите пароль</label>
                 <input
                     id="password_confirmation"
                     v-model="form.password_confirmation"
                     type="password"
                     required
                     autocomplete="new-password"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5] outline-none"
+                    class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted2 focus:border-brand"
                 />
             </div>
 
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="w-full rounded-lg bg-[#2E74B5] py-2.5 font-medium text-white hover:bg-[#255f96] disabled:opacity-50 transition"
+                class="w-full rounded-full bg-brand bg-gradient-to-r from-brand to-violet-brand py-3 text-[15px] font-bold text-white shadow-lg shadow-[rgba(43,92,224,0.30)] transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[rgba(43,92,224,0.35)] disabled:pointer-events-none disabled:opacity-50"
             >
                 Сменить пароль
             </button>
 
-            <p class="text-center text-sm text-slate-500">
-                <Link href="/forgot-password" class="text-[#2E74B5] hover:underline">Запросить новый код</Link>
+            <p class="text-center text-sm text-muted">
+                <Link href="/forgot-password" class="font-semibold text-brand hover:underline">Запросить новый код</Link>
             </p>
         </form>
     </AuthLayout>

@@ -103,6 +103,16 @@ const open = (id: string): void => {
     router.get(`/cabinet/clients/${id}`);
 };
 
+// Инициалы для аватара-кружка (как в макете: «АК» из «Анна Ковалёва»).
+const initials = (name: string | null): string => {
+    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    return parts
+        .slice(0, 2)
+        .map((w) => w[0]!.toUpperCase())
+        .join('');
+};
+
 const can = useCan();
 const remove = (id: string): void => {
     if (confirm('Удалить карточку клиента? Связанные диалоги останутся.')) {
@@ -129,22 +139,22 @@ const toggleBan = (row: Row): void => {
         <div class="mb-4 space-y-3">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div class="relative flex-1">
-                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted2">🔍</span>
                     <input
                         v-model="state.search"
                         type="text"
                         placeholder="Поиск по имени, телефону, email или нику…"
-                        class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[#2E74B5]"
+                        class="w-full rounded-xl border border-line bg-panel py-2.5 pl-9 pr-3.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand"
                     />
                 </div>
                 <div class="flex items-center gap-1.5">
-                    <span class="text-xs text-slate-400">Сортировка:</span>
+                    <span class="text-xs text-muted2">Сортировка:</span>
                     <button
                         v-for="s in sorts"
                         :key="s.value"
                         type="button"
-                        class="rounded-lg px-3 py-2 text-sm font-medium transition"
-                        :class="state.sort === s.value ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                        class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                        :class="state.sort === s.value ? 'bg-brand text-white' : 'border border-line bg-panel text-muted hover:bg-hoverbg'"
                         @click="sortBy(s.value)"
                     >
                         {{ s.label }}
@@ -154,11 +164,11 @@ const toggleBan = (row: Row): void => {
             </div>
 
             <div v-if="channels.length" class="flex flex-wrap items-center gap-1.5">
-                <span class="text-xs text-slate-400">Откуда пришёл:</span>
+                <span class="text-xs text-muted2">Откуда пришёл:</span>
                 <button
                     type="button"
-                    class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                    :class="state.channel === '' ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                    class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                    :class="state.channel === '' ? 'bg-brand text-white' : 'border border-line bg-panel text-muted hover:bg-hoverbg'"
                     @click="setChannel('')"
                 >
                     Все
@@ -167,8 +177,8 @@ const toggleBan = (row: Row): void => {
                     v-for="c in channels"
                     :key="c.value"
                     type="button"
-                    class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                    :class="state.channel === c.value ? 'bg-[#2E74B5] text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+                    class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                    :class="state.channel === c.value ? 'bg-brand text-white' : 'border border-line bg-panel text-muted hover:bg-hoverbg'"
                     @click="setChannel(c.value)"
                 >
                     {{ c.label }}
@@ -177,24 +187,24 @@ const toggleBan = (row: Row): void => {
         </div>
 
         <!-- Есть новые клиенты — кнопка массово погасить подсветку «Новый». -->
-        <div v-if="newCount > 0" class="mb-3 flex items-center justify-between rounded-xl border border-[#2E74B5]/20 bg-[#2E74B5]/5 px-4 py-2.5">
-            <span class="text-sm text-slate-600"><span class="font-semibold text-[#2E74B5]">{{ newCount }}</span> новых</span>
-            <button type="button" class="text-sm font-medium text-[#2E74B5] hover:underline" @click="markAllRead">Прочитать всё</button>
+        <div v-if="newCount > 0" class="mb-3 flex items-center justify-between rounded-xl border border-brand/20 bg-active px-4 py-2.5">
+            <span class="text-sm text-muted"><span class="font-bold text-brand">{{ newCount }}</span> новых</span>
+            <button type="button" class="text-sm font-semibold text-brand hover:underline" @click="markAllRead">Прочитать всё</button>
         </div>
 
-        <div v-if="clients.length === 0" class="rounded-xl border border-slate-200 bg-white py-12 text-center text-slate-400">
+        <div v-if="clients.length === 0" class="otk-card py-12 text-center text-muted2">
             Клиентов пока нет. Карточка заводится автоматически, когда бот узнаёт телефон клиента.
         </div>
 
-        <div v-else class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div v-else class="overflow-x-auto rounded-2xl border border-line bg-panel">
             <table class="w-full min-w-[560px] text-sm">
-                <thead class="bg-slate-50 text-left text-xs text-slate-400">
+                <thead class="text-left text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Клиент</th>
-                        <th class="px-4 py-3 font-medium">Контакты</th>
-                        <th class="px-4 py-3 font-medium">Откуда</th>
-                        <th class="px-4 py-3 text-center font-medium">Диалогов</th>
-                        <th class="px-4 py-3 font-medium">Активность</th>
+                        <th class="px-4 py-3 font-bold">Клиент</th>
+                        <th class="px-4 py-3 font-bold">Контакты</th>
+                        <th class="px-4 py-3 font-bold">Откуда</th>
+                        <th class="px-4 py-3 text-center font-bold">Диалогов</th>
+                        <th class="px-4 py-3 font-bold">Активность</th>
                         <th v-if="can('clients.edit') || can('clients.delete')" class="px-4 py-3" />
                     </tr>
                 </thead>
@@ -202,40 +212,45 @@ const toggleBan = (row: Row): void => {
                     <tr
                         v-for="c in clients"
                         :key="c.id"
-                        class="cursor-pointer border-t border-slate-100 transition hover:bg-slate-50"
-                        :class="isNew(c.id) ? 'bg-[#2E74B5]/5' : ''"
+                        class="cursor-pointer border-t border-line transition hover:bg-hoverbg"
+                        :class="isNew(c.id) ? 'bg-active' : ''"
                         @click="open(c.id)"
                     >
                         <td class="px-4 py-3">
-                            <div class="font-medium text-slate-700">
-                                <span v-if="isNew(c.id)" title="Новый клиент" class="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#2E74B5] align-middle"></span>
-                                {{ c.name || 'Без имени' }}
-                                <span v-if="isNew(c.id)" class="ml-1 rounded-full bg-[#2E74B5]/10 px-2 py-0.5 text-xs font-medium text-[#2E74B5]">Новый</span>
-                                <span v-if="c.has_summary" title="Есть резюме" class="ml-1">📝</span>
-                                <span v-if="c.banned" class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">заблокирован</span>
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-active text-sm font-bold text-brand">{{ initials(c.name) }}</span>
+                                <div class="min-w-0">
+                                    <div class="font-semibold text-ink">
+                                        <span v-if="isNew(c.id)" title="Новый клиент" class="mr-1.5 inline-block h-2 w-2 rounded-full bg-brand align-middle"></span>
+                                        {{ c.name || 'Без имени' }}
+                                        <span v-if="isNew(c.id)" class="ml-1 rounded-full bg-active px-2.5 py-0.5 text-xs font-semibold text-brand">Новый</span>
+                                        <span v-if="c.has_summary" title="Есть резюме" class="ml-1">📝</span>
+                                        <span v-if="c.banned" class="ml-1 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">заблокирован</span>
+                                    </div>
+                                    <div v-if="c.phone" class="text-xs text-muted2">{{ c.phone }}</div>
+                                </div>
                             </div>
-                            <div v-if="c.phone" class="text-xs text-slate-400">{{ c.phone }}</div>
                         </td>
-                        <td class="px-4 py-3 text-slate-500">
+                        <td class="px-4 py-3 text-muted">
                             <div v-if="c.email" class="text-xs">{{ c.email }}</div>
                             <div v-if="c.telegram_username" class="text-xs">@{{ c.telegram_username }}</div>
-                            <span v-if="!c.email && !c.telegram_username" class="text-xs text-slate-300">—</span>
+                            <span v-if="!c.email && !c.telegram_username" class="text-xs text-muted2">—</span>
                         </td>
-                        <td class="px-4 py-3 text-slate-500">{{ c.channel || '—' }}</td>
-                        <td class="px-4 py-3 text-center text-slate-500">{{ c.conversations_count }}</td>
-                        <td class="px-4 py-3 text-slate-400">{{ c.last_seen_at || '—' }}</td>
+                        <td class="px-4 py-3 text-muted">{{ c.channel || '—' }}</td>
+                        <td class="px-4 py-3 text-center text-muted">{{ c.conversations_count }}</td>
+                        <td class="px-4 py-3 text-muted2">{{ c.last_seen_at || '—' }}</td>
                         <td v-if="can('clients.edit') || can('clients.delete')" class="px-4 py-3 text-right" @click.stop>
                             <div class="flex items-center justify-end gap-3">
                                 <button
                                     v-if="can('clients.edit')"
                                     type="button"
-                                    class="text-sm hover:underline"
-                                    :class="c.banned ? 'text-emerald-600' : 'text-amber-600'"
+                                    class="text-sm font-semibold hover:underline"
+                                    :class="c.banned ? 'text-emerald-600 dark:text-emerald-400' : 'text-warm'"
                                     @click="toggleBan(c)"
                                 >
                                     {{ c.banned ? 'Разбанить' : 'Забанить' }}
                                 </button>
-                                <button v-if="can('clients.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="remove(c.id)">Удалить</button>
+                                <button v-if="can('clients.delete')" type="button" class="text-sm font-semibold text-red-600 hover:underline dark:text-red-400" @click="remove(c.id)">Удалить</button>
                             </div>
                         </td>
                     </tr>

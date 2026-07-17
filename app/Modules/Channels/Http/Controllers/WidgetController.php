@@ -23,7 +23,7 @@ use Inertia\Response;
 final class WidgetController extends Controller
 {
     /** Брендовый акцент «Отклик» по умолчанию (если бизнес не выбрал свой). */
-    private const DEFAULT_COLOR = '#2E74B5';
+    private const DEFAULT_COLOR = '#2B5CE0';
 
     public function __construct(
         private readonly ChannelRepositoryInterface $channels,

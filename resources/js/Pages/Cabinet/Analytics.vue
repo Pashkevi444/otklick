@@ -148,9 +148,9 @@ const insightSource = computed<string>(() => (props.insights ? (props.insights.s
 
 const kpiDecimals = (k: Kpi): number => (k.key === 'clarifications' ? 2 : 0);
 const deltaClass = (k: Kpi): string => {
-    if (k.deltaPct === null || k.deltaPct === 0) return 'text-slate-400';
+    if (k.deltaPct === null || k.deltaPct === 0) return 'bg-chip text-muted2';
     const good = k.deltaPct > 0 === k.goodWhenUp;
-    return good ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
+    return good ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-500 dark:text-rose-400';
 };
 const deltaText = (k: Kpi): string => {
     if (k.deltaPct === null) return 'нет данных';
@@ -160,19 +160,19 @@ const deltaText = (k: Kpi): string => {
 
 const gapClass = (s: string): string =>
     ({
-        high: 'border-rose-300/70 bg-rose-50 dark:border-rose-400/30 dark:bg-rose-500/10',
-        medium: 'border-amber-300/70 bg-amber-50 dark:border-amber-400/30 dark:bg-amber-500/10',
-        low: 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/5',
-        ok: 'border-emerald-300/70 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-500/10',
-    })[s] ?? 'border-slate-200 bg-slate-50';
+        high: 'border-rose-500/30 bg-rose-500/10',
+        medium: 'border-[#EE8A5C]/30 bg-[#EE8A5C]/10',
+        low: 'border-line bg-chip',
+        ok: 'border-emerald-500/30 bg-emerald-500/10',
+    })[s] ?? 'border-line bg-chip';
 const gapIcon = (s: string): string => ({ high: '⚠️', medium: '⚡', low: 'ℹ️', ok: '✅' })[s] ?? 'ℹ️';
 
 const statusClass = (s: string): string =>
     s === 'needs_human'
-        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+        ? 'bg-[#EE8A5C]/15 text-warm'
         : s === 'closed'
-          ? 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300'
-          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
+          ? 'bg-chip text-muted'
+          : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
 </script>
 
 <template>
@@ -180,48 +180,48 @@ const statusClass = (s: string): string =>
 
     <AppLayout title="Аналитика по лидам">
         <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <p class="text-sm text-slate-500">Период: {{ analytics.period.from }} — {{ analytics.period.to }}</p>
+            <p class="text-sm text-muted">Период: {{ analytics.period.from }} — {{ analytics.period.to }}</p>
             <div class="flex flex-wrap items-center gap-2">
-                <div class="flex rounded-xl border border-slate-200 bg-white/60 p-1 dark:border-white/10 dark:bg-white/5">
+                <div class="flex rounded-full border border-line bg-panel p-1">
                     <button
                         v-for="p in analytics.periods"
                         :key="p.key"
                         type="button"
-                        class="rounded-lg px-3 py-1 text-sm font-medium transition"
-                        :class="p.key === analytics.period.key ? 'bg-[#2E74B5] text-white shadow' : 'text-slate-500 hover:text-[#1F4E79] dark:text-slate-300'"
+                        class="rounded-full px-3 py-1 text-sm font-semibold transition"
+                        :class="p.key === analytics.period.key ? 'bg-brand text-white' : 'text-muted hover:text-ink'"
                         @click="setPeriod(p.key)"
                     >
                         {{ p.label }}
                     </button>
                 </div>
                 <div
-                    class="flex items-center gap-1.5 rounded-xl border bg-white/60 px-2 py-1 dark:bg-white/5"
-                    :class="isCustom ? 'border-[#2E74B5] dark:border-sky-400' : 'border-slate-200 dark:border-white/10'"
+                    class="flex items-center gap-1.5 rounded-full border bg-panel px-3 py-1.5"
+                    :class="isCustom ? 'border-brand' : 'border-line'"
                 >
                     <input
                         v-model="customFrom"
                         type="date"
-                        class="bg-transparent text-sm text-slate-600 outline-none dark:text-slate-200 dark:[color-scheme:dark]"
+                        class="bg-transparent text-sm text-ink outline-none dark:[color-scheme:dark]"
                         aria-label="Дата начала"
                     />
-                    <span class="text-slate-400">—</span>
+                    <span class="text-muted2">—</span>
                     <input
                         v-model="customTo"
                         type="date"
-                        class="bg-transparent text-sm text-slate-600 outline-none dark:text-slate-200 dark:[color-scheme:dark]"
+                        class="bg-transparent text-sm text-ink outline-none dark:[color-scheme:dark]"
                         aria-label="Дата конца"
                     />
                     <button
                         type="button"
-                        class="rounded-lg bg-[#2E74B5] px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-0.5 disabled:opacity-50"
+                        class="rounded-full bg-brand px-2.5 py-1 text-xs font-bold text-white transition hover:bg-brand-hover disabled:opacity-50"
                         :disabled="!customFrom || !customTo"
                         @click="applyCustom"
                     >
                         Применить
                     </button>
                 </div>
-                <a :href="exportUrl('leads')" class="rounded-xl border border-slate-200 bg-white/60 px-3 py-1.5 text-sm font-medium text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-sky-300">⬇ Лиды CSV</a>
-                <a :href="exportUrl('daily')" class="rounded-xl border border-slate-200 bg-white/60 px-3 py-1.5 text-sm font-medium text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-sky-300">⬇ По дням CSV</a>
+                <a :href="exportUrl('leads')" class="rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm font-semibold text-ink transition hover:bg-hoverbg">⬇ Лиды CSV</a>
+                <a :href="exportUrl('daily')" class="rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm font-semibold text-ink transition hover:bg-hoverbg">⬇ По дням CSV</a>
             </div>
         </div>
 
@@ -229,14 +229,14 @@ const statusClass = (s: string): string =>
             <!-- Отчёт ценности (по каждой CRM) -->
             <div
                 v-if="valueReports.length > 0"
-                class="rounded-2xl border border-[#2E74B5]/30 bg-gradient-to-br from-[#EAF2FB] to-white p-5 dark:border-sky-400/20 dark:bg-none dark:bg-white/5"
+                class="rounded-2xl border border-violet-brand/25 bg-gradient-to-r from-violet-brand/10 to-brand/10 p-5"
             >
                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">💰 Отчёт ценности — что бот принёс в деньгах</div>
+                    <div class="font-display text-base font-semibold text-ink">💰 Отчёт ценности — что бот принёс в деньгах</div>
                     <a
                         v-if="activeReport"
                         :href="valueExportUrl(activeReport.crmConnectionId)"
-                        class="rounded-xl border border-slate-200 bg-white/60 px-3 py-1.5 text-sm font-medium text-[#1F4E79] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-sky-300"
+                        class="rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm font-semibold text-ink transition hover:bg-hoverbg"
                     >⬇ Записи CSV</a>
                 </div>
 
@@ -246,43 +246,43 @@ const statusClass = (s: string): string =>
                         v-for="(r, i) in valueReports"
                         :key="r.crmConnectionId"
                         type="button"
-                        class="rounded-lg px-3 py-1 text-sm font-medium transition"
-                        :class="i === activeCrm ? 'bg-[#2E74B5] text-white shadow' : 'bg-white/60 text-slate-500 hover:text-[#1F4E79] dark:bg-white/5 dark:text-slate-300'"
+                        class="rounded-full px-3.5 py-1.5 text-sm font-semibold transition"
+                        :class="i === activeCrm ? 'bg-brand text-white' : 'border border-line bg-panel text-muted hover:bg-hoverbg'"
                         @click="activeCrm = i"
                     >
                         {{ r.crmLabel }}
                     </button>
                 </div>
-                <div v-else class="mb-3 text-xs text-slate-500 dark:text-slate-400">{{ activeReport?.crmLabel }}</div>
+                <div v-else class="mb-3 text-xs text-muted">{{ activeReport?.crmLabel }}</div>
 
                 <template v-if="activeReport">
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                         <div
                             v-for="k in activeReport.kpis"
                             :key="k.key"
-                            class="rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-100 dark:border-white/10 dark:bg-white/5 dark:hover:shadow-none"
+                            class="rounded-2xl border border-line bg-panel p-4 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(16,28,51,0.06)]"
                             :title="k.hint"
                         >
-                            <div class="text-xs font-medium text-slate-500">{{ k.label }}</div>
-                            <div class="mt-1 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">
+                            <div class="text-xs font-semibold text-muted">{{ k.label }}</div>
+                            <div class="mt-1.5 font-display text-2xl font-semibold text-ink">
                                 <CountUp :value="k.value" :suffix="k.unit" />
                             </div>
-                            <div class="mt-1 text-xs" :class="deltaClass(k)">{{ deltaText(k) }}</div>
+                            <div class="mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[11px] font-bold" :class="deltaClass(k)">{{ deltaText(k) }}</div>
                         </div>
                     </div>
 
-                    <p v-if="activeReport.note" class="mt-2 text-xs text-amber-600 dark:text-amber-400">⚠️ {{ activeReport.note }}</p>
+                    <p v-if="activeReport.note" class="mt-2 text-xs font-semibold text-warm">⚠️ {{ activeReport.note }}</p>
 
                     <div v-if="activeReport.topServices.length > 0" class="mt-4">
-                        <div class="mb-2 text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Топ услуг по выручке</div>
+                        <div class="mb-2 text-sm font-semibold text-ink">Топ услуг по выручке</div>
                         <div class="space-y-1.5">
                             <div
                                 v-for="s in activeReport.topServices"
                                 :key="s.title"
-                                class="flex items-center justify-between rounded-lg bg-white/70 px-3 py-1.5 text-sm dark:bg-white/5"
+                                class="flex items-center justify-between rounded-xl bg-panel/70 px-3 py-1.5 text-sm"
                             >
-                                <span class="text-slate-700 dark:text-slate-200">{{ s.title }}</span>
-                                <span class="text-slate-500 dark:text-slate-400">{{ s.bookings }} зап. · <b class="text-[#1F4E79] dark:text-sky-200">{{ fmtMoney(s.revenue) }} ₽</b></span>
+                                <span class="text-ink">{{ s.title }}</span>
+                                <span class="text-muted">{{ s.bookings }} зап. · <b class="text-ink">{{ fmtMoney(s.revenue) }} ₽</b></span>
                             </div>
                         </div>
                     </div>
@@ -294,90 +294,90 @@ const statusClass = (s: string): string =>
                 <div
                     v-for="k in analytics.kpis"
                     :key="k.key"
-                    class="rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-100 dark:border-white/10 dark:bg-white/5 dark:hover:shadow-none"
+                    class="rounded-2xl border border-line bg-panel p-4 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[rgba(16,28,51,0.06)]"
                     :title="k.hint"
                 >
-                    <div class="text-xs font-medium text-slate-500">{{ k.label }}</div>
-                    <div class="mt-1 text-2xl font-bold text-[#1F4E79] dark:text-sky-200">
+                    <div class="text-xs font-semibold text-muted">{{ k.label }}</div>
+                    <div class="mt-1.5 font-display text-3xl font-semibold text-ink">
                         <CountUp :value="k.value" :decimals="kpiDecimals(k)" :suffix="k.unit" />
                     </div>
-                    <div class="mt-1 text-xs" :class="deltaClass(k)">{{ deltaText(k) }}</div>
+                    <div class="mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[11px] font-bold" :class="deltaClass(k)">{{ deltaText(k) }}</div>
                 </div>
             </div>
 
             <!-- Динамика по дням -->
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">Новые лиды по дням</div>
-                <div class="text-[#2E74B5] dark:text-sky-400">
+            <div class="otk-card p-5">
+                <div class="mb-3 font-display text-base font-semibold text-ink">Новые лиды по дням</div>
+                <div class="text-brand">
                     <AreaChart :points="analytics.daily" />
                 </div>
             </div>
 
             <!-- Разбивки -->
             <div class="grid gap-4 lg:grid-cols-2">
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">Источники</div>
+                <div class="otk-card p-5">
+                    <div class="mb-3 font-display text-base font-semibold text-ink">Источники</div>
                     <DonutChart :slices="analytics.byChannel" center-label="лидов" :center-value="analytics.totals.leads" />
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">Результаты лидов</div>
+                <div class="otk-card p-5">
+                    <div class="mb-3 font-display text-base font-semibold text-ink">Результаты лидов</div>
                     <DonutChart :slices="analytics.byOutcome" center-label="лидов" :center-value="analytics.totals.leads" />
                 </div>
             </div>
 
             <!-- Покрытие 24/7 + глубина диалога -->
             <div class="grid gap-4 lg:grid-cols-2">
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">🌙 Покрытие 24/7</div>
-                    <p class="mb-3 mt-0.5 text-xs text-slate-400">{{ afterHoursCaption }}</p>
+                <div class="otk-card p-5">
+                    <div class="font-display text-base font-semibold text-ink">🌙 Покрытие 24/7</div>
+                    <p class="mb-3 mt-0.5 text-xs text-muted2">{{ afterHoursCaption }}</p>
                     <DonutChart :slices="analytics.byDaypart" center-label="обращений" :center-value="analytics.totals.leads" />
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">💬 Глубина диалога</div>
-                    <p class="mb-3 mt-0.5 text-xs text-slate-400">Сколько сообщений клиенты пишут боту — выше столбики справа значат более вовлечённые диалоги.</p>
+                <div class="otk-card p-5">
+                    <div class="font-display text-base font-semibold text-ink">💬 Глубина диалога</div>
+                    <p class="mb-3 mt-0.5 text-xs text-muted2">Сколько сообщений клиенты пишут боту — выше столбики справа значат более вовлечённые диалоги.</p>
                     <BarChart :bars="analytics.engagement" :height="150" />
                 </div>
             </div>
 
             <!-- Воронка + дни недели -->
             <div class="grid gap-4 lg:grid-cols-2">
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="mb-4 font-semibold text-[#1F4E79] dark:text-sky-200">Воронка лида</div>
+                <div class="otk-card p-5">
+                    <div class="mb-4 font-display text-base font-semibold text-ink">Воронка лида</div>
                     <div class="space-y-3">
                         <div v-for="(s, i) in analytics.funnel" :key="s.key">
                             <div class="mb-1 flex justify-between text-sm">
-                                <span class="text-slate-600 dark:text-slate-300">{{ s.label }}</span>
-                                <span class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ s.value }} · {{ s.pct }}%</span>
+                                <span class="text-muted">{{ s.label }}</span>
+                                <span class="font-semibold text-ink">{{ s.value }} · {{ s.pct }}%</span>
                             </div>
-                            <div class="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
-                                <div class="funnel-bar h-full rounded-full bg-gradient-to-r from-[#2E74B5] to-[#1F4E79]" :style="{ width: `${Math.max(s.pct, 2)}%`, animationDelay: `${i * 120}ms` }" />
+                            <div class="h-3 overflow-hidden rounded-full bg-chip">
+                                <div class="funnel-bar h-full rounded-full bg-gradient-to-r from-brand to-violet-brand" :style="{ width: `${Math.max(s.pct, 2)}%`, animationDelay: `${i * 120}ms` }" />
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                    <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">По дням недели</div>
+                <div class="otk-card p-5">
+                    <div class="mb-3 font-display text-base font-semibold text-ink">По дням недели</div>
                     <BarChart :bars="weekBars" />
                 </div>
             </div>
 
             <!-- По времени суток -->
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                <div class="mb-3 font-semibold text-[#1F4E79] dark:text-sky-200">По времени суток</div>
+            <div class="otk-card p-5">
+                <div class="mb-3 font-display text-base font-semibold text-ink">По времени суток</div>
                 <BarChart :bars="hourBars" :label-step="3" />
             </div>
 
             <!-- ИИ-разбор «чего не хватает» — премиум (Макс+) -->
-            <div v-if="aiInsights" class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <div v-if="aiInsights" class="rounded-2xl border border-violet-brand/25 bg-gradient-to-r from-violet-brand/10 to-brand/10 p-5">
                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">Чего и где не хватает</div>
-                    <div class="flex items-center gap-2 text-xs text-slate-400">
-                        <span class="rounded-full bg-[#EAF2FB] px-2 py-0.5 text-[#2E74B5] dark:bg-white/10 dark:text-sky-300">
+                    <div class="font-display text-base font-semibold text-ink">Чего и где не хватает</div>
+                    <div class="flex items-center gap-2 text-xs text-muted2">
+                        <span class="rounded-full bg-active px-2 py-0.5 font-semibold text-brand">
                             {{ insightSource }}<template v-if="insights"> · {{ insights.generatedAt }}</template>
                         </span>
                         <button
                             type="button"
-                            class="rounded-lg border border-slate-200 bg-white/60 px-3 py-1.5 font-medium text-[#1F4E79] transition hover:-translate-y-0.5 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-sky-300"
+                            class="rounded-xl border border-line bg-panel px-3 py-1.5 font-semibold text-ink transition hover:bg-hoverbg disabled:opacity-60"
                             :disabled="refreshing"
                             @click="refreshInsights"
                         >
@@ -385,15 +385,15 @@ const statusClass = (s: string): string =>
                         </button>
                     </div>
                 </div>
-                <p v-if="!insights" class="mb-3 text-xs text-slate-400">ИИ-разбор готовится в фоне — пока показан базовый. Можно обновить кнопкой.</p>
+                <p v-if="!insights" class="mb-3 text-xs text-muted2">ИИ-разбор готовится в фоне — пока показан базовый. Можно обновить кнопкой.</p>
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <div v-for="(g, i) in gapItems" :key="i" class="rounded-xl border p-4" :class="gapClass(g.severity)">
+                    <div v-for="(g, i) in gapItems" :key="i" class="rounded-2xl border p-4" :class="gapClass(g.severity)">
                         <div class="flex items-start gap-2">
                             <span class="text-lg leading-none">{{ gapIcon(g.severity) }}</span>
                             <div>
-                                <div class="font-semibold text-slate-800 dark:text-slate-100">{{ g.title }}</div>
-                                <div class="mt-0.5 text-sm text-slate-600 dark:text-slate-300">{{ g.detail }}</div>
-                                <div v-if="g.action" class="mt-1 text-sm font-medium text-[#1F4E79] dark:text-sky-300">→ {{ g.action }}</div>
+                                <div class="font-semibold text-ink">{{ g.title }}</div>
+                                <div class="mt-0.5 text-sm text-muted">{{ g.detail }}</div>
+                                <div v-if="g.action" class="mt-1 text-sm font-semibold text-brand">→ {{ g.action }}</div>
                             </div>
                         </div>
                     </div>
@@ -401,40 +401,40 @@ const statusClass = (s: string): string =>
             </div>
 
             <!-- Свежие лиды -->
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+            <div class="otk-card p-5">
                 <div class="mb-3 flex items-center justify-between">
-                    <div class="font-semibold text-[#1F4E79] dark:text-sky-200">Свежие лиды</div>
-                    <Link href="/cabinet/conversations" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300">Все диалоги →</Link>
+                    <div class="font-display text-base font-semibold text-ink">Свежие лиды</div>
+                    <Link href="/cabinet/conversations" class="text-sm font-semibold text-brand hover:underline">Все диалоги →</Link>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
-                        <thead class="text-left text-xs text-slate-400">
+                        <thead class="text-left text-[11px] font-bold uppercase tracking-[0.09em] text-muted2">
                             <tr>
-                                <th class="py-2 pr-3 font-medium">Клиент</th>
-                                <th class="py-2 pr-3 font-medium">Источник</th>
-                                <th class="py-2 pr-3 font-medium">Статус</th>
-                                <th class="py-2 pr-3 text-center font-medium">Сообщений</th>
-                                <th class="py-2 font-medium">Когда</th>
+                                <th class="py-2 pr-3">Клиент</th>
+                                <th class="py-2 pr-3">Источник</th>
+                                <th class="py-2 pr-3">Статус</th>
+                                <th class="py-2 pr-3 text-center">Сообщений</th>
+                                <th class="py-2">Когда</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr
                                 v-for="r in analytics.recent"
                                 :key="r.id"
-                                class="cursor-pointer border-t border-slate-100 transition hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5"
+                                class="cursor-pointer border-t border-line transition hover:bg-hoverbg"
                                 @click="router.get(`/cabinet/conversations/${r.id}`)"
                             >
                                 <td class="py-2.5 pr-3">
-                                    <div class="font-medium text-slate-700 dark:text-slate-200">{{ r.contact }}</div>
-                                    <div v-if="r.phone" class="text-xs text-slate-400">{{ r.phone }}</div>
+                                    <div class="font-semibold text-ink">{{ r.contact }}</div>
+                                    <div v-if="r.phone" class="text-xs text-muted2">{{ r.phone }}</div>
                                 </td>
-                                <td class="py-2.5 pr-3 text-slate-500">{{ r.channel }}</td>
-                                <td class="py-2.5 pr-3"><span class="rounded-full px-2 py-0.5 text-xs" :class="statusClass(r.status)">{{ r.statusLabel }}</span></td>
-                                <td class="py-2.5 pr-3 text-center text-slate-500">{{ r.messages }}</td>
-                                <td class="py-2.5 text-slate-400">{{ r.createdAt }}</td>
+                                <td class="py-2.5 pr-3 text-muted">{{ r.channel }}</td>
+                                <td class="py-2.5 pr-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="statusClass(r.status)">{{ r.statusLabel }}</span></td>
+                                <td class="py-2.5 pr-3 text-center text-muted">{{ r.messages }}</td>
+                                <td class="py-2.5 text-muted2">{{ r.createdAt }}</td>
                             </tr>
                             <tr v-if="analytics.recent.length === 0">
-                                <td colspan="6" class="py-6 text-center text-slate-400">Пока нет лидов</td>
+                                <td colspan="6" class="py-6 text-center text-muted2">Пока нет лидов</td>
                             </tr>
                         </tbody>
                     </table>

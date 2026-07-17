@@ -8,7 +8,7 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-        <meta name="theme-color" content="#1F4E79">
+        <meta name="theme-color" content="#101C33">
 
         {{-- Подтверждение прав в Яндекс.Вебмастере. --}}
         <meta name="yandex-verification" content="451d14762ac81dea" />

@@ -148,14 +148,14 @@ onBeforeUnmount(() => {
     <div class="relative">
         <button
             type="button"
-            class="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/50 bg-white/40 text-lg transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10"
+            class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-panel text-lg transition hover:bg-hoverbg"
             :aria-label="`Уведомления${total ? ': ' + total + ' новых' : ''}`"
             @click="open = !open"
         >
             🔔
             <span
                 v-if="total > 0"
-                class="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
+                class="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-warm px-1 text-[10px] font-bold text-white"
             >{{ total > 99 ? '99+' : total }}</span>
         </button>
 
@@ -164,14 +164,14 @@ onBeforeUnmount(() => {
 
         <div
             v-if="open"
-            class="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-[#141d33]"
+            class="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-line bg-panel shadow-xl"
         >
             <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-white/10">
-                <span class="text-sm font-semibold text-[#1F4E79] dark:text-sky-200">Уведомления</span>
+                <span class="text-sm font-semibold text-[#101C33] dark:text-sky-200">Уведомления</span>
                 <button
                     v-if="total > 0"
                     type="button"
-                    class="text-xs text-[#2E74B5] hover:underline dark:text-sky-300"
+                    class="text-xs text-[#2B5CE0] hover:underline dark:text-sky-300"
                     @click="markAll"
                 >Прочитать всё</button>
             </div>
@@ -186,7 +186,7 @@ onBeforeUnmount(() => {
                     :key="item.id"
                     type="button"
                     class="flex w-full items-start gap-2.5 px-4 py-2.5 text-left transition hover:bg-slate-50 dark:hover:bg-white/5"
-                    :class="!item.read ? 'bg-[#EAF2FB]/60 dark:bg-white/5' : ''"
+                    :class="!item.read ? 'bg-[#E7EDFB]/60 dark:bg-white/5' : ''"
                     @click="go(item)"
                 >
                     <span class="text-base leading-5">{{ item.icon }}</span>
@@ -203,7 +203,7 @@ onBeforeUnmount(() => {
 
             <button
                 type="button"
-                class="block w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-[#2E74B5] transition hover:bg-slate-50 dark:border-white/10 dark:text-sky-300 dark:hover:bg-white/5"
+                class="block w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-[#2B5CE0] transition hover:bg-slate-50 dark:border-white/10 dark:text-sky-300 dark:hover:bg-white/5"
                 @click="showAll"
             >Показать все</button>
         </div>

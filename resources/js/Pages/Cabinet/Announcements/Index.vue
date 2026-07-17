@@ -30,7 +30,7 @@ const fmt = (d: string | null): string =>
 
     <AppLayout :title="title">
         <div class="mx-auto max-w-3xl space-y-4">
-            <p v-if="page.data.length === 0" class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-400 dark:border-white/10 dark:bg-white/5">
+            <p v-if="page.data.length === 0" class="otk-card p-10 text-center text-muted2">
                 Пока ничего нет. Здесь будут появляться {{ title.toLowerCase() }}.
             </p>
 
@@ -39,16 +39,16 @@ const fmt = (d: string | null): string =>
                 v-for="item in page.data"
                 :key="item.id"
                 :href="`${base}/${item.id}`"
-                class="group block rounded-2xl border bg-white p-6 transition hover:-translate-y-0.5 hover:border-[#2E74B5] hover:shadow-lg hover:shadow-slate-200/60 sm:p-7 dark:bg-white/5 dark:hover:shadow-black/30"
-                :class="item.is_new ? 'border-rose-200 dark:border-rose-500/25' : 'border-slate-200 dark:border-white/10'"
+                class="group block rounded-2xl border bg-panel p-6 transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg hover:shadow-[rgba(16,28,51,0.06)] sm:p-7"
+                :class="item.is_new ? 'border-brand' : 'border-line'"
             >
                 <div class="flex items-center gap-3 text-xs">
-                    <span v-if="item.is_new" class="rounded-full bg-rose-500 px-2.5 py-0.5 text-[11px] font-bold text-white">новое</span>
-                    <span v-if="item.published_at" class="text-slate-400">{{ fmt(item.published_at) }}</span>
+                    <span v-if="item.is_new" class="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">новое</span>
+                    <span v-if="item.published_at" class="text-muted2">{{ fmt(item.published_at) }}</span>
                 </div>
-                <h2 class="mt-2.5 text-lg font-bold leading-snug text-[#1F4E79] sm:text-xl dark:text-sky-200">{{ item.title }}</h2>
-                <p class="mt-2.5 line-clamp-3 leading-relaxed text-slate-600 dark:text-slate-300">{{ item.excerpt }}</p>
-                <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#2E74B5] transition-all group-hover:gap-2 dark:text-sky-300">Читать →</span>
+                <h2 class="mt-2.5 font-display text-lg font-semibold leading-snug text-ink sm:text-xl">{{ item.title }}</h2>
+                <p class="mt-2.5 line-clamp-3 leading-relaxed text-muted">{{ item.excerpt }}</p>
+                <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand transition-all group-hover:gap-2">Читать →</span>
             </Link>
 
             <!-- Пагинация -->

@@ -271,13 +271,13 @@ const groups = computed(() => {
 
 const outcomeClass = (o: string): string =>
     ({
-        booked: 'bg-green-100 text-green-700',
-        lost: 'bg-red-100 text-red-700',
-        cancelled: 'bg-amber-100 text-amber-700',
-        spam: 'bg-slate-100 text-slate-500',
-        needs_human: 'bg-amber-100 text-amber-700',
-        open: 'bg-green-100 text-green-700',
-    })[o] ?? 'bg-slate-100 text-slate-500';
+        booked: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+        lost: 'bg-red-500/15 text-red-600 dark:text-red-400',
+        cancelled: 'bg-[#EE8A5C]/15 text-warm',
+        spam: 'bg-chip text-muted',
+        needs_human: 'bg-[#EE8A5C]/15 text-warm',
+        open: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    })[o] ?? 'bg-chip text-muted';
 
 const setOutcome = (outcome: string): void => {
     router.put(`/cabinet/conversations/${props.conversation.id}/status`, { outcome }, { preserveScroll: true });
@@ -295,30 +295,30 @@ const removeLead = (): void => {
     <Head :title="`Переписка — ${conversation.contact}`" />
 
     <AppLayout>
-        <Link href="/cabinet/conversations" class="text-sm text-[#2E74B5] hover:underline dark:text-sky-300">← К списку лидов</Link>
+        <Link href="/cabinet/conversations" class="text-sm font-semibold text-brand hover:underline">← К списку лидов</Link>
 
         <!-- Шапка диалога -->
-        <div class="mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-gradient-to-br from-[#2E74B5] to-[#1F4E79] text-sm font-semibold text-white">
+        <div class="otk-card mt-3 mb-5 flex flex-wrap items-center gap-3 p-4">
+            <span class="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full bg-active text-sm font-bold text-brand">
                 {{ conversation.contact.slice(0, 2).toUpperCase() }}
             </span>
             <div class="min-w-0">
-                <div class="font-semibold text-[#1F4E79] dark:text-sky-200">{{ conversation.contact }}</div>
-                <div class="text-xs text-slate-400">{{ conversation.source }} · диалог от {{ conversation.createdAt }}</div>
-                <div v-if="conversation.contactRef" class="mt-0.5 text-xs text-slate-400">
+                <div class="font-display text-base font-semibold text-ink">{{ conversation.contact }}</div>
+                <div class="text-xs text-muted2">{{ conversation.source }} · диалог от {{ conversation.createdAt }}</div>
+                <div v-if="conversation.contactRef" class="mt-0.5 text-xs text-muted2">
                     <a
                         v-if="conversation.contactRef.startsWith('http')"
                         :href="conversation.contactRef"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="font-medium text-[#2E74B5] hover:underline dark:text-sky-300"
+                        class="font-semibold text-brand hover:underline"
                         >👤 {{ conversation.contactRef.replace(/^https?:\/\//, '') }}</a
                     >
                     <span v-else>IP: {{ conversation.contactRef }}</span>
                 </div>
-                <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-medium text-[#2E74B5] dark:text-sky-300">📞 {{ conversation.phone }}</a>
-                <div v-if="conversation.crmRecordId" class="mt-0.5 text-xs text-slate-400">
-                    🗂 Запись в {{ conversation.crmProvider }}: <span class="font-medium text-slate-600 dark:text-slate-300">#{{ conversation.crmRecordId }}</span>
+                <a v-if="conversation.phone" :href="`tel:${conversation.phone}`" class="mt-0.5 inline-block text-sm font-semibold text-brand">📞 {{ conversation.phone }}</a>
+                <div v-if="conversation.crmRecordId" class="mt-0.5 text-xs text-muted2">
+                    🗂 Запись в {{ conversation.crmProvider }}: <span class="font-semibold text-muted">#{{ conversation.crmRecordId }}</span>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
@@ -327,41 +327,41 @@ const removeLead = (): void => {
                         v-if="!operatorActive"
                         type="button"
                         :disabled="busy"
-                        class="rounded-xl bg-[#2E74B5] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#255f96] disabled:opacity-50"
+                        class="rounded-full bg-brand px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover disabled:opacity-50"
                         @click="takeOver"
                     >
                         💬 Перехватить диалог
                     </button>
                     <template v-else>
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>{{ operatorName || 'Оператор' }} на связи
                         </span>
-                        <button type="button" :disabled="busy" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:text-[#1F4E79] disabled:opacity-50 dark:border-white/10 dark:text-slate-300" @click="release">
+                        <button type="button" :disabled="busy" class="rounded-full border border-line bg-panel px-3.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-hoverbg disabled:opacity-50" @click="release">
                             Вернуть боту
                         </button>
                     </template>
                 </template>
-                <span class="rounded-full px-2.5 py-1 text-xs" :class="outcomeClass(conversation.outcome)">{{ conversation.outcomeLabel }}</span>
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="outcomeClass(conversation.outcome)">{{ conversation.outcomeLabel }}</span>
                 <select
                     v-if="can('conversations.edit')"
                     :value="conversation.outcome"
-                    class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 outline-none transition hover:text-[#1F4E79] focus:border-[#2E74B5] dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                    class="rounded-full border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-muted outline-none transition hover:bg-hoverbg focus:border-brand"
                     title="Статус лида"
                     @change="setOutcome(($event.target as HTMLSelectElement).value)"
                 >
                     <option v-for="o in outcomes" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
-                <button v-if="can('conversations.delete')" type="button" class="text-sm text-red-600 hover:underline" @click="removeLead">Удалить</button>
+                <button v-if="can('conversations.delete')" type="button" class="text-sm font-semibold text-red-600 hover:underline dark:text-red-400" @click="removeLead">Удалить</button>
             </div>
         </div>
 
         <!-- Переписка -->
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
-            <div v-if="messages.length === 0" class="py-10 text-center text-slate-400">В этом диалоге пока нет сообщений.</div>
+        <div class="otk-card p-4 sm:p-6">
+            <div v-if="messages.length === 0" class="py-10 text-center text-muted2">В этом диалоге пока нет сообщений.</div>
 
             <template v-for="(g, gi) in groups" :key="gi">
                 <div class="my-4 flex justify-center first:mt-0">
-                    <span class="rounded-full bg-slate-200/70 px-3 py-1 text-xs text-slate-500 dark:bg-white/10 dark:text-slate-300">{{ g.date }}</span>
+                    <span class="rounded-full bg-chip px-3 py-1 text-xs font-semibold text-muted">{{ g.date }}</span>
                 </div>
                 <div class="space-y-2.5">
                     <div
@@ -373,8 +373,8 @@ const removeLead = (): void => {
                         <div
                             class="max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
                             :class="m.direction === 'inbound'
-                                ? 'rounded-bl-md border border-slate-200 bg-white text-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-100'
-                                : 'rounded-br-md bg-gradient-to-br from-[#2E74B5] to-[#1F4E79] text-white'"
+                                ? 'rounded-bl-md bg-chip text-ink'
+                                : 'rounded-br-md bg-brand text-white'"
                         >
                             <div v-if="m.text">{{ m.text }}</div>
                             <img
@@ -388,7 +388,7 @@ const removeLead = (): void => {
                             />
                             <div
                                 class="mt-1 text-right text-[11px]"
-                                :class="m.direction === 'inbound' ? 'text-slate-400' : 'text-blue-100/80'"
+                                :class="m.direction === 'inbound' ? 'text-muted2' : 'text-white/70'"
                             >
                                 {{ m.direction === 'inbound' ? 'Клиент' : 'Бот' }} · {{ m.time }}
                             </div>
@@ -399,11 +399,11 @@ const removeLead = (): void => {
 
             <!-- «Клиент печатает…» — реалтайм-индикатор (как в мессенджере) -->
             <div v-if="clientTyping" class="mt-2.5 flex justify-start">
-                <div class="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 dark:border-white/10 dark:bg-white/5">
-                    <span class="text-xs text-slate-400">Клиент печатает</span>
-                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-slate-400"></span>
-                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" style="animation-delay: 0.2s"></span>
-                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" style="animation-delay: 0.4s"></span>
+                <div class="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-chip px-3.5 py-2.5">
+                    <span class="text-xs text-muted2">Клиент печатает</span>
+                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-muted2"></span>
+                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-muted2" style="animation-delay: 0.2s"></span>
+                    <span class="otk-typing-dot h-1.5 w-1.5 rounded-full bg-muted2" style="animation-delay: 0.4s"></span>
                 </div>
             </div>
         </div>
@@ -411,13 +411,13 @@ const removeLead = (): void => {
         <!-- Ответ оператора (живой чат): доступен, пока диалог перехвачен -->
         <div
             v-if="canReply && operatorActive"
-            class="mt-3 flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/5"
+            class="otk-card mt-3 flex items-end gap-2 p-3"
         >
             <textarea
                 v-model="replyText"
                 rows="1"
                 placeholder="Ответьте клиенту…"
-                class="max-h-32 flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#2E74B5] dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                class="max-h-32 flex-1 resize-none rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted2 focus:border-brand"
                 @keydown.enter.exact.prevent="sendReply"
                 @input="notifyTyping"
             ></textarea>
@@ -426,7 +426,7 @@ const removeLead = (): void => {
                 type="button"
                 :disabled="busy"
                 title="Прикрепить фото"
-                class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-500 transition hover:text-[#2E74B5] disabled:opacity-50 dark:border-white/10"
+                class="rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-muted transition hover:bg-hoverbg hover:text-brand disabled:opacity-50"
                 @click="fileInput?.click()"
             >
                 📎
@@ -434,13 +434,13 @@ const removeLead = (): void => {
             <button
                 type="button"
                 :disabled="busy || !replyText.trim()"
-                class="rounded-xl bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#255f96] disabled:opacity-50"
+                class="rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-hover disabled:opacity-50"
                 @click="sendReply"
             >
                 Отправить
             </button>
         </div>
-        <p v-else-if="canReply" class="mt-3 text-center text-xs text-slate-400">
+        <p v-else-if="canReply" class="mt-3 text-center text-xs text-muted2">
             Нажмите «Перехватить диалог», чтобы ответить клиенту лично — бот при этом замолчит.
         </p>
 

@@ -9,7 +9,7 @@ const { isDark, toggle } = useTheme();
         type="button"
         :aria-label="isDark ? 'Светлая тема' : 'Тёмная тема'"
         :title="isDark ? 'Светлая тема' : 'Тёмная тема'"
-        class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/50 bg-white/50 text-base backdrop-blur transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10"
+        class="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-panel text-base transition hover:bg-hoverbg"
         @click="toggle"
     >
         <span v-if="isDark">☀️</span>

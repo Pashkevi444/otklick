@@ -7,7 +7,7 @@ interface Point {
 }
 
 const props = withDefaults(defineProps<{ points: Point[]; color?: string; height?: number }>(), {
-    color: '#2E74B5',
+    color: '#2B5CE0',
     height: 170,
 });
 
@@ -105,7 +105,7 @@ onMounted(() => requestAnimationFrame(() => (shown.value = true)));
             <!-- тултип -->
             <div
                 v-if="hoveredCoord && hoveredPoint"
-                class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#1F4E79] px-2 py-1 text-center text-[11px] leading-tight text-white shadow-lg dark:bg-sky-600"
+                class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#101C33] px-2 py-1 text-center text-[11px] leading-tight text-white shadow-lg dark:bg-sky-600"
                 :style="{ left: `${(hoveredCoord.x / W) * 100}%`, top: `${hoveredCoord.y - 8}px` }"
             >
                 <div class="font-semibold">{{ hoveredPoint.value }}</div>

@@ -20,20 +20,20 @@ const items = [
     <Head title="Настройки аккаунта" />
 
     <AppLayout title="Настройки аккаунта">
-        <p class="mb-6 text-sm text-slate-500">{{ account.name }} · {{ account.email }}</p>
+        <p class="mb-6 text-sm text-muted">{{ account.name }} · {{ account.email }}</p>
 
         <div class="grid max-w-2xl gap-4 sm:grid-cols-2">
             <Link
                 v-for="item in items"
                 :key="item.href"
                 :href="item.href"
-                class="group block rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-1 hover:border-[#2E74B5] hover:shadow-lg hover:shadow-slate-100 dark:border-white/10 dark:bg-white/5"
+                class="group otk-card block p-5 transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg hover:shadow-[rgba(16,28,51,0.06)]"
             >
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EAF2FB] text-2xl transition group-hover:scale-110 dark:bg-white/10">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-active text-2xl transition group-hover:scale-110">
                     {{ item.icon }}
                 </div>
-                <div class="mt-4 font-semibold text-[#1F4E79] dark:text-sky-200">{{ item.label }}</div>
-                <div class="mt-1 text-sm text-slate-500">{{ item.text }}</div>
+                <div class="mt-4 font-display text-base font-semibold text-ink">{{ item.label }}</div>
+                <div class="mt-1 text-sm text-muted">{{ item.text }}</div>
             </Link>
         </div>
     </AppLayout>

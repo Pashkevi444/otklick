@@ -78,7 +78,7 @@ const disconnect = (id: string): void => {
     <Head title="YClients" />
 
     <AppLayout title="YClients">
-        <p class="text-slate-500 text-sm mb-6 max-w-2xl">
+        <p class="text-muted text-sm mb-6 max-w-2xl">
             Подключите YClients, чтобы бот мог записывать, переносить и отменять клиентов.
             Подключение — из вашего YClients (маркетплейс), без ручного ввода токенов.
         </p>
@@ -87,14 +87,14 @@ const disconnect = (id: string): void => {
             <div
                 v-for="integration in integrations"
                 :key="integration.provider"
-                class="bg-white rounded-xl border border-slate-200 p-6"
+                class="otk-card p-6"
             >
                 <div class="flex items-center justify-between mb-4">
-                    <div class="font-semibold text-[#1F4E79]">{{ integration.label }}</div>
+                    <div class="font-display text-base font-semibold text-ink">{{ integration.label }}</div>
                     <span
                         v-if="integration.connection"
-                        class="text-xs rounded-full px-2 py-0.5"
-                        :class="integration.connection.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'"
+                        class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                        :class="integration.connection.is_active ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-chip text-muted'"
                     >
                         {{ integration.connection.is_active ? 'подключён' : 'отключён' }}
                     </span>
@@ -102,35 +102,35 @@ const disconnect = (id: string): void => {
 
                 <!-- Подключено -->
                 <div v-if="integration.connection" class="space-y-4">
-                    <div class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                    <div class="rounded-xl border border-[#EE8A5C]/30 bg-[#EE8A5C]/10 p-3.5 text-sm text-ink">
                         <b>Важно:</b> после подключения YClients кнопка <b>«Записаться»</b> автоматически добавляется в
                         <a href="/cabinet/menu" class="underline">Главное меню бота</a>. <b>Проверьте и поправьте главное меню</b> — если у вас уже была своя кнопка «Записаться», уберите дубль.
                     </div>
                     <dl class="text-sm grid grid-cols-2 gap-2">
                         <template v-for="(value, label) in integration.connection.summary" :key="label">
-                            <dt class="text-slate-500">{{ label }}</dt>
-                            <dd class="font-medium">{{ value }}</dd>
+                            <dt class="text-muted">{{ label }}</dt>
+                            <dd class="font-medium text-ink">{{ value }}</dd>
                         </template>
-                        <dt class="text-slate-500">Подключён</dt>
-                        <dd class="font-medium">{{ integration.connection.connected_at }}</dd>
+                        <dt class="text-muted">Подключён</dt>
+                        <dd class="font-medium text-ink">{{ integration.connection.connected_at }}</dd>
                     </dl>
                     <div class="flex flex-wrap items-center gap-3">
                         <button
                             type="button"
-                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            class="otk-btn-ghost"
                             @click="verify(integration.connection.id)"
                         >
                             Проверить связь
                         </button>
                         <a
                             href="/cabinet/knowledge-crm"
-                            class="rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5"
+                            class="otk-btn-primary transition hover:-translate-y-0.5"
                         >
                             📚 База знаний из YClients
                         </a>
                         <button
                             type="button"
-                            class="text-sm text-red-600 hover:underline"
+                            class="text-sm font-semibold text-red-600 hover:underline dark:text-red-400"
                             @click="disconnect(integration.connection.id)"
                         >
                             Отключить
@@ -138,12 +138,12 @@ const disconnect = (id: string): void => {
                     </div>
 
                     <!-- Напоминания клиенту о записи (в рамках этой интеграции) -->
-                    <div v-if="hasReminders" class="mt-5 rounded-xl border border-slate-200 p-4 dark:border-white/10">
-                        <label class="flex items-center gap-2 text-sm font-medium text-[#1F4E79] dark:text-sky-200">
+                    <div v-if="hasReminders" class="mt-5 rounded-2xl border border-line p-4">
+                        <label class="flex items-center gap-2 text-sm font-semibold text-ink">
                             <Toggle v-model="reminderForms[integration.connection.id].enabled" />
                             Напоминать клиентам о записи
                         </label>
-                        <p class="mt-1 text-xs text-slate-400">
+                        <p class="mt-1 text-xs text-muted2">
                             Бот напомнит клиенту о визите за указанное время. Можно добавить несколько напоминаний.
                         </p>
 
@@ -153,24 +153,24 @@ const disconnect = (id: string): void => {
                                 :key="i"
                                 class="flex items-center gap-2"
                             >
-                                <span class="text-sm text-slate-500">За</span>
+                                <span class="text-sm text-muted">За</span>
                                 <input
                                     v-model.number="reminderForms[integration.connection.id].offsets_hours[i]"
                                     type="number"
                                     min="0.25"
                                     max="168"
                                     step="0.25"
-                                    class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                                    class="w-24 rounded-xl border border-line bg-panel px-2.5 py-1.5 text-sm text-ink outline-none focus:border-brand"
                                 />
-                                <span class="text-sm text-slate-500">ч до визита</span>
-                                <button type="button" class="text-sm text-red-600 hover:underline" @click="removeOffset(integration.connection.id, i)">
+                                <span class="text-sm text-muted">ч до визита</span>
+                                <button type="button" class="text-sm text-red-600 hover:underline dark:text-red-400" @click="removeOffset(integration.connection.id, i)">
                                     убрать
                                 </button>
                             </div>
                             <button
                                 v-if="reminderForms[integration.connection.id].offsets_hours.length < 5"
                                 type="button"
-                                class="text-sm text-[#2E74B5] hover:underline"
+                                class="text-sm font-semibold text-brand hover:underline"
                                 @click="addOffset(integration.connection.id)"
                             >
                                 + добавить напоминание
@@ -179,7 +179,7 @@ const disconnect = (id: string): void => {
 
                         <button
                             type="button"
-                            class="mt-3 rounded-lg bg-[#2E74B5] px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5"
+                            class="otk-btn-primary mt-3 transition hover:-translate-y-0.5"
                             @click="saveReminders(integration.connection.id)"
                         >
                             Сохранить напоминания
@@ -190,9 +190,9 @@ const disconnect = (id: string): void => {
                 <!-- Не подключено -->
                 <div v-else class="space-y-4">
                     <!-- Рекомендуемый путь: маркетплейс YClients (без токенов) -->
-                    <div class="rounded-xl border border-[#2E74B5]/30 bg-[#2E74B5]/5 p-4 text-sm">
-                        <div class="font-medium text-[#1F4E79]">Как подключить</div>
-                        <ol class="mt-2 list-decimal space-y-1 pl-5 text-slate-600">
+                    <div class="rounded-2xl border border-brand/30 bg-active p-4 text-sm">
+                        <div class="font-semibold text-ink">Как подключить</div>
+                        <ol class="mt-2 list-decimal space-y-1 pl-5 text-muted">
                             <li>Откройте свой YClients → «Интеграции» → найдите приложение «Отклик».</li>
                             <li>Нажмите «Подключить» и подтвердите доступ.</li>
                             <li>Вы вернётесь сюда — связь активируется автоматически, токены вводить не нужно.</li>

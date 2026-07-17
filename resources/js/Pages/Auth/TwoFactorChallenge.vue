@@ -15,7 +15,7 @@ const submit = (): void => {
     <AuthLayout title="Подтверждение входа" subtitle="Введите код из приложения-аутентификатора">
         <form class="space-y-5" @submit.prevent="submit">
             <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700" for="code">Код 2FA или резервный код</label>
+                <label class="mb-1.5 block text-sm font-semibold text-ink" for="code">Код 2FA или резервный код</label>
                 <input
                     id="code"
                     v-model="form.code"
@@ -24,15 +24,15 @@ const submit = (): void => {
                     autofocus
                     autocomplete="one-time-code"
                     placeholder="123456"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-center text-lg tracking-widest outline-none focus:border-[#2E74B5] focus:ring-1 focus:ring-[#2E74B5]"
+                    class="w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-center text-lg tracking-widest text-ink outline-none transition placeholder:text-muted2 focus:border-brand"
                 />
-                <p v-if="form.errors.code" class="mt-1 text-sm text-red-600">{{ form.errors.code }}</p>
+                <p v-if="form.errors.code" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.code }}</p>
             </div>
 
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="w-full rounded-lg bg-[#2E74B5] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#255f96] disabled:opacity-50"
+                class="w-full rounded-full bg-brand bg-gradient-to-r from-brand to-violet-brand py-3 text-[15px] font-bold text-white shadow-lg shadow-[rgba(43,92,224,0.30)] transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[rgba(43,92,224,0.35)] disabled:pointer-events-none disabled:opacity-50"
             >
                 Подтвердить вход
             </button>
