@@ -39,13 +39,16 @@ html.dark .mkt .mkt-nav {
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
 }
 
-/* Футер: deep-нави на всю ширину */
+/* Футер: светлая тема — белая панель на креме, тёмная — deep-нави */
 .mkt .mkt-footer {
-    background: #0f1e3d;
-    color: rgba(255, 255, 255, 0.7);
+    background: #ffffff;
+    border-top: 1px solid var(--otk-border);
+    color: var(--otk-muted);
 }
 html.dark .mkt .mkt-footer {
     background: #070c16;
+    border-top-color: transparent;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* ===== Переливающаяся градиентная рамка ===== */
@@ -158,14 +161,30 @@ html.dark .mkt .aurora {
     opacity: 0.65;
 }
 
-/* ===== Тёмный герой лендинга (#0B1120 в обеих темах) ===== */
+/* ===== Герой лендинга: светлая тема — крем, тёмная — deep-нави ===== */
 .mkt .mkt-hero {
+    background:
+        radial-gradient(560px 420px at 12% 0%, rgba(43, 92, 224, 0.1), transparent 65%),
+        radial-gradient(520px 420px at 88% 18%, rgba(124, 92, 252, 0.08), transparent 65%),
+        radial-gradient(640px 480px at 70% 96%, rgba(238, 138, 92, 0.09), transparent 70%),
+        var(--otk-bg);
+    color: var(--otk-ink);
+}
+html.dark .mkt .mkt-hero {
     background:
         radial-gradient(560px 420px at 12% 0%, rgba(43, 92, 224, 0.24), transparent 65%),
         radial-gradient(520px 420px at 88% 18%, rgba(124, 92, 252, 0.16), transparent 65%),
         radial-gradient(640px 480px at 70% 96%, rgba(238, 138, 92, 0.1), transparent 70%),
         #0b1120;
     color: #eaeef6;
+}
+/* Хвост тёмной зоны (метрики): светлая — прозрачный на креме, тёмная — продолжение героя */
+.mkt .mkt-hero-tail {
+    background: transparent;
+}
+html.dark .mkt .mkt-hero-tail {
+    background: radial-gradient(640px 300px at 70% 0%, rgba(238, 138, 92, 0.07), transparent 70%), #0b1120;
+    border-radius: 0 0 44px 44px;
 }
 /* Центральный ореол за заголовком */
 .mkt .mkt-hero::before {
@@ -187,13 +206,19 @@ html.dark .mkt .aurora {
     display: inline-flex;
     align-items: center;
     gap: 9px;
-    background: #141e30;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #eaeef6;
+    background: #ffffff;
+    border: 1px solid var(--otk-border);
+    color: var(--otk-ink);
     padding: 11px 16px;
     border-radius: 14px;
     font-size: 14px;
     font-weight: 600;
+    box-shadow: 0 14px 30px rgba(16, 28, 51, 0.1);
+}
+html.dark .mkt .hero-chip {
+    background: #141e30;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #eaeef6;
     box-shadow: 0 16px 34px rgba(2, 8, 20, 0.45);
 }
 .mkt .hero-chip-cta {
@@ -349,10 +374,15 @@ html.dark .mkt .card-hover:hover {
     box-shadow: 0 24px 60px rgba(43, 92, 224, 0.35);
 }
 
-/* ===== Мокап чата на тёмном герое (в обеих темах тёмный) ===== */
+/* ===== Мокап чата на герое: светлая — белая карточка, тёмная — нави ===== */
 .mkt .chat-mock {
+    background: #ffffff;
+    border: 1px solid var(--otk-border);
+    box-shadow: 0 30px 70px rgba(16, 28, 51, 0.14);
+}
+html.dark .mkt .chat-mock {
     background: #141e30;
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.09);
     box-shadow: 0 34px 80px rgba(4, 10, 26, 0.55);
 }
 .mkt .live-dot {
@@ -382,9 +412,13 @@ html.dark .mkt .card-hover:hover {
     box-shadow: 0 6px 16px rgba(43, 92, 224, 0.28);
 }
 .mkt .msg-bot {
+    background: #eef1f7;
+    color: var(--otk-ink);
+    border-bottom-left-radius: 5px;
+}
+html.dark .mkt .msg-bot {
     background: rgba(255, 255, 255, 0.09);
     color: #dbe4f5;
-    border-bottom-left-radius: 5px;
 }
 .mkt .chat-chips {
     display: flex;
@@ -396,12 +430,17 @@ html.dark .mkt .card-hover:hover {
     animation-delay: var(--d, 0s);
 }
 .mkt .chip {
-    border: 1px solid rgba(139, 168, 255, 0.3);
-    color: #aec4f5;
+    border: 1px solid rgba(43, 92, 224, 0.3);
+    color: #2b5ce0;
     border-radius: 999px;
     padding: 6px 12px;
     font-size: 12px;
     font-weight: 500;
+    background: rgba(43, 92, 224, 0.05);
+}
+html.dark .mkt .chip {
+    border-color: rgba(139, 168, 255, 0.3);
+    color: #aec4f5;
     background: rgba(255, 255, 255, 0.05);
 }
 .mkt .chip-primary {

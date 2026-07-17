@@ -145,24 +145,24 @@ onBeforeUnmount(() => {
 
         <slot />
 
-        <!-- Футер: тёмно-нави блок на всю ширину -->
+        <!-- Футер: светлая тема — белая панель, тёмная — deep-нави -->
         <footer class="mkt-footer mt-16">
             <div class="mx-auto max-w-6xl px-6 pb-10 pt-14">
-                <div class="flex flex-col justify-between gap-10 border-b border-white/10 pb-10 sm:flex-row">
+                <div class="flex flex-col justify-between gap-10 border-b border-line pb-10 sm:flex-row dark:border-white/10">
                     <div class="max-w-xs">
-                        <Logo :size="30" class="text-[17px] text-white" />
-                        <p class="mt-3.5 text-sm leading-relaxed text-white/60">AI-администратор для локального бизнеса: ответы клиентам и запись в CRM круглосуточно.</p>
+                        <Logo :size="30" class="text-[17px] text-ink dark:text-white" />
+                        <p class="mt-3.5 text-sm leading-relaxed text-muted dark:text-white/60">AI-администратор для локального бизнеса: ответы клиентам и запись в CRM круглосуточно.</p>
                     </div>
                     <div class="flex max-w-xl flex-wrap content-start items-start gap-x-6 gap-y-2.5 text-sm">
-                        <Link v-for="l in navLinks" :key="l.href" :href="l.href" class="text-white/70 transition hover:text-white">{{ l.label }}</Link>
-                        <Link href="/privacy" class="text-white/70 transition hover:text-white">Конфиденциальность</Link>
-                        <Link href="/offer" class="text-white/70 transition hover:text-white">Оферта</Link>
-                        <Link href="/terms" class="text-white/70 transition hover:text-white">Соглашение</Link>
-                        <Link href="/consent" class="text-white/70 transition hover:text-white">Согласие на ПДн</Link>
-                        <a :href="loginUrl" class="text-white/70 transition hover:text-white">Вход</a>
+                        <Link v-for="l in navLinks" :key="l.href" :href="l.href" class="text-muted transition hover:text-ink dark:text-white/70 dark:hover:text-white">{{ l.label }}</Link>
+                        <Link href="/privacy" class="text-muted transition hover:text-ink dark:text-white/70 dark:hover:text-white">Конфиденциальность</Link>
+                        <Link href="/offer" class="text-muted transition hover:text-ink dark:text-white/70 dark:hover:text-white">Оферта</Link>
+                        <Link href="/terms" class="text-muted transition hover:text-ink dark:text-white/70 dark:hover:text-white">Соглашение</Link>
+                        <Link href="/consent" class="text-muted transition hover:text-ink dark:text-white/70 dark:hover:text-white">Согласие на ПДн</Link>
+                        <a :href="loginUrl" class="text-muted transition hover:text-ink dark:text-white/70 dark:hover:text-white">Вход</a>
                     </div>
                 </div>
-                <div class="pt-6 text-xs leading-relaxed text-white/45">
+                <div class="pt-6 text-xs leading-relaxed text-muted2 dark:text-white/45">
                     <span v-if="site.legalName">{{ site.legalName }}</span>
                     <span v-if="site.inn"> · ИНН {{ site.inn }}</span>
                     <span v-if="site.ogrnip"> · ОГРНИП {{ site.ogrnip }}</span>
