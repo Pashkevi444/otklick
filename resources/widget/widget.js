@@ -76,7 +76,10 @@
     // цвет бизнеса подтягивается с /config и переопределяет переменные.
     var css = [
         ':root{--otk-a:#2B5CE0;--otk-b:#7C5CFC}',
-        '.otk-launcher{position:fixed;right:22px;bottom:22px;width:62px;height:62px;border:0;border-radius:50%;cursor:pointer;z-index:2147483000;',
+        // Мини-резет: виджет живёт в DOM сайта клиента — гасим протекающие стили хоста.
+        '.otk-panel,.otk-panel *,.otk-panel *::before,.otk-panel *::after{box-sizing:border-box}',
+        '.otk-panel button{margin:0;padding:0;font-family:inherit}',
+        '.otk-launcher{position:fixed;right:22px;bottom:22px;width:62px;height:62px;border:0;margin:0;padding:0;border-radius:50%;cursor:pointer;z-index:2147483000;',
         'background:linear-gradient(135deg,var(--otk-a),var(--otk-b));box-shadow:0 12px 30px rgba(16,42,73,.42),inset 0 1px 1px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;',
         'transition:transform .28s cubic-bezier(.2,.85,.25,1),box-shadow .28s ease}',
         '.otk-launcher::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--otk-a);opacity:.5;animation:otk-ring 2.6s ease-out infinite;pointer-events:none}',
@@ -86,7 +89,7 @@
         '.otk-launcher.otk-on svg{transform:rotate(90deg) scale(.88)}',
         '.otk-panel{position:fixed;right:22px;bottom:98px;width:380px;max-width:calc(100vw - 32px);height:566px;max-height:calc(100vh - 130px);z-index:2147483000;',
         'background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.7);border-radius:22px;box-shadow:0 28px 80px rgba(16,42,73,.32);display:flex;flex-direction:column;overflow:hidden;',
-        'font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:0;transform:translateY(24px) scale(.95);pointer-events:none;transform-origin:bottom right;',
+        'font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.45;color:#1f2a3a;text-align:left;opacity:0;transform:translateY(24px) scale(.95);pointer-events:none;transform-origin:bottom right;',
         'transition:opacity .32s ease,transform .42s cubic-bezier(.2,.9,.25,1)}',
         '.otk-panel.otk-open{opacity:1;transform:none;pointer-events:auto}',
         // Стеклянная шапка: градиент бренда + светящийся блик сверху.
@@ -114,14 +117,16 @@
         '.otk-bot .otk-link{color:var(--otk-a);text-decoration:underline;word-break:break-word}',
         '.otk-me .otk-link{color:#fff;text-decoration:underline;word-break:break-word}',
         '.otk-foot{display:flex;gap:9px;padding:11px;border-top:1px solid rgba(16,42,73,.06);background:rgba(255,255,255,.85);backdrop-filter:blur(6px);align-items:flex-end}',
-        '.otk-in{flex:1;border:1.5px solid #dde5ef;border-radius:14px;padding:10px 13px;font-size:14px;outline:none;resize:none;max-height:96px;font-family:inherit;transition:border-color .2s,box-shadow .2s}',
-        '.otk-in:focus{border-color:var(--otk-a);box-shadow:0 0 0 3px rgba(46,116,181,.12)}',
+        '.otk-in{flex:1;border:1.5px solid #dde5ef;border-radius:14px;padding:10px 13px;font-size:14px;line-height:1.4;min-height:41px;outline:none;resize:none;max-height:96px;overflow-y:auto;font-family:inherit;background:#fff;color:#1f2a3a;-webkit-text-fill-color:#1f2a3a;caret-color:var(--otk-a);margin:0;appearance:none;-webkit-appearance:none;scrollbar-width:none;transition:border-color .2s,box-shadow .2s}',
+        '.otk-in::-webkit-scrollbar{display:none}',
+        '.otk-in::placeholder{color:#9aa7b8;-webkit-text-fill-color:#9aa7b8;opacity:1}',
+        '.otk-in:focus{border-color:var(--otk-a);box-shadow:0 0 0 3px rgba(43,92,224,.12)}',
         '.otk-send{flex:0 0 auto;width:43px;height:43px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--otk-a),var(--otk-b));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,opacity .2s,box-shadow .2s;box-shadow:0 4px 12px rgba(16,42,73,.2)}',
         '.otk-send:hover{transform:translateY(-1px) scale(1.04)}.otk-send:disabled{opacity:.45;cursor:default;transform:none;box-shadow:none}',
         '.otk-send svg{width:19px;height:19px;fill:#fff}',
         '.otk-pow{text-align:center;font-size:11px;color:#9aa7b8;padding:6px 0 9px;background:rgba(255,255,255,.85)}',
         '.otk-pow a{color:var(--otk-a);text-decoration:none;font-weight:600}.otk-pow a:hover{text-decoration:underline}',
-        '.otk-oper{display:none;font-size:11px;color:var(--otk-b);background:rgba(46,116,181,.1);text-align:center;padding:5px 10px;border-top:1px solid rgba(46,116,181,.18)}',
+        '.otk-oper{display:none;font-size:11px;color:var(--otk-a);background:rgba(43,92,224,.08);text-align:center;padding:5px 10px;border-top:1px solid rgba(43,92,224,.16)}',
         '.otk-oper.otk-on{display:block}',
         '.otk-img{margin-top:8px;max-width:220px;max-height:220px;width:auto;border-radius:13px;cursor:zoom-in;display:block;object-fit:cover;box-shadow:0 2px 10px rgba(16,42,73,.14);transition:transform .2s ease}',
         '.otk-img:hover{transform:scale(1.03)}',
@@ -131,14 +136,14 @@
         // Разделитель дней: «Сегодня» / «Вчера» / «5 мар» по центру ленты.
         '.otk-day{align-self:center;font-size:11px;color:#7b8aa0;background:rgba(255,255,255,.7);border:1px solid rgba(16,42,73,.06);border-radius:11px;padding:3px 11px;margin:4px 0;box-shadow:0 1px 4px rgba(16,42,73,.05)}',
         // Кнопки-инструменты ввода (эмодзи, скрепка) слева от поля.
-        '.otk-tool{flex:0 0 auto;width:34px;height:34px;border:0;border-radius:11px;background:rgba(46,116,181,.08);color:var(--otk-a);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s}',
-        '.otk-tool:hover{background:rgba(46,116,181,.16);transform:translateY(-1px)}',
+        '.otk-tool{flex:0 0 auto;width:34px;height:34px;border:0;border-radius:11px;background:rgba(43,92,224,.08);color:var(--otk-a);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s}',
+        '.otk-tool:hover{background:rgba(43,92,224,.16);transform:translateY(-1px)}',
         '.otk-tool svg{width:18px;height:18px;fill:var(--otk-a)}',
         // Панель эмодзи над полем ввода.
         '.otk-emoji{display:none;flex-wrap:wrap;gap:3px;padding:8px 10px;border-top:1px solid rgba(16,42,73,.06);background:rgba(255,255,255,.95);max-height:128px;overflow-y:auto}',
         '.otk-emoji.otk-on{display:flex}',
         '.otk-emoji button{border:0;background:none;cursor:pointer;font-size:21px;line-height:1;padding:4px;border-radius:8px;transition:background .15s,transform .15s}',
-        '.otk-emoji button:hover{background:rgba(46,116,181,.1);transform:scale(1.18)}',
+        '.otk-emoji button:hover{background:rgba(43,92,224,.1);transform:scale(1.18)}',
         '.otk-lightbox{position:fixed;inset:0;z-index:2147483600;background:rgba(8,15,30,0);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;transition:background .28s ease}',
         '.otk-lightbox.otk-lb-on{background:rgba(8,15,30,.88)}',
         '.otk-lightbox img{max-width:92vw;max-height:88vh;border-radius:14px;box-shadow:0 28px 80px rgba(0,0,0,.6);transform:scale(.9);opacity:0;transition:transform .32s cubic-bezier(.2,.85,.25,1),opacity .25s ease}',

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><title>Тест виджета</title>
+<style>
+  /* агрессивные хост-стили — имитируем сайт клиента, который ломал виджет */
+  body { font-family: Georgia, serif; line-height: 2.2; color: #ddd; background: #f7f7f7; }
+  textarea { color: #eee; background: #222; line-height: 3; padding: 20px; }
+  button { padding: 14px 22px; margin: 6px; font-size: 22px; }
+  * { letter-spacing: .5px; }
+</style>
+</head>
+<body>
+<h1 style="color:#333">Сайт клиента (агрессивные стили)</h1>
+<p style="color:#333">Хостовая страница со злыми стилями textarea/button.</p>
+</body>
+</html>
+<script src="http://localhost:8000/widget/v1/widget.js"
+        data-otklik-tenant="019f6faf-aa0e-708c-bc47-ea567bcb7c02"
+        data-otklik-channel="019f6faf-ada7-72a9-97ac-194439c593d2"></script>
