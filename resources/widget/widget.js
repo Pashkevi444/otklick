@@ -149,6 +149,9 @@
         '.otk-lightbox img{max-width:92vw;max-height:88vh;border-radius:14px;box-shadow:0 28px 80px rgba(0,0,0,.6);transform:scale(.9);opacity:0;transition:transform .32s cubic-bezier(.2,.85,.25,1),opacity .25s ease}',
         '.otk-lightbox.otk-lb-on img{transform:none;opacity:1}',
         '.otk-lightbox .otk-lb-x{position:absolute;top:18px;right:20px;width:40px;height:40px;border:0;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:18px;cursor:pointer}',
+        // Мигающий курсор на конце «печатающегося» ответа бота.
+        '.otk-tw::after{content:"▍";margin-left:1px;color:#9fb2c9;animation:otk-caret .9s steps(1) infinite}',
+        '@keyframes otk-caret{50%{opacity:0}}',
         '@keyframes otk-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}',
         '@keyframes otk-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}',
         '@keyframes otk-pulse{0%{box-shadow:0 0 0 0 rgba(124,246,195,.6)}70%{box-shadow:0 0 0 7px rgba(124,246,195,0)}100%{box-shadow:0 0 0 0 rgba(124,246,195,0)}}',
@@ -365,7 +368,38 @@
         requestAnimationFrame(function () { ov.classList.add('otk-lb-on'); });
     }
 
-    function addMsg(text, who, noSave, extraImages, ts) {
+    // Автоскролл во время «печати»: не дёргаем ленту, если человек отмотал вверх.
+    function stickScroll() {
+        if (body.scrollHeight - body.scrollTop - body.clientHeight < 60) body.scrollTop = body.scrollHeight;
+    }
+
+    // Посимвольная «печать» текста в узел (эффект живого набора). Длинные ответы
+    // добираются порциями покрупнее, чтобы весь текст укладывался в ~2.5–3с.
+    function typeText(node, text, onDone) {
+        var STEP_MS = 24;
+        var chunk = Math.max(1, Math.round(text.length / (2800 / STEP_MS)));
+        var i = 0;
+        node.classList.add('otk-tw');
+        var timer = setInterval(function () {
+            i = Math.min(text.length, i + chunk);
+            node.textContent = text.slice(0, i);
+            stickScroll();
+            if (i >= text.length) {
+                clearInterval(timer);
+                node.classList.remove('otk-tw');
+                onDone();
+            }
+        }, STEP_MS);
+    }
+
+    function reducedMotion() {
+        return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }
+
+    // animate — «печатающийся» показ (только живые ответы бота; история и ответы
+    // оператора из поллинга рисуются сразу). onDone зовётся, когда сообщение
+    // дорисовано полностью (для кнопок-подсказок после текста).
+    function addMsg(text, who, noSave, extraImages, ts, animate, onDone) {
         // Метка времени: серверная (если пришла) либо момент показа. Для лайв-чата
         // клиентского времени достаточно, а в истории оно переживает перезагрузку.
         var when = ts || new Date().toISOString();
@@ -390,30 +424,49 @@
             extraImages.forEach(function (u) { if (images.indexOf(u) < 0) images.push(u); });
         }
 
+        var t = null;
         if (clean) {
-            var t = document.createElement('div');
-            appendLinkified(t, clean);
+            t = document.createElement('div');
             el.appendChild(t);
         }
-        images.forEach(function (url) {
-            var img = document.createElement('img');
-            img.className = 'otk-img';
-            img.src = url;
-            img.alt = 'Фото';
-            img.loading = 'lazy';
-            img.addEventListener('click', function () { openLightbox(url); });
-            img.addEventListener('load', function () { body.scrollTop = body.scrollHeight; });
-            el.appendChild(img);
-        });
 
-        // Время сообщения — мелкой строкой под текстом/фото.
-        var tm = document.createElement('div');
-        tm.className = 'otk-time';
-        tm.textContent = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        el.appendChild(tm);
+        // Хвост сообщения (фото + время) — после текста; при «печати» дорисовывается,
+        // когда текст набран, как будто собеседник докинул вложения следом.
+        var finish = function () {
+            images.forEach(function (url) {
+                var img = document.createElement('img');
+                img.className = 'otk-img';
+                img.src = url;
+                img.alt = 'Фото';
+                img.loading = 'lazy';
+                img.addEventListener('click', function () { openLightbox(url); });
+                img.addEventListener('load', stickScroll);
+                el.appendChild(img);
+            });
+
+            // Время сообщения — мелкой строкой под текстом/фото.
+            var tm = document.createElement('div');
+            tm.className = 'otk-time';
+            tm.textContent = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            el.appendChild(tm);
+            stickScroll();
+            if (onDone) onDone();
+        };
 
         body.appendChild(el);
         body.scrollTop = body.scrollHeight;
+
+        if (t && animate && !reducedMotion()) {
+            typeText(t, clean, function () {
+                // Допечатали — заменяем плоский текст версией с кликабельными ссылками.
+                t.textContent = '';
+                appendLinkified(t, clean);
+                finish();
+            });
+        } else {
+            if (t) appendLinkified(t, clean);
+            finish();
+        }
         return el;
     }
 
@@ -457,7 +510,7 @@
                 persist();
                 hideTyping();
                 connectRealtime(data.reverb, data.channel);
-                if (data.greeting) addMsg(data.greeting, 'bot');
+                if (data.greeting) addMsg(data.greeting, 'bot', false, null, null, true);
             })
             .catch(function () {
                 hideTyping();
@@ -518,9 +571,13 @@
                 // При перехвате оператором бот молчит (reply пустой) — ничего не рисуем,
                 // ответ оператора придёт лайв-поллингом.
                 if (data.reply || (data.images && data.images.length)) {
-                    addMsg(data.reply, 'bot', false, data.images, data.createdAt);
+                    // Кнопки-подсказки — после того, как ответ «допечатается».
+                    addMsg(data.reply, 'bot', false, data.images, data.createdAt, true, function () {
+                        renderChips(data.options);
+                    });
+                } else {
+                    renderChips(data.options);
                 }
-                renderChips(data.options);
             })
             .catch(function (err) {
                 hideTyping();
@@ -689,7 +746,7 @@
                     hideTyping();
                     addMsg(caption, 'me', false, data.images || [], data.createdAt);
                     if (data.lastId) { lastId = data.lastId; persist(); }
-                    if (data.reply) addMsg(data.reply, 'bot', false, [], data.replyAt);
+                    if (data.reply) addMsg(data.reply, 'bot', false, [], data.replyAt, true);
                     setOperator(data.operatorActive);
                 })
                 .catch(function (err) {
